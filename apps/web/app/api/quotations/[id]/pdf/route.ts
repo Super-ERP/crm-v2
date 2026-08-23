@@ -31,6 +31,7 @@ export async function GET(
     form.set("marginRight", "0")
     form.set("printBackground", "true")
     form.set("preferCssPageSize", "true")
+    form.set("failOnHttpStatusCodes", "[400,499,500,599]")
 
     const response = await fetch(
       `${process.env.GOTENBERG_URL ?? "http://gotenberg:3000"}/forms/chromium/convert/url`,
@@ -54,8 +55,9 @@ export async function GET(
     })
   } catch (error) {
     console.error("[quotation-pdf] render failed", { quotationId: id, error })
+    const detail = error instanceof Error ? error.message : "Unknown renderer error"
     return Response.json(
-      { error: "Quotation PDF rendering failed" },
+      { error: "Quotation PDF rendering failed", detail },
       { status: 502, headers: { "Cache-Control": "no-store" } }
     )
   }

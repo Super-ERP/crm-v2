@@ -23,7 +23,19 @@ export function PrintButton({ quotationId, quoteNumber }: { quotationId: string;
         response.ok &&
         contentType.toLowerCase().includes("application/pdf") &&
         new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-"
-      if (!isPdf) throw new Error("The quotation PDF could not be generated.")
+      if (!isPdf) {
+        let message = "The quotation PDF could not be generated."
+        try {
+          const body = JSON.parse(new TextDecoder().decode(bytes)) as {
+            detail?: string
+            error?: string
+          }
+          message = body.detail || body.error || message
+        } catch {
+          // Keep the user-facing fallback for non-JSON upstream responses.
+        }
+        throw new Error(message)
+      }
 
       const blob = new Blob([bytes], { type: "application/pdf" })
       const url = URL.createObjectURL(blob)
