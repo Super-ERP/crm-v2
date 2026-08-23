@@ -401,5 +401,8 @@ describe("contract editing and entitlement controls form", () => {
     const html = await page.text()
     expect(html).toContain("Edit commercial terms")
     expect(html).toContain("Advanced subscription controls")
+    expect(html).toMatch(/<option value="past_due" selected="">Past Due<\/option>/)
+    expect(html).toMatch(/<option value="monthly" selected="">Monthly<\/option>/)
+    expect(html).toMatch(/<option value="non_renewing" selected="">Non Renewing<\/option>/)
   })
 })
