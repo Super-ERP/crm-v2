@@ -110,7 +110,7 @@ services:
       migrate:
         condition: service_completed_successfully
       gotenberg:
-        condition: service_healthy
+        condition: service_started
     expose:
       - "3000"
     healthcheck:
@@ -127,12 +127,6 @@ services:
     image: gotenberg/gotenberg@sha256:9ced40d1b764b4538d79a7597137f42f0c187499d0f283208b227d1e62c55c3f
     expose:
       - "3000"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
     mem_limit: 512m
     logging: *default-logging
     restart: unless-stopped
