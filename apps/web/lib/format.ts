@@ -46,15 +46,15 @@ export function formatMalaysianPhone(value: string | null | undefined): string {
     const mobileCode = national.slice(0, 2)
     const subscriber = national.slice(2)
     if (subscriber.length === 8) {
-      return `+60 ${mobileCode}-${subscriber.slice(0, 4)} ${subscriber.slice(4)}`
+      return `+60${mobileCode}-${subscriber.slice(0, 4)} ${subscriber.slice(4)}`
     }
     if (subscriber.length === 7) {
-      return `+60 ${mobileCode}-${subscriber.slice(0, 3)} ${subscriber.slice(3)}`
+      return `+60${mobileCode}-${subscriber.slice(0, 3)} ${subscriber.slice(3)}`
     }
   }
 
   if (national.startsWith("3") && national.length === 9) {
-    return `+60 3-${national.slice(1, 5)} ${national.slice(5)}`
+    return `+603-${national.slice(1, 5)} ${national.slice(5)}`
   }
 
   return `+${international}`
