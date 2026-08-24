@@ -101,6 +101,7 @@ export default async function QuotationPreviewPage({
   const isDefaultTemplate = isDefaultPdfTemplate(template)
   const attentionName =
     contact?.name ?? account?.name ?? "—"
+  const logoUrl = `/api/tenant-logo?v=${encodeURIComponent(company.logoVersion ?? "none")}`
 
   if (quotationTemplate?.renderMode === "html" && quotationTemplate.htmlTemplate) {
     return (
@@ -163,7 +164,7 @@ export default async function QuotationPreviewPage({
               {company.hasLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src="/api/tenant-logo"
+                  src={logoUrl}
                   alt={entityName}
                   className="mb-2 h-12 max-w-52 object-contain object-left"
                 />

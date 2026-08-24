@@ -53,13 +53,14 @@ function taxLabel(doc: QuotationDocument): string {
 }
 
 function CompanyHeader({ doc }: { doc: QuotationDocument }) {
+  const logoUrl = `/api/tenant-logo?v=${encodeURIComponent(doc.company.logoVersion ?? "none")}`
   return (
     <header className="grid grid-cols-[29%_1fr] items-start gap-6 pb-3">
       <div className="h-[24mm]">
         {doc.company.hasLogo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src="/api/tenant-logo"
+            src={logoUrl}
             alt={doc.entityName}
             className="h-[22mm] max-w-[55mm] object-contain object-left"
           />
