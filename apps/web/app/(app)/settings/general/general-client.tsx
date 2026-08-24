@@ -138,6 +138,8 @@ function GeneralForm({
       approvalBypassTier: settings.approvalBypassTier,
       followUpDueDays: settings.followUpDueDays,
       autoCompleteProjectOnPaid: settings.autoCompleteProjectOnPaid,
+      intercoAutoMirror: settings.intercoAutoMirror,
+      documentationModule: settings.documentationModule,
       staleDealDays:
         settings.staleDealDays == null ? "" : String(settings.staleDealDays),
       leadFollowUpDays:
@@ -200,6 +202,8 @@ function GeneralForm({
         approvalBypassTier: updated.approvalBypassTier,
         followUpDueDays: updated.followUpDueDays,
         autoCompleteProjectOnPaid: updated.autoCompleteProjectOnPaid,
+        intercoAutoMirror: updated.intercoAutoMirror,
+        documentationModule: updated.documentationModule,
         staleDealDays:
           updated.staleDealDays == null ? "" : String(updated.staleDealDays),
         leadFollowUpDays:

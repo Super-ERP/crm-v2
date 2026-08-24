@@ -141,6 +141,27 @@ async function rollupPairs(
     if (p?.oppId) pairs.push({ type: "opportunity", ids: [p.oppId] })
     return pairs
   }
+  if (rootType === "opportunity_container") {
+    const funnelIds = (
+      await tx
+        .select({ id: funnels.id })
+        .from(funnels)
+        .where(eq(funnels.opportunityId, rootId))
+    ).map((r) => r.id)
+    const projectIds = projectsEnabled
+      ? (
+          await tx
+            .select({ id: projects.id })
+            .from(projects)
+            .where(inArray(projects.funnelId, funnelIds))
+        ).map((r) => r.id)
+      : []
+    return [
+      { type: "opportunity_container", ids: [rootId] },
+      { type: "opportunity", ids: funnelIds },
+      { type: "project", ids: projectIds },
+    ]
+  }
   return [{ type: rootType, ids: [rootId] }]
 }
 

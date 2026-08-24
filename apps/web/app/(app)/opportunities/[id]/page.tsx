@@ -15,7 +15,7 @@ import { getOpportunity } from "../actions"
 import { listPersonsWithAccount } from "@/app/(app)/funnel/actions"
 import { OpportunityForm } from "@/app/(app)/funnel/opportunity-form"
 import { listEntityAttachments } from "@/app/(app)/_shared/attachment-actions"
-import { listActivities } from "@/app/(app)/_shared/activity-actions"
+import { listEntityTimeline } from "@/app/(app)/_shared/activity-actions"
 import { OpportunityDetailBody } from "./opportunity-detail-body"
 
 export default async function OpportunityDetailPage({
@@ -43,7 +43,7 @@ export default async function OpportunityDetailPage({
   ] = await Promise.all([
     requireContext(),
     getOpportunity(id),
-    listActivities("opportunity_container", id),
+    listEntityTimeline("opportunity_container", id),
     listEntityAttachments("opportunity_container", id),
     listPersonsWithAccount(),
     listProjectNatures(),
