@@ -293,13 +293,13 @@ export function ContractPage(props: { contract: ContractDetail; operatorEmail: s
           <p>Changing terms bumps the entitlement revision, so the deployment must receive a freshly signed entitlement version.</p>
           <form class="form-grid" method="post" action={`/operator/contracts/${contract.id}/edit`}>
             <Field name="planId" label="Plan ID" required placeholder="plan-basic" value={contract.planId} />
-            <Field name="status" label="Status" required options={["active", "past_due", "suspended", "cancelled"].map((value) => ({ value, label: titleCase(value) }))} />
+            <Field name="status" label="Status" required value={contract.status} options={["active", "past_due", "suspended", "cancelled"].map((value) => ({ value, label: titleCase(value) }))} />
             <Field name="startsAt" label="Starts on" required type="date" value={contract.startsAt} />
             <Field name="endsAt" label="Ends on" required type="date" value={contract.endsAt} />
             <Field name="seatLimit" label="Seat limit" required type="number" min={1} max={100000} step={1} value={contract.seatLimit} />
             <Field name="monthlySeatPriceCents" label="Monthly seat price, cents" required type="number" min={0} step={1} value={contract.monthlySeatPriceCents} />
             <Field name="taxBasisPoints" label="Tax, basis points" required type="number" min={0} max={10000} step={1} value={contract.taxBasisPoints} />
-            <Field name="collectionFrequency" label="Collection frequency" required options={["monthly", "upfront"].map((value) => ({ value, label: titleCase(value) }))} />
+            <Field name="collectionFrequency" label="Collection frequency" required value={contract.collectionFrequency} options={["monthly", "upfront"].map((value) => ({ value, label: titleCase(value) }))} />
             <fieldset class="module-fieldset">
               <legend>Modules</legend>
               <p class="field-hint">Select the modules covered by this contract.</p>
@@ -315,8 +315,8 @@ export function ContractPage(props: { contract: ContractDetail; operatorEmail: s
           <div class="collapsible-panel-content">
           <p class="section-description">Licence status, renewal, suspension, and seat-limit controls. Changes create a new entitlement revision.</p>
           <form class="form-grid" method="post" action={`/operator/contracts/${contract.id}/entitlement-controls`}>
-            <Field name="status" label="Subscription status" required options={["active", "past_due", "suspended", "cancelled"].map((value) => ({ value, label: titleCase(value) }))} />
-            <Field name="renewalPolicy" label="Renewal policy" required options={["auto_renew", "non_renewing"].map((value) => ({ value, label: titleCase(value) }))} />
+            <Field name="status" label="Subscription status" required value={contract.status} options={["active", "past_due", "suspended", "cancelled"].map((value) => ({ value, label: titleCase(value) }))} />
+            <Field name="renewalPolicy" label="Renewal policy" required value={contract.renewalPolicy} options={["auto_renew", "non_renewing"].map((value) => ({ value, label: titleCase(value) }))} />
             <Field name="suspensionAt" label="Schedule suspension at" type="datetime-local" hint="Leave empty to clear a scheduled suspension." />
             <Field name="seatLimit" label="Seat limit" type="number" min={1} max={100000} step={1} value={contract.scheduledSeatLimit ?? contract.seatLimit} hint="A lower limit applies immediately; a higher limit requires the current heartbeat to confirm enough free seats." />
             <Field name="effectiveAt" label="Effective at (UTC)" type="datetime-local" hint="Optional future-dated change. Leave empty to apply now." />

@@ -15,6 +15,7 @@ import { getOpportunity } from "../actions"
 import { listPersonsWithAccount } from "@/app/(app)/funnel/actions"
 import { OpportunityForm } from "@/app/(app)/funnel/opportunity-form"
 import { listEntityAttachments } from "@/app/(app)/_shared/attachment-actions"
+import { listEntityTimeline } from "@/app/(app)/_shared/activity-actions"
 import { OpportunityDetailBody } from "./opportunity-detail-body"
 
 export default async function OpportunityDetailPage({
@@ -29,6 +30,7 @@ export default async function OpportunityDetailPage({
   const [
     ctx,
     detail,
+    activity,
     attachments,
     persons,
     projectNatures,
@@ -41,6 +43,7 @@ export default async function OpportunityDetailPage({
   ] = await Promise.all([
     requireContext(),
     getOpportunity(id),
+    listEntityTimeline("opportunity_container", id),
     listEntityAttachments("opportunity_container", id),
     listPersonsWithAccount(),
     listProjectNatures(),
@@ -84,6 +87,7 @@ export default async function OpportunityDetailPage({
       <PageBody>
         <OpportunityDetailBody
           detail={detail}
+          activity={activity}
           documents={documents}
           projectNatures={projectNatures}
           newFunnelButton={newFunnelButton}

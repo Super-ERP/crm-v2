@@ -303,6 +303,16 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
+  account: {
+    accountLinking: {
+      // Microsoft Entra is single-tenant and the callback still requires an
+      // exact email match. This permits pre-provisioned users (for example,
+      // automation identities) whose local record has not been email-verified
+      // to link their verified Entra account on first sign-in.
+      trustedProviders: ["microsoft-entra-id"],
+      requireLocalEmailVerified: false,
+    },
+  },
   advanced: {
     useSecureCookies: isProd,
   },

@@ -29,6 +29,8 @@ import { DocumentsSection } from "@/components/documents-section"
 import { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
 import { OpportunityAnalysis } from "@/components/opportunity-analysis"
+import { ActivityTimeline } from "@/components/activity/activity-timeline"
+import type { ActivityRow } from "@/app/(app)/_shared/activity-actions"
 import { formatMoney } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
@@ -50,6 +52,7 @@ function stageVariant(kind: string | null): "default" | "secondary" | "destructi
 
 export function OpportunityDetailBody({
   detail,
+  activity,
   documents,
   projectNatures,
   newFunnelButton,
@@ -58,6 +61,7 @@ export function OpportunityDetailBody({
   initialTab,
 }: {
   detail: OpportunityContainerDetail
+  activity: ActivityRow[]
   documents: React.ComponentProps<typeof DocumentsSection>["documents"]
   projectNatures: { code: string; name: string }[]
   newFunnelButton?: React.ReactNode
@@ -68,7 +72,7 @@ export function OpportunityDetailBody({
   /** Deep-linked tab (?tab=analysis from the stage-gate checklist). */
   initialTab?: string
 }) {
-  const TABS = ["funnels", "quotations", "products", "analysis", "remarks", "documents", "history"]
+  const TABS = ["funnels", "activity", "quotations", "products", "analysis", "remarks", "documents", "history"]
   const [tab, setTab] = React.useState(
     initialTab && TABS.includes(initialTab) ? initialTab : "funnels"
   )
@@ -330,6 +334,9 @@ export function OpportunityDetailBody({
                     {detail.funnels.length}
                   </Badge>
                 </TabsTrigger>
+                <TabsTrigger value="activity">
+                  Activity
+                </TabsTrigger>
                 <TabsTrigger value="quotations">
                   Quotations
                   <Badge variant="secondary" className="ml-1.5 tabular-nums">
@@ -362,6 +369,15 @@ export function OpportunityDetailBody({
                   toolbar={newFunnelButton}
                   emptyMessage="No funnels yet"
                   emptyDescription="Add a funnel under this opportunity to start the pipeline."
+                />
+              </TabsContent>
+
+              <TabsContent value="activity" className="mt-4">
+                <ActivityTimeline
+                  entityType="opportunity_container"
+                  entityId={o.id}
+                  items={activity}
+                  revalidate={revalidate}
                 />
               </TabsContent>
 

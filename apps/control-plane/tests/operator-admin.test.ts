@@ -401,6 +401,36 @@ describe("contract editing and entitlement controls form", () => {
     const html = await page.text()
     expect(html).toContain("Edit commercial terms")
     expect(html).toContain("Advanced subscription controls")
+    expect(html).toMatch(/<option value="past_due" selected="">Past Due<\/option>/)
+    expect(html).toMatch(/<option value="monthly" selected="">Monthly<\/option>/)
+    expect(html).toMatch(/<option value="non_renewing" selected="">Non Renewing<\/option>/)
+  })
+
+  it("allows a core-CRM-only contract to update its end date", async () => {
+    const response = await operatorRequest(`/operator/contracts/${contractId}/edit`, {
+      method: "POST",
+      form: {
+        planId: "plan-basic",
+        status: "past_due",
+        startsAt: "2026-08-05",
+        endsAt: "2026-12-31",
+        seatLimit: "3",
+        monthlySeatPriceCents: "30000",
+        taxBasisPoints: "0",
+        collectionFrequency: "monthly",
+      },
+    })
+    expect(response.status).toBe(303)
+
+    const modules = await env.CONTROL_DB.prepare(
+      "SELECT COUNT(*) AS count FROM contract_modules WHERE contract_id = ?",
+    ).bind(contractId).first<{ count: number }>()
+    expect(modules?.count).toBe(0)
+
+    const contract = await env.CONTROL_DB.prepare(
+      "SELECT ends_at FROM contracts WHERE id = ?",
+    ).bind(contractId).first<{ ends_at: string }>()
+    expect(contract?.ends_at).toBe("2026-12-31")
   })
 
   it("allows a core-CRM-only contract to update its end date", async () => {

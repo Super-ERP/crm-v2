@@ -101,7 +101,6 @@ function CustomerAndMeta({ doc }: { doc: QuotationDocument }) {
           <dt>Attn:</dt><dd>{doc.contact?.name ?? "—"}</dd>
           <dt>Tel:</dt><dd>{doc.contact?.phone ?? "—"}</dd>
           <dt>Email:</dt><dd>{doc.contact?.email ?? "—"}</dd>
-          <dt>Project:</dt><dd>{doc.projectName || "—"}</dd>
         </dl>
       </div>
       <dl className="py-1">

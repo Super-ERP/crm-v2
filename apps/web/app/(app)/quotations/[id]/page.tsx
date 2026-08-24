@@ -8,7 +8,12 @@ import { tenantSettings } from "@/db/schema"
 import { listTaxOptions, listProjectNatures, listProductOptions } from "@/lib/lookups"
 import { PageBody } from "@/components/page-header"
 import { listEntityAttachments } from "@/app/(app)/_shared/attachment-actions"
-import { getQuotation, getProjectForQuotation, getQuotationFormMeta } from "../actions"
+import {
+  getQuotation,
+  getQuotationDocument,
+  getProjectForQuotation,
+  getQuotationFormMeta,
+} from "../actions"
 import { QuotationForm } from "../quotation-form"
 
 async function getTaxInclusive(): Promise<boolean> {
@@ -41,6 +46,7 @@ export default async function QuotationDetailPage({
     ctx,
     modules,
     formMeta,
+    preview,
   ] = await Promise.all([
     listTaxOptions(),
     getTaxInclusive(),
@@ -51,6 +57,7 @@ export default async function QuotationDetailPage({
     requireContext(),
     getEntitledModuleMap(),
     getQuotationFormMeta(detail.quotation.funnelId),
+    getQuotationDocument(id),
   ])
 
   const perms = {
@@ -69,6 +76,7 @@ export default async function QuotationDetailPage({
       <PageBody>
         <QuotationForm
           detail={detail}
+          preview={preview}
           taxOptions={taxOptions}
           taxInclusive={taxInclusive}
           projectNatures={projectNatures}
