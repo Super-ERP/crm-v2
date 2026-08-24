@@ -142,6 +142,8 @@ export type QuotationDocument = {
     bankDetails: string | null
     quoteFooter: string | null
     hasLogo: boolean
+    /** Opaque cache-busting token for the tenant logo. */
+    logoVersion?: string
   }
   account: {
     name: string
@@ -337,6 +339,7 @@ export async function getQuotationDocument(
         bankDetails: profile?.bankDetails ?? null,
         quoteFooter: profile?.quoteFooter ?? null,
         hasLogo: !!profile?.logoStorageKey,
+        logoVersion: profile?.logoStorageKey?.split("/").pop() ?? "",
       },
       account,
       contact,

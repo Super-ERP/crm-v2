@@ -120,6 +120,8 @@ export type TenantSettingsView = {
   companyProfile: CompanyProfile
   /** True when a logo has been uploaded (served at /api/tenant-logo). */
   hasLogo: boolean
+  /** Opaque cache-busting token for the active tenant's logo. */
+  logoVersion?: string
   /** Subscription / licensing fields (seat licensing managed manually). */
   subscriptionPlan: string
   subscriptionStatus: "active" | "trial" | "paused" | "expired" | "cancelled"
@@ -330,6 +332,7 @@ function toView(
       quoteFooter: row.quoteFooter ?? "",
     },
     hasLogo: !!row.logoStorageKey,
+    logoVersion: row.logoStorageKey?.split("/").pop() ?? "",
     subscriptionPlan: row.subscriptionPlan ?? "Starter",
     subscriptionStatus: (row.subscriptionStatus as
       | "active"

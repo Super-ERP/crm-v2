@@ -56,7 +56,7 @@ function templateContext(doc: QuotationDocument) {
     companyPhone: formatMalaysianPhone(doc.company.phone),
     companyEmail: doc.company.email ?? "",
     companyWebsite: doc.company.website ?? "",
-    logoUrl: "/api/tenant-logo",
+    logoUrl: `/api/tenant-logo?v=${encodeURIComponent(doc.company.logoVersion ?? "none")}`,
     quoteNumber: doc.quotation.quoteNumber,
     quoteDate: formatQuotationDate(doc.quotation.quoteDate ?? doc.quotation.createdAt),
     validUntil: formatQuotationDate(doc.quotation.validUntil),
