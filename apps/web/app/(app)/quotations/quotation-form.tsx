@@ -1329,13 +1329,6 @@ export function QuotationForm({
                       },
                     ]
                   : []),
-                project
-                  ? {
-                      kind: "project" as const,
-                      label: project.projectCode,
-                      href: `/projects/${project.id}`,
-                    }
-                  : { kind: "project" as const, label: "Projects", count: 0, href: "/projects" },
                 {
                   kind: "product" as const,
                   label: "Products",
