@@ -90,6 +90,7 @@ import {
   type QuotationDocument,
 } from "./actions"
 import { EntityQuotationDocument } from "./[id]/preview/entity-quotation-document"
+import { PrintButton } from "./[id]/preview/print-button"
 
 const schema = z.object({
   taxSettingId: z.string(),
@@ -1372,21 +1373,7 @@ export function QuotationForm({
           <p className="text-sm text-muted-foreground">
             This is how your quotation prints as a PDF.
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link
-                href={`/quotation-preview/${quotation.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            }
-          >
-            <PrinterIcon className="size-4" />
-            Open / Print PDF
-          </Button>
+          <PrintButton quotationId={quotation.id} quoteNumber={quotation.quoteNumber} />
         </div>
 
         {/* PDF-style A4 document floating on a desk background. */}
