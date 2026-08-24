@@ -72,6 +72,7 @@ import {
 } from "@/lib/quotation-content"
 import { quotationActionsFor } from "@/lib/quotation-transitions"
 import { canCreateQuotationRevision } from "@/lib/quotation-revision-policy"
+import { resolveQuotationPdfTemplate } from "@/lib/quotation-pdf-template"
 import {
   updateQuotation,
   createQuotationRevision,
@@ -329,9 +330,19 @@ export function QuotationForm({
   const lineTotalAt = (i: number): number | string =>
     isDraft ? totals.lines[i]?.lineTotal ?? 0 : lines[i]?.lineTotal ?? 0
 
+  const resolvedEntityTemplate = preview
+    ? resolveQuotationPdfTemplate({
+        accountTemplateCode: preview.accountQuotationTemplateCode,
+        rawTemplateCode: preview.resolvedTemplateCode,
+        entityCode: preview.entityCode,
+        entitySlug: preview.entitySlug,
+        entityName: preview.entityName,
+        legacyKey: preview.pdfTemplateKey,
+      })
+    : "default"
   const entityTemplate =
-    preview?.resolvedTemplateCode === "qar" || preview?.resolvedTemplateCode === "cc"
-      ? preview.resolvedTemplateCode
+    resolvedEntityTemplate === "qar" || resolvedEntityTemplate === "cc"
+      ? resolvedEntityTemplate
       : null
   const liveEntityPreview = preview && isDraft
     ? {
