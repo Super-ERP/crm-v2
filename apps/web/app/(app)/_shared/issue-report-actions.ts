@@ -46,6 +46,8 @@ export async function reportIssue(
       "---",
       `Reported by: ${ctx.userName} <${ctx.userEmail}>`,
       `Organization ID: ${ctx.tenantId}`,
+      `Submitted at: ${new Date().toISOString()}`,
+      "Status: Open",
     ].join("\n")
 
     const issue = await createGithubIssue({
