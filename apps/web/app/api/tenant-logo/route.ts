@@ -40,8 +40,10 @@ export async function GET() {
     headers: {
       "Content-Type": row.contentType || "image/png",
       "Content-Length": String(bytes.byteLength),
-      // The key changes on every upload, so short private caching is safe.
-      "Cache-Control": "private, max-age=300",
+      // This URL is session/tenant-scoped. Never let a browser reuse one
+      // tenant's image after the active tenant changes.
+      "Cache-Control": "private, no-store",
+      Vary: "Cookie",
     },
   })
 }
