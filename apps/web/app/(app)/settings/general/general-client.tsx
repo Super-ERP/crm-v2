@@ -441,7 +441,7 @@ function GeneralForm({
           >
             Reset
           </Button>
-          <Button type="submit" disabled={isPending || !form.formState.isDirty}>
+          <Button type="submit" disabled={isPending}>
             {isPending ? "Saving…" : "Save changes"}
           </Button>
         </div>
