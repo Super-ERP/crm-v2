@@ -86,7 +86,9 @@ import {
   deleteQuotation,
   type QuotationContactOption,
   type QuotationDetail,
+  type QuotationDocument,
 } from "./actions"
+import { EntityQuotationDocument } from "./[id]/preview/entity-quotation-document"
 
 const schema = z.object({
   taxSettingId: z.string(),
@@ -134,6 +136,7 @@ const ALL_QUOTATION_PERMS: QuotationPerms = {
 
 export function QuotationForm({
   detail,
+  preview,
   taxOptions,
   taxInclusive,
   projectNatures = [],
@@ -144,6 +147,7 @@ export function QuotationForm({
   perms = ALL_QUOTATION_PERMS,
 }: {
   detail: QuotationDetail
+  preview?: QuotationDocument | null
   taxOptions: TaxOption[]
   taxInclusive: boolean
   /** Tenant project-nature picklist; empty hides the picker. */
@@ -278,6 +282,10 @@ export function QuotationForm({
   // Live totals: watch lines + tax selection and recompute with the shared formula.
   const watchedLines = useWatch({ control: form.control, name: "lines" })
   const watchedTaxId = useWatch({ control: form.control, name: "taxSettingId" })
+  const watchedValidUntil = useWatch({ control: form.control, name: "validUntil" })
+  const watchedNotes = useWatch({ control: form.control, name: "notes" })
+  const watchedDelivery = useWatch({ control: form.control, name: "delivery" })
+  const watchedPaymentTerm = useWatch({ control: form.control, name: "paymentTerm" })
   const watchedHeaderDiscount = useWatch({
     control: form.control,
     name: "headerDiscount",
@@ -320,6 +328,36 @@ export function QuotationForm({
       }
   const lineTotalAt = (i: number): number | string =>
     isDraft ? totals.lines[i]?.lineTotal ?? 0 : lines[i]?.lineTotal ?? 0
+
+  const entityTemplate =
+    preview?.resolvedTemplateCode === "qar" || preview?.resolvedTemplateCode === "cc"
+      ? preview.resolvedTemplateCode
+      : null
+  const liveEntityPreview = preview && isDraft
+    ? {
+        ...preview,
+        quotation: {
+          ...preview.quotation,
+          validUntil: watchedValidUntil || null,
+          notes: watchedNotes || null,
+          delivery: watchedDelivery || null,
+          paymentTerm: watchedPaymentTerm || null,
+          taxInclusive,
+          subtotal: String(totals.subtotal),
+          discountTotal: String(totals.discountTotal),
+          taxTotal: String(totals.taxTotal),
+          total: String(totals.total),
+        },
+        lines: (watchedLines ?? []).map((line, index) => ({
+          ...(preview.lines[index] ?? lines[index]),
+          ...line,
+          lineSubtotal: String(totals.lines[index]?.lineSubtotal ?? 0),
+          lineTax: String(totals.lines[index]?.lineTax ?? 0),
+          lineTotal: String(totals.lines[index]?.lineTotal ?? 0),
+          sku: null,
+        })),
+      }
+    : preview
   // A draft tracks the live tenant flag; a frozen quote shows the value snapshot
   // onto it at create/send time, so the label never drifts after a settings flip.
   const labelTaxInclusive = isDraft ? taxInclusive : quotation.taxInclusive
@@ -1342,7 +1380,9 @@ export function QuotationForm({
 
         {/* PDF-style A4 document floating on a desk background. */}
         <div className="flex justify-center rounded-lg bg-muted/40 p-4 sm:p-6">
-          <div className="w-[210mm] max-w-full min-h-[297mm] overflow-hidden rounded-sm bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
+          {liveEntityPreview && entityTemplate ? (
+            <EntityQuotationDocument doc={liveEntityPreview} template={entityTemplate} />
+          ) : <div className="w-[210mm] max-w-full min-h-[297mm] overflow-hidden rounded-sm bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
             <div className="h-2 w-full bg-red-600" />
             <div className="grid gap-6 p-[14mm]">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 pb-5">
@@ -1463,7 +1503,7 @@ export function QuotationForm({
               </div>
             ) : null}
             </div>
-          </div>
+          </div>}
         </div>
       </TabsContent>
     </Tabs>
