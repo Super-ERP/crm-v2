@@ -7,6 +7,7 @@ export const activityEntityType = pgEnum("activity_entity_type", [
   "person",
   "lead",
   "opportunity",
+  "opportunity_container",
   "project",
   "finance_doc",
 ])

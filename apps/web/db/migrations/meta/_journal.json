@@ -610,6 +610,13 @@
 			"when": 1786975210000,
 			"tag": "0086_stage_transition_approvals",
 			"breakpoints": true
+		},
+		{
+			"idx": 87,
+			"version": "7",
+			"when": 1787549481000,
+			"tag": "0087_opportunity_container_activity",
+			"breakpoints": true
 		}
 	]
 }

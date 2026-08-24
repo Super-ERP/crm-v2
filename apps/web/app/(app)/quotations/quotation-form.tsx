@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, Trash2, HelpCircleIcon, PrinterIcon } from "lucide-react"
+import { Plus, Trash2, HelpCircleIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -72,6 +72,7 @@ import {
 } from "@/lib/quotation-content"
 import { quotationActionsFor } from "@/lib/quotation-transitions"
 import { canCreateQuotationRevision } from "@/lib/quotation-revision-policy"
+import { resolveQuotationPdfTemplate } from "@/lib/quotation-pdf-template"
 import {
   updateQuotation,
   createQuotationRevision,
@@ -86,7 +87,10 @@ import {
   deleteQuotation,
   type QuotationContactOption,
   type QuotationDetail,
+  type QuotationDocument,
 } from "./actions"
+import { EntityQuotationDocument } from "./[id]/preview/entity-quotation-document"
+import { PrintButton } from "./[id]/preview/print-button"
 
 const schema = z.object({
   taxSettingId: z.string(),
@@ -134,6 +138,7 @@ const ALL_QUOTATION_PERMS: QuotationPerms = {
 
 export function QuotationForm({
   detail,
+  preview,
   taxOptions,
   taxInclusive,
   projectNatures = [],
@@ -144,6 +149,7 @@ export function QuotationForm({
   perms = ALL_QUOTATION_PERMS,
 }: {
   detail: QuotationDetail
+  preview?: QuotationDocument | null
   taxOptions: TaxOption[]
   taxInclusive: boolean
   /** Tenant project-nature picklist; empty hides the picker. */
@@ -278,6 +284,10 @@ export function QuotationForm({
   // Live totals: watch lines + tax selection and recompute with the shared formula.
   const watchedLines = useWatch({ control: form.control, name: "lines" })
   const watchedTaxId = useWatch({ control: form.control, name: "taxSettingId" })
+  const watchedValidUntil = useWatch({ control: form.control, name: "validUntil" })
+  const watchedNotes = useWatch({ control: form.control, name: "notes" })
+  const watchedDelivery = useWatch({ control: form.control, name: "delivery" })
+  const watchedPaymentTerm = useWatch({ control: form.control, name: "paymentTerm" })
   const watchedHeaderDiscount = useWatch({
     control: form.control,
     name: "headerDiscount",
@@ -320,6 +330,46 @@ export function QuotationForm({
       }
   const lineTotalAt = (i: number): number | string =>
     isDraft ? totals.lines[i]?.lineTotal ?? 0 : lines[i]?.lineTotal ?? 0
+
+  const resolvedEntityTemplate = preview
+    ? resolveQuotationPdfTemplate({
+        accountTemplateCode: preview.accountQuotationTemplateCode,
+        rawTemplateCode: preview.resolvedTemplateCode,
+        entityCode: preview.entityCode,
+        entitySlug: preview.entitySlug,
+        entityName: preview.entityName,
+        legacyKey: preview.pdfTemplateKey,
+      })
+    : "default"
+  const entityTemplate =
+    resolvedEntityTemplate === "qar" || resolvedEntityTemplate === "cc"
+      ? resolvedEntityTemplate
+      : null
+  const liveEntityPreview = preview && isDraft
+    ? {
+        ...preview,
+        quotation: {
+          ...preview.quotation,
+          validUntil: watchedValidUntil || null,
+          notes: watchedNotes || null,
+          delivery: watchedDelivery || null,
+          paymentTerm: watchedPaymentTerm || null,
+          taxInclusive,
+          subtotal: String(totals.subtotal),
+          discountTotal: String(totals.discountTotal),
+          taxTotal: String(totals.taxTotal),
+          total: String(totals.total),
+        },
+        lines: (watchedLines ?? []).map((line, index) => ({
+          ...(preview.lines[index] ?? lines[index]),
+          ...line,
+          lineSubtotal: String(totals.lines[index]?.lineSubtotal ?? 0),
+          lineTax: String(totals.lines[index]?.lineTax ?? 0),
+          lineTotal: String(totals.lines[index]?.lineTotal ?? 0),
+          sku: null,
+        })),
+      }
+    : preview
   // A draft tracks the live tenant flag; a frozen quote shows the value snapshot
   // onto it at create/send time, so the label never drifts after a settings flip.
   const labelTaxInclusive = isDraft ? taxInclusive : quotation.taxInclusive
@@ -1279,13 +1329,6 @@ export function QuotationForm({
                       },
                     ]
                   : []),
-                project
-                  ? {
-                      kind: "project" as const,
-                      label: project.projectCode,
-                      href: `/projects/${project.id}`,
-                    }
-                  : { kind: "project" as const, label: "Projects", count: 0, href: "/projects" },
                 {
                   kind: "product" as const,
                   label: "Products",
@@ -1323,32 +1366,15 @@ export function QuotationForm({
           <p className="text-sm text-muted-foreground">
             This is how your quotation prints as a PDF.
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            nativeButton={false}
-            render={
-              <Link
-                href={`/quotation-preview/${quotation.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              />
-            }
-          >
-            <PrinterIcon className="size-4" />
-            Open / Print PDF
-          </Button>
+          <PrintButton quotationId={quotation.id} quoteNumber={quotation.quoteNumber} />
         </div>
 
-        <iframe
-          title={`${quotation.quoteNumber} quotation preview`}
-          src={`/quotation-preview/${quotation.id}`}
-          className="h-[780px] w-full rounded-lg border bg-muted/40"
-        />
-
         {/* PDF-style A4 document floating on a desk background. */}
-        <div className="hidden flex justify-center rounded-lg bg-muted/40 p-4 sm:p-6">
-          <div className="w-[210mm] max-w-full min-h-[297mm] overflow-hidden rounded-sm bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
+        <div className="flex justify-center rounded-lg bg-muted/40 p-4 sm:p-6">
+          {liveEntityPreview && entityTemplate ? (
+            <EntityQuotationDocument doc={liveEntityPreview} template={entityTemplate} />
+          ) : (
+            <div className="w-[210mm] max-w-full min-h-[297mm] overflow-hidden rounded-sm bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">
             <div className="h-2 w-full bg-red-600" />
             <div className="grid gap-6 p-[14mm]">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-200 pb-5">
@@ -1469,7 +1495,8 @@ export function QuotationForm({
               </div>
             ) : null}
             </div>
-          </div>
+            </div>
+          )}
         </div>
       </TabsContent>
     </Tabs>
