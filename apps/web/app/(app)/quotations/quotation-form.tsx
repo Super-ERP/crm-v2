@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, Trash2, HelpCircleIcon, PrinterIcon } from "lucide-react"
+import { Plus, Trash2, HelpCircleIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
