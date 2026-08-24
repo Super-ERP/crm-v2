@@ -1,6 +1,7 @@
 import type { QuotationDocument } from "../../actions"
 import type { QuotationTemplateSpec } from "@/lib/quotation-template-registry"
 import { renderQuotationTemplate } from "@/lib/quotation-template-renderer"
+import { formatMalaysianPhone } from "@/lib/format"
 
 function formatQuotationDate(value: Date | string | null | undefined): string {
   if (!value) return "—"
@@ -19,23 +20,6 @@ function formatQuotationMoney(value: string | number | null | undefined): string
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(amount) ? amount : 0)
-}
-
-function formatMalaysianPhone(value: string | null | undefined): string {
-  const raw = value?.trim() ?? ""
-  if (!raw) return ""
-  const digits = raw.replace(/[^0-9]/g, "")
-  if (!digits) return raw
-
-  const international = digits.startsWith("60") ? digits : `60${digits.replace(/^0/, "")}`
-  const national = international.slice(2)
-  if (national.startsWith("3") && national.length === 9) {
-    return `+603-${national.slice(1, 5)} ${national.slice(5)}`
-  }
-  if (national.startsWith("1") && national.length >= 9) {
-    return `+60${national.slice(0, 2)} ${national.slice(2, 5)} ${national.slice(5)}`
-  }
-  return `+${international}`
 }
 
 function customerAddress(doc: QuotationDocument): string {
