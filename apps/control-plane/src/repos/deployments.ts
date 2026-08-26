@@ -366,7 +366,7 @@ export async function recordHeartbeat(
         "INSERT INTO deployment_request_nonces (deployment_key_id, nonce_digest, expires_at, created_at) VALUES (?, ?, ?, ?)",
       ).bind(input.key.id, input.nonceDigest, input.nonceExpiresAt, input.observedAt),
       database.prepare(
-        "INSERT INTO heartbeat_rollups (id, deployment_id, observed_at, occupied_seats, application_version, health_status, client_timestamp, image_digest, entitlement_version, configuration_version, active_user_count, reserved_invitation_count, enabled_module_ids_json, migration_version, last_successful_backup_at, last_restore_test_at, agent_version, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO heartbeat_rollups (id, deployment_id, observed_at, occupied_seats, application_version, health_status, client_timestamp, image_digest, entitlement_version, configuration_version, active_user_count, reserved_invitation_count, enabled_module_ids_json, migration_version, last_successful_backup_at, last_restore_test_at, agent_version, database_configuration_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       ).bind(
         rollupId,
         input.heartbeat.deploymentId,
@@ -385,6 +385,7 @@ export async function recordHeartbeat(
         input.heartbeat.lastSuccessfulBackupAt,
         input.heartbeat.lastRestoreTestAt,
         input.heartbeat.agentVersion,
+        input.heartbeat.databaseConfiguration === null ? null : JSON.stringify(input.heartbeat.databaseConfiguration),
         input.observedAt,
       ),
       audit.statement,

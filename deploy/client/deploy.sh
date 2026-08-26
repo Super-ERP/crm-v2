@@ -133,7 +133,22 @@ assert_secure_file() {
   [ -f "$secure_path" ] || fail "$secure_label not found: $secure_path"
   [ -r "$secure_path" ] || fail "$secure_label is not readable: $secure_path"
   [ "$(stat_uid "$secure_path")" = "$(id -u)" ] || fail "$secure_label must be owned by the deployment user"
-  [ "$(stat_mode "$secure_path")" = 600 ] || fail "$secure_label must have mode 0600"
+  secure_mode=$(stat_mode "$secure_path")
+  if [ "$secure_mode" = 600 ]; then
+    return
+  fi
+  if [ "$secure_mode" = 660 ] && command -v getfacl >/dev/null 2>&1 &&
+    getfacl -cp "$secure_path" | grep -qx 'user:10001:rw-' &&
+    getfacl -cp "$secure_path" | grep -qx 'group::---' &&
+    getfacl -cp "$secure_path" | grep -qx 'mask::rw-' &&
+    getfacl -cp "$secure_path" | grep -qx 'other::---'; then
+    secure_directory=$(dirname "$secure_path")
+    [ "$(stat_mode "$secure_directory")" = 710 ] || fail "$secure_label parent must have mode 0710 when portal editing is enabled"
+    getfacl -cp "$secure_directory" | grep -qx 'user:10001:--x' || fail "$secure_label parent ACL is invalid"
+    getfacl -cp "$secure_directory" | grep -qx 'mask::--x' || fail "$secure_label parent ACL mask is invalid"
+    return
+  fi
+  fail "$secure_label must have mode 0600, or the exact portal-edit ACL"
 }
 
 assert_secure_directory() {

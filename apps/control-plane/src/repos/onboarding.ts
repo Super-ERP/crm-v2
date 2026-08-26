@@ -94,6 +94,16 @@ export interface DeploymentWorkspace {
     lastSuccessfulBackupAt: string | null
     lastRestoreTestAt: string | null
     agentVersion: string | null
+    databaseConfiguration: {
+      databaseName: string | null
+      hostPort: number | null
+      containerHost: "db"
+      containerPort: 5432
+      applicationUser: "crm_app"
+      administratorUser: "postgres"
+      applicationPasswordConfigured: boolean
+      administratorPasswordConfigured: boolean
+    } | null
   } | null
   commandHistory: CommandHistoryItem[]
   recentEntitlements: EntitlementSummary[]
@@ -245,7 +255,7 @@ export async function getDeploymentWorkspace(
       issued_at: string
     }>(),
     database.prepare(
-      "SELECT observed_at, health_status, application_version, occupied_seats, entitlement_version, configuration_version, image_digest, migration_version, last_successful_backup_at, last_restore_test_at, agent_version FROM heartbeat_rollups WHERE deployment_id = ? ORDER BY observed_at DESC, id DESC LIMIT 1",
+      "SELECT observed_at, health_status, application_version, occupied_seats, entitlement_version, configuration_version, image_digest, migration_version, last_successful_backup_at, last_restore_test_at, agent_version, database_configuration_json FROM heartbeat_rollups WHERE deployment_id = ? ORDER BY observed_at DESC, id DESC LIMIT 1",
     ).bind(deploymentId).first<{
       observed_at: string
       health_status: string
@@ -258,6 +268,7 @@ export async function getDeploymentWorkspace(
       last_successful_backup_at: string | null
       last_restore_test_at: string | null
       agent_version: string | null
+      database_configuration_json: string | null
     }>(),
     database.prepare(
       "SELECT id, action, outcome, created_at FROM operator_audit_log WHERE target_type = 'deployment' AND target_id = ? ORDER BY created_at DESC, id DESC LIMIT ?",
@@ -307,6 +318,11 @@ export async function getDeploymentWorkspace(
     lastSuccessfulBackupAt: heartbeat.last_successful_backup_at,
     lastRestoreTestAt: heartbeat.last_restore_test_at,
     agentVersion: heartbeat.agent_version,
+    databaseConfiguration: (() => {
+      if (heartbeat.database_configuration_json === null) return null
+      try { return JSON.parse(heartbeat.database_configuration_json) }
+      catch { return null }
+    })(),
   }
   const scheduledContract = schedule === null
     ? undefined

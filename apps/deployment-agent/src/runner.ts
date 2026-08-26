@@ -2,6 +2,7 @@ import type { DeploymentHeartbeat } from "@crm/control-protocol/heartbeat"
 
 import { AgentRequestError, createDeploymentClient, type ClaimedCommand } from "./client.js"
 import type { AgentConfig } from "./config.js"
+import { readDatabaseConfiguration, updateEnvironment } from "./environment.js"
 import {
   assertIdentityMatches,
   generateIdentity,
@@ -205,6 +206,24 @@ export function createDeploymentAgent(input: {
     if (kind === "echo") {
       return { ...ackTemplate, output: { received: "echo" } }
     }
+    if (kind === "environment_update") {
+      if (!input.config.environmentFilePath) {
+        return { ...ackTemplate, status: "error", outcome: "failed_dependencies", errorCode: "environment_file_unavailable", errorMessage: null }
+      }
+      try {
+        const result = await updateEnvironment(
+          input.config.environmentFilePath,
+          envelopeRecord.envelope.payload.payload.updates,
+        )
+        return {
+          ...ackTemplate,
+          output: { changedKeys: result.changedKeys, databaseConfiguration: result.configuration, requiresServiceReapply: true },
+        }
+      } catch (error) {
+        logger.error(`deployment_environment_update_failed code=${error instanceof Error ? error.message : "unknown"}`)
+        return { ...ackTemplate, status: "error", outcome: "failed_dependencies", errorCode: "environment_update_failed", errorMessage: null }
+      }
+    }
     return {
       ...ackTemplate,
       status: "error",
@@ -250,6 +269,9 @@ export function createDeploymentAgent(input: {
       lastSuccessfulBackupAt: null,
       lastRestoreTestAt: null,
       agentVersion: input.config.agentVersion,
+      databaseConfiguration: input.config.environmentFilePath
+        ? await readDatabaseConfiguration(input.config.environmentFilePath).catch(() => null)
+        : null,
     }
     const response = await client.heartbeat(identity, heartbeat, signal)
     runtime = {
