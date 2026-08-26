@@ -130,8 +130,10 @@ services:
       AGENT_VERSION: ${AGENT_VERSION:?AGENT_VERSION must be set}
       IMAGE_DIGEST: ${IMAGE_DIGEST:?IMAGE_DIGEST is derived by deploy.sh}
       MIGRATION_VERSION: ${MIGRATION_VERSION:?MIGRATION_VERSION must be set}
+      ENV_FILE_PATH: /etc/quandatics-client/.env
     volumes:
       - agent-state:/var/lib/crm-agent
+      - ./.env:/etc/quandatics-client/.env:rw
     depends_on:
       web:
         condition: service_healthy

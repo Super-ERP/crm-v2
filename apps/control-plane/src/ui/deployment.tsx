@@ -176,6 +176,31 @@ export function DeploymentPage(props: { workspace: DeploymentWorkspace; operator
         { term: "Environment", details: titleCase(workspace.deployment.environment) },
         { term: "Registration", details: <StatusBadge tone={statusTone(registrationStatus.toLowerCase().replaceAll(" ", "_"))}>{registrationStatus}</StatusBadge> },
       ]} />
+      <section class="workspace-section" aria-labelledby="database-configuration-heading">
+        <h2 id="database-configuration-heading">On-premise database setup</h2>
+        <Card title="Connection and credential names">
+          {workspace.latestHeartbeat?.databaseConfiguration ? (
+            <>
+              <DataList items={[
+                { term: "Database", details: workspace.latestHeartbeat.databaseConfiguration.databaseName ?? "Not set" },
+                { term: "Application user", details: <code>{workspace.latestHeartbeat.databaseConfiguration.applicationUser}</code> },
+                { term: "Administrator user", details: <code>{workspace.latestHeartbeat.databaseConfiguration.administratorUser}</code> },
+                { term: "Container", details: <code>{workspace.latestHeartbeat.databaseConfiguration.containerHost}:{workspace.latestHeartbeat.databaseConfiguration.containerPort}</code> },
+                { term: "Host port", details: workspace.latestHeartbeat.databaseConfiguration.hostPort ?? "Not set" },
+                { term: "Application password", details: workspace.latestHeartbeat.databaseConfiguration.applicationPasswordConfigured ? "Configured (masked)" : "Missing" },
+                { term: "Administrator password", details: workspace.latestHeartbeat.databaseConfiguration.administratorPasswordConfigured ? "Configured (masked)" : "Missing" },
+              ]} />
+              <p class="field-hint">Passwords are never displayed or stored in portal command history. The variable names are <code>CRM_APP_PASSWORD</code> and <code>POSTGRES_PASSWORD</code>.</p>
+              <form method="post" action={`/operator/deployments/${workspace.deployment.id}/commands`} class="form-grid">
+                <input type="hidden" name="kind" value="environment_update" />
+                <Field label="Database name" name="DB_NAME" value={workspace.latestHeartbeat.databaseConfiguration.databaseName ?? ""} required />
+                <Field label="Host port" name="DB_HOST_PORT" type="number" min={1} max={65535} value={workspace.latestHeartbeat.databaseConfiguration.hostPort ?? ""} required />
+                <div><Button>Save database settings</Button><p class="field-hint">Writes the allowlisted settings to the on-premise <code>.env</code>. A service re-apply is required for runtime changes.</p></div>
+              </form>
+            </>
+          ) : <p class="field-hint">Waiting for a deployment heartbeat. Once the agent reports in, this panel shows the database name, users, ports, and masked password status.</p>}
+        </Card>
+      </section>
       {workspace.client.status !== "active" ? <p class="field-hint">Client is disabled. Enable it from the client record before continuing deployment setup.</p> : null}
       {workspace.deployment.status !== "active" ? <p class="field-hint">Deployment is disabled. Enable it from the lifecycle card below to continue.</p> : null}
       <details class="field-hint">

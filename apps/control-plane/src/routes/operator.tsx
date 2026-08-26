@@ -348,6 +348,13 @@ function commandPayload(data: MutationData, operator: { roles: ReadonlySet<strin
   if (kind === "diagnostics") {
     return CommandPayloadSchema.parse({ kind, includeLogs: false, maxLogBytes: 0, includeContainerStatus: true, requestedAt })
   }
+  if (kind === "environment_update") {
+    if (!operator.roles.has("vendor_owner")) throw forbidden("operator_role_forbidden")
+    const updates: Record<string, string> = {}
+    if (data.DB_NAME !== undefined && data.DB_NAME !== "") updates.DB_NAME = String(data.DB_NAME)
+    if (data.DB_HOST_PORT !== undefined && data.DB_HOST_PORT !== "") updates.DB_HOST_PORT = String(data.DB_HOST_PORT)
+    return CommandPayloadSchema.parse({ kind, updates, requestedAt })
+  }
   if (kind === "trigger_backup") {
     return CommandPayloadSchema.parse({ kind, requestedAt, artifactTag: String(data.artifactTag ?? "manual") })
   }

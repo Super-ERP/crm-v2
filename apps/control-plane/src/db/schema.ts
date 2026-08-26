@@ -348,6 +348,7 @@ export const heartbeatRollups = sqliteTable(
     lastSuccessfulBackupAt: text("last_successful_backup_at"),
     lastRestoreTestAt: text("last_restore_test_at"),
     agentVersion: text("agent_version"),
+    databaseConfigurationJson: text("database_configuration_json"),
     createdAt: text("created_at").notNull(),
   },
   (table) => [

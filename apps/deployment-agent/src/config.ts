@@ -25,6 +25,7 @@ const rawConfigSchema = z.object({
   IMAGE_DIGEST: z.string().regex(/^sha256:[a-f0-9]{64}$/),
   MIGRATION_VERSION: z.string().regex(migrationVersionPattern),
   ENTITLEMENT_POLL_MS: z.string().regex(/^[1-9][0-9]*$/).optional(),
+  ENV_FILE_PATH: z.string().startsWith("/").max(256).optional(),
 }).strict()
 
 export type AgentConfig = {
@@ -39,6 +40,7 @@ export type AgentConfig = {
   imageDigest: string
   migrationVersion: string
   entitlementPollMs?: number
+  environmentFilePath?: string
 }
 
 function parseBaseUrl(value: string, protocols: readonly string[]): string {
@@ -70,6 +72,7 @@ export function loadAgentConfig(environment: Record<string, string | undefined> 
       IMAGE_DIGEST: environment.IMAGE_DIGEST,
       MIGRATION_VERSION: environment.MIGRATION_VERSION,
       ENTITLEMENT_POLL_MS: environment.ENTITLEMENT_POLL_MS || undefined,
+      ENV_FILE_PATH: environment.ENV_FILE_PATH || undefined,
     })
     const controlPlaneUrl = parseBaseUrl(
       parsed.CONTROL_PLANE_URL,
@@ -91,6 +94,7 @@ export function loadAgentConfig(environment: Record<string, string | undefined> 
       imageDigest: parsed.IMAGE_DIGEST,
       migrationVersion: parsed.MIGRATION_VERSION,
       entitlementPollMs,
+      environmentFilePath: parsed.ENV_FILE_PATH,
     }
   } catch {
     throw new TypeError("Invalid deployment agent configuration")

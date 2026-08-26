@@ -14,6 +14,7 @@ const CommandIdSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]
 const VendorKeyIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/)
 const CommandKindSchema = z.enum([
   "echo",
+  "environment_update",
   "diagnostics",
   "trigger_backup",
   "verify_restore",
@@ -24,6 +25,14 @@ const CommandKindSchema = z.enum([
 
 const CommandPayloadEchoSchema = z.object({
   message: z.string().min(1).max(1024),
+}).strict()
+
+const CommandPayloadEnvironmentUpdateSchema = z.object({
+  updates: z.object({
+    DB_NAME: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_$]{0,62}$/).optional(),
+    DB_HOST_PORT: z.string().regex(/^[1-9][0-9]{0,4}$/).refine((value) => Number(value) <= 65535).optional(),
+  }).strict().refine((updates) => Object.keys(updates).length > 0),
+  requestedAt: IsoTimestampSchema,
 }).strict()
 
 const CommandPayloadDiagnosticsSchema = z.object({
@@ -55,6 +64,7 @@ const CommandPayloadLogStreamSchema = z.object({
 
 export const CommandPayloadSchema = z.discriminatedUnion("kind", [
   CommandPayloadEchoSchema.extend({ kind: z.literal("echo") }),
+  CommandPayloadEnvironmentUpdateSchema.extend({ kind: z.literal("environment_update") }),
   CommandPayloadDiagnosticsSchema.extend({ kind: z.literal("diagnostics") }),
   CommandPayloadTriggerBackupSchema.extend({ kind: z.literal("trigger_backup") }),
   CommandPayloadVerifyRestoreSchema.extend({ kind: z.literal("verify_restore") }),

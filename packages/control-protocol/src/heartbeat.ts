@@ -18,6 +18,17 @@ const CanonicalTimestampSchema = z
     }
   })
 
+const DatabaseConfigurationSchema = z.object({
+  databaseName: z.string().regex(/^[a-zA-Z_][a-zA-Z0-9_$]{0,62}$/).nullable(),
+  hostPort: z.number().int().min(1).max(65535).nullable(),
+  containerHost: z.literal("db"),
+  containerPort: z.literal(5432),
+  applicationUser: z.literal("crm_app"),
+  administratorUser: z.literal("postgres"),
+  applicationPasswordConfigured: z.boolean(),
+  administratorPasswordConfigured: z.boolean(),
+}).strict()
+
 export const DeploymentRegistrationSchema = z
   .object({
     installationToken: Base64Url32Schema,
@@ -56,6 +67,7 @@ export const DeploymentHeartbeatSchema = z
     lastSuccessfulBackupAt: CanonicalTimestampSchema.nullable(),
     lastRestoreTestAt: CanonicalTimestampSchema.nullable(),
     agentVersion: StrictSemverSchema,
+    databaseConfiguration: DatabaseConfigurationSchema.nullable().optional().default(null),
   })
   .strict()
 
