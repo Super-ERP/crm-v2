@@ -54,7 +54,7 @@ describe("EntityQuotationDocument", () => {
       createElement(EntityQuotationDocument, { doc, template: "cc" })
     )
 
-    expect(html).toContain('src="/api/tenant-logo"')
+    expect(html).toContain('src="/api/tenant-logo?v=none"')
     expect(html).toContain("Item")
     expect(html).toContain("SKU")
     expect(html).toContain("Subtotal")

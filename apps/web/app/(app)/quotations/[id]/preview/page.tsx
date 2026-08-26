@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 import { ArrowLeftIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { formatMoney, formatDate } from "@/lib/format"
+import { formatMoney, formatDate, formatMalaysianPhone } from "@/lib/format"
 import { getQuotationDocument } from "../../actions"
 import { PrintButton } from "./print-button"
 import { EntityQuotationDocument } from "./entity-quotation-document"
@@ -101,6 +101,7 @@ export default async function QuotationPreviewPage({
   const isDefaultTemplate = isDefaultPdfTemplate(template)
   const attentionName =
     contact?.name ?? account?.name ?? "—"
+  const logoUrl = `/api/tenant-logo?v=${encodeURIComponent(company.logoVersion ?? "none")}`
 
   if (quotationTemplate?.renderMode === "html" && quotationTemplate.htmlTemplate) {
     return (
@@ -163,7 +164,7 @@ export default async function QuotationPreviewPage({
               {company.hasLogo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src="/api/tenant-logo"
+                  src={logoUrl}
                   alt={entityName}
                   className="mb-2 h-12 max-w-52 object-contain object-left"
                 />
@@ -182,7 +183,7 @@ export default async function QuotationPreviewPage({
               {(company.phone || company.email || company.website) && (
                 <p className="mt-1 text-xs text-zinc-600">
                   {[
-                    company.phone ? `Tel: ${company.phone}` : null,
+                    company.phone ? `Tel: ${formatMalaysianPhone(company.phone)}` : null,
                     company.email,
                     company.website,
                   ]
@@ -228,7 +229,7 @@ export default async function QuotationPreviewPage({
                       </div>
                     ))}
                     {account.phone ? (
-                      <div className="text-zinc-600">Tel: {account.phone}</div>
+                      <div className="text-zinc-600">Tel: {formatMalaysianPhone(account.phone)}</div>
                     ) : null}
                   </div>
                 ) : (
@@ -246,7 +247,7 @@ export default async function QuotationPreviewPage({
                       <div className="text-zinc-600">{contact.email}</div>
                     ) : null}
                     {contact.phone ? (
-                      <div className="text-zinc-600">{contact.phone}</div>
+                      <div className="text-zinc-600">{formatMalaysianPhone(contact.phone)}</div>
                     ) : null}
                   </div>
                 ) : (
@@ -277,7 +278,7 @@ export default async function QuotationPreviewPage({
                     <div className="mt-1 text-slate-600">{contact.email}</div>
                   ) : null}
                   {contact?.phone ? (
-                    <div className="text-slate-600">{contact.phone}</div>
+                    <div className="text-slate-600">{formatMalaysianPhone(contact.phone)}</div>
                   ) : null}
                 </div>
               </div>

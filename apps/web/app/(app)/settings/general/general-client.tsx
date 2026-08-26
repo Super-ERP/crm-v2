@@ -461,10 +461,12 @@ function CompanyProfileCard({
   profile,
   hasLogo,
   defaultCountry,
+  logoKeyVersion,
 }: {
   profile: CompanyProfile
   hasLogo: boolean
   defaultCountry?: string
+  logoKeyVersion?: string
 }) {
   const router = useRouter()
   const [values, setValues] = React.useState<CompanyProfile>(profile)
@@ -542,7 +544,7 @@ function CompanyProfileCard({
             {hasLogo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`/api/tenant-logo?v=${logoVersion}`}
+                src={`/api/tenant-logo?v=${encodeURIComponent(`${logoKeyVersion ?? "none"}-${logoVersion}`)}`}
                 alt="Company logo"
                 className="h-12 max-w-40 rounded border bg-white object-contain p-1"
               />
@@ -665,6 +667,7 @@ export function GeneralClient({
       <CompanyProfileCard
         profile={settings.companyProfile}
         hasLogo={settings.hasLogo}
+        logoKeyVersion={settings.logoVersion}
         defaultCountry={settings.defaultCountry || "MY"}
       />
 

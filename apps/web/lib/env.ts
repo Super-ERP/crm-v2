@@ -38,6 +38,9 @@ export const env = {
   MICROSOFT_CLIENT_SECRET: read("MICROSOFT_CLIENT_SECRET"),
   MICROSOFT_TENANT_ID: read("MICROSOFT_TENANT_ID"),
 
+  // Server-only GitHub Issues token. Never expose this through NEXT_PUBLIC_*.
+  GITHUB_ISSUES_TOKEN: read("GITHUB_ISSUES_TOKEN"),
+
   // File storage
   STORAGE_DRIVER: (process.env.STORAGE_DRIVER ?? "local") as "local" | "s3",
   STORAGE_LOCAL_DIR: process.env.STORAGE_LOCAL_DIR ?? "./var/uploads",

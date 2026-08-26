@@ -6,6 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { TextSizeToggle } from "@/components/text-size-toggle"
 import { HeaderActions } from "@/components/command-palette"
+import { ReportIssueDialog } from "@/components/report-issue-dialog"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -67,6 +68,7 @@ export function SiteHeader({
         )}
         <div className="ml-auto flex items-center gap-2">
           <HeaderActions />
+          <ReportIssueDialog />
           <TextSizeToggle />
           <ThemeToggle />
         </div>

@@ -1,5 +1,6 @@
 import type { QuotationDocument } from "../../actions"
 import type { QuotationPdfTemplateKey } from "@/lib/quotation-pdf-template"
+import { formatMalaysianPhone } from "@/lib/format"
 
 type EntityTemplateKey = Exclude<QuotationPdfTemplateKey, "default">
 
@@ -52,13 +53,14 @@ function taxLabel(doc: QuotationDocument): string {
 }
 
 function CompanyHeader({ doc }: { doc: QuotationDocument }) {
+  const logoUrl = `/api/tenant-logo?v=${encodeURIComponent(doc.company.logoVersion ?? "none")}`
   return (
     <header className="grid grid-cols-[29%_1fr] items-start gap-6 pb-3">
       <div className="h-[24mm]">
         {doc.company.hasLogo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src="/api/tenant-logo"
+            src={logoUrl}
             alt={doc.entityName}
             className="h-[22mm] max-w-[55mm] object-contain object-left"
           />
@@ -71,7 +73,7 @@ function CompanyHeader({ doc }: { doc: QuotationDocument }) {
         </div>
         {doc.company.address ? <div className="whitespace-pre-line uppercase">{doc.company.address}</div> : null}
         <div>
-          {doc.company.phone ? `Tel: ${doc.company.phone}` : ""}
+          {doc.company.phone ? `Tel: ${formatMalaysianPhone(doc.company.phone)}` : ""}
           {doc.company.email ? `   Email: ${doc.company.email}` : ""}
         </div>
       </div>
@@ -99,7 +101,7 @@ function CustomerAndMeta({ doc }: { doc: QuotationDocument }) {
         {addresses.map((line) => <div key={line}>{line}</div>)}
         <dl className="absolute bottom-2 left-1 grid grid-cols-[30mm_1fr] gap-y-1">
           <dt>Attn:</dt><dd>{doc.contact?.name ?? "—"}</dd>
-          <dt>Tel:</dt><dd>{doc.contact?.phone ?? "—"}</dd>
+          <dt>Tel:</dt><dd>{doc.contact?.phone ? formatMalaysianPhone(doc.contact.phone) : "—"}</dd>
           <dt>Email:</dt><dd>{doc.contact?.email ?? "—"}</dd>
         </dl>
       </div>
