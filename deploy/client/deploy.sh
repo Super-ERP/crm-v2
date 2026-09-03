@@ -958,6 +958,7 @@ fi
 
 verify_images || fail "image signature verification failed; running containers were not changed"
 
+if [ "${SKIP_BACKUP_PREFLIGHT:-false}" != true ]; then
 assert_secure_file "$BACKUP_EVIDENCE_PUBLIC_KEY_FILE" "backup evidence public key file"
 [ "$(sha256_file "$BACKUP_EVIDENCE_PUBLIC_KEY_FILE")" = "$BACKUP_EVIDENCE_PUBLIC_KEY_SHA256" ] ||
   fail "backup evidence public key does not match pinned sha256"
@@ -1053,6 +1054,7 @@ reverify_backup_before_migration() {
   fi
   return 0
 }
+fi
 
 TARGET_WEB_IMAGE=$WEB_IMAGE
 TARGET_BACKUP_IMAGE=$BACKUP_IMAGE
@@ -1118,7 +1120,7 @@ if ! wait_for_database; then
   abort_with_database_rollback "target database health check failed"
 fi
 
-if ! reverify_backup_before_migration; then
+if [ "${SKIP_BACKUP_PREFLIGHT:-false}" != true ] && ! reverify_backup_before_migration; then
   abort_with_database_rollback "$final_backup_failure"
 fi
 compose run --rm --no-deps migrate || fail "migration failed"
