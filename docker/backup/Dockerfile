@@ -23,10 +23,10 @@ FROM tools-${TARGETARCH} AS tools
 
 FROM ${ALPINE_IMAGE}
 
-ARG POSTGRESQL_CLIENT_VERSION=17.10-r0
+ARG POSTGRESQL_CLIENT_VERSION=17.11-r0
 ARG AGE_VERSION=1.2.1-r15
 ARG CA_CERTIFICATES_VERSION=20260611-r0
-ARG LIBPQ_VERSION=18.4-r0
+ARG LIBPQ_VERSION=18.6-r0
 ARG LIBNCURSESW_VERSION=6.5_p20251123-r0
 ARG LZ4_LIBS_VERSION=1.10.0-r0
 ARG NCURSES_TERMINFO_BASE_VERSION=6.5_p20251123-r0
@@ -66,7 +66,7 @@ ENV HOME=/var/lib/backup \
 LABEL org.opencontainers.image.title="Quandatics encrypted backup runtime" \
   org.opencontainers.image.description="Source-free PostgreSQL backup, age encryption, and R2 upload runtime" \
   org.opencontainers.image.source="https://github.com/Super-ERP/crm-v2" \
-  com.quandatics.postgresql-client.version="17.10-r0" \
+  com.quandatics.postgresql-client.version="17.11-r0" \
   com.quandatics.age.version="1.2.1-r15" \
   com.quandatics.rclone.version="1.75.0"
 
