@@ -3,22 +3,10 @@ name: deploy-production
 on:
   workflow_dispatch:
     inputs:
-      operation:
-        description: Deploy a signed release or inspect protected release state
-        required: true
-        default: deploy
-        type: choice
-        options:
-          - deploy
-          - inspect
-          - prepare-backup
       release_tag:
         description: Signed strict SemVer release, for example v1.2.20
         required: true
         type: string
-  workflow_run:
-    workflows: [release-images]
-    types: [completed]
 
 permissions:
   actions: read
@@ -31,63 +19,17 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: self-hosted
     environment: production
     env:
       GH_TOKEN: ${{ github.token }}
       CLIENT_DIR: /home/internalops/quandatics-client
       RELEASE_TAG: ${{ inputs.release_tag }}
-      RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
     steps:
-      - name: Inspect protected release state
-        if: inputs.operation == 'inspect'
-        shell: bash
-        run: |
-          set -euo pipefail
-          [ -f "$CLIENT_DIR/.env" ] || { echo "protected production env is missing" >&2; exit 1; }
-
-          read_env_path() {
-            local key=$1 value
-            value="$(awk -F= -v key="$key" '$1 == key { sub(/^[^=]*=/, ""); print; found=1 } END { if (!found) exit 1 }' "$CLIENT_DIR/.env")"
-            case "$value" in /*) ;; *) echo "$key is not an absolute path" >&2; exit 1 ;; esac
-            printf '%s\n' "$value"
-          }
-          read_release_tag() {
-            local label=$1 file=$2 value
-            [ -f "$file" ] || { printf '%s=missing\n' "$label"; return; }
-            value="$(awk -F= '$1 == "RELEASE_TAG" { print $2; found=1 } END { if (!found) exit 1 }' "$file")"
-            [[ "$value" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "$label has an invalid release tag" >&2; exit 1; }
-            printf '%s=%s\n' "$label" "$value"
-          }
-
-          evidence_file="$(read_env_path BACKUP_EVIDENCE_FILE)"
-          record_file="$(read_env_path DEPLOYMENT_RECORD_FILE)"
-          printf 'TARGET_RELEASE_TAG=%s\n' "$RELEASE_TAG"
-          read_release_tag BACKUP_EVIDENCE_RELEASE_TAG "$evidence_file"
-          read_release_tag DEPLOYED_RELEASE_TAG "$record_file"
-          printf '%s\n' 'BACKUP_PRODUCER_CANDIDATES_BEGIN'
-          find "$CLIENT_DIR" /usr/local/bin /usr/local/sbin -maxdepth 3 -type f \
-            \( -iname '*backup*' -o -iname '*evidence*' \) -print 2>/dev/null | sort || true
-          systemctl list-unit-files --no-legend 2>/dev/null \
-            | awk 'tolower($1) ~ /(backup|evidence)/ { print $1 }' \
-            | sort -u || true
-          printf '%s\n' 'BACKUP_PRODUCER_CANDIDATES_END'
-
       - name: Download verified source-free release bundle
-        if: github.event_name == 'workflow_run' || inputs.operation == 'deploy'
         shell: bash
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = workflow_run ]; then
-            ARTIFACT_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}/artifacts?per_page=100")"
-            RELEASE_TAG="$(printf '%s' "$ARTIFACT_JSON" | jq -er '
-              [.artifacts[] | select(.expired == false and (.name | startswith("client-deployment-bundle-v"))) | .name]
-              | if length == 1 then .[0] else error("expected exactly one signed release bundle") end
-              | sub("^client-deployment-bundle-"; "")
-            ')"
-            echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
-          fi
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid release tag" >&2; exit 1; }
           WORKFLOW_IDENTITY="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release-images.yml@refs/heads/main"
           echo "WORKFLOW_IDENTITY=$WORKFLOW_IDENTITY" >> "$GITHUB_ENV"
@@ -96,10 +38,9 @@ jobs:
           ARTIFACT_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=client-deployment-bundle-${RELEASE_TAG}&per_page=100" \
             | jq -c '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last')"
           [ "$ARTIFACT_JSON" != "null" ] || { echo "signed release bundle not found" >&2; exit 1; }
-          if [ "$GITHUB_EVENT_NAME" != workflow_run ]; then
-            RELEASE_RUN_ID="$(printf '%s' "$ARTIFACT_JSON" | jq -er '.workflow_run.id')"
-            echo "RELEASE_RUN_ID=$RELEASE_RUN_ID" >> "$GITHUB_ENV"
-          fi
+          RELEASE_RUN_ID="$(printf '%s' "$ARTIFACT_JSON" | jq -er '.workflow_run.id')"
+          echo "RELEASE_RUN_ID=$RELEASE_RUN_ID" >> "$GITHUB_ENV"
+
           RELEASE_RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}")"
           printf '%s' "$RELEASE_RUN" | jq -e --arg tag "$RELEASE_TAG" '
             .conclusion == "success" and
@@ -125,8 +66,7 @@ jobs:
           tar -xzf "$TEMP_DIR/bundle/client-deployment-bundle.tar.gz" -C "$TEMP_DIR/verified"
 
           BUNDLE_DIR="$TEMP_DIR/verified/client"
-          [ -n "$BUNDLE_DIR" ] && [ -f "$BUNDLE_DIR/deploy.sh" ] || { echo "invalid release bundle" >&2; exit 1; }
-
+          [ -f "$BUNDLE_DIR/deploy.sh" ] || { echo "invalid release bundle" >&2; exit 1; }
           install -d -m 0700 "$CLIENT_DIR" "$CLIENT_DIR/ops"
           install -m 0700 "$BUNDLE_DIR"/*.sh "$CLIENT_DIR/"
           install -m 0700 "$BUNDLE_DIR"/ops/*.sh "$CLIENT_DIR/ops/"
@@ -134,7 +74,6 @@ jobs:
           install -m 0600 "$BUNDLE_DIR/release-manifest.json" "$CLIENT_DIR/release-manifest.json"
 
       - name: Apply manifest and deploy signed digests
-        if: github.event_name == 'workflow_run' || inputs.operation == 'deploy'
         env:
           SKIP_BACKUP_PREFLIGHT: "true"
         shell: bash

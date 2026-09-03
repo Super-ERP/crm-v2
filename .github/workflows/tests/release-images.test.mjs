@@ -214,6 +214,8 @@ test("release manifest records immutable provenance for all images", () => {
   const upload = findStep(manifestSteps, (step) => /actions\/upload-artifact@/.test(step.uses ?? ""), "missing manifest upload")
   assert.match(upload.with?.path ?? "", /release-manifest\.json/)
   assert.equal(upload.with?.["if-no-files-found"], "error")
+  assert.equal(workflow.jobs?.manifest?.permissions?.contents, "write")
+  assert.match(source, /gh release create "\$TARGET_REF" --verify-tag --generate-notes/)
 })
 
 test("all third-party actions use immutable commit pins", () => {

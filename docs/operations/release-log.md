@@ -1,7 +1,7 @@
 # Release log
 
-Signed immutable releases are recorded here as `release-images` runs complete.
-Entries are appended by `scripts/release-one-command.sh`.
+Signed immutable releases are recorded automatically in GitHub Releases after
+the `release-images` workflow completes.
 
 Documentation-only preparation, including operator-workflow updates, does not
 create a release-log entry or indicate a live deployment. Add an entry only
@@ -171,4 +171,3 @@ and resume forward; do not run destructive SQL rollback.
 - migrator_image: ghcr.io/super-erp/crm-migrator@sha256:c51818e7896d3222bc86bc83c435f2118db9ac717b86eeb6a35dbd39ee59fdd7
 - backup_image: ghcr.io/super-erp/crm-backup@sha256:78ec8a0a21c38740945ab10b18def42410feab4477b83bc810c968cf24bd82cf
 - agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:d37f1c6d08c0167509776f73970cd109c7ada4c98af177486c7359c30ae34104
-

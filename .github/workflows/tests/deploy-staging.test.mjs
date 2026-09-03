@@ -12,13 +12,15 @@ assert.match(workflow, /Reconcile retained staging database password/);
 assert.match(workflow, /ALTER ROLE postgres PASSWORD/);
 assert.match(workflow, /\^\[0-9a-f\]\{48\}\$/);
 
-assert.match(workflow, /workflows:\s*\[quality\]/);
+assert.match(workflow, /workflows:\s*\[release-images\]/);
 assert.match(workflow, /branches:\s*\[main\]/);
 assert.doesNotMatch(workflow, /branches:\s*\[staging\]/);
-assert.match(workflow, /gh api --paginate/);
-assert.match(workflow, /commits\/\$\{DEPLOY_SHA\}/);
-assert.match(workflow, /WEB_IMAGE: ghcr\.io\/super-erp\/crm-web:sha-/);
-assert.match(workflow, /MIGRATOR_IMAGE: ghcr\.io\/super-erp\/crm-migrator:sha-/);
+assert.match(workflow, /release-manifest-/);
+assert.match(workflow, /\.source_commit/);
+assert.match(workflow, /\.image_ref/);
+assert.match(workflow, /WEB_IMAGE=\$web_image/);
+assert.match(workflow, /MIGRATOR_IMAGE=\$migrator_image/);
+assert.doesNotMatch(workflow, /:sha-\$\{\{/);
 assert.match(workflow, /docker-compose\.staging-images\.yaml/);
 assert.match(workflow, /--pull always --no-build/);
 assert.match(workflow, /git -C \"\$DIR\" fetch origin main \"\$\{DEPLOY_SHA\}\"/);
@@ -61,5 +63,11 @@ assert.match(
 assert.match(workflow, /get_env PLATFORM_MASTER_EMAIL/);
 assert.match(workflow, /get_env PLATFORM_MASTER_PASSWORD/);
 assert.doesNotMatch(workflow, /get_env DEMO_ADMIN_(?:EMAIL|PASSWORD)/);
+assert.match(workflow, /Promote verified release to production/);
+assert.match(workflow, /gh workflow run deploy\.yml/);
+assert.ok(
+  workflow.indexOf("Promote verified release to production") > loginCheck,
+  "production promotion must happen only after staging login succeeds",
+);
 
 console.log("deploy-staging workflow login contract OK");
