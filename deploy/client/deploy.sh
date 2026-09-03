@@ -900,8 +900,10 @@ if [ -e "$DEPLOYMENT_RECORD_FILE" ] || [ -L "$DEPLOYMENT_RECORD_FILE" ]; then
     fail "previous deployment record release tag is invalid"
   printf '%s\n' "$PREVIOUS_SOURCE_COMMIT_SHA" | grep -Eq '^([0-9a-f]{40}|[0-9a-f]{64})$' ||
     fail "previous deployment record source object ID is invalid"
-  printf '%s\n' "$PREVIOUS_BACKUP_ARTIFACT_SHA256" | grep -Eq '^[0-9a-f]{64}$' ||
-    fail "previous deployment record backup checksum is invalid"
+  if [ "${SKIP_BACKUP_PREFLIGHT:-false}" != true ] || [ -n "$PREVIOUS_BACKUP_ARTIFACT_SHA256" ]; then
+    printf '%s\n' "$PREVIOUS_BACKUP_ARTIFACT_SHA256" | grep -Eq '^[0-9a-f]{64}$' ||
+      fail "previous deployment record backup checksum is invalid"
+  fi
   printf '%s\n' "$PREVIOUS_DEPLOYED_AT_EPOCH" | grep -Eq '^[0-9]{10}$' ||
     fail "previous deployment record timestamp is invalid"
   [ "$PREVIOUS_DEPLOYMENT_ID" = "$DEPLOYMENT_ID" ] || fail "previous deployment record belongs to another deployment"
