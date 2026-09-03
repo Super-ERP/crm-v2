@@ -89,7 +89,7 @@ jobs:
             echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
           fi
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid release tag" >&2; exit 1; }
-          WORKFLOW_IDENTITY="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release-images.yml@refs/tags/${RELEASE_TAG}"
+          WORKFLOW_IDENTITY="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release-images.yml@refs/heads/main"
           echo "WORKFLOW_IDENTITY=$WORKFLOW_IDENTITY" >> "$GITHUB_ENV"
           [ -f "$CLIENT_DIR/.env" ] || { echo "protected production env is missing" >&2; exit 1; }
 
