@@ -1,7 +1,4 @@
-# Deploy the STAGING stack after the `quality` workflow succeeds on `main`.
-# Mirrors deploy.yml
-# but targets a separate server checkout (~/crm-v2-staging) and Compose project
-# (crm-staging), in its own concurrency group so it never fights the prod deploy.
+# Deploy the signed release to staging before promoting it to production.
 #
 # One-time server setup (see the "Staging environment" runbook in
 # https://github.com/Super-ERP/docs/blob/main/archive/operations/OPERATIONS.md):
@@ -11,7 +8,7 @@ name: deploy-staging
 
 on:
   workflow_run:
-    workflows: [quality]
+    workflows: [release-images]
     types: [completed]
     branches: [main]
 
@@ -20,46 +17,49 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: write
   contents: read
+  packages: read
 
 jobs:
-  changes:
+  deploy-staging:
     if: github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-24.04
-    outputs:
-      deploy: ${{ steps.filter.outputs.deploy }}
+    runs-on: self-hosted
+    environment: staging
+    env:
+      RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Skip documentation-only changes
-        id: filter
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
+      - name: Resolve immutable release images
         shell: bash
         run: |
           set -euo pipefail
-          changed_files="$(gh api --paginate \
-            "repos/${GITHUB_REPOSITORY}/commits/${DEPLOY_SHA}" \
-            --jq '.files[].filename')"
-          if printf '%s\n' "$changed_files" | grep -qvE '^(docs/|README\.md$)'; then
-            echo "deploy=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "deploy=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  deploy-staging:
-    needs: changes
-    if: needs.changes.outputs.deploy == 'true'
-    runs-on: self-hosted
-    environment: staging
-    permissions:
-      contents: read
-      packages: read
-    env:
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha }}
-      GH_TOKEN: ${{ github.token }}
-      WEB_IMAGE: ghcr.io/super-erp/crm-web:sha-${{ github.event.workflow_run.head_sha }}
-      MIGRATOR_IMAGE: ghcr.io/super-erp/crm-migrator:sha-${{ github.event.workflow_run.head_sha }}
-    steps:
+          artifact_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}/artifacts?per_page=100")"
+          release_tag="$(printf '%s' "$artifact_json" | jq -er '
+            [.artifacts[] | select(.expired == false and (.name | startswith("release-manifest-v"))) | .name]
+            | if length == 1 then .[0] else error("expected exactly one release manifest") end
+            | sub("^release-manifest-"; "")
+          ')"
+          [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid release tag" >&2; exit 1; }
+          manifest_dir="$(mktemp -d)"
+          gh run download "$RELEASE_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "release-manifest-${release_tag}" \
+            --dir "$manifest_dir"
+          manifest="$manifest_dir/release-manifest.json"
+          jq -e '
+            (.source_commit | test("^[0-9a-f]{40}$")) and
+            (.images | length == 4) and
+            all(.images[]; (.image_ref | test("^ghcr.io/super-erp/crm-[a-z-]+@sha256:[0-9a-f]{64}$")))
+          ' "$manifest" >/dev/null
+          source_sha="$(jq -er '.source_commit' "$manifest")"
+          web_image="$(jq -er '.images[] | select(.name == "web") | .image_ref' "$manifest")"
+          migrator_image="$(jq -er '.images[] | select(.name == "migrator") | .image_ref' "$manifest")"
+          echo "DEPLOY_SHA=$source_sha" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
+          echo "WEB_IMAGE=$web_image" >> "$GITHUB_ENV"
+          echo "MIGRATOR_IMAGE=$migrator_image" >> "$GITHUB_ENV"
+          rm -rf -- "$manifest_dir"
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -191,6 +191,8 @@ jobs:
             exit 1
           fi
           echo "staging email/password login OK"
+      - name: Promote verified release to production
+        run: gh workflow run deploy.yml --ref main -f release_tag="$RELEASE_TAG"
       - name: Publish staging access
         if: always()
         run: |

@@ -7,12 +7,11 @@ const updater = readFileSync(new URL("../../../deploy/client/apply-release-manif
 
 test("production deploy uses only a signed source-free release bundle", () => {
   assert.match(workflow, /workflow_dispatch:/)
-  assert.match(workflow, /workflow_run:/)
-  assert.match(workflow, /workflows: \[release-images\]/)
+  assert.doesNotMatch(workflow, /workflow_run:/)
   assert.match(workflow, /environment: production/)
   assert.match(workflow, /client-deployment-bundle-/)
   assert.match(workflow, /gh run download/)
-  assert.match(workflow, /workflow_run.*inputs\.operation == 'deploy'/s)
+  assert.doesNotMatch(workflow, /inputs\.operation/)
   assert.doesNotMatch(workflow, /Prepare signed backup evidence for deployed release/)
   assert.doesNotMatch(workflow, /ARTIFACT_ID/)
   assert.doesNotMatch(workflow, /\\bunzip\\b/)
