@@ -2,11 +2,10 @@
 set -eu
 
 : "${DATABASE_ADMIN_URL:?DATABASE_ADMIN_URL must be set}"
-: "${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT must be set}"
 
 interval=${BACKUP_INTERVAL_SECONDS:-86400}
 retention_days=${BACKUP_RETENTION_DAYS:-35}
-backup_dir=/backups/encrypted
+backup_dir=/backups/plaintext
 status_file=/backups/status.env
 work_dir=/var/lib/backup/work
 
@@ -50,7 +49,7 @@ backup_once() {
   verify_db="crm_backup_verify_${epoch}_$$"
   base_url=${DATABASE_ADMIN_URL%/*}/postgres
   verify_url=${DATABASE_ADMIN_URL%/*}/$verify_db
-  artifact="$backup_dir/crm-$stamp.tar.age"
+  artifact="$backup_dir/crm-$stamp.tar"
 
   cleanup() {
     psql "$base_url" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$verify_db\"" >/dev/null 2>&1 || true
@@ -68,7 +67,7 @@ backup_once() {
 
   tar -cf "$workspace/backup.tar" -C "$workspace" database.dump uploads.tar.gz
   mkdir -p "$backup_dir"
-  age -r "$BACKUP_AGE_RECIPIENT" -o "$artifact.tmp" "$workspace/backup.tar"
+  cp "$workspace/backup.tar" "$artifact.tmp"
   mv -f "$artifact.tmp" "$artifact"
   checksum=$(sha256sum "$artifact" | awk '{print $1}')
   printf '%s  %s\n' "$checksum" "$(basename "$artifact")" > "$artifact.sha256"

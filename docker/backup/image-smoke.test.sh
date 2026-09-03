@@ -23,7 +23,7 @@ trap cleanup EXIT HUP INT TERM
 versions=$(docker run --rm --entrypoint /opt/backup/check-tools.sh "$image")
 
 case "$versions" in
-  *"uid=10001"*"postgresql=17.11"*"age=1.2.1"*"rsync=3.5.0"*"openssh=10.2"*"packages=pinned"*) ;;
+  *"uid=10001"*"postgresql=17.11"*"rsync=3.5.0"*"openssh=10.2"*"packages=pinned"*) ;;
   *)
     echo "unexpected backup tool report: $versions" >&2
     exit 1
