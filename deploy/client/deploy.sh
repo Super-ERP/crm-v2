@@ -675,7 +675,7 @@ write_deployment_record() {
     printf 'HEALTHCHECK_TIMEOUT_SECONDS=%s\n' "$HEALTHCHECK_TIMEOUT_SECONDS"
     printf 'DB_HEALTH_ATTEMPTS=%s\n' "$DB_HEALTH_ATTEMPTS"
     printf 'DB_HEALTH_INTERVAL_SECONDS=%s\n' "$DB_HEALTH_INTERVAL_SECONDS"
-    printf 'BACKUP_ARTIFACT_SHA256=%s\n' "$EVIDENCE_BACKUP_ARTIFACT_SHA256"
+    printf 'BACKUP_ARTIFACT_SHA256=%s\n' "${EVIDENCE_BACKUP_ARTIFACT_SHA256:-}"
     printf 'DEPLOYED_AT_EPOCH=%s\n' "$(date +%s)"
   } >"$record_tmp" || return 1
   chmod 0600 "$record_tmp" || return 1
