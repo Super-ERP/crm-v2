@@ -622,7 +622,7 @@
 			"idx": 88,
 			"version": "7",
 			"when": 1788410400000,
-			"tag": "0088_soc2_technical_controls",
+			"tag": "0088_security_controls",
 			"breakpoints": true
 		}
 	]

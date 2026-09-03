@@ -11,7 +11,7 @@ describe("migration journal", () => {
 
     expect(journal.entries.at(-1)).toMatchObject({
       idx: 88,
-      tag: "0088_soc2_technical_controls",
+      tag: "0088_security_controls",
     })
   })
 
@@ -31,7 +31,7 @@ describe("migration journal", () => {
       { idx: 85, tag: "0085_funnel_stage_field_map" },
       { idx: 86, tag: "0086_stage_transition_approvals" },
       { idx: 87, tag: "0087_opportunity_container_activity" },
-      { idx: 88, tag: "0088_soc2_technical_controls" },
+      { idx: 88, tag: "0088_security_controls" },
     ])
   })
 
