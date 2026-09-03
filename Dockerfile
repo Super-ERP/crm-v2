@@ -3,7 +3,10 @@
 ARG BUILDPLATFORM
 
 FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache \
+    libc6-compat \
+    libcrypto3=3.5.8-r0 \
+    libssl3=3.5.8-r0
 # Pin pnpm globally. We use `npm i -g` rather than corepack: corepack is being
 # unbundled from newer Node and its registry-signature checks are a recurring
 # CI failure. The version must match packageManager in package.json.
@@ -35,7 +38,10 @@ RUN pnpm --filter web run build --turbopack
 
 # ---- compile architecture-neutral migrate/seed assets on the native runner ----
 FROM --platform=$BUILDPLATFORM node:22-alpine AS migrator-base
-RUN apk add --no-cache libc6-compat \
+RUN apk add --no-cache \
+    libc6-compat \
+    libcrypto3=3.5.8-r0 \
+    libssl3=3.5.8-r0 \
     && npm install -g pnpm@11.6.0
 WORKDIR /app
 

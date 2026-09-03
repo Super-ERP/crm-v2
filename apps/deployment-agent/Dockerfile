@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS build
+RUN apk add --no-cache libcrypto3=3.5.8-r0 libssl3=3.5.8-r0
 RUN npm install -g pnpm@11.6.0
 WORKDIR /build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -15,6 +16,7 @@ RUN pnpm --filter @crm/control-protocol run build \
     && pnpm --filter @crm/deployment-agent run build
 
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS runtime
+RUN apk add --no-cache libcrypto3=3.5.8-r0 libssl3=3.5.8-r0
 ENV NODE_ENV=production
 COPY scripts/strip-runtime-package-managers.sh /tmp/strip-runtime-package-managers.sh
 RUN /tmp/strip-runtime-package-managers.sh / --container-root \
