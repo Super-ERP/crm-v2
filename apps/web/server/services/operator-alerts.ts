@@ -1,5 +1,5 @@
 import "server-only"
-import { eq, desc, and, isNull, sql, type SQL } from "drizzle-orm"
+import { eq, desc, and, isNull, isNotNull, lt, sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { operatorAlerts } from "@/db/schema"
 import { organization } from "@/db/schema"
@@ -11,8 +11,8 @@ import type { AlertSeverity, OperatorAlertRow } from "./operator-alerts-types"
 /**
  * Write a platform-level operator alert. Safe to call from any server context —
  * even when no tenant/user context exists (e.g. an unhandled exception before auth).
- * Errors in this function itself are swallowed so an alert-logging failure never
- * blocks the originating request.  Also emits a structured JSON line to stdout
+ * Persistence is awaited so callers know whether durable reporting succeeded.
+ * Also emits a structured JSON line to stdout
  * for log-aggregator forwarding (CloudWatch, Datadog, etc.).
  */
 export async function writeOperatorAlert(input: {
@@ -66,8 +66,7 @@ export async function writeOperatorAlert(input: {
         : ""
   )
 
-  // Write to DB — fire-and-forget, never throws so the caller proceeds normally.
-  db.insert(operatorAlerts).values({
+  await db.insert(operatorAlerts).values({
     severity,
     summary: input.summary,
     detail,
@@ -78,7 +77,7 @@ export async function writeOperatorAlert(input: {
     userEmail,
     stackSummary,
     errorDigest,
-  }).catch(() => {})
+  })
 
   // Structured stdout line for log-aggregator ingestion.
   console.error(JSON.stringify({
@@ -129,14 +128,13 @@ export async function listOperatorAlerts(options?: {
 /** Mark one or more alerts as resolved. */
 export async function resolveOperatorAlerts(
   ids: string[],
-  resolvedBy: string,
 ): Promise<void> {
   const ctx = await requireContext()
   if (!ctx.isSuperadmin) throw new Error("Only the platform master can resolve operator alerts.")
 
   await db
     .update(operatorAlerts)
-    .set({ resolvedAt: new Date(), resolvedBy })
+    .set({ resolvedAt: new Date(), resolvedBy: ctx.userId })
     .where(
       and(
         sql`${operatorAlerts.id} = ANY(${ids})`,
@@ -157,10 +155,10 @@ export async function purgeResolvedAlerts(olderThanDays = 90): Promise<number> {
     .delete(operatorAlerts)
     .where(
       and(
-        sql`${operatorAlerts.createdAt} < ${cutoff}`,
-        isNull(operatorAlerts.resolvedAt),
+        isNotNull(operatorAlerts.resolvedAt),
+        lt(operatorAlerts.resolvedAt, cutoff),
       ),
     )
-  // @ts-expect-error drizzle-orm delete result has rowCount on some DB drivers
-  return result.rowCount ?? 0
+    .returning({ id: operatorAlerts.id })
+  return result.length
 }

@@ -152,7 +152,7 @@ export function OperatorAlertsDialog({
 
   async function handleResolve(id: string) {
     try {
-      await resolveOperatorAlerts([id], "operator")
+      await resolveOperatorAlerts([id])
       setAlerts((prev) =>
         prev.map((a) =>
           a.id === id ? { ...a, resolvedAt: new Date(), resolvedBy: "operator" } : a

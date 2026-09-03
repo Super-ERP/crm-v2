@@ -22,6 +22,8 @@ export default function SignInPage() {
   const [showEmail, setShowEmail] = React.useState(false)
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
+  const [totpCode, setTotpCode] = React.useState("")
+  const [requiresTotp, setRequiresTotp] = React.useState(false)
 
   async function signInWithMicrosoft() {
     setLoading(true)
@@ -41,10 +43,26 @@ export default function SignInPage() {
   async function signInWithEmail(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const { error } = await authClient.signIn.email({ email, password })
+    const { data, error } = await authClient.signIn.email({ email, password })
     setLoading(false)
     if (error) {
       toast.error("Invalid email or password")
+      return
+    }
+    if ((data as { twoFactorRedirect?: boolean } | null)?.twoFactorRedirect) {
+      setRequiresTotp(true)
+      return
+    }
+    router.push("/dashboard")
+  }
+
+  async function verifyTotp(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    const { error } = await authClient.twoFactor.verifyTotp({ code: totpCode, trustDevice: false })
+    setLoading(false)
+    if (error) {
+      toast.error("Invalid authentication code")
       return
     }
     router.push("/dashboard")
@@ -66,7 +84,20 @@ export default function SignInPage() {
           Continue with Microsoft
         </Button>
 
-        {showEmail ? (
+        {requiresTotp ? (
+          <form onSubmit={verifyTotp} className="grid gap-3">
+            <Label htmlFor="totp">Authentication code</Label>
+            <Input
+              id="totp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={totpCode}
+              onChange={(e) => setTotpCode(e.target.value)}
+              required
+            />
+            <Button type="submit" disabled={loading}>Verify</Button>
+          </form>
+        ) : showEmail ? (
           <form onSubmit={signInWithEmail} className="grid gap-3">
             <div className="relative my-1 text-center text-xs text-muted-foreground">
               <span className="bg-card px-2">or sign in with email</span>

@@ -216,7 +216,9 @@ RETURNS TABLE(organization_id text, member_id text)
 LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $$
   UPDATE public.api_keys
      SET last_used_at = pg_catalog.now()
-   WHERE key_hash = p_hash AND revoked_at IS NULL
+   WHERE key_hash = p_hash
+     AND revoked_at IS NULL
+     AND expires_at > pg_catalog.now()
   RETURNING organization_id, member_id;
 $$;
 REVOKE ALL ON FUNCTION verify_api_key(text) FROM PUBLIC;

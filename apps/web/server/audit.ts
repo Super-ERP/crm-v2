@@ -2,6 +2,32 @@ import "server-only"
 import type { Tx } from "@/db"
 import { auditLog } from "@/db/schema"
 import type { ServerContext } from "@/lib/server-context"
+import { createHash } from "node:crypto"
+
+export type AuditOutcome = "success" | "denied" | "error"
+type AuditValue = boolean | number | string | null | AuditValue[] | { [key: string]: AuditValue }
+const sensitiveKeyPattern = /authorization|cookie|credential|password|secret|token|apikey|privatekey/i
+
+function sanitizeMetadata(value: unknown, depth = 0): AuditValue {
+  if (depth > 6) throw new TypeError("Audit metadata exceeds structural limit")
+  if (value === null || typeof value === "boolean" || typeof value === "string") return value
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (Array.isArray(value)) return value.map((item) => sanitizeMetadata(item, depth + 1))
+  if (typeof value === "object") {
+    const output: Record<string, AuditValue> = {}
+    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      if (sensitiveKeyPattern.test(key.replace(/[^a-z0-9]/gi, ""))) {
+        throw new TypeError("Audit metadata contains sensitive field")
+      }
+      output[key] = sanitizeMetadata(item, depth + 1)
+    }
+    if (Buffer.byteLength(JSON.stringify(output)) > 8_192) {
+      throw new TypeError("Audit metadata exceeds byte limit")
+    }
+    return output
+  }
+  throw new TypeError("Audit metadata contains unsupported value")
+}
 
 export async function writeAudit(
   tx: Tx,
@@ -12,6 +38,10 @@ export async function writeAudit(
     entityId: string
     before?: unknown
     after?: unknown
+    outcome?: AuditOutcome
+    source?: string
+    metadata?: unknown
+    requestId?: string
   }
 ): Promise<void> {
   await tx.insert(auditLog).values({
@@ -23,6 +53,12 @@ export async function writeAudit(
     entityId: entry.entityId,
     before: (entry.before as object | null) ?? null,
     after: (entry.after as object | null) ?? null,
+    outcome: entry.outcome ?? "success",
+    source: entry.source ?? "application",
+    metadata: entry.metadata == null ? null : sanitizeMetadata(entry.metadata),
+    requestIdHash: entry.requestId
+      ? createHash("sha256").update(entry.requestId).digest("hex")
+      : null,
   })
 }
 
@@ -45,6 +81,10 @@ export async function writeAuthAudit(
     entityType?: string
     entityId?: string
     after?: unknown
+    outcome?: AuditOutcome
+    source?: string
+    metadata?: unknown
+    requestId?: string
   }
 ): Promise<void> {
   await tx.insert(auditLog).values({
@@ -55,6 +95,12 @@ export async function writeAuthAudit(
     entityType: entry.entityType ?? "auth",
     entityId: entry.entityId ?? entry.actorUserId ?? "unknown",
     ip: entry.ip ?? null,
+    outcome: entry.outcome ?? "success",
+    source: entry.source ?? "authentication",
+    metadata: entry.metadata == null ? null : sanitizeMetadata(entry.metadata),
+    requestIdHash: entry.requestId
+      ? createHash("sha256").update(entry.requestId).digest("hex")
+      : null,
     after:
       entry.after != null
         ? (entry.after as object)
