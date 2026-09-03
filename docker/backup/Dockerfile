@@ -5,7 +5,6 @@ ARG ALPINE_IMAGE=alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f79
 FROM ${ALPINE_IMAGE}
 
 ARG POSTGRESQL_CLIENT_VERSION=17.11-r0
-ARG AGE_VERSION=1.2.1-r15
 ARG CA_CERTIFICATES_VERSION=20260611-r0
 ARG LIBPQ_VERSION=18.6-r0
 ARG LIBCRYPTO3_VERSION=3.5.8-r0
@@ -21,7 +20,6 @@ ARG TZDATA_VERSION=2026c-r0
 ARG ZSTD_LIBS_VERSION=1.5.7-r2
 
 RUN apk add --no-cache \
-      "age=${AGE_VERSION}" \
       "ca-certificates=${CA_CERTIFICATES_VERSION}" \
       "libncursesw=${LIBNCURSESW_VERSION}" \
       "libpq=${LIBPQ_VERSION}" \
@@ -51,11 +49,10 @@ COPY --chmod=0555 run-backup.sh backup-health.sh restore-test.sh /opt/backup/
 ENV HOME=/var/lib/backup \
     XDG_CONFIG_HOME=/var/lib/backup/.config
 
-LABEL org.opencontainers.image.title="Quandatics encrypted backup runtime" \
-  org.opencontainers.image.description="Source-free PostgreSQL backup, age encryption, and SSH offsite-copy runtime" \
+LABEL org.opencontainers.image.title="Quandatics backup runtime" \
+  org.opencontainers.image.description="Source-free PostgreSQL backup and SSH offsite-copy runtime" \
   org.opencontainers.image.source="https://github.com/Super-ERP/crm-v2" \
   com.quandatics.postgresql-client.version="17.11-r0" \
-  com.quandatics.age.version="1.2.1-r15" \
   com.quandatics.rsync.version="3.5.0-r0"
 
 WORKDIR /var/lib/backup/work

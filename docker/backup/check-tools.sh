@@ -17,15 +17,6 @@ case "$postgres_version" in
     ;;
 esac
 
-age_version=$(age --version)
-case "$age_version" in
-  *"1.2.1"*) ;;
-  *)
-    echo "expected age 1.2.1, got: $age_version" >&2
-    exit 1
-    ;;
-esac
-
 rsync_version=$(rsync --version | sed -n '1p')
 case "$rsync_version" in
   *"version 3.5.0"*) ;;
@@ -53,7 +44,6 @@ package_version() {
 }
 
 for package_pin in \
-  age=1.2.1-r15 \
   ca-certificates=20260611-r0 \
   libpq=18.6-r0 \
   libcrypto3=3.5.8-r0 \
@@ -79,9 +69,8 @@ do
 done
 
 postgres_semver=${postgres_version##* }
-age_semver=${age_version#v}
 rsync_semver=$(printf '%s\n' "$rsync_version" | awk '{ print $3 }')
 ssh_semver=$(printf '%s\n' "$ssh_version" | sed 's/^OpenSSH_//; s/[ ,].*$//')
 
-printf 'uid=%s postgresql=%s age=%s rsync=%s openssh=%s packages=pinned\n' \
-  "$uid" "$postgres_semver" "$age_semver" "$rsync_semver" "$ssh_semver"
+printf 'uid=%s postgresql=%s rsync=%s openssh=%s packages=pinned\n' \
+  "$uid" "$postgres_semver" "$rsync_semver" "$ssh_semver"
