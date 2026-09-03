@@ -2,36 +2,21 @@
 
 ARG ALPINE_IMAGE=alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f797758156952bc2d6daf40
 
-FROM ${ALPINE_IMAGE} AS tools-amd64
-ADD --checksum=sha256:aa2804e08f48250e71009c727124b6341cd0288465804a9a09d14663cabafbaa \
-  https://downloads.rclone.org/v1.75.0/rclone-v1.75.0-linux-amd64.zip \
-  /tmp/rclone.zip
-RUN mkdir -p /out \
-    && unzip -q /tmp/rclone.zip -d /tmp \
-    && install -m 0555 /tmp/rclone-v1.75.0-linux-amd64/rclone /out/rclone
-
-FROM ${ALPINE_IMAGE} AS tools-arm64
-ADD --checksum=sha256:d0ad88ba4c8e285b7c9efa591e0ab643280a91741e13c27f3a9c0957ccfa5203 \
-  https://downloads.rclone.org/v1.75.0/rclone-v1.75.0-linux-arm64.zip \
-  /tmp/rclone.zip
-RUN mkdir -p /out \
-    && unzip -q /tmp/rclone.zip -d /tmp \
-    && install -m 0555 /tmp/rclone-v1.75.0-linux-arm64/rclone /out/rclone
-
-ARG TARGETARCH
-FROM tools-${TARGETARCH} AS tools
-
 FROM ${ALPINE_IMAGE}
 
 ARG POSTGRESQL_CLIENT_VERSION=17.11-r0
 ARG AGE_VERSION=1.2.1-r15
 ARG CA_CERTIFICATES_VERSION=20260611-r0
 ARG LIBPQ_VERSION=18.6-r0
+ARG LIBCRYPTO3_VERSION=3.5.8-r0
+ARG LIBSSL3_VERSION=3.5.8-r0
 ARG LIBNCURSESW_VERSION=6.5_p20251123-r0
 ARG LZ4_LIBS_VERSION=1.10.0-r0
 ARG NCURSES_TERMINFO_BASE_VERSION=6.5_p20251123-r0
 ARG POSTGRESQL_COMMON_VERSION=1.2-r2
 ARG READLINE_VERSION=8.3.1-r0
+ARG RSYNC_VERSION=3.5.0-r0
+ARG OPENSSH_CLIENT_VERSION=10.2_p1-r0
 ARG TZDATA_VERSION=2026c-r0
 ARG ZSTD_LIBS_VERSION=1.5.7-r2
 
@@ -40,11 +25,15 @@ RUN apk add --no-cache \
       "ca-certificates=${CA_CERTIFICATES_VERSION}" \
       "libncursesw=${LIBNCURSESW_VERSION}" \
       "libpq=${LIBPQ_VERSION}" \
+      "libcrypto3=${LIBCRYPTO3_VERSION}" \
+      "libssl3=${LIBSSL3_VERSION}" \
       "lz4-libs=${LZ4_LIBS_VERSION}" \
       "ncurses-terminfo-base=${NCURSES_TERMINFO_BASE_VERSION}" \
       "postgresql-common=${POSTGRESQL_COMMON_VERSION}" \
       "postgresql17-client=${POSTGRESQL_CLIENT_VERSION}" \
       "readline=${READLINE_VERSION}" \
+      "rsync=${RSYNC_VERSION}" \
+      "openssh-client-default=${OPENSSH_CLIENT_VERSION}" \
       "tzdata=${TZDATA_VERSION}" \
       "zstd-libs=${ZSTD_LIBS_VERSION}" \
     && addgroup -S -g 10001 backup \
@@ -56,7 +45,6 @@ RUN apk add --no-cache \
       /var/lib/backup/work \
     && rm -f /sbin/apk
 
-COPY --from=tools /out/rclone /usr/local/bin/rclone
 COPY --chmod=0555 check-tools.sh /opt/backup/check-tools.sh
 COPY --chmod=0555 run-backup.sh backup-health.sh restore-test.sh /opt/backup/
 
@@ -64,11 +52,11 @@ ENV HOME=/var/lib/backup \
     XDG_CONFIG_HOME=/var/lib/backup/.config
 
 LABEL org.opencontainers.image.title="Quandatics encrypted backup runtime" \
-  org.opencontainers.image.description="Source-free PostgreSQL backup, age encryption, and R2 upload runtime" \
+  org.opencontainers.image.description="Source-free PostgreSQL backup, age encryption, and SSH offsite-copy runtime" \
   org.opencontainers.image.source="https://github.com/Super-ERP/crm-v2" \
   com.quandatics.postgresql-client.version="17.11-r0" \
   com.quandatics.age.version="1.2.1-r15" \
-  com.quandatics.rclone.version="1.75.0"
+  com.quandatics.rsync.version="3.5.0-r0"
 
 WORKDIR /var/lib/backup/work
 USER 10001:10001

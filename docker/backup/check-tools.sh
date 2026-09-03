@@ -26,11 +26,20 @@ case "$age_version" in
     ;;
 esac
 
-rclone_version=$(rclone version | sed -n '1p')
-case "$rclone_version" in
-  *"v1.75.0"*) ;;
+rsync_version=$(rsync --version | sed -n '1p')
+case "$rsync_version" in
+  *"version 3.5.0"*) ;;
   *)
-    echo "expected rclone 1.75.0, got: $rclone_version" >&2
+    echo "expected rsync 3.5.0, got: $rsync_version" >&2
+    exit 1
+    ;;
+esac
+
+ssh_version=$(ssh -V 2>&1)
+case "$ssh_version" in
+  *"OpenSSH_10.2"*) ;;
+  *)
+    echo "expected OpenSSH 10.2, got: $ssh_version" >&2
     exit 1
     ;;
 esac
@@ -46,13 +55,17 @@ package_version() {
 for package_pin in \
   age=1.2.1-r15 \
   ca-certificates=20260611-r0 \
-  libpq=18.4-r0 \
+  libpq=18.6-r0 \
+  libcrypto3=3.5.8-r0 \
+  libssl3=3.5.8-r0 \
   libncursesw=6.5_p20251123-r0 \
   lz4-libs=1.10.0-r0 \
   ncurses-terminfo-base=6.5_p20251123-r0 \
   postgresql-common=1.2-r2 \
-  postgresql17-client=17.10-r0 \
+  postgresql17-client=17.11-r0 \
   readline=8.3.1-r0 \
+  rsync=3.5.0-r0 \
+  openssh-client-default=10.2_p1-r0 \
   tzdata=2026c-r0 \
   zstd-libs=1.5.7-r2
 do
@@ -67,7 +80,8 @@ done
 
 postgres_semver=${postgres_version##* }
 age_semver=${age_version#v}
-rclone_semver=${rclone_version#rclone v}
+rsync_semver=$(printf '%s\n' "$rsync_version" | awk '{ print $3 }')
+ssh_semver=$(printf '%s\n' "$ssh_version" | sed 's/^OpenSSH_//; s/[ ,].*$//')
 
-printf 'uid=%s postgresql=%s age=%s rclone=%s packages=pinned\n' \
-  "$uid" "$postgres_semver" "$age_semver" "$rclone_semver"
+printf 'uid=%s postgresql=%s age=%s rsync=%s openssh=%s packages=pinned\n' \
+  "$uid" "$postgres_semver" "$age_semver" "$rsync_semver" "$ssh_semver"

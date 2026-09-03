@@ -73,10 +73,9 @@ backup_once() {
   checksum=$(sha256sum "$artifact" | awk '{print $1}')
   printf '%s  %s\n' "$checksum" "$(basename "$artifact")" > "$artifact.sha256"
   remote_verified=false
-  if [ -n "${BACKUP_REMOTE_TARGET:-}" ]; then
-    remote_base=${BACKUP_REMOTE_TARGET%/}
-    rclone copyto "$artifact" "$remote_base/$(basename "$artifact")"
-    rclone copyto "$artifact.sha256" "$remote_base/$(basename "$artifact.sha256")"
+  if [ -n "${BACKUP_RSYNC_TARGET:-}" ]; then
+    remote_base=${BACKUP_RSYNC_TARGET%/}
+    rsync -az "$artifact" "$artifact.sha256" "$remote_base/"
     remote_verified=true
   elif [ "${BACKUP_REQUIRE_OFFSITE:-false}" = true ]; then
     return 1
