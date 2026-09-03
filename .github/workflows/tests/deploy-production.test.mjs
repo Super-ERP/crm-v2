@@ -20,7 +20,7 @@ test("production deploy uses only a signed source-free release bundle", () => {
   assert.match(workflow, /--password-stdin/)
   assert.match(workflow, /DOCKER_CONFIG/)
   assert.match(workflow, /cosign verify-blob/)
-  assert.match(workflow, /WORKFLOW_IDENTITY=.*refs\/tags\/\$\{RELEASE_TAG\}/)
+  assert.match(workflow, /WORKFLOW_IDENTITY=.*refs\/heads\/main/)
   assert.match(workflow, /--certificate-identity "\$WORKFLOW_IDENTITY"/)
   assert.match(workflow, /apply-release-manifest\.sh/)
   assert.match(workflow, /"\$CLIENT_DIR\/deploy\.sh"/)
