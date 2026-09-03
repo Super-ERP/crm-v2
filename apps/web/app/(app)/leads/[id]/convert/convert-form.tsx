@@ -17,6 +17,17 @@ import { convertLeadAction, type Lead } from "../../actions"
 
 const NEW_ACCOUNT = "__new__"
 
+function matchingAccountId(companyName: string | null, accounts: Option[]): string {
+  const normalizedCompany = companyName?.trim().toLocaleLowerCase()
+  if (!normalizedCompany) return NEW_ACCOUNT
+
+  return (
+    accounts.find(
+      (account) => account.name.trim().toLocaleLowerCase() === normalizedCompany
+    )?.id ?? NEW_ACCOUNT
+  )
+}
+
 /**
  * Full-page lead conversion (replaces the old cramped dialog). Converting is
  * always the full cascade — Account + Contact + Opportunity + Funnel — seeded
@@ -39,7 +50,9 @@ export function ConvertForm({
   const [funnelName, setFunnelName] = React.useState(defaultDealName)
   const [funnelNameTouched, setFunnelNameTouched] = React.useState(false)
   const [expectedCloseDate, setExpectedCloseDate] = React.useState("")
-  const [accountId, setAccountId] = React.useState<string>("")
+  const [accountId, setAccountId] = React.useState<string>(() =>
+    matchingAccountId(lead.companyName, accountOptions)
+  )
   const [newType, setNewType] = React.useState<"client" | "reseller">("client")
   const [newCode, setNewCode] = React.useState("")
   const [newPhone, setNewPhone] = React.useState("")
@@ -105,7 +118,9 @@ export function ConvertForm({
         return
       }
       toast.success("Lead converted", {
-        description: "Account, Contact, Opportunity and Funnel created.",
+        description: creatingNew
+          ? "Company account, contact, opportunity and funnel created."
+          : "Contact, opportunity and funnel added to the existing account.",
       })
       if (res.data.opportunityId) {
         router.push(`/opportunities/${res.data.opportunityId}`)
@@ -135,7 +150,7 @@ export function ConvertForm({
           <div className="grid gap-0.5">
             <CardTitle className="text-base">Account</CardTitle>
             <CardDescription>
-              The company “{lead.name}” becomes a contact of.
+              “{lead.name}” becomes a contact for “{lead.companyName || lead.name}”.
             </CardDescription>
           </div>
         </CardHeader>
@@ -164,7 +179,7 @@ export function ConvertForm({
                 ? "Attach the contact to an existing account, or create a new one."
                 : creatingNew
                   ? `A new account will be created from “${lead.companyName || lead.name}”.`
-                  : "The contact will be added to the selected account."}
+                  : "Matched by company name. The contact will be added to this account."}
             </p>
           </div>
 

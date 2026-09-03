@@ -43,7 +43,7 @@ import { formatDate } from "@/lib/format"
 import { useOpenOnNewParam } from "@/hooks/use-open-on-new-param"
 import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
-import type { FunnelWithStages, MemberOption } from "@/lib/lookups"
+import type { FunnelWithStages, MemberOption, Option } from "@/lib/lookups"
 
 import { Combobox } from "@/components/ui/combobox"
 import { StatusBadge } from "@/components/status-badge"
@@ -65,6 +65,7 @@ export function LeadsTable({
   data,
   pipelines,
   members,
+  accountOptions = [],
   leadSources = [],
   lossReasons = [],
   defaultCountry,
@@ -72,6 +73,7 @@ export function LeadsTable({
   data: Lead[]
   pipelines: FunnelWithStages[]
   members: MemberOption[]
+  accountOptions?: Option[]
   /** Tenant picklists (Settings); empty = free-text fallbacks. */
   leadSources?: string[]
   lossReasons?: string[]
@@ -397,6 +399,7 @@ export function LeadsTable({
                   <DialogTitle>New lead</DialogTitle>
                 </DialogHeader>
                 <LeadForm
+                  accountOptions={accountOptions}
                   sources={leadSources}
                                     defaultCountry={defaultCountry}
                   onSubmit={handleCreate}
@@ -421,6 +424,7 @@ export function LeadsTable({
             <LeadForm
               key={editLead.id}
               lead={editLead}
+              accountOptions={accountOptions}
               sources={leadSources}
               onSubmit={handleUpdate}
               submitLabel="Save changes"

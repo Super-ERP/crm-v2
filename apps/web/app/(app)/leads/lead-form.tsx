@@ -25,6 +25,7 @@ import {
 import { DialogClose } from "@/components/ui/dialog"
 import { Combobox } from "@/components/ui/combobox"
 import { PhoneInput } from "@/components/phone-input"
+import type { Option } from "@/lib/lookups"
 import type { Lead, LeadInput } from "./actions"
 
 /** Sentinel: no source picked. */
@@ -55,12 +56,14 @@ export type LeadFormValues = z.infer<ReturnType<typeof leadSchema>>
 
 export function LeadForm({
   lead,
+  accountOptions = [],
   sources = [],
   defaultCountry,
   onSubmit,
   submitLabel = "Save",
 }: {
   lead?: Lead
+  accountOptions?: Option[]
   /** Tenant lead-source picklist (Settings); empty falls back to free text. */
   sources?: string[]
   defaultCountry?: string
@@ -127,15 +130,40 @@ export function LeadForm({
         <FormField
           control={form.control}
           name="companyName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel required>Company</FormLabel>
-              <FormControl>
-                <Input placeholder="Acme Inc." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+          render={({ field }) => {
+            const companyOptions = accountOptions.map((account) => ({
+              value: account.name,
+              label: account.name,
+            }))
+            if (
+              field.value &&
+              !companyOptions.some(
+                (option) => option.value.toLowerCase() === field.value.toLowerCase()
+              )
+            ) {
+              companyOptions.push({ value: field.value, label: field.value })
+            }
+
+            return (
+              <FormItem>
+                <FormLabel required>Company</FormLabel>
+                <FormControl>
+                  <Combobox
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={companyOptions}
+                    onCreate={field.onChange}
+                    createLabel={(query) => `Use new company “${query}”`}
+                    placeholder="Select or create a company"
+                    searchPlaceholder="Search companies…"
+                    emptyMessage="No companies found."
+                    aria-invalid={!!form.formState.errors.companyName}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )
+          }}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
