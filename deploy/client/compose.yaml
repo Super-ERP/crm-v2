@@ -131,9 +131,11 @@ services:
       IMAGE_DIGEST: ${IMAGE_DIGEST:?IMAGE_DIGEST is derived by deploy.sh}
       MIGRATION_VERSION: ${MIGRATION_VERSION:?MIGRATION_VERSION must be set}
       ENV_FILE_PATH: /etc/quandatics-client/.env
+      BACKUP_STATUS_FILE: /var/lib/crm-backup/status.env
     volumes:
       - agent-state:/var/lib/crm-agent
       - ./.env:/etc/quandatics-client/.env:rw
+      - backups:/var/lib/crm-backup:ro
     depends_on:
       web:
         condition: service_healthy
@@ -163,6 +165,12 @@ services:
     environment:
       DATABASE_ADMIN_URL: ${DATABASE_ADMIN_URL:?DATABASE_ADMIN_URL is derived by deploy.sh}
       BACKUP_RSYNC_TARGET: ${BACKUP_RSYNC_TARGET:-}
+      BACKUP_REMOTE_TARGET: ${BACKUP_REMOTE_TARGET:-}
+      BACKUP_REQUIRE_OFFSITE: ${BACKUP_REQUIRE_OFFSITE:-false}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?BACKUP_AGE_RECIPIENT must be set}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-35}
+      BACKUP_MAX_AGE_SECONDS: ${BACKUP_MAX_AGE_SECONDS:-93600}
     volumes:
       - appfiles:/data/uploads:ro
       - backups:/backups
@@ -172,6 +180,15 @@ services:
     networks:
       - backend
       - egress
+    read_only: true
+    tmpfs:
+      - /var/lib/backup/work:rw,noexec,nosuid,nodev,size=1g,mode=0700,uid=10001,gid=10001
+    healthcheck:
+      test: ["CMD", "/opt/backup/backup-health.sh"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30m
     mem_limit: ${BACKUP_MEMORY_LIMIT:-256m}
     logging: *default-logging
     restart: unless-stopped

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, boolean, integer, bigint } from "drizzle-orm/pg-core"
 
 /**
  * Better Auth core + organization-plugin tables.
@@ -17,6 +17,9 @@ export const user = pgTable("user", {
   isSuperadmin: boolean("is_superadmin").notNull().default(false),
   /** Seat-exempt support identity; never grants CRM membership or RLS bypass. */
   isVendorSupport: boolean("is_vendor_support").notNull().default(false),
+  /** Local emergency access only; normal users authenticate through Entra ID. */
+  isBreakGlass: boolean("is_break_glass").notNull().default(false),
+  twoFactorEnabled: boolean("two_factor_enabled").notNull().default(false),
   /** Stamped on every sign-in (auth session-create hook). Null until first login. */
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -63,6 +66,23 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const twoFactor = pgTable("two_factor", {
+  id: text("id").primaryKey(),
+  secret: text("secret").notNull(),
+  backupCodes: text("backup_codes").notNull(),
+  verified: boolean("verified").notNull().default(true),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+})
+
+export const rateLimit = pgTable("rate_limit", {
+  id: text("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 })
 
 // ---- organization plugin ----

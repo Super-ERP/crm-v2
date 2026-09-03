@@ -42,7 +42,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { formatDate } from "@/lib/format"
-import { createApiKey, revokeApiKey, type ApiKeyRow } from "./actions"
+import { createApiKey, revokeApiKey, rotateApiKey, type ApiKeyRow } from "./actions"
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -176,7 +176,21 @@ function CreateKeyDialog({
 function RevokeAction({ row }: { row: ApiKeyRow }) {
   const router = useRouter()
   const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const [rotatedKey, setRotatedKey] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
+
+  async function onRotate() {
+    setBusy(true)
+    const res = await rotateApiKey(row.id)
+    setBusy(false)
+    if (!res.ok) {
+      showActionError(res)
+      return
+    }
+    setRotatedKey(res.data.fullKey)
+    toast.success("API key rotated")
+    router.refresh()
+  }
 
   async function onRevoke() {
     setBusy(true)
@@ -193,14 +207,29 @@ function RevokeAction({ row }: { row: ApiKeyRow }) {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-destructive hover:text-destructive"
-        onClick={() => setConfirmOpen(true)}
-      >
-        Revoke
-      </Button>
+      <div className="flex gap-1">
+        <Button variant="ghost" size="sm" onClick={onRotate} disabled={busy}>Rotate</Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive"
+          onClick={() => setConfirmOpen(true)}
+        >
+          Revoke
+        </Button>
+      </div>
+      <Dialog open={rotatedKey !== null} onOpenChange={(open) => { if (!open) setRotatedKey(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Replacement API key</DialogTitle>
+            <DialogDescription>The previous key is revoked. Copy this replacement now; it will not be shown again.</DialogDescription>
+          </DialogHeader>
+          <Input value={rotatedKey ?? ""} readOnly className="font-mono" />
+          <DialogFooter>
+            <Button onClick={() => navigator.clipboard.writeText(rotatedKey ?? "")}>Copy key</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -255,6 +284,11 @@ export function AccessClient({ data }: { data: ApiKeyRow[] }) {
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
+      accessorKey: "expiresAt",
+      header: ({ column }) => <SortableHeader column={column} title="Expires" />,
+      cell: ({ row }) => formatDate(row.original.expiresAt),
+    },
+    {
       accessorKey: "lastUsedAt",
       header: "Last used",
       cell: ({ row }) =>
@@ -270,6 +304,8 @@ export function AccessClient({ data }: { data: ApiKeyRow[] }) {
       cell: ({ row }) =>
         row.original.revokedAt ? (
           <Badge variant="secondary">Revoked</Badge>
+        ) : row.original.expiresAt <= new Date() ? (
+          <Badge variant="destructive">Expired</Badge>
         ) : (
           <Badge variant="outline">Active</Badge>
         ),

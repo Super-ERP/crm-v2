@@ -22,12 +22,10 @@ type IncidentInput = {
  * the boundary's render is never itself broken by a reporting failure.
  */
 export async function reportIncident(input: IncidentInput): Promise<void> {
-  let ctx = null
-  try {
-    ctx = await getServerContext()
-  } catch {
-    // Context resolution can fail when auth is partially broken.
-  }
+  const ctx = await getServerContext()
+  if (!ctx) throw new Error("Authentication required")
+  const summary = input.summary.trim().slice(0, 200)
+  if (!summary) throw new Error("Incident summary is required")
 
   try {
     const error = input.errorMessage != null
@@ -35,14 +33,14 @@ export async function reportIncident(input: IncidentInput): Promise<void> {
       : undefined
     await writeOperatorAlert({
       severity: input.severity,
-      summary: input.summary,
-      detail: input.detail,
-      source: input.source ?? "app_error_boundary",
-      ctx: ctx ?? null,
+      summary,
+      detail: input.detail?.slice(0, 8_000),
+      source: (input.source ?? "app_error_boundary").slice(0, 100),
+      ctx,
       error,
     })
   } catch {
-    // writeOperatorAlert already fire-and-forgets DB writes.
+    console.error("incident_persistence_failed")
   }
 }
 
@@ -58,6 +56,6 @@ export async function listOperatorAlerts(options?: {
 
 // ─── Resolve ────────────────────────────────────────────────────────────────
 
-export async function resolveOperatorAlerts(ids: string[], resolvedBy: string): Promise<void> {
-  return resolveAlerts(ids, resolvedBy)
+export async function resolveOperatorAlerts(ids: string[]): Promise<void> {
+  return resolveAlerts(ids)
 }

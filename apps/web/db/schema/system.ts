@@ -30,6 +30,10 @@ export const auditLog = pgTable("audit_log", {
   entityId: text("entity_id").notNull(),
   before: jsonb("before"),
   after: jsonb("after"),
+  outcome: text("outcome", { enum: ["success", "denied", "error"] }).notNull().default("success"),
+  source: text("source").notNull().default("application"),
+  metadata: jsonb("metadata"),
+  requestIdHash: text("request_id_hash"),
   ip: text("ip"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 })

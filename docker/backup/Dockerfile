@@ -58,6 +58,7 @@ RUN apk add --no-cache \
 
 COPY --from=tools /out/rclone /usr/local/bin/rclone
 COPY --chmod=0555 check-tools.sh /opt/backup/check-tools.sh
+COPY --chmod=0555 run-backup.sh backup-health.sh restore-test.sh /opt/backup/
 
 ENV HOME=/var/lib/backup \
     XDG_CONFIG_HOME=/var/lib/backup/.config
@@ -71,4 +72,4 @@ LABEL org.opencontainers.image.title="Quandatics encrypted backup runtime" \
 
 WORKDIR /var/lib/backup/work
 USER 10001:10001
-CMD ["sleep", "infinity"]
+CMD ["/opt/backup/run-backup.sh"]

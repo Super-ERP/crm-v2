@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { organization } from "better-auth/plugins"
+import { organization, twoFactor } from "better-auth/plugins"
 import { genericOAuth, microsoftEntraId } from "better-auth/plugins/generic-oauth"
 import { nextCookies } from "better-auth/next-js"
 import { APIError, createAuthMiddleware } from "better-auth/api"
@@ -135,10 +135,16 @@ async function autoJoinByDomain(user: {
  * ANY of their orgs still permits password login.
  */
 async function passwordLoginAllowed(email: string): Promise<boolean> {
-  // Password sign-in is a platform invariant; the legacy tenant flag is
-  // retained only for database compatibility and is no longer consulted.
-  void email
-  return true
+  if (!isProd) return true
+  const [candidate] = await db
+    .select({
+      isBreakGlass: schema.user.isBreakGlass,
+      twoFactorEnabled: schema.user.twoFactorEnabled,
+    })
+    .from(schema.user)
+    .where(eq(schema.user.email, email.trim().toLowerCase()))
+    .limit(1)
+  return candidate?.isBreakGlass === true && candidate.twoFactorEnabled === true
 }
 
 // A real directory (tenant) GUID is required when Microsoft sign-in is
@@ -173,12 +179,15 @@ export const auth = betterAuth({
       organization: schema.organization,
       member: schema.member,
       invitation: schema.invitation,
+      twoFactor: schema.twoFactor,
+      rateLimit: schema.rateLimit,
     },
   }),
   user: {
     additionalFields: {
       isSuperadmin: { type: "boolean", required: false, input: false },
       isVendorSupport: { type: "boolean", required: false, input: false },
+      isBreakGlass: { type: "boolean", required: false, input: false },
     },
   },
   // Email/password is enabled at the framework level (so the seed can hash via
@@ -189,6 +198,17 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
+  },
+  rateLimit: {
+    enabled: true,
+    storage: "database",
+    window: 60,
+    max: 10,
+    customRules: {
+      "/sign-in/email": { window: 60, max: 5 },
+      "/two-factor/verify-totp": { window: 60, max: 5 },
+      "/two-factor/verify-backup-code": { window: 300, max: 3 },
+    },
   },
   // Reject email/password sign-in for tenants that have opted into SSO-only.
   hooks: {
@@ -324,6 +344,7 @@ export const auth = betterAuth({
       disableOrganizationDeletion: true,
       organizationHooks: licensedOrganizationHooks,
     }),
+    twoFactor({ issuer: "Quandatics CRM" }),
     ...(entraEnabled
       ? [
           genericOAuth({

@@ -18,6 +18,7 @@ export type ApiKeyRow = {
   name: string
   keyPrefix: string
   createdAt: Date
+  expiresAt: Date
   lastUsedAt: Date | null
   revokedAt: Date | null
 }
@@ -31,6 +32,7 @@ export async function listApiKeys(): Promise<ApiKeyRow[]> {
         name: apiKeys.name,
         keyPrefix: apiKeys.keyPrefix,
         createdAt: apiKeys.createdAt,
+        expiresAt: apiKeys.expiresAt,
         lastUsedAt: apiKeys.lastUsedAt,
         revokedAt: apiKeys.revokedAt,
       })
@@ -61,6 +63,7 @@ export async function createApiKey(
         // superadmin browsing without one.
         if (!ctx.memberId) throw new Error("No active membership for this tenant")
         const { key, prefix, hash } = generateApiKey()
+        const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
         const [created] = await tx
           .insert(apiKeys)
           .values({
@@ -71,17 +74,61 @@ export async function createApiKey(
             keyHash: hash,
             // `created_by` FKs to `user.id` (the auth identity), not `member.id`.
             createdBy: ctx.userId,
+            expiresAt,
           })
           .returning({ id: apiKeys.id })
         await writeAudit(tx, ctx, {
           action: "api_key.created",
           entityType: "api_key",
           entityId: created.id,
-          after: { name: trimmed, keyPrefix: prefix },
+          after: { name: trimmed, keyPrefix: prefix, expiresAt: expiresAt.toISOString() },
         })
         return { id: created.id, fullKey: key }
       }
     )
+    revalidatePath("/settings/access")
+    return result
+  })
+}
+
+export async function rotateApiKey(
+  id: string
+): Promise<ActionResult<{ id: string; fullKey: string }>> {
+  return runAction(async () => {
+    const result = await withTenant(PERMISSIONS.TENANT_SETTINGS, async (tx, ctx) => {
+      const [current] = await tx
+        .select({ name: apiKeys.name, memberId: apiKeys.memberId })
+        .from(apiKeys)
+        .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, ctx.tenantId)))
+        .limit(1)
+      if (!current) throw new Error("API key not found")
+
+      const { key, prefix, hash } = generateApiKey()
+      const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+      const [replacement] = await tx
+        .insert(apiKeys)
+        .values({
+          organizationId: ctx.tenantId,
+          memberId: current.memberId,
+          name: current.name,
+          keyPrefix: prefix,
+          keyHash: hash,
+          createdBy: ctx.userId,
+          expiresAt,
+        })
+        .returning({ id: apiKeys.id })
+      await tx
+        .update(apiKeys)
+        .set({ revokedAt: new Date() })
+        .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, ctx.tenantId)))
+      await writeAudit(tx, ctx, {
+        action: "api_key.rotated",
+        entityType: "api_key",
+        entityId: replacement.id,
+        after: { replacesId: id, keyPrefix: prefix, expiresAt: expiresAt.toISOString() },
+      })
+      return { id: replacement.id, fullKey: key }
+    })
     revalidatePath("/settings/access")
     return result
   })

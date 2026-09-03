@@ -28,6 +28,10 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     label: "General",
     items: [
       {
+        label: "Security",
+        href: "/settings/security",
+      },
+      {
         label: "General",
         href: "/settings/general",
         permission: PERMISSIONS.TENANT_SETTINGS,

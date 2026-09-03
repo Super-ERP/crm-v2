@@ -18,6 +18,26 @@ const MIN_ENTITLEMENT_POLL_MS = 100
 const MAX_ENTITLEMENT_POLL_MS = Math.floor(HEARTBEAT_INTERVAL_MS / 2)
 
 type Logger = { info(message: string): void; error(message: string): void }
+
+async function readBackupStatus(path: string): Promise<{
+  lastSuccessfulBackupAt: string | null
+  lastRestoreTestAt: string | null
+}> {
+  const { readFile } = await import("node:fs/promises")
+  const values = Object.fromEntries(
+    (await readFile(path, "utf8")).trim().split("\n").map((line) => {
+      const separator = line.indexOf("=")
+      return [line.slice(0, separator), line.slice(separator + 1)]
+    }),
+  )
+  const asIso = (value?: string) => value && /^\d+$/.test(value)
+    ? new Date(Number(value) * 1000).toISOString()
+    : null
+  return {
+    lastSuccessfulBackupAt: asIso(values.LAST_SUCCESS_AT_EPOCH),
+    lastRestoreTestAt: asIso(values.LAST_RESTORE_TEST_AT_EPOCH),
+  }
+}
 type AttemptOptions = { maxAttempts?: number }
 
 export function heartbeatDelayMs(random: () => number = Math.random): number {
@@ -254,6 +274,12 @@ export function createDeploymentAgent(input: {
       lastErrorCode: null,
     }
     await input.store.saveRuntime(runtime)
+    const backupStatus = input.config.backupStatusFile
+      ? await readBackupStatus(input.config.backupStatusFile).catch(() => ({
+          lastSuccessfulBackupAt: null,
+          lastRestoreTestAt: null,
+        }))
+      : { lastSuccessfulBackupAt: null, lastRestoreTestAt: null }
     const heartbeat: DeploymentHeartbeat = {
       deploymentId: input.config.deploymentId,
       environment: input.config.environment,
@@ -266,8 +292,8 @@ export function createDeploymentAgent(input: {
       enabledModuleIds: status.entitlement.enabledModuleIds,
       healthState: status.healthState,
       migrationVersion: status.migrationVersion,
-      lastSuccessfulBackupAt: null,
-      lastRestoreTestAt: null,
+      lastSuccessfulBackupAt: backupStatus.lastSuccessfulBackupAt,
+      lastRestoreTestAt: backupStatus.lastRestoreTestAt,
       agentVersion: input.config.agentVersion,
       databaseConfiguration: input.config.environmentFilePath
         ? await readDatabaseConfiguration(input.config.environmentFilePath).catch(() => null)
