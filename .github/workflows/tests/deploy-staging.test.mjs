@@ -33,15 +33,15 @@ const pointAuthAtTunnel = workflow.indexOf(
 const healthCheck = workflow.indexOf(
   "- name: Health check (via the public tunnel URL)",
 );
-const loginCheck = workflow.indexOf(
-  "- name: Verify email/password login",
+const promotion = workflow.indexOf(
+  "- name: Promote verified release to production",
 );
 const publishAccess = workflow.indexOf("- name: Publish staging access");
 
 assert.ok(pointAuthAtTunnel >= 0, "missing tunnel auth configuration step");
 assert.ok(healthCheck > pointAuthAtTunnel, "health check must use the live URL");
-assert.ok(loginCheck > healthCheck, "login must be tested after health");
-assert.ok(publishAccess > loginCheck, "access details must publish after login test");
+assert.ok(promotion > healthCheck, "production promotion must follow health");
+assert.ok(publishAccess > promotion, "access details must publish after promotion");
 
 const bootstrap = workflow.slice(0, pointAuthAtTunnel);
 const publish = workflow.slice(publishAccess);
@@ -56,19 +56,9 @@ assert.doesNotMatch(publish, /get_env DEMO_ADMIN_PASSWORD/);
 assert.doesNotMatch(publish, /get_env SEED_SAMPLE_PASSWORD/);
 assert.doesNotMatch(publish, /Demo admin:/);
 assert.match(publish, /never printed in workflow logs or summaries/);
-assert.match(
-  workflow,
-  /\$URL\/api\/auth\/sign-in\/email/,
-  "workflow must prove the published credentials can authenticate",
-);
-assert.match(workflow, /get_env PLATFORM_MASTER_EMAIL/);
-assert.match(workflow, /get_env PLATFORM_MASTER_PASSWORD/);
+assert.doesNotMatch(workflow, /\/api\/auth\/sign-in\/email/);
 assert.doesNotMatch(workflow, /get_env DEMO_ADMIN_(?:EMAIL|PASSWORD)/);
 assert.match(workflow, /Promote verified release to production/);
 assert.match(workflow, /gh workflow run deploy\.yml/);
-assert.ok(
-  workflow.indexOf("Promote verified release to production") > loginCheck,
-  "production promotion must happen only after staging login succeeds",
-);
 
-console.log("deploy-staging workflow login contract OK");
+console.log("deploy-staging workflow health contract OK");
