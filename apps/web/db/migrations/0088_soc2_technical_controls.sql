@@ -35,7 +35,6 @@ LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $$
   RETURNING organization_id, member_id;
 $$;
 REVOKE ALL ON FUNCTION verify_api_key(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION verify_api_key(text) TO crm_app;
 
 ALTER TABLE "audit_log"
   ADD COLUMN IF NOT EXISTS "outcome" text NOT NULL DEFAULT 'success',
@@ -50,6 +49,7 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'crm_app') THEN
     GRANT SELECT, INSERT, UPDATE ON "two_factor", "rate_limit" TO crm_app;
+    GRANT EXECUTE ON FUNCTION verify_api_key(text) TO crm_app;
   END IF;
 END
 $$;
