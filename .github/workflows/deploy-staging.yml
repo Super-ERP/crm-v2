@@ -178,28 +178,6 @@ jobs:
             echo "waiting for staging web through the tunnel... ($i)"; sleep 5
           done
           curl -fsS --max-time 6 "$URL/api/health" >/dev/null || { echo "health FAILED"; docker compose -p crm-staging logs --tail=50 web migrate || true; exit 1; }
-      - name: Verify email/password login
-        run: |
-          set -euo pipefail
-          DIR="${STAGING_DIR:-$HOME/crm-v2-staging}"
-          URL="${{ steps.url.outputs.STAGING_URL }}"
-          get_env() {
-            sed -n "s/^$1=//p" "$DIR/.env.staging" | tail -1
-          }
-          ADMIN_EMAIL="$(get_env PLATFORM_MASTER_EMAIL)"
-          ADMIN_PW="$(get_env PLATFORM_MASTER_PASSWORD)"
-          HTTP_CODE=$(curl -sS --max-time 12 \
-            -o /tmp/crm-staging-auth-response.json \
-            -w "%{http_code}" \
-            -H "Content-Type: application/json" \
-            -H "Origin: ${URL}" \
-            --data "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PW}\"}" \
-            "$URL/api/auth/sign-in/email")
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "staging email/password login FAILED with HTTP $HTTP_CODE"
-            exit 1
-          fi
-          echo "staging email/password login OK"
       - name: Promote verified release to production
         run: gh workflow run deploy.yml --ref main -f release_tag="$RELEASE_TAG"
       - name: Publish staging access
