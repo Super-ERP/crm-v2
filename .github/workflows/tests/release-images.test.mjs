@@ -215,7 +215,9 @@ test("release manifest records immutable provenance for all images", () => {
   assert.match(upload.with?.path ?? "", /release-manifest\.json/)
   assert.equal(upload.with?.["if-no-files-found"], "error")
   assert.equal(workflow.jobs?.manifest?.permissions?.contents, "write")
+  assert.equal(workflow.jobs?.manifest?.permissions?.actions, "write")
   assert.match(source, /gh release create "\$TARGET_REF" --verify-tag --generate-notes/)
+  assert.match(source, /gh workflow run deploy-staging\.yml --ref main -f release_run_id="\$GITHUB_RUN_ID"/)
 })
 
 test("all third-party actions use immutable commit pins", () => {

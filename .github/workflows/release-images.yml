@@ -227,7 +227,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      actions: read
+      actions: write
       contents: write
       id-token: write
     env:
@@ -309,3 +309,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release view "$TARGET_REF" >/dev/null 2>&1 || gh release create "$TARGET_REF" --verify-tag --generate-notes --title "$TARGET_REF"
+      - name: Deploy signed release to staging
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-staging.yml --ref main -f release_run_id="$GITHUB_RUN_ID"
