@@ -7,8 +7,8 @@ const workflows = resolve(import.meta.dirname, "..")
 
 test("staging upgrades retained env through a protected trust-set secret before Compose starts", () => {
   const workflow = readFileSync(resolve(workflows, "deploy-staging.yml"), "utf8")
-  assert.match(workflow, /workflows:\s*\[release-images\]/)
-  assert.match(workflow, /branches:\s*\[main\]/)
+  assert.match(workflow, /workflow_dispatch:/)
+  assert.match(workflow, /release_run_id:/)
   assert.match(readFileSync(resolve(workflows, "quality.yml"), "utf8"), /pnpm run test:workflows/)
   assert.match(workflow, /environment:\s*staging/)
   assert.match(workflow, /CADDY_HOST_PORT=8092/)

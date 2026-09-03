@@ -12,10 +12,11 @@ assert.match(workflow, /Reconcile retained staging database password/);
 assert.match(workflow, /ALTER ROLE postgres PASSWORD/);
 assert.match(workflow, /\^\[0-9a-f\]\{48\}\$/);
 
-assert.match(workflow, /workflows:\s*\[release-images\]/);
-assert.match(workflow, /branches:\s*\[main\]/);
+assert.match(workflow, /workflow_dispatch:/);
+assert.match(workflow, /release_run_id:/);
 assert.doesNotMatch(workflow, /branches:\s*\[staging\]/);
 assert.match(workflow, /release-manifest-/);
+assert.match(workflow, /release run is not a successful main release/);
 assert.match(workflow, /\.source_commit/);
 assert.match(workflow, /\.image_ref/);
 assert.match(workflow, /WEB_IMAGE=\$web_image/);

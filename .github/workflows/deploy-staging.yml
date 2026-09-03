@@ -7,10 +7,12 @@
 name: deploy-staging
 
 on:
-  workflow_run:
-    workflows: [release-images]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_run_id:
+        description: Successful release-images workflow run to deploy
+        required: true
+        type: string
 
 concurrency:
   group: deploy-staging
@@ -23,17 +25,24 @@ permissions:
 
 jobs:
   deploy-staging:
-    if: github.event.workflow_run.conclusion == 'success'
     runs-on: self-hosted
     environment: staging
     env:
-      RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
+      RELEASE_RUN_ID: ${{ inputs.release_run_id }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Resolve immutable release images
         shell: bash
         run: |
           set -euo pipefail
+          [[ "$RELEASE_RUN_ID" =~ ^[0-9]+$ ]] || { echo "invalid release run id" >&2; exit 1; }
+          release_run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}")"
+          printf '%s' "$release_run" | jq -e '
+            .conclusion == "success" and
+            .event == "workflow_dispatch" and
+            .path == ".github/workflows/release-images.yml" and
+            .head_branch == "main"
+          ' >/dev/null || { echo "release run is not a successful main release" >&2; exit 1; }
           artifact_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}/artifacts?per_page=100")"
           release_tag="$(printf '%s' "$artifact_json" | jq -er '
             [.artifacts[] | select(.expired == false and (.name | startswith("release-manifest-v"))) | .name]
