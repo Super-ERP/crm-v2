@@ -1,9 +1,3 @@
-# Deploy the signed release to staging before promoting it to production.
-#
-# One-time server setup (see the "Staging environment" runbook in
-# https://github.com/Super-ERP/docs/blob/main/archive/operations/OPERATIONS.md):
-#   git clone <repo> ~/crm-v2-staging && cd ~/crm-v2-staging && git checkout <sha>
-#   cp .env.staging.example .env.staging   # then fill in fresh secrets
 name: deploy-staging
 
 on:
@@ -69,135 +63,27 @@ jobs:
           echo "WEB_IMAGE=$web_image" >> "$GITHUB_ENV"
           echo "MIGRATOR_IMAGE=$migrator_image" >> "$GITHUB_ENV"
           rm -rf -- "$manifest_dir"
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: 22
-      # Self-bootstrapping: creates the staging checkout + base env on first run,
-      # then upgrades retained deployment-control values on every release.
-      # Staging is reachable at 127.0.0.1:8092 through its quick tunnel.
-      - name: Bootstrap or upgrade staging checkout + env
+      - name: Test signed production bundle locally
         env:
           VENDOR_ENTITLEMENT_TRUST_SET: ${{ secrets.STAGING_VENDOR_ENTITLEMENT_TRUST_SET }}
+        shell: bash
         run: |
           set -euo pipefail
-          DIR="${STAGING_DIR:-$HOME/crm-v2-staging}"
-          REPOSITORY_URL="https://github.com/Super-ERP/crm-v2.git"
-          if [ ! -d "$DIR/.git" ]; then
-            git clone "$REPOSITORY_URL" "$DIR"
-          fi
-          git -C "$DIR" fetch origin main "${DEPLOY_SHA}"
-          git -C "$DIR" checkout -f "${DEPLOY_SHA}"
-          if [ ! -f "$DIR/.env.staging" ]; then
-            cd "$DIR"
-            cp .env.staging.example .env.staging
-            gen() { openssl rand -hex 24; }
-            sed -i "s|change_me_staging_postgres|$(gen)|" .env.staging
-            sed -i "s|change_me_staging_crm_app|$(gen)|" .env.staging
-            sed -i "s|change_me_run_openssl_rand_base64_32|$(openssl rand -base64 32)|" .env.staging
-            ADMIN_PW="$(openssl rand -hex 16)"
-            SAMPLE_PW="$(openssl rand -hex 16)"
-            sed -i "s|change_me_strong_staging_master|${ADMIN_PW}|" .env.staging
-            sed -i "s|change_me_strong_staging_sample|${SAMPLE_PW}|" .env.staging
-            # No public domain: reach staging via SSH tunnel to 127.0.0.1:8092.
-            sed -i "s|staging.quandatics.com|localhost:8092|g" .env.staging
-            sed -i "s|https://localhost:8092|http://localhost:8092|g" .env.staging
-          fi
-          sed -i "s|^CADDY_HOST_PORT=.*|CADDY_HOST_PORT=8092|" "$DIR/.env.staging"
-          node "$DIR/.github/workflows/scripts/provision-deployment-runtime.mjs" --mode staging --env-file "$DIR/.env.staging" --repo-root "$DIR"
-      - name: Reconcile retained staging database password
-        run: |
-          set -euo pipefail
-          DIR="${STAGING_DIR:-$HOME/crm-v2-staging}"
-          POSTGRES_PASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' "$DIR/.env.staging" | tail -1)"
-          if [[ ! "$POSTGRES_PASSWORD" =~ ^[0-9a-f]{48}$ ]]; then
-            echo "Invalid staging PostgreSQL password format" >&2
-            exit 1
-          fi
-          if docker ps --format '{{.Names}}' | grep -qx crm-staging-db-1; then
-            docker exec \
-              -u postgres \
-              -e TARGET_PASSWORD="$POSTGRES_PASSWORD" \
-              crm-staging-db-1 \
-              sh -ceu 'psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c "ALTER ROLE postgres PASSWORD '\''$TARGET_PASSWORD'\'';" >/dev/null'
-          fi
-      # Phase 1: pull the GitHub-built images and bring the whole stack + tunnel
-      # up. web boots with the current
-      # (possibly stale) BETTER_AUTH_URL; phase 2 repoints it to the live tunnel
-      # URL so Better Auth trusts the public origin (else login -> INVALID_ORIGIN).
-      - name: Pull and start the staging stack (+ public tunnel)
-        run: |
-          set -euo pipefail
-          DIR="${STAGING_DIR:-$HOME/crm-v2-staging}"
+          TEMP_DIR="$(mktemp -d)"
+          export DOCKER_CONFIG="$TEMP_DIR/docker-auth"
+          trap 'rm -rf -- "$TEMP_DIR"' EXIT
           printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
-          compose=(docker compose \
-            -p crm-staging \
-            -f "$DIR/docker-compose.yaml" \
-            -f "$DIR/docker-compose.staging-images.yaml" \
-            -f "$DIR/docker-compose.staging-tunnel.yaml" \
-            --env-file "$DIR/.env.staging")
-          if ! "${compose[@]}" up -d --pull always --no-build migrate web caddy tunnel; then
-            echo "Migration/startup failed. Container status:"
-            "${compose[@]}" ps -a
-            echo "Migration logs:"
-            "${compose[@]}" logs --no-color --tail=200 migrate
-            exit 1
-          fi
-      # Phase 2: capture the random tunnel URL, point BETTER_AUTH_URL/APP_URL at
-      # it, and recreate ONLY web so auth accepts requests through the tunnel.
-      - name: Point auth at the tunnel URL and recreate web
-        id: url
-        run: |
-          DIR="${STAGING_DIR:-$HOME/crm-v2-staging}"
-          URL=""
-          for i in $(seq 1 45); do
-            URL=$(docker logs crm-staging-tunnel-1 2>&1 | grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" | tail -1)
-            [ -n "$URL" ] && break
-            sleep 4
-          done
-          if [ -z "$URL" ]; then
-            echo "Tunnel URL not captured. cloudflared logs:"; docker logs crm-staging-tunnel-1 2>&1 | tail -30 || true
-            exit 1
-          fi
-          echo "STAGING_URL=$URL" >> "$GITHUB_OUTPUT"
-          sed -i "s|^BETTER_AUTH_URL=.*|BETTER_AUTH_URL=${URL}|" "$DIR/.env.staging"
-          sed -i "s|^APP_URL=.*|APP_URL=${URL}|" "$DIR/.env.staging"
-          docker compose \
-            -p crm-staging \
-            -f "$DIR/docker-compose.yaml" \
-            -f "$DIR/docker-compose.staging-images.yaml" \
-            -f "$DIR/docker-compose.staging-tunnel.yaml" \
-            --env-file "$DIR/.env.staging" \
-            up -d --pull always --force-recreate --no-deps web
-      - name: Health check (via the public tunnel URL)
-        run: |
-          URL="${{ steps.url.outputs.STAGING_URL }}"
-          for i in $(seq 1 40); do
-            if curl -fsS --max-time 6 "$URL/api/health" >/dev/null 2>&1; then
-              echo "staging $URL/api/health OK"; break
-            fi
-            echo "waiting for staging web through the tunnel... ($i)"; sleep 5
-          done
-          curl -fsS --max-time 6 "$URL/api/health" >/dev/null || { echo "health FAILED"; docker compose -p crm-staging logs --tail=50 web migrate || true; exit 1; }
+          gh run download "$RELEASE_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name "client-deployment-bundle-${RELEASE_TAG}" --dir "$TEMP_DIR"
+          cosign verify-blob \
+            --bundle "$TEMP_DIR/client-deployment-bundle.sigstore.json" \
+            --certificate-identity "https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release-images.yml@refs/heads/main" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$TEMP_DIR/client-deployment-bundle.tar.gz"
+          tar -xzf "$TEMP_DIR/client-deployment-bundle.tar.gz" -C "$TEMP_DIR"
+          node "$TEMP_DIR/client/ops/smoke-release.mjs" "$TEMP_DIR/client"
       - name: Promote verified release to production
         run: gh workflow run deploy.yml --ref main -f release_tag="$RELEASE_TAG"
-      - name: Publish staging access
-        if: always()
+      - name: Publish deployment summary
         run: |
-          set -euo pipefail
-          DIR="${STAGING_DIR:-$HOME/crm-v2-staging}"
-          URL="${{ steps.url.outputs.STAGING_URL }}"
-          get_env() {
-            sed -n "s/^$1=//p" "$DIR/.env.staging" | tail -1
-          }
-          if [ -n "$URL" ]; then
-            {
-              echo "## Staging"
-              echo ""
-              echo "**Open:** $URL"
-              echo ""
-              echo "Use **email and password**. Microsoft SSO is intentionally unavailable because the quick-tunnel hostname changes on each redeploy and cannot be pre-registered as an Entra callback URL."
-              echo ""
-              echo "Credentials are stored in the protected staging environment; they are never printed in workflow logs or summaries."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "STAGING_PUBLIC_URL=$URL"
-          fi
+          echo "Local production-bundle smoke passed for $RELEASE_TAG; production deployment queued." >> "$GITHUB_STEP_SUMMARY"

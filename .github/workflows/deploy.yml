@@ -3,13 +3,19 @@ name: deploy-production
 on:
   workflow_dispatch:
     inputs:
-      release_tag:
-        description: Signed strict SemVer release, for example v1.2.20
+      operation:
+        description: Server action
         required: true
+        default: Deploy latest
+        type: choice
+        options: [Deploy latest, Roll back]
+      release_tag:
+        description: Leave blank to deploy latest; provide a prior release tag to roll back
+        required: false
         type: string
 
 permissions:
-  actions: read
+  actions: write
   contents: read
   packages: read
 
@@ -25,11 +31,20 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       CLIENT_DIR: /home/internalops/quandatics-client
       RELEASE_TAG: ${{ inputs.release_tag }}
+      OPERATION: ${{ inputs.operation }}
     steps:
       - name: Download verified source-free release bundle
         shell: bash
         run: |
           set -euo pipefail
+          if [ "$OPERATION" = "Roll back" ] && [ -z "$RELEASE_TAG" ]; then
+            echo "Choose the prior release tag to roll back to." >&2
+            exit 1
+          fi
+          if [ -z "$RELEASE_TAG" ]; then
+            RELEASE_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+            echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+          fi
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid release tag" >&2; exit 1; }
           WORKFLOW_IDENTITY="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/release-images.yml@refs/heads/main"
           echo "WORKFLOW_IDENTITY=$WORKFLOW_IDENTITY" >> "$GITHUB_ENV"
@@ -67,11 +82,22 @@ jobs:
 
           BUNDLE_DIR="$TEMP_DIR/verified/client"
           [ -f "$BUNDLE_DIR/deploy.sh" ] || { echo "invalid release bundle" >&2; exit 1; }
+          if [ -f "$CLIENT_DIR/deployed-release.env" ]; then
+            current_migration=$(sed -n 's/^MIGRATION_VERSION=//p' "$CLIENT_DIR/deployed-release.env")
+            target_migration=$(jq -er '.migration_version' "$BUNDLE_DIR/release-manifest.json")
+            if [ "$current_migration" != "$target_migration" ] && [ "$target_migration" \< "$current_migration" ]; then
+              echo "Rollback crosses database migrations; use the tested database restore procedure." >&2
+              exit 1
+            fi
+          fi
           install -d -m 0700 "$CLIENT_DIR" "$CLIENT_DIR/ops"
           install -m 0700 "$BUNDLE_DIR"/*.sh "$CLIENT_DIR/"
           install -m 0700 "$BUNDLE_DIR"/ops/*.sh "$CLIENT_DIR/ops/"
           install -m 0644 "$BUNDLE_DIR/compose.yaml" "$BUNDLE_DIR/Caddyfile" "$CLIENT_DIR/"
           install -m 0600 "$BUNDLE_DIR/release-manifest.json" "$CLIENT_DIR/release-manifest.json"
+          echo "SOURCE_SHA=$(jq -er '.source_commit' "$CLIENT_DIR/release-manifest.json")" >> "$GITHUB_ENV"
+          echo "DEPLOY_VENDOR=$(jq -r '.deploy_vendor // false' "$CLIENT_DIR/release-manifest.json")" >> "$GITHUB_ENV"
+
 
       - name: Apply manifest and deploy signed digests
         env:
@@ -85,6 +111,17 @@ jobs:
           printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           "$CLIENT_DIR/apply-release-manifest.sh" "$CLIENT_DIR/.env" "$CLIENT_DIR/release-manifest.json" "$RELEASE_TAG"
           "$CLIENT_DIR/deploy.sh" "$CLIENT_DIR/.env"
+
+      - name: Deploy affected vendor service after ERP
+        if: env.DEPLOY_VENDOR == 'true' && inputs.operation != 'Roll back'
+        run: gh workflow run deploy-control-plane.yml --ref main -f environment=production -f source_sha="$SOURCE_SHA"
+      - name: Deployment result
+        if: always()
+        env:
+          DEPLOY_RESULT: ${{ job.status }}
+        run: |
+          echo "Release: $RELEASE_TAG — result: $DEPLOY_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          echo "Production: Quandatics. Successful deployment includes health and entitlement checks." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Clean temporary bundle
         if: always()

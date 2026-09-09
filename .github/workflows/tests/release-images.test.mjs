@@ -49,7 +49,7 @@ test("release runs only for version tags with least-privilege publishing permiss
 
 test("release validation and quality run in parallel before the manifest gate", () => {
   assert.equal(workflow.jobs?.["validate-tag"]?.needs, undefined)
-  assert.deepEqual(workflow.jobs?.manifest?.needs, ["build", "validate-tag", "quality"])
+  assert.deepEqual(workflow.jobs?.manifest?.needs, ["build", "validate-tag"])
 })
 
 test("release quality skips only the duplicate application build", () => {
@@ -69,8 +69,9 @@ test("release quality skips only the duplicate application build", () => {
     "standalone build must be gated by inputs.run_build — true on PRs/pushes, false from release",
   )
 
-  const releaseQuality = workflow.jobs?.quality
-  assert.equal(releaseQuality?.with?.run_build, false)
+  assert.equal(workflow.jobs?.quality, undefined)
+  assert.match(source, /verify-quality.mjs/)
+
 })
 
 test("release jobs have bounded execution time", () => {

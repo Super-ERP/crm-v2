@@ -23,7 +23,8 @@ test("release labels select semver behavior and documentation changes skip relea
   for (const label of ["release:none", "release:minor", "release:major"]) {
     assert.match(source, new RegExp(label.replace(":", "\\:")))
   }
-  assert.match(source, /docs\/\|README/)
+  assert.match(source, /release-scope\.mjs/)
+  assert.doesNotMatch(source, /changed_files=/)
   assert.match(source, /git tag -a/)
   assert.match(source, /gh workflow run release-images\.yml/)
 })
