@@ -65,7 +65,7 @@ const statusResponseSchema = z.object({
   entitlement: z.object({
     revision: decimalRevisionSchema.nullable(),
     configurationVersion: opaqueVersionSchema.nullable(),
-    mode: z.enum(["active", "grace", "read_only"]).nullable(),
+    mode: z.enum(["active", "grace", "read_only", "service_disabled"]).nullable(),
     enabledModuleIds: z.array(ModuleIdSchema).max(32)
       .refine((values) => new Set(values).size === values.length),
   }).strict(),
@@ -73,6 +73,7 @@ const statusResponseSchema = z.object({
   reservedInvitationCount: z.number().int().min(0).max(100_000),
   applicationVersion: StrictSemverSchema,
   migrationVersion: migrationVersionSchema,
+  supportedEntitlementSchemaVersion: z.literal(3).optional(),
 }).strict().superRefine((status, context) => {
   const hasEntitlement = status.entitlement.revision !== null
   if (hasEntitlement && (status.entitlement.mode === null || status.healthState === "unhealthy")) {
@@ -91,6 +92,9 @@ const heartbeatResponseSchema = z.object({
   accepted: z.literal(true),
   entitlement: z.object({ version: z.number().int().min(1).max(2_147_483_647) }).strict().nullable(),
 }).strict()
+const currentEntitlementResponseSchema = z.object({
+  version: z.number().int().min(1).max(2_147_483_647).nullable(),
+}).strict()
 const entitlementEnvelopeSchema = z.object({
   keyId: z.string().min(1).max(128),
   payload: z.unknown(),
@@ -99,7 +103,7 @@ const entitlementEnvelopeSchema = z.object({
 const applyResponseSchema = z.object({
   outcome: z.enum(["accepted", "idempotent"]),
   revision: z.number().int().min(1),
-  mode: z.enum(["active", "grace", "read_only"]),
+  mode: z.enum(["active", "grace", "read_only", "service_disabled"]),
 }).strict()
 
 const commandAckResponseSchema = z.object({
@@ -298,18 +302,24 @@ export function createDeploymentClient(input: {
       heartbeat: DeploymentHeartbeat,
       signal: AbortSignal,
     ): Promise<z.infer<typeof heartbeatResponseSchema>> {
-      const parsed = DeploymentHeartbeatSchema.parse(heartbeat)
-      const body = JSON.stringify(parsed)
-      const bytes = new TextEncoder().encode(body)
       const path = `/v1/deployments/${input.config.deploymentId}/heartbeat`
-      const headers = await signedHeaders(identity, "POST", path, bytes)
-      headers.set("Content-Type", "application/json")
-      const response = await fetchResponse(
-        fetchImplementation,
-        `${input.config.controlPlaneUrl}${path}`,
-        { method: "POST", headers, body, signal },
-        now,
-      )
+      const send = async (value: DeploymentHeartbeat) => {
+        const body = JSON.stringify(DeploymentHeartbeatSchema.parse(value))
+        const bytes = new TextEncoder().encode(body)
+        const headers = await signedHeaders(identity, "POST", path, bytes)
+        headers.set("Content-Type", "application/json")
+        return fetchResponse(
+          fetchImplementation,
+          `${input.config.controlPlaneUrl}${path}`,
+          { method: "POST", headers, body, signal },
+          now,
+        )
+      }
+      let response = await send(heartbeat)
+      if (response.status === 400 && heartbeat.supportedEntitlementSchemaVersion === 3) {
+        const { supportedEntitlementSchemaVersion: _unsupported, ...legacyHeartbeat } = heartbeat
+        response = await send(legacyHeartbeat)
+      }
       if (response.status !== 202) throw new AgentRequestError(`http_${response.status}`, false)
       return parseJson(response, heartbeatResponseSchema)
     },
@@ -337,6 +347,25 @@ export function createDeploymentClient(input: {
       } catch {
         throw new AgentRequestError("invalid_response", false)
       }
+    },
+
+    async currentEntitlement(
+      identity: DeploymentClientIdentity,
+      signal: AbortSignal,
+    ): Promise<number | null | undefined> {
+      const path = `/v1/deployments/${input.config.deploymentId}/entitlement/current`
+      const headers = await signedHeaders(identity, "GET", path, new Uint8Array())
+      const response = await fetchResponse(
+        fetchImplementation,
+        `${input.config.controlPlaneUrl}${path}`,
+        { headers, signal },
+        now,
+      )
+      // Older control planes do not expose the lightweight pointer. Let the
+      // runner retain its prior web-revision-only behavior during rollout.
+      if (response.status === 404) return undefined
+      if (response.status !== 200) throw new AgentRequestError(`http_${response.status}`, false)
+      return (await parseJson(response, currentEntitlementResponseSchema)).version
     },
 
     async applyEntitlement(raw: string, expectedVersion: number, signal: AbortSignal): Promise<void> {

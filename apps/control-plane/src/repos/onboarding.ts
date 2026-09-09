@@ -14,7 +14,7 @@ const RECENT_LIMIT = 10
 
 type StoredLease = EntitlementLease | LegacyEntitlementLease
 
-export type LicenceState = "unsigned" | "active" | "grace" | "read_only"
+export type LicenceState = "unsigned" | "active" | "grace" | "read_only" | "service_disabled"
 export type ConnectivityState = "online" | "stale" | "never_connected"
 export type OnboardingProgress = "contract" | "install" | "configure" | "sign" | "verify" | "complete"
 export type OnboardingNextAction =
@@ -151,7 +151,7 @@ export function deriveOnboardingState(input: {
       ? "online"
       : "stale"
 
-  if (!input.hasCompatibleContract) {
+  if (!input.hasCompatibleContract && input.lease?.schemaVersion !== 3) {
     return { progress: "contract", nextAction: "create_contract", licenceState, connectivityState }
   }
   if (!input.isRegistered) {

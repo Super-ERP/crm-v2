@@ -1,4 +1,5 @@
 import "server-only"
+import { getDeploymentAccess } from "@/lib/deployment-control"
 import { cookies, headers } from "next/headers"
 import { asc, eq, inArray } from "drizzle-orm"
 import { auth } from "@/lib/auth"
@@ -58,7 +59,12 @@ export function hasStandingTenantAccess(input: Pick<
  * effective permissions. Returns null when unauthenticated.
  */
 export async function getServerContext(): Promise<ServerContext | null> {
-  const session = await auth.api.getSession({ headers: await headers() })
+  // Establish request-time rendering before consulting the deployment database.
+  const requestHeaders = await headers()
+  if ((await getDeploymentAccess()).mode === "service_disabled") {
+    throw new Error("SERVICE_DISABLED: Service is disabled. Contact your service provider.")
+  }
+  const session = await auth.api.getSession({ headers: requestHeaders })
   if (!session) return null
 
   const sessionUser = session.user

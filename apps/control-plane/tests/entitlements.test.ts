@@ -1034,3 +1034,163 @@ describe("scheduler and retrieval", () => {
     expect(wrongDeployment.status).toBe(401)
   })
 })
+
+describe("simple service controls", () => {
+  async function ready() {
+    const fixture = await seed({ seatLimit: 4 })
+    const original = await issue(fixture)
+    await env.CONTROL_DB.prepare("INSERT INTO heartbeat_rollups (id, deployment_id, observed_at, occupied_seats, application_version, health_status, created_at, active_user_count, reserved_invitation_count, entitlement_version, supported_entitlement_schema_version) VALUES (?, ?, ?, 2, '1.0.0', 'healthy', ?, 2, 1, ?, 3)")
+      .bind(crypto.randomUUID(), fixture.deploymentId, now.toISOString(), now.toISOString(), String(original.version)).run()
+    return { ...fixture, original }
+  }
+  async function save(fixture: { deploymentId: string }, enabled: boolean, seatLimit: number, expectedRevision: number, environment = bindings()) {
+    const { saveServiceControls } = await import("../src/repos/service-controls")
+    return saveServiceControls(environment, { deploymentId: fixture.deploymentId, enabled, seatLimit, expectedRevision, actor: { operatorId: ownerId, requestId: crypto.randomUUID() }, now })
+  }
+  it("adopts explicitly, signs automatically, preserves modules, and waits for server acknowledgement", async () => {
+    const fixture = await ready()
+    const { getServiceControls } = await import("../src/repos/service-controls")
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ adopted: false, revision: 0, seatLimit: 4 })
+    await save(fixture, true, 6, 0)
+    const reference = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    const issued = await getEntitlement(env.CONTROL_DB, fixture.deploymentId, reference!.version)
+    expect(issued!.envelope.payload).toMatchObject({ schemaVersion: 3, serviceEnabled: true, serviceRevision: 1, maxActiveUsers: 6, moduleIds: fixture.original.envelope.payload.moduleIds })
+    expect(await verifyEnvelope(issued!.envelope, { "vendor-key-a": publicJwk })).not.toBeNull()
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ adopted: true, syncStatus: "pending" })
+    await env.CONTROL_DB.prepare("UPDATE heartbeat_rollups SET entitlement_version = ? WHERE deployment_id = ?").bind(String(reference!.version), fixture.deploymentId).run()
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ syncStatus: "applied" })
+  })
+  it("requires server compatibility and rejects stale edits and occupied seat reductions", async () => {
+    const fixture = await ready()
+    await expect(save(fixture, true, 2, 0)).rejects.toMatchObject({ code: "service_seat_limit_in_use" })
+    await env.CONTROL_DB.prepare("UPDATE heartbeat_rollups SET supported_entitlement_schema_version = NULL WHERE deployment_id = ?").bind(fixture.deploymentId).run()
+    await expect(save(fixture, true, 4, 0)).rejects.toMatchObject({ code: "service_upgrade_required" })
+    await env.CONTROL_DB.prepare("UPDATE heartbeat_rollups SET supported_entitlement_schema_version = 3 WHERE deployment_id = ?").bind(fixture.deploymentId).run()
+    await save(fixture, true, 6, 0)
+    await expect(save(fixture, false, 6, 0)).rejects.toMatchObject({ code: "service_controls_changed" })
+    await save(fixture, false, 3, 1)
+    const ref = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    const lease = (await getEntitlement(env.CONTROL_DB, fixture.deploymentId, ref!.version))!.envelope.payload
+    expect(evaluateLease(lease, now).mode).toBe("service_disabled")
+  })
+  it("retains saved intent after signing failure and automatically retries without a manual signing step", async () => {
+    const fixture = await ready()
+    await expect(save(fixture, false, 4, 0, bindings(env.CONTROL_DB, { ENTITLEMENT_SIGNING_PRIVATE_JWK: "invalid" }))).rejects.toMatchObject({ code: "service_update_pending" })
+    const { getServiceControls } = await import("../src/repos/service-controls")
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ enabled: false, revision: 1, syncStatus: "pending" })
+    await runEntitlementRenewal(bindings(), now)
+    const reference = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    expect((await getEntitlement(env.CONTROL_DB, fixture.deploymentId, reference!.version))!.envelope.payload).toMatchObject({ schemaVersion: 3, serviceEnabled: false })
+  })
+  it("does not churn signed versions between technical renewals", async () => {
+    const fixture = await ready()
+    await save(fixture, true, 4, 0)
+    const first = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    await runEntitlementRenewal(bindings(), new Date(now.getTime() + 60000))
+    expect(await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)).toEqual(first)
+    await save(fixture, true, 4, 1)
+    expect(await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)).toEqual(first)
+    await runEntitlementRenewal(bindings(), new Date(now.getTime() + 19 * 60 * 60000))
+    const next = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    expect(next!.version).toBeGreaterThan(first!.version)
+  })
+  it("keeps offline toggles pending but rejects reductions using stale seat counts", async () => {
+    const fixture = await ready()
+    await save(fixture, true, 4, 0)
+    await env.CONTROL_DB.prepare("UPDATE heartbeat_rollups SET observed_at = '2026-08-09T00:00:00.000Z' WHERE deployment_id = ?").bind(fixture.deploymentId).run()
+    await expect(save(fixture, true, 3, 1)).rejects.toMatchObject({ code: "service_seat_usage_stale" })
+    await save(fixture, false, 4, 1)
+    const { getServiceControls } = await import("../src/repos/service-controls")
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ enabled: false, syncStatus: "pending", canSave: true })
+  })
+  it("does not adopt a vendor version the server has not applied", async () => {
+    const fixture = await ready()
+    await issue(fixture)
+    await expect(save(fixture, true, 4, 0)).rejects.toMatchObject({ code: "service_setup_required" })
+  })
+  it("does not report applied when an enabled service's technical offline allowance has elapsed", async () => {
+    const fixture = await ready()
+    await save(fixture, true, 4, 0)
+    const reference = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    const later = new Date(now.getTime() + 9 * DAY_MS)
+    await env.CONTROL_DB.prepare("UPDATE heartbeat_rollups SET observed_at = ?, entitlement_version = ? WHERE deployment_id = ?").bind(later.toISOString(), String(reference!.version), fixture.deploymentId).run()
+    const { getServiceControls } = await import("../src/repos/service-controls")
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, later)).toMatchObject({ syncStatus: "attention" })
+  })
+  it("atomically rejects adoption when a newer vendor version appears after the preview", async () => {
+    const fixture = await ready()
+    let intercepted = false
+    const database = new Proxy(env.CONTROL_DB, {
+      get(target, property) {
+        if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+          if (!intercepted) { intercepted = true; await issue(fixture) }
+          return target.batch(statements)
+        }
+        const value = Reflect.get(target, property, target)
+        return typeof value === "function" ? value.bind(target) : value
+      },
+    })
+    await expect(save(fixture, true, 4, 0, bindings(database))).rejects.toMatchObject({ code: "service_controls_changed" })
+    expect(await env.CONTROL_DB.prepare("SELECT 1 FROM service_controls WHERE deployment_id = ?").bind(fixture.deploymentId).first()).toBeNull()
+  })
+  it("rechecks live reported usage atomically before committing a seat reduction", async () => {
+    const fixture = await ready()
+    await save(fixture, true, 6, 0)
+    let intercepted = false
+    const database = new Proxy(env.CONTROL_DB, {
+      get(target, property) {
+        if (property === "batch") return async (statements: D1PreparedStatement[]) => {
+          if (!intercepted) {
+            intercepted = true
+            await target.prepare("UPDATE heartbeat_rollups SET active_user_count = 5 WHERE deployment_id = ?").bind(fixture.deploymentId).run()
+          }
+          return target.batch(statements)
+        }
+        const value = Reflect.get(target, property, target)
+        return typeof value === "function" ? value.bind(target) : value
+      },
+    })
+    await expect(save(fixture, true, 3, 1, bindings(database))).rejects.toMatchObject({ code: "service_controls_changed" })
+    const { getServiceControls } = await import("../src/repos/service-controls")
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ seatLimit: 6, revision: 1 })
+  })
+  it("guards retired legacy writes in the database even after a stale route precheck", async () => {
+    const fixture = await ready()
+    await save(fixture, true, 4, 0)
+    await expect(env.CONTROL_DB.prepare("UPDATE contracts SET seat_limit = 99 WHERE id = ?").bind(fixture.contractId).run()).rejects.toThrow("service legacy controls retired")
+    await expect(env.CONTROL_DB.prepare("UPDATE deployment_entitlement_schedules SET configuration_version = 'old-tab' WHERE deployment_id = ?").bind(fixture.deploymentId).run()).rejects.toThrow("service legacy controls retired")
+    await expect(env.CONTROL_DB.prepare("UPDATE deployments SET status = 'disabled' WHERE id = ?").bind(fixture.deploymentId).run()).rejects.toThrow("service legacy controls retired")
+  })
+  it("retries adopted signing failures promptly after signing configuration is repaired", async () => {
+    const fixture = await ready()
+    const broken = bindings(env.CONTROL_DB, { ENTITLEMENT_SIGNING_PRIVATE_JWK: "invalid" })
+    await expect(save(fixture, false, 4, 0, broken)).rejects.toMatchObject({ code: "service_update_pending" })
+    await runEntitlementRenewal(broken, now)
+    const schedule = await env.CONTROL_DB.prepare("SELECT next_check_at FROM deployment_entitlement_schedules WHERE deployment_id = ?").bind(fixture.deploymentId).first<{ next_check_at: string }>()
+    expect(Date.parse(schedule!.next_check_at) - now.getTime()).toBeLessThanOrEqual(5 * 60000)
+    await runEntitlementRenewal(bindings(), new Date(now.getTime() + 5 * 60000))
+    const reference = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    expect((await getEntitlement(env.CONTROL_DB, fixture.deploymentId, reference!.version))!.envelope.payload).toMatchObject({ schemaVersion: 3, serviceEnabled: false })
+  })
+  it("removes retired billing warnings from service dashboard attention", async () => {
+    const fixture = await ready()
+    await env.CONTROL_DB.prepare("UPDATE contracts SET status = 'past_due' WHERE id = ?").bind(fixture.contractId).run()
+    await save(fixture, true, 4, 0)
+    const { getDashboardSummary } = await import("../src/repos/clients")
+    const summary = await getDashboardSummary(env.CONTROL_DB)
+    expect(summary.attentionItems.some((item) => item.href === `/operator/contracts/${fixture.contractId}`)).toBe(false)
+  })
+  it("removes billing from adopted access decisions and retires conflicting legacy mutations", async () => {
+    const fixture = await ready()
+    // Existing history may already be expired when the vendor adopts explicit control.
+    await env.CONTROL_DB.prepare("UPDATE contracts SET ends_at = '2026-08-02', status = 'cancelled' WHERE id = ?").bind(fixture.contractId).run()
+    await save(fixture, true, 4, 0)
+    const { assertLegacyContractWritable, assertLegacyDeploymentWritable } = await import("../src/repos/service-controls")
+    await expect(assertLegacyContractWritable(env.CONTROL_DB, fixture.contractId)).rejects.toMatchObject({ code: "service_legacy_controls_retired" })
+    await expect(assertLegacyDeploymentWritable(env.CONTROL_DB, fixture.deploymentId)).rejects.toMatchObject({ code: "service_legacy_controls_retired" })
+    // The old contract remains expired, while service access renews independently.
+    const renewed = await issue(fixture, new Date(now.getTime() + DAY_MS))
+    expect(evaluateLease(renewed.envelope.payload, new Date(now.getTime() + DAY_MS)).writeAllowed).toBe(true)
+    expect(renewed.envelope.payload.moduleIds).toEqual(fixture.original.envelope.payload.moduleIds)
+  })
+})

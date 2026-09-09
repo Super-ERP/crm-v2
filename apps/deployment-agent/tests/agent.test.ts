@@ -587,6 +587,7 @@ describe("deployment agent flow", () => {
       expect((await lstat(join(directory, "registration.json"))).mode & 0o777).toBe(0o600)
       await agent.runOnce()
       expect((await store.loadRuntime()).lastAppliedEntitlementVersion).toBe(4)
+      expect(controlRequests.filter((request) => request.method === "POST" && request.path.endsWith("/heartbeat"))).toHaveLength(2)
       await agent.runOnce()
       expect(controlRequests.filter((request) => request.method === "GET")).toHaveLength(1)
       expect(webRequests.filter((request) => request.method === "PUT")).toHaveLength(1)
@@ -683,6 +684,8 @@ describe("deployment agent flow", () => {
       Response.json({ accepted: true, entitlement: { version: 5 } }, { status: 202 }),
       Response.json({ keyId: "vendor", payload: { revision: 5 }, signature: "valid" }),
       Response.json({ outcome: "idempotent", revision: 5, mode: "active" }, { status: 200 }),
+      Response.json(status("5")),
+      Response.json({ accepted: true, entitlement: { version: 5 } }, { status: 202 }),
     ]
     const agent = createDeploymentAgent({
       config: config(),
@@ -765,12 +768,14 @@ describe("deployment agent flow", () => {
       Response.json({ accepted: true, entitlement: { version: 5 } }, { status: 202 }),
       Response.json({ keyId: "vendor", payload: { revision: 5 }, signature: "valid" }),
       Response.json({ outcome: "accepted", revision: 5, mode: "active" }),
+      Response.json(status("5")),
+      Response.json({ accepted: true, entitlement: { version: 5 } }, { status: 202 }),
     ]
     const fetch = vi.fn<typeof globalThis.fetch>(async () => responses.shift()!)
     const agent = createDeploymentAgent({ config: config(), store, fetch, random: () => 0 })
     await agent.initialize()
     await agent.runOnce({ maxAttempts: 1 })
-    expect(fetch).toHaveBeenCalledTimes(4)
+    expect(fetch).toHaveBeenCalledTimes(6)
     expect(await readHealth(store)).toBe(true)
   })
 
@@ -792,6 +797,8 @@ describe("deployment agent flow", () => {
       Response.json({ accepted: true, entitlement: { version: 4 } }, { status: 202 }),
       Response.json({ keyId: "vendor", payload: { revision: 4 }, signature: "valid" }),
       Response.json({ outcome: "accepted", revision: 4, mode: "active" }),
+      Response.json(status("4")),
+      Response.json({ accepted: true, entitlement: { version: 4 } }, { status: 202 }),
     ]
     const repair = createDeploymentAgent({
       config: config(),
@@ -917,12 +924,18 @@ describe("deployment agent flow", () => {
     await store.markRegistered(identity)
     const envelope = { keyId: "vendor-key", payload: { revision: 8 }, signature: "signed-envelope" }
     const responses = [
+      Response.json(status("7", {
+        entitlement: { revision: "7", configurationVersion: "config-9", mode: "active", enabledModuleIds: [] },
+        activeUserCount: 9,
+      })),
+      Response.json({ version: 8 }),
+      Response.json({ keyId: "vendor-key", payload: { revision: 8 }, signature: "signed-envelope" }),
+      Response.json({ outcome: "accepted", revision: 8, mode: "active" }),
       Response.json(status("8", {
         entitlement: { revision: "8", configurationVersion: "config-9", mode: "active", enabledModuleIds: [] },
         activeUserCount: 9,
       })),
-      Response.json({ keyId: "vendor-key", payload: { revision: 8 }, signature: "signed-envelope" }),
-      Response.json({ outcome: "accepted", revision: 8, mode: "active" }),
+      Response.json({ accepted: true, entitlement: { version: 8 } }, { status: 202 }),
     ]
     const fetch = vi.fn<typeof globalThis.fetch>(async () => responses.shift()!)
     const agent = createDeploymentAgent({
@@ -934,7 +947,7 @@ describe("deployment agent flow", () => {
     })
     await agent.initialize()
     await agent.pollOnce({ maxAttempts: 1 })
-    expect(fetch).toHaveBeenCalledTimes(3)
+    expect(fetch).toHaveBeenCalledTimes(6)
     expect((await store.loadRuntime()).lastAppliedEntitlementVersion).toBe(8)
   })
 
@@ -951,10 +964,14 @@ describe("deployment agent flow", () => {
       lastHeartbeatSucceededAt: null,
       lastErrorCode: null,
     })
-    const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json(status("4", {
-      entitlement: { revision: "4", configurationVersion: null, mode: "active", enabledModuleIds: [] },
-      activeUserCount: 1,
-    })))
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      const url = String(input)
+      if (url.endsWith("/entitlement/current")) return Response.json({ version: 4 })
+      return Response.json(status("4", {
+        entitlement: { revision: "4", configurationVersion: null, mode: "active", enabledModuleIds: [] },
+        activeUserCount: 1,
+      }))
+    })
     const agent = createDeploymentAgent({
       config: config(),
       store,
@@ -964,8 +981,137 @@ describe("deployment agent flow", () => {
     })
     await agent.initialize()
     await agent.pollOnce({ maxAttempts: 1 })
-    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledTimes(2)
     expect((await store.loadRuntime()).lastAppliedEntitlementVersion).toBe(4)
+  })
+
+  it("pollOnce discovers a newer remote entitlement even when web and runtime revisions agree, then acknowledges it", async () => {
+    const directory = await stateDirectory()
+    const store = await createStateStore(directory)
+    const identity = await generateIdentity(config(), store)
+    await store.markRegistered(identity)
+    await store.saveRuntime({
+      schemaVersion: 1,
+      lastAppliedEntitlementVersion: 4,
+      lastAppliedConfigurationVersion: null,
+      hasAppliedValidEntitlement: true,
+      lastHeartbeatSucceededAt: null,
+      lastErrorCode: null,
+    })
+    let webRevision = "4"
+    let heartbeatAttempts = 0
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      const url = String(input)
+      if (url.endsWith("/api/internal/deployment/status")) {
+        return Response.json(status(webRevision, {
+          supportedEntitlementSchemaVersion: 3,
+          entitlement: { revision: webRevision, configurationVersion: null, mode: "active", enabledModuleIds: [] },
+        }))
+      }
+      if (url.endsWith("/entitlement/current")) return Response.json({ version: 5 })
+      if (url.endsWith("/entitlement/5")) {
+        return Response.json({ keyId: "vendor-key", payload: { revision: 5 }, signature: "signed-envelope" })
+      }
+      if (url.endsWith("/api/internal/deployment/entitlement")) {
+        webRevision = "5"
+        return Response.json({ outcome: "accepted", revision: 5, mode: "active" })
+      }
+      if (url.endsWith("/heartbeat")) {
+        heartbeatAttempts += 1
+        if (heartbeatAttempts === 1) return new Response(null, { status: 503 })
+        return Response.json({ accepted: true, entitlement: { version: 5 } }, { status: 202 })
+      }
+      return new Response(null, { status: 503 })
+    })
+    const agent = createDeploymentAgent({ config: config(), store, fetch, random: () => 0 })
+    await agent.initialize()
+
+    await expect(agent.pollOnce({ maxAttempts: 1 })).rejects.toThrow("http_503")
+    expect((await store.loadRuntime()).pendingAcknowledgementRevision).toBe(5)
+    await agent.pollOnce({ maxAttempts: 1 })
+
+    expect((await store.loadRuntime()).lastAppliedEntitlementVersion).toBe(5)
+    const heartbeatCalls = fetch.mock.calls.filter(([input]) => String(input).endsWith("/heartbeat"))
+    expect(JSON.parse(String(heartbeatCalls[0]?.[1]?.body))).toMatchObject({
+      entitlementVersion: "5",
+      supportedEntitlementSchemaVersion: 3,
+    })
+    expect(JSON.parse(String(heartbeatCalls[1]?.[1]?.body))).toMatchObject({
+      entitlementVersion: "5",
+      supportedEntitlementSchemaVersion: 3,
+    })
+    expect((await store.loadRuntime()).pendingAcknowledgementRevision).toBeNull()
+  })
+
+  it("pollOnce repairs a restored older web even when runtime already records the remote revision", async () => {
+    const directory = await stateDirectory()
+    const store = await createStateStore(directory)
+    const identity = await generateIdentity(config(), store)
+    await store.markRegistered(identity)
+    await store.saveRuntime({
+      schemaVersion: 1,
+      lastAppliedEntitlementVersion: 5,
+      lastAppliedConfigurationVersion: null,
+      hasAppliedValidEntitlement: true,
+      lastHeartbeatSucceededAt: null,
+      lastErrorCode: null,
+    })
+    let webRevision = "4"
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      const url = String(input)
+      if (url.endsWith("/api/internal/deployment/status")) return Response.json(status(webRevision))
+      if (url.endsWith("/entitlement/current")) return Response.json({ version: 5 })
+      if (url.endsWith("/entitlement/5")) return Response.json({ keyId: "vendor", payload: {}, signature: "valid" })
+      if (url.endsWith("/api/internal/deployment/entitlement")) {
+        webRevision = "5"
+        return Response.json({ outcome: "accepted", revision: 5, mode: "active" })
+      }
+      return Response.json({ accepted: true, entitlement: { version: 5 } }, { status: 202 })
+    })
+    const agent = createDeploymentAgent({ config: config(), store, fetch, random: () => 0 })
+    await agent.initialize()
+
+    await agent.pollOnce({ maxAttempts: 1 })
+
+    expect(fetch.mock.calls.some(([input]) => String(input).endsWith("/api/internal/deployment/entitlement"))).toBe(true)
+  })
+
+  it("pollOnce rejects a stale remote entitlement pointer", async () => {
+    const directory = await stateDirectory()
+    const store = await createStateStore(directory)
+    const identity = await generateIdentity(config(), store)
+    await store.markRegistered(identity)
+    await store.saveRuntime({
+      schemaVersion: 1,
+      lastAppliedEntitlementVersion: 5,
+      lastAppliedConfigurationVersion: null,
+      hasAppliedValidEntitlement: true,
+      lastHeartbeatSucceededAt: null,
+      lastErrorCode: null,
+    })
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => String(input).endsWith("/entitlement/current")
+      ? Response.json({ version: 4 })
+      : Response.json(status("5")))
+    const agent = createDeploymentAgent({ config: config(), store, fetch, random: () => 0 })
+    await agent.initialize()
+
+    await expect(agent.pollOnce({ maxAttempts: 1 })).rejects.toThrow("control_entitlement_regressed")
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it("pollOnce does not bootstrap an entitlement when the web has no applied revision", async () => {
+    const directory = await stateDirectory()
+    const store = await createStateStore(directory)
+    const identity = await generateIdentity(config(), store)
+    await store.markRegistered(identity)
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json(status()))
+    const agent = createDeploymentAgent({ config: config(), store, fetch, random: () => 0 })
+    await agent.initialize()
+
+    await agent.pollOnce({ maxAttempts: 1 })
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect((await store.loadRuntime()).lastAppliedEntitlementVersion).toBeNull()
   })
 
   it("repeated pollOnce on the same revision never reapplies the entitlement", async () => {
@@ -974,20 +1120,24 @@ describe("deployment agent flow", () => {
     const identity = await generateIdentity(config(), store)
     await store.markRegistered(identity)
     const envelope = { keyId: "vendor-key", payload: { revision: 8 }, signature: "signed-envelope" }
+    let webRevision = "7"
     const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : (input as Request).url
       if (url.includes("/api/internal/deployment/status")) {
-        return Response.json(status("8", {
-          entitlement: { revision: "8", configurationVersion: "config-9", mode: "active", enabledModuleIds: [] },
+        return Response.json(status(webRevision, {
+          entitlement: { revision: webRevision, configurationVersion: "config-9", mode: "active", enabledModuleIds: [] },
           activeUserCount: 9,
         }))
       }
+      if (url.endsWith("/entitlement/current")) return Response.json({ version: 8 })
       if (url.includes("/entitlement/")) {
         return Response.json(envelope)
       }
       if (url.includes("/api/internal/deployment/entitlement")) {
+        webRevision = "8"
         return Response.json({ outcome: "accepted", revision: 8, mode: "active" })
       }
+      if (url.endsWith("/heartbeat")) return Response.json({ accepted: true, entitlement: { version: 8 } }, { status: 202 })
       return new Response(null, { status: 503 })
     })
     const agent = createDeploymentAgent({
@@ -1039,6 +1189,41 @@ describe("deployment agent flow", () => {
     expect(aborted).toBe(false)
     await agent.stop(500)
     expect(aborted).toBe(true)
+  })
+
+  it("serializes heartbeat cycles and fast polls so an older heartbeat cannot follow a newer acknowledgement", async () => {
+    const directory = await stateDirectory()
+    const store = await createStateStore(directory)
+    const identity = await generateIdentity(config(), store)
+    await store.markRegistered(identity)
+    let releaseHeartbeat!: () => void
+    const heartbeatBlocked = new Promise<void>((resolve) => { releaseHeartbeat = resolve })
+    let heartbeatStarted!: () => void
+    const started = new Promise<void>((resolve) => { heartbeatStarted = resolve })
+    const paths: string[] = []
+    const fetch = vi.fn<typeof globalThis.fetch>(async (input) => {
+      const url = String(input)
+      paths.push(url)
+      if (url.endsWith("/api/internal/deployment/status")) return Response.json(status("4"))
+      if (url.endsWith("/heartbeat")) {
+        heartbeatStarted()
+        await heartbeatBlocked
+        return Response.json({ accepted: true, entitlement: { version: 4 } }, { status: 202 })
+      }
+      if (url.endsWith("/entitlement/current")) return Response.json({ version: 4 })
+      return new Response(null, { status: 503 })
+    })
+    const agent = createDeploymentAgent({ config: config(), store, fetch, random: () => 0 })
+    await agent.initialize()
+
+    const cycle = agent.runOnce({ maxAttempts: 1 })
+    await started
+    const poll = agent.pollOnce({ maxAttempts: 1 })
+    await Promise.resolve()
+    expect(paths.filter((path) => path.endsWith("/api/internal/deployment/status"))).toHaveLength(1)
+    releaseHeartbeat()
+    await Promise.all([cycle, poll])
+    expect(paths.filter((path) => path.endsWith("/api/internal/deployment/status"))).toHaveLength(2)
   })
 
   it("pollCommands fetches one command and acks with status=ok for echo kind", async () => {

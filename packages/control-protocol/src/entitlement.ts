@@ -79,11 +79,19 @@ function validateLeaseDates(
   }
 }
 
-/** Current enforcement format. Revision-bearing leases are schema v2. */
-export const EntitlementLeaseSchema = z
+/** Transitional enforcement format for existing deployments. */
+const EntitlementLeaseV2Schema = z
   .object({ schemaVersion: z.literal(2), ...entitlementLeaseFields })
   .strict()
   .superRefine(validateLeaseDates)
+
+const EntitlementLeaseV3Schema = z
+  .object({ schemaVersion: z.literal(3), ...entitlementLeaseFields, serviceEnabled: z.boolean(), serviceRevision: z.number().int().positive() })
+  .strict()
+  .superRefine(validateLeaseDates)
+
+/** v3 retains commercial fields for persistence compatibility, not access decisions. */
+export const EntitlementLeaseSchema = z.union([EntitlementLeaseV2Schema, EntitlementLeaseV3Schema])
 
 /** Immutable control-plane history compatibility only; never use for enforcement. */
 export const LegacyEntitlementLeaseSchema = z
@@ -112,7 +120,7 @@ export type LeaseClock = {
 }
 
 export type LeaseAccess = {
-  mode: "active" | "grace" | "read_only"
+  mode: "active" | "grace" | "read_only" | "service_disabled"
   reason: string
   writeAllowed: boolean
 }
@@ -125,6 +133,9 @@ export function evaluateLease(
   lease: EntitlementLease | LegacyEntitlementLease,
   now: Date | string | LeaseClock,
 ): LeaseAccess {
+  if (lease.schemaVersion === 3 && !lease.serviceEnabled) {
+    return { mode: "service_disabled", reason: "Service is disabled", writeAllowed: false }
+  }
   const currentTime = parseTime(typeof now === "object" && !(now instanceof Date) ? now.currentTime : now)
   const greatestTrustedTime =
     typeof now === "object" && !(now instanceof Date) && now.greatestTrustedTime !== undefined
@@ -136,16 +147,18 @@ export function evaluateLease(
   }
 
   const effectiveTime = Math.max(currentTime, greatestTrustedTime)
-  if (lease.subscriptionStatus === "suspended" || lease.subscriptionStatus === "cancelled") {
-    return readOnly(`Subscription is ${lease.subscriptionStatus}`)
+  if (lease.schemaVersion !== 3) {
+    if (lease.subscriptionStatus === "suspended" || lease.subscriptionStatus === "cancelled") {
+      return readOnly(`Subscription is ${lease.subscriptionStatus}`)
+    }
+    if (effectiveTime < Date.parse(lease.contractStartsAt)) {
+      return readOnly("Contract has not started")
+    }
+    if (effectiveTime >= Date.parse(lease.contractEndsAt)) {
+      return readOnly("Contract has ended")
+    }
   }
-  if (effectiveTime < Date.parse(lease.contractStartsAt)) {
-    return readOnly("Contract has not started")
-  }
-  if (effectiveTime >= Date.parse(lease.contractEndsAt)) {
-    return readOnly("Contract has ended")
-  }
-  const warning = lease.subscriptionStatus === "past_due" ? "; subscription is past_due" : ""
+  const warning = lease.schemaVersion !== 3 && lease.subscriptionStatus === "past_due" ? "; subscription is past_due" : ""
   if (effectiveTime <= Date.parse(lease.leaseExpiresAt)) {
     return { mode: "active", reason: `Lease is active${warning}`, writeAllowed: true }
   }

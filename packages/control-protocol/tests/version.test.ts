@@ -36,6 +36,7 @@ describe("strict SemVer", () => {
   it("accepts valid registration and heartbeat fixtures", () => {
     expect(DeploymentRegistrationSchema.safeParse(registration).success).toBe(true)
     expect(DeploymentHeartbeatSchema.safeParse(heartbeat).success).toBe(true)
+    expect(DeploymentHeartbeatSchema.safeParse({ ...heartbeat, supportedEntitlementSchemaVersion: 3 }).success).toBe(true)
   })
 
   it.each([

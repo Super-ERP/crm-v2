@@ -396,7 +396,7 @@ describe("contract editing and entitlement controls form", () => {
       contractId,
     )).toBe(1)
 
-    const page = await operatorRequest(`/operator/contracts/${contractId}`)
+    const page = await operatorRequest(`/operator/contracts/${contractId}/advanced`)
     expect(page.status).toBe(200)
     const html = await page.text()
     expect(html).toContain("Edit commercial terms")

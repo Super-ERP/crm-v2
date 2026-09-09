@@ -16,11 +16,12 @@ export type DeploymentStatusRollup = {
 }
 
 export type DeploymentStatus = {
+  supportedEntitlementSchemaVersion?: 3
   healthState: "healthy" | "degraded" | "unhealthy"
   entitlement: {
     revision: string | null
     configurationVersion: string | null
-    mode: "active" | "grace" | "read_only" | null
+    mode: "active" | "grace" | "read_only" | "service_disabled" | null
     enabledModuleIds: DeploymentAccess["moduleIds"]
   }
   activeUserCount: number
@@ -75,7 +76,12 @@ export function createDeploymentStatusService(input: {
         throw new Error("Applied migration version mismatch")
       }
       const hasEntitlement = access.revision !== null
+      // v3 requires the SQL seat authority installed by migration 0089.
+      // Unknown/custom version labels must not advertise rollout capability.
+      const supportsServiceControls = /^\d{4}$/.test(rollup.appliedMigrationVersion) &&
+        Number(rollup.appliedMigrationVersion) >= 89
       return {
+        ...(supportsServiceControls ? { supportedEntitlementSchemaVersion: 3 as const } : {}),
         healthState: hasEntitlement ? "healthy" : "unhealthy",
         entitlement: {
           revision: hasEntitlement ? String(access.revision) : null,

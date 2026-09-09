@@ -1,6 +1,6 @@
 import type { DeploymentHeartbeat } from "@crm/control-protocol/heartbeat"
 
-import { AgentRequestError, createDeploymentClient, type ClaimedCommand } from "./client.js"
+import { AgentRequestError, createDeploymentClient, type ClaimedCommand, type WebDeploymentStatus } from "./client.js"
 import type { AgentConfig } from "./config.js"
 import { readDatabaseConfiguration, updateEnvironment } from "./environment.js"
 import {
@@ -170,6 +170,7 @@ export function createDeploymentAgent(input: {
     await input.store.saveRuntime({
       ...runtime,
       lastAppliedEntitlementVersion: version,
+      pendingAcknowledgementRevision: version,
       hasAppliedValidEntitlement: true,
       lastErrorCode: null,
     })
@@ -185,6 +186,49 @@ export function createDeploymentAgent(input: {
       .finally(() => { release() })
   }
 
+  async function sendHeartbeat(status: WebDeploymentStatus, signal: AbortSignal): Promise<Awaited<ReturnType<typeof client.heartbeat>>> {
+    const backupStatus = input.config.backupStatusFile
+      ? await readBackupStatus(input.config.backupStatusFile).catch(() => ({
+          lastSuccessfulBackupAt: null,
+          lastRestoreTestAt: null,
+        }))
+      : { lastSuccessfulBackupAt: null, lastRestoreTestAt: null }
+    const heartbeat: DeploymentHeartbeat = {
+      deploymentId: input.config.deploymentId,
+      environment: input.config.environment,
+      applicationVersion: status.applicationVersion,
+      imageDigest: input.config.imageDigest,
+      entitlementVersion: status.entitlement.revision,
+      configurationVersion: status.entitlement.configurationVersion,
+      activeUserCount: status.activeUserCount,
+      reservedInvitationCount: status.reservedInvitationCount,
+      enabledModuleIds: status.entitlement.enabledModuleIds,
+      healthState: status.healthState,
+      migrationVersion: status.migrationVersion,
+      lastSuccessfulBackupAt: backupStatus.lastSuccessfulBackupAt,
+      lastRestoreTestAt: backupStatus.lastRestoreTestAt,
+      agentVersion: input.config.agentVersion,
+      databaseConfiguration: input.config.environmentFilePath
+        ? await readDatabaseConfiguration(input.config.environmentFilePath).catch(() => null)
+        : null,
+      ...(status.supportedEntitlementSchemaVersion === 3
+        ? { supportedEntitlementSchemaVersion: 3 as const }
+        : {}),
+    }
+    const response = await client.heartbeat(identity!, heartbeat, signal)
+    const runtime = await input.store.loadRuntime()
+    await input.store.saveRuntime({
+      ...runtime,
+      lastHeartbeatSucceededAt: now().toISOString(),
+      pendingAcknowledgementRevision: status.entitlement.revision !== null &&
+        runtime.pendingAcknowledgementRevision === Number(status.entitlement.revision)
+        ? null
+        : runtime.pendingAcknowledgementRevision,
+      lastErrorCode: null,
+    })
+    return response
+  }
+
   async function pollOnceInternal(signal: AbortSignal): Promise<void> {
     if (identity === null || !await input.store.isRegistered(identity)) throw new Error("Agent is not initialized")
     const statusResult = await client.status(signal)
@@ -193,8 +237,27 @@ export function createDeploymentAgent(input: {
       : Number(statusResult.entitlement.revision)
     if (webRevision === null) return
     const runtime = await input.store.loadRuntime()
-    if (webRevision === runtime.lastAppliedEntitlementVersion) return
-    await withApplyLock(() => applyLatest(webRevision, signal))
+    const remoteRevision = await client.currentEntitlement(identity, signal)
+    const targetRevision = remoteRevision === undefined ? webRevision : remoteRevision
+    if (
+      targetRevision === null ||
+      targetRevision < webRevision ||
+      (runtime.lastAppliedEntitlementVersion !== null && targetRevision < runtime.lastAppliedEntitlementVersion)
+    ) {
+      throw new AgentRequestError("control_entitlement_regressed", false)
+    }
+    if (targetRevision === webRevision) {
+      if (runtime.pendingAcknowledgementRevision === targetRevision) {
+        await sendHeartbeat(statusResult, signal)
+      }
+      return
+    }
+    await applyLatest(targetRevision, signal)
+    const appliedStatus = await client.status(signal)
+    if (appliedStatus.entitlement.revision !== String(targetRevision)) {
+      throw new AgentRequestError("entitlement_not_accepted", false)
+    }
+    await sendHeartbeat(appliedStatus, signal)
   }
 
   async function pollCommandsOnce(signal: AbortSignal): Promise<void> {
@@ -274,38 +337,7 @@ export function createDeploymentAgent(input: {
       lastErrorCode: null,
     }
     await input.store.saveRuntime(runtime)
-    const backupStatus = input.config.backupStatusFile
-      ? await readBackupStatus(input.config.backupStatusFile).catch(() => ({
-          lastSuccessfulBackupAt: null,
-          lastRestoreTestAt: null,
-        }))
-      : { lastSuccessfulBackupAt: null, lastRestoreTestAt: null }
-    const heartbeat: DeploymentHeartbeat = {
-      deploymentId: input.config.deploymentId,
-      environment: input.config.environment,
-      applicationVersion: status.applicationVersion,
-      imageDigest: input.config.imageDigest,
-      entitlementVersion: status.entitlement.revision,
-      configurationVersion: status.entitlement.configurationVersion,
-      activeUserCount: status.activeUserCount,
-      reservedInvitationCount: status.reservedInvitationCount,
-      enabledModuleIds: status.entitlement.enabledModuleIds,
-      healthState: status.healthState,
-      migrationVersion: status.migrationVersion,
-      lastSuccessfulBackupAt: backupStatus.lastSuccessfulBackupAt,
-      lastRestoreTestAt: backupStatus.lastRestoreTestAt,
-      agentVersion: input.config.agentVersion,
-      databaseConfiguration: input.config.environmentFilePath
-        ? await readDatabaseConfiguration(input.config.environmentFilePath).catch(() => null)
-        : null,
-    }
-    const response = await client.heartbeat(identity, heartbeat, signal)
-    runtime = {
-      ...runtime,
-      lastHeartbeatSucceededAt: now().toISOString(),
-      lastErrorCode: null,
-    }
-    await input.store.saveRuntime(runtime)
+    const response = await sendHeartbeat(status, signal)
 
     const version = response.entitlement?.version
     if (version === undefined) {
@@ -316,13 +348,21 @@ export function createDeploymentAgent(input: {
       throw new AgentRequestError("control_entitlement_regressed", false)
     }
     if (webRevision === version) return
-    await withApplyLock(() => applyLatest(version, signal))
+    await applyLatest(version, signal)
+    const appliedStatus = await client.status(signal)
+    if (appliedStatus.entitlement.revision !== String(version)) {
+      throw new AgentRequestError("entitlement_not_accepted", false)
+    }
+    await sendHeartbeat(appliedStatus, signal)
   }
 
   async function runOnce(options: AttemptOptions = {}): Promise<void> {
     if (repairRequired) throw new Error("Agent requires operator repair")
     try {
-      await attempt(cycle, options)
+      await withApplyLock(() => {
+        if (stopped) throw new DOMException("Aborted", "AbortError")
+        return attempt(cycle, options)
+      })
       logger.info("deployment_heartbeat_succeeded")
     } catch (error) {
       const runtime = await input.store.loadRuntime()
@@ -335,7 +375,10 @@ export function createDeploymentAgent(input: {
   async function runPollOnce(options: AttemptOptions = {}): Promise<void> {
     if (repairRequired) throw new Error("Agent requires operator repair")
     try {
-      await attempt(pollOnceInternal, options)
+      await withApplyLock(() => {
+        if (stopped) throw new DOMException("Aborted", "AbortError")
+        return attempt(pollOnceInternal, options)
+      })
       logger.info("deployment_entitlement_poll_succeeded")
     } catch (error) {
       const runtime = await input.store.loadRuntime()

@@ -49,11 +49,31 @@ function bindings(overrides: Partial<CloudflareBindings> = {}): CloudflareBindin
 
 function workspaceRequest(deploymentId: string, token = "token-vendor_owner") {
   return app.fetch(
-    new Request(`https://control.invalid/operator/deployments/${deploymentId}`, {
+    new Request(`https://control.invalid/operator/deployments/${deploymentId}/advanced`, {
       headers: token ? { "Cf-Access-Jwt-Assertion": token } : undefined,
     }),
     bindings(),
   )
+}
+
+function serviceControlsRequest(
+  deploymentId: string,
+  options: { token?: string; form?: Record<string, string>; origin?: string | null } = {},
+) {
+  const method = options.form ? "POST" : "GET"
+  const headers = new Headers({ "Cf-Access-Jwt-Assertion": options.token ?? "token-vendor_owner" })
+  if (options.form) {
+    headers.set("Content-Type", "application/x-www-form-urlencoded")
+    if (options.origin !== null) {
+      headers.set("Origin", options.origin ?? "https://control.invalid")
+      headers.set("Sec-Fetch-Site", "same-origin")
+    }
+  }
+  return app.fetch(new Request(`https://control.invalid/operator/deployments/${deploymentId}${options.form ? "/service-controls" : ""}`, {
+    method,
+    headers,
+    body: options.form ? new URLSearchParams(options.form) : undefined,
+  }), bindings())
 }
 
 function issueInstallTokenRequest(
@@ -152,7 +172,7 @@ async function fixture(): Promise<Fixture> {
       "INSERT INTO deployments (id, client_id, deployment_key, environment, status, created_at, updated_at) VALUES (?, ?, ?, 'production', 'active', ?, ?)",
     ).bind(deploymentId, clientId, `deployment-${deploymentId}`, createdAt, createdAt),
     env.CONTROL_DB.prepare(
-      "INSERT INTO contracts (id, client_id, plan_id, status, starts_at, ends_at, seat_limit, monthly_seat_price_cents, tax_basis_points, collection_frequency, total_cents, renewal_policy, created_at, updated_at) VALUES (?, ?, 'onboarding-plan', 'active', '2026-08-01', '2026-08-31', 25, 0, 0, 'upfront', 0, 'auto_renew', ?, ?)",
+      "INSERT INTO contracts (id, client_id, plan_id, status, starts_at, ends_at, seat_limit, monthly_seat_price_cents, tax_basis_points, collection_frequency, total_cents, renewal_policy, created_at, updated_at) VALUES (?, ?, 'onboarding-plan', 'active', '2026-08-01', '2099-08-31', 25, 0, 0, 'upfront', 0, 'auto_renew', ?, ?)",
     ).bind(contractId, clientId, createdAt, createdAt),
   ])
   return { clientId, deploymentId, contractId }
@@ -281,6 +301,28 @@ beforeAll(async () => {
 })
 
 describe("operator onboarding workspace", () => {
+  it("keeps the everyday deployment page focused on ERP access and links maintenance explicitly", async () => {
+    const input = await fixture()
+    const response = await serviceControlsRequest(input.deploymentId)
+
+    expect(response.status).toBe(200)
+    const html = await response.text()
+    expect(html).toContain("ERP access")
+    expect(html).toContain("Seats allowed")
+    expect(html).toContain("Needs attention")
+    expect(html).toContain(`/operator/deployments/${input.deploymentId}/advanced`)
+    expect(html).not.toMatch(/billing|invoice|signing workspace/i)
+  })
+
+  it("requires owner access, same origin, and strict on/off service input", async () => {
+    const input = await fixture()
+    const form = { enabled: "yes", seatLimit: "25", expectedRevision: "0" }
+
+    expect((await serviceControlsRequest(input.deploymentId, { form, token: "token-vendor_support" })).status).toBe(403)
+    expect((await serviceControlsRequest(input.deploymentId, { form, origin: null })).status).toBe(403)
+    expect((await serviceControlsRequest(input.deploymentId, { form })).status).toBe(400)
+  })
+
   it("issues a bounded token only to the vendor owner and reveals it once", async () => {
     const input = await fixture()
 
@@ -608,7 +650,7 @@ describe("operator onboarding workspace", () => {
     const response = await scheduleRequest(input.deploymentId, input.contractId)
     expect(response.status).toBe(303)
     expect(response.headers.get("Location")).toBe(
-      `/operator/deployments/${input.deploymentId}?notice=entitlement_schedule_updated`,
+      `/operator/deployments/${input.deploymentId}/advanced?notice=entitlement_schedule_updated`,
     )
     const after = await (await workspaceRequest(input.deploymentId)).text()
     expect(after).toContain("configuration-route-1")
@@ -703,7 +745,7 @@ describe("operator onboarding workspace", () => {
     })
     expect(first.status).toBe(303)
     expect(first.headers.get("Location")).toBe(
-      `/operator/deployments/${input.deploymentId}?notice=entitlement_issued&version=1`,
+      `/operator/deployments/${input.deploymentId}/advanced?notice=entitlement_issued&version=1`,
     )
     expect(await first.text()).not.toContain("signature")
 
@@ -1108,7 +1150,7 @@ describe("operator onboarding workspace", () => {
     await env.CONTROL_DB.batch([
       env.CONTROL_DB.prepare("INSERT INTO clients (id, client_key, display_name, status, created_at, updated_at) VALUES (?, ?, 'Other', 'active', ?, ?)")
         .bind(otherClientId, `client-${otherClientId}`, createdAt, createdAt),
-      env.CONTROL_DB.prepare("INSERT INTO contracts (id, client_id, plan_id, status, starts_at, ends_at, seat_limit, monthly_seat_price_cents, tax_basis_points, collection_frequency, total_cents, renewal_policy, created_at, updated_at) VALUES (?, ?, 'onboarding-plan', 'active', '2026-08-01', '2026-08-31', 25, 0, 0, 'upfront', 0, 'auto_renew', ?, ?)")
+      env.CONTROL_DB.prepare("INSERT INTO contracts (id, client_id, plan_id, status, starts_at, ends_at, seat_limit, monthly_seat_price_cents, tax_basis_points, collection_frequency, total_cents, renewal_policy, created_at, updated_at) VALUES (?, ?, 'onboarding-plan', 'active', '2026-08-01', '2099-08-31', 25, 0, 0, 'upfront', 0, 'auto_renew', ?, ?)")
         .bind(otherContractId, otherClientId, createdAt, createdAt),
       env.CONTROL_DB.prepare("INSERT INTO operator_audit_log (id, operator_id, action, target_type, target_id, outcome, request_id_hash, metadata_json, created_at) VALUES (?, NULL, 'deployment.heartbeat', 'deployment', ?, 'success', 'request', '{}', ?)")
         .bind(crypto.randomUUID(), input.deploymentId, createdAt),

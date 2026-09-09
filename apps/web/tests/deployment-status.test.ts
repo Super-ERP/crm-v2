@@ -20,7 +20,7 @@ const baseAccess = {
 }
 
 describe("deployment status service", () => {
-  it.each(["active", "grace", "read_only"] as const)("reports truthful %s cached entitlement", async (mode) => {
+  it.each(["active", "grace", "read_only", "service_disabled"] as const)("reports truthful %s cached entitlement", async (mode) => {
     const service = createDeploymentStatusService({
       applicationVersion: "2.3.4",
       configuredMigrationVersion: "0067",
@@ -45,6 +45,25 @@ describe("deployment status service", () => {
       applicationVersion: "2.3.4",
       migrationVersion: "0067",
     })
+  })
+
+  it.each([
+    ["0088", false], ["0089", true], ["0090", true],
+    ["unknown", false], ["0089_service_controls", false], ["89", false],
+  ] as const)("advertises v3 capability only with verified supported migration %s", async (migrationVersion, supported) => {
+    const service = createDeploymentStatusService({
+      applicationVersion: "2.3.4",
+      configuredMigrationVersion: migrationVersion,
+      getAccess: async () => baseAccess,
+      readRollup: async () => ({
+        activeUserCount: 4,
+        reservedInvitationCount: 2,
+        appliedMigrationVersion: migrationVersion,
+      }),
+    })
+    const status = await service.getStatus()
+    if (supported) expect(status.supportedEntitlementSchemaVersion).toBe(3)
+    else expect(status).not.toHaveProperty("supportedEntitlementSchemaVersion")
   })
 
   it("reports unhealthy only from an actual absent last-known-good state", async () => {

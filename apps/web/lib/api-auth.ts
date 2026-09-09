@@ -1,4 +1,5 @@
 import "server-only"
+import { getDeploymentAccess } from "@/lib/deployment-control"
 import { createHash, randomBytes } from "node:crypto"
 import { and, asc, eq, inArray, sql } from "drizzle-orm"
 import { db, runInTenant, type Tx } from "@/db"
@@ -47,6 +48,9 @@ export function generateApiKey(): { key: string; prefix: string; hash: string } 
  * empty permission set, just like the UI.
  */
 export async function getApiContext(req: Request): Promise<ServerContext | null> {
+  if ((await getDeploymentAccess()).mode === "service_disabled") {
+    throw new Error("SERVICE_DISABLED: Service is disabled. Contact your service provider.")
+  }
   const auth = req.headers.get("authorization") ?? ""
   // "Bearer" is case-insensitive (RFC 7235); the key itself is matched exactly.
   const m = auth.match(/^Bearer\s+(qdk_[A-Za-z0-9_-]+)$/i)

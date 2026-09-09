@@ -312,7 +312,7 @@ export async function getDashboardSummary(database: D1Database): Promise<Dashboa
     database.prepare("SELECT COUNT(*) AS count FROM clients WHERE status = 'active'").first<{ count: number }>(),
     database.prepare("SELECT COUNT(*) AS count FROM deployments").first<{ count: number }>(),
     database.prepare(
-      "SELECT id, client_id, status FROM contracts WHERE status IN ('past_due', 'suspended') ORDER BY updated_at DESC, id DESC LIMIT 20",
+      "SELECT id, client_id, status FROM contracts WHERE status IN ('past_due', 'suspended') AND NOT EXISTS (SELECT 1 FROM deployment_entitlement_schedules s JOIN service_controls p ON p.deployment_id = s.deployment_id WHERE s.contract_id = contracts.id) ORDER BY updated_at DESC, id DESC LIMIT 20",
     ).all<{ id: string; client_id: string; status: "past_due" | "suspended" }>(),
     database.prepare(
       `SELECT d.id, d.deployment_key, d.status, c.display_name,

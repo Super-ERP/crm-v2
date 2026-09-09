@@ -36,6 +36,13 @@ import {
 } from "../repos/operators"
 import { getDeploymentWorkspace } from "../repos/onboarding"
 import {
+  assertLegacyContractWritable,
+  assertLegacyDeploymentWritable,
+  getClientServiceControls,
+  getServiceControls,
+  saveServiceControls,
+} from "../repos/service-controls"
+import {
   assignEntitlementSchedule,
   issueEntitlement,
   privateSigningJwk,
@@ -44,6 +51,7 @@ import {
 import { ClientList, ClientPage, ContractPage, Dashboard, IssuesPage, type OperatorNotice } from "../ui/dashboard"
 import { DeploymentPage, EntitlementReviewPage, InstallTokenResultPage } from "../ui/deployment"
 import { OperatorRosterPage } from "../ui/operators"
+import { ClientServicePage, ServiceControlsPage } from "../ui/service-controls"
 import { OPERATOR_STYLES } from "../ui/styles"
 
 type OperatorContext = Context<ControlPlaneEnvironment>
@@ -69,6 +77,7 @@ const OPERATOR_NOTICES = {
   command_cancelled: { tone: "success", title: "Command cancelled", message: "The deployment agent will no longer run that command." },
   command_retried: { tone: "success", title: "Command retried", message: "A new command was queued with a fresh five-minute expiry." },
   changes_saved: { tone: "success", title: "Changes saved", message: "The requested update completed." },
+  service_controls_updated: { tone: "success", title: "Service updated", message: "The new access settings are being applied." },
 } as const satisfies Record<string, OperatorNotice>
 
 function requestNotice(context: OperatorContext): OperatorNotice | undefined {
@@ -190,6 +199,9 @@ function mutationDescriptor(pathname: string): {
       targetId: pathname.split("/")[3]!,
     }
   }
+  if (/^\/operator\/deployments\/[^/]+\/service-controls$/.test(pathname)) {
+    return { action: "service_controls.update", targetType: "deployment", targetId: pathname.split("/")[3]! }
+  }
   const installToken = /^\/operator\/deployments\/([^/]+)\/install-tokens$/.exec(pathname)
   if (installToken) {
     return { action: "install_token.issue", targetType: "deployment", targetId: installToken[1]! }
@@ -306,32 +318,34 @@ function htmlSuccessRedirect(context: OperatorContext): string {
       : clientMutation[2] === "deployments"
         ? "deployment_created"
         : "contract_created"
-    return withNotice(`/operator/clients/${clientMutation[1]}`, notice)
+    return withNotice(`/operator/clients/${clientMutation[1]}/advanced`, notice)
   }
 
   const invoiceMutation = /^\/operator\/contracts\/([^/]+)\/invoices$/.exec(pathname)
-  if (invoiceMutation) return withNotice(`/operator/contracts/${invoiceMutation[1]}`, "invoice_created")
+  if (invoiceMutation) return withNotice(`/operator/contracts/${invoiceMutation[1]}/advanced`, "invoice_created")
   const scheduleMutation = /^\/operator\/deployments\/([^/]+)\/entitlements\/schedule$/.exec(pathname)
   if (scheduleMutation) {
-    return withNotice(`/operator/deployments/${scheduleMutation[1]}`, "entitlement_schedule_updated")
+    return withNotice(`/operator/deployments/${scheduleMutation[1]}/advanced`, "entitlement_schedule_updated")
   }
+  const serviceControls = /^\/operator\/deployments\/([^/]+)\/service-controls$/.exec(pathname)
+  if (serviceControls) return withNotice(`/operator/deployments/${serviceControls[1]}`, "service_controls_updated")
   if (pathname === "/operator/operators") return withNotice("/operator/operators", "operator_created")
   const operatorStatus = /^\/operator\/operators\/([^/]+)\/status$/.exec(pathname)
   if (operatorStatus) return withNotice("/operator/operators", "operator_status_updated")
   const operatorRoles = /^\/operator\/operators\/([^/]+)\/roles$/.exec(pathname)
   if (operatorRoles) return withNotice("/operator/operators", "operator_roles_updated")
   const deploymentStatus = /^\/operator\/deployments\/([^/]+)\/status$/.exec(pathname)
-  if (deploymentStatus) return withNotice(`/operator/deployments/${deploymentStatus[1]}`, "deployment_status_updated")
+  if (deploymentStatus) return withNotice(`/operator/deployments/${deploymentStatus[1]}/advanced`, "deployment_status_updated")
   const command = /^\/operator\/deployments\/([^/]+)\/commands$/.exec(pathname)
-  if (command) return withNotice(`/operator/deployments/${command[1]}`, "command_issued")
+  if (command) return withNotice(`/operator/deployments/${command[1]}/advanced`, "command_issued")
   const commandAction = /^\/operator\/deployments\/([^/]+)\/commands\/[^/]+\/(cancel|retry)$/.exec(pathname)
-  if (commandAction) return withNotice(`/operator/deployments/${commandAction[1]}`, commandAction[2] === "cancel" ? "command_cancelled" : "command_retried")
+  if (commandAction) return withNotice(`/operator/deployments/${commandAction[1]}/advanced`, commandAction[2] === "cancel" ? "command_cancelled" : "command_retried")
   const tokenRevoke = /^\/operator\/deployments\/([^/]+)\/install-tokens\/revoke$/.exec(pathname)
-  if (tokenRevoke) return withNotice(`/operator/deployments/${tokenRevoke[1]}`, "install_token_revoked")
+  if (tokenRevoke) return withNotice(`/operator/deployments/${tokenRevoke[1]}/advanced`, "install_token_revoked")
   const contractEdit = /^\/operator\/contracts\/([^/]+)\/edit$/.exec(pathname)
-  if (contractEdit) return withNotice(`/operator/contracts/${contractEdit[1]}`, "contract_updated")
+  if (contractEdit) return withNotice(`/operator/contracts/${contractEdit[1]}/advanced`, "contract_updated")
   const entitlementControls = /^\/operator\/contracts\/([^/]+)\/entitlement-controls$/.exec(pathname)
-  if (entitlementControls) return withNotice(`/operator/contracts/${entitlementControls[1]}`, "entitlement_controls_updated")
+  if (entitlementControls) return withNotice(`/operator/contracts/${entitlementControls[1]}/advanced`, "entitlement_controls_updated")
   return withNotice("/operator/clients", "changes_saved")
 }
 
@@ -400,6 +414,41 @@ function positiveRevision(value: unknown): number {
   return revision
 }
 
+function nonNegativeRevision(value: unknown): number {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) throw badRequest()
+  const revision = Number(value)
+  if (!Number.isSafeInteger(revision)) throw badRequest()
+  return revision
+}
+
+function serviceSeatLimit(value: unknown): number {
+  if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)) throw badRequest()
+  const seatLimit = Number(value)
+  if (!Number.isSafeInteger(seatLimit) || seatLimit > 100000) throw badRequest()
+  return seatLimit
+}
+
+const SERVICE_ERROR_MESSAGES: Record<string, string> = {
+  service_upgrade_required: "Upgrade the client service before changing access.",
+  service_setup_required: "Finish service setup before changing access.",
+  service_seat_usage_stale: "Seat usage is out of date. Wait for the client to reconnect, then try again.",
+  service_seat_limit_in_use: "The seat limit is below current users and invitations.",
+  service_controls_changed: "These settings changed in another session. Review the latest values and try again.",
+  service_legacy_controls_retired: "Use the ERP access and seat controls on the service page.",
+}
+
+function serviceFailureNotice(error: SafeHttpError): OperatorNotice | undefined {
+  if (error.code === "service_update_pending") {
+    return {
+      tone: "warning",
+      title: "Settings saved; update pending",
+      message: "Your settings are saved. Delivery will retry automatically.",
+    }
+  }
+  const message = SERVICE_ERROR_MESSAGES[error.code]
+  return message ? { tone: "error", title: "Could not save service settings", message } : undefined
+}
+
 export function createOperatorRoutes() {
   const routes = new Hono<ControlPlaneEnvironment>()
 
@@ -453,12 +502,14 @@ export function createOperatorRoutes() {
     />,
   ))
   routes.get("/clients/:clientId", async (context) => {
+    const clientId = context.req.param("clientId")
     const client = await getClientDetail(
       context.env.CONTROL_DB,
-      context.req.param("clientId"),
+      clientId,
       parseClientChildPagination(context.req.url),
     )
-    return context.html(<ClientPage client={client} operatorEmail={context.get("operator").email} notice={requestNotice(context)} />)
+    const controls = await getClientServiceControls(context.env.CONTROL_DB, clientId, new Date())
+    return context.html(<ClientServicePage controls={controls} clientId={clientId} clientName={client.displayName} operatorEmail={context.get("operator").email} notice={requestNotice(context)} />)
   })
   routes.get("/contracts/:contractId", async (context) => {
     const contract = await getContractDetail(
@@ -466,7 +517,23 @@ export function createOperatorRoutes() {
       context.req.param("contractId"),
       parseNamedPagination(context.req.url, "invoices"),
     )
+    return context.redirect(`/operator/clients/${contract.clientId}`, 302)
+  })
+  routes.get("/contracts/:contractId/advanced", async (context) => {
+    const contract = await getContractDetail(
+      context.env.CONTROL_DB,
+      context.req.param("contractId"),
+      parseNamedPagination(context.req.url, "invoices"),
+    )
     return context.html(<ContractPage contract={contract} operatorEmail={context.get("operator").email} notice={requestNotice(context)} />)
+  })
+  routes.get("/clients/:clientId/advanced", async (context) => {
+    const client = await getClientDetail(
+      context.env.CONTROL_DB,
+      context.req.param("clientId"),
+      parseClientChildPagination(context.req.url),
+    )
+    return context.html(<ClientPage client={client} operatorEmail={context.get("operator").email} notice={requestNotice(context)} />)
   })
   routes.get("/operators", requireOperatorRole("vendor_owner"), async (context) => {
     const operator = context.get("operator")
@@ -479,6 +546,10 @@ export function createOperatorRoutes() {
     />)
   })
   routes.get("/deployments/:deploymentId", async (context) => {
+    const controls = await getServiceControls(context.env.CONTROL_DB, context.req.param("deploymentId"), new Date())
+    return context.html(<ServiceControlsPage controls={controls} operatorEmail={context.get("operator").email} notice={requestNotice(context)} />)
+  })
+  routes.get("/deployments/:deploymentId/advanced", async (context) => {
     const workspace = await getDeploymentWorkspace(
       context.env.CONTROL_DB,
       context.req.param("deploymentId"),
@@ -499,6 +570,34 @@ export function createOperatorRoutes() {
     />)
   })
 
+  routes.post(
+    "/deployments/:deploymentId/service-controls",
+    sameOriginMutation,
+    requireOperatorRole("vendor_owner"),
+    async (context) => {
+      const deploymentId = context.req.param("deploymentId")
+      const data = await mutationData(context)
+      if (data.enabled !== "on" && data.enabled !== "off") throw badRequest()
+      try {
+        await saveServiceControls(context.env, {
+          deploymentId,
+          enabled: data.enabled === "on",
+          seatLimit: serviceSeatLimit(data.seatLimit),
+          expectedRevision: nonNegativeRevision(data.expectedRevision),
+          actor: actor(context),
+          now: new Date(),
+        })
+      } catch (error) {
+        if (!(error instanceof SafeHttpError)) throw error
+        const notice = serviceFailureNotice(error)
+        if (!notice || isJson(context)) throw error
+        const controls = await getServiceControls(context.env.CONTROL_DB, deploymentId, new Date())
+        return context.html(<ServiceControlsPage controls={controls} operatorEmail={context.get("operator").email} notice={notice} />, error.status as never)
+      }
+      if (isJson(context)) return context.json({ id: deploymentId }, 200)
+      return context.redirect(htmlSuccessRedirect(context), 303)
+    },
+  )
   routes.post(
     "/clients",
     sameOriginMutation,
@@ -548,8 +647,9 @@ export function createOperatorRoutes() {
     "/contracts/:contractId/invoices",
     sameOriginMutation,
     requireOperatorRole("vendor_owner", "billing_operator"),
-    (context) => {
+    async (context) => {
       const contractId = context.req.param("contractId")
+      await assertLegacyContractWritable(context.env.CONTROL_DB, contractId)
       return runMutation(
         context,
         (data) => createInvoice(context.env.CONTROL_DB, contractId, data as never, actor(context)),
@@ -562,6 +662,7 @@ export function createOperatorRoutes() {
     requireOperatorRole("vendor_owner", "billing_operator"),
     async (context) => {
       const deploymentId = context.req.param("deploymentId")
+      await assertLegacyDeploymentWritable(context.env.CONTROL_DB, deploymentId)
       const data = await mutationData(context)
       await assignEntitlementSchedule(context.env.CONTROL_DB, {
         deploymentId,
@@ -599,6 +700,7 @@ export function createOperatorRoutes() {
     requireOperatorRole("vendor_owner", "billing_operator"),
     async (context) => {
       const deploymentId = context.req.param("deploymentId")
+      await assertLegacyDeploymentWritable(context.env.CONTROL_DB, deploymentId)
       const data = await mutationData(context)
       const json = isJson(context)
       const contractId = typeof data.contractId === "string" && data.contractId.length > 0
@@ -619,7 +721,7 @@ export function createOperatorRoutes() {
       })
       if (json) return context.json({ id: issued.id, version: issued.version }, 201)
       return context.redirect(
-        `/operator/deployments/${deploymentId}?notice=entitlement_issued&version=${issued.version}`,
+        `/operator/deployments/${deploymentId}/advanced?notice=entitlement_issued&version=${issued.version}`,
         303,
       )
     },
@@ -630,6 +732,7 @@ export function createOperatorRoutes() {
     requireOperatorRole("vendor_owner", "billing_operator"),
     async (context) => {
       const contractId = context.req.param("contractId")
+      await assertLegacyContractWritable(context.env.CONTROL_DB, contractId)
       const data = await mutationData(context)
       const seatLimit = data.seatLimit === undefined || data.seatLimit === ""
         ? undefined
@@ -687,6 +790,7 @@ export function createOperatorRoutes() {
     requireOperatorRole("vendor_owner", "billing_operator"),
     async (context) => {
       const contractId = context.req.param("contractId")
+      await assertLegacyContractWritable(context.env.CONTROL_DB, contractId)
       const data = await mutationData(context)
       await updateContract(context.env.CONTROL_DB, contractId, data as never, actor(context))
       if (isJson(context)) return context.json({ id: contractId }, 200)
@@ -700,6 +804,7 @@ export function createOperatorRoutes() {
     requireOperatorRole("vendor_owner", "vendor_support"),
     async (context) => {
       const deploymentId = context.req.param("deploymentId")
+      await assertLegacyDeploymentWritable(context.env.CONTROL_DB, deploymentId)
       const data = await mutationData(context)
       if (data.status === "disabled" && data.confirmation !== "disable_deployment") throw badRequest()
       await setDeploymentStatus(context.env.CONTROL_DB, deploymentId, data.status, actor(context))

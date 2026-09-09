@@ -51,6 +51,10 @@ interface EntitlementStateRow {
   latest_version: number | null
   entitlement_revision: number
   state_revision: number
+  service_revision: number | null
+  service_enabled: number | null
+  service_seat_limit: number | null
+  service_base_payload_json: string | null
 }
 
 interface StoredEntitlementRow {
@@ -359,7 +363,7 @@ export async function updateEntitlementControls(
 async function loadState(database: D1Database, deploymentId: string, now: Date, contractId?: string): Promise<EntitlementStateRow> {
   const at = now.toISOString()
   const row = await database.prepare(
-    "SELECT d.id AS deployment_id, d.status AS deployment_status, d.registered_at, d.registration_key_fingerprint, d.client_id, client.status AS client_status, EXISTS (SELECT 1 FROM deployment_keys dk WHERE dk.deployment_id = d.id AND dk.algorithm = 'Ed25519' AND dk.revoked_at IS NULL AND dk.replaced_by_key_id IS NULL AND dk.not_before <= ? AND (dk.expires_at IS NULL OR dk.expires_at > ?)) AS has_active_deployment_key, s.contract_id, c.client_id AS contract_client_id, c.plan_id, c.status, c.starts_at, c.ends_at, c.seat_limit, c.renewal_policy, c.suspension_at, c.scheduled_seat_limit, c.seat_limit_effective_at, c.entitlement_revision, s.configuration_version, s.release_channel, s.minimum_supported_app_version, s.approved_image_digest, s.next_check_at, s.latest_version, s.state_revision FROM deployment_entitlement_schedules s JOIN deployments d ON d.id = s.deployment_id JOIN clients client ON client.id = d.client_id JOIN contracts c ON c.id = s.contract_id WHERE s.deployment_id = ? AND (? IS NULL OR s.contract_id = ?)",
+    "SELECT d.id AS deployment_id, d.status AS deployment_status, d.registered_at, d.registration_key_fingerprint, d.client_id, client.status AS client_status, EXISTS (SELECT 1 FROM deployment_keys dk WHERE dk.deployment_id = d.id AND dk.algorithm = 'Ed25519' AND dk.revoked_at IS NULL AND dk.replaced_by_key_id IS NULL AND dk.not_before <= ? AND (dk.expires_at IS NULL OR dk.expires_at > ?)) AS has_active_deployment_key, s.contract_id, c.client_id AS contract_client_id, c.plan_id, c.status, c.starts_at, c.ends_at, c.seat_limit, c.renewal_policy, c.suspension_at, c.scheduled_seat_limit, c.seat_limit_effective_at, c.entitlement_revision, s.configuration_version, s.release_channel, s.minimum_supported_app_version, s.approved_image_digest, s.next_check_at, s.latest_version, s.state_revision, service.revision AS service_revision, service.enabled AS service_enabled, service.seat_limit AS service_seat_limit, service.base_payload_json AS service_base_payload_json FROM deployment_entitlement_schedules s LEFT JOIN service_controls service ON service.deployment_id = s.deployment_id JOIN deployments d ON d.id = s.deployment_id JOIN clients client ON client.id = d.client_id JOIN contracts c ON c.id = s.contract_id WHERE s.deployment_id = ? AND (? IS NULL OR s.contract_id = ?)",
   ).bind(at, at, deploymentId, contractId ?? null, contractId ?? null).first<EntitlementStateRow>()
   if (!row) throw notFound()
   if (row.client_id !== row.contract_client_id) throw badRequest()
@@ -465,6 +469,23 @@ async function desiredLease(
   revision: number,
   now: Date,
 ): Promise<EntitlementLease> {
+  if (row.service_revision !== null) {
+    // Preserve the client's installed feature/release configuration. Commercial
+    // history remains stored, but does not determine adopted service access.
+    const base = EntitlementLeaseSchema.parse(JSON.parse(row.service_base_payload_json!))
+    if (base.deploymentId !== row.deployment_id || base.clientId !== row.client_id) throw badRequest()
+    return EntitlementLeaseSchema.parse({
+      ...base,
+      schemaVersion: 3,
+      serviceEnabled: row.service_enabled === 1,
+      serviceRevision: row.service_revision,
+      maxActiveUsers: row.service_seat_limit,
+      revision, keyId, leaseId: crypto.randomUUID(),
+      issuedAt: now.toISOString(),
+      leaseExpiresAt: new Date(now.getTime() + DAY_MS).toISOString(),
+      graceUntil: new Date(now.getTime() + 8 * DAY_MS).toISOString(),
+    })
+  }
   const effective = effectiveState(row, now)
   const issuedAt = now.toISOString()
   const payload = {
@@ -504,6 +525,7 @@ async function allocateEntitlementRevision(database: D1Database, deploymentId: s
 
 function nextCheck(row: EntitlementStateRow, lease: EntitlementLease, now: Date): string {
   const candidates = [Date.parse(lease.leaseExpiresAt) - RENEWAL_HORIZON_MS]
+  if (row.service_revision !== null) return new Date(candidates[0]).toISOString()
   const { endsAt } = contractBounds(row)
   for (const value of [row.suspension_at, row.seat_limit_effective_at]) {
     if (value !== null) candidates.push(assertInstant(value))
@@ -728,6 +750,7 @@ async function updateScheduleFromSnapshot(
 function retryAtOrCommercialBoundary(row: EntitlementStateRow, retryAt: string, now: Date): string {
   try {
     const candidates = [assertInstant(retryAt)]
+    if (row.service_revision !== null) return retryAt
     const { endsAt } = contractBounds(row)
     candidates.push(endsAt)
     for (const value of [row.suspension_at, row.seat_limit_effective_at]) {
@@ -752,7 +775,7 @@ export async function runEntitlementRenewal(environment: CloudflareBindings, clo
   let workCount = 0
   while (workCount < RENEWAL_BATCH_SIZE && summary.checked < MAX_RENEWAL_SCANS) {
     const due = await environment.CONTROL_DB.prepare(
-      "SELECT s.deployment_id, s.contract_id FROM deployment_entitlement_schedules s JOIN contracts c ON c.id = s.contract_id LEFT JOIN entitlement_versions e ON e.id = (SELECT current.id FROM entitlement_versions current WHERE current.deployment_id = s.deployment_id ORDER BY current.version DESC LIMIT 1) WHERE s.deployment_id > ? AND (s.next_check_at <= ? OR (e.id IS NOT NULL AND e.contract_id = s.contract_id AND e.contract_revision = c.entitlement_revision AND e.schedule_revision = s.state_revision AND (e.key_id <> ? OR COALESCE(json_extract(e.payload_json, '$.schemaVersion'), 0) <> 2) AND NOT EXISTS (SELECT 1 FROM entitlement_renewal_claims r WHERE r.deployment_id = s.deployment_id AND r.target_key_id = ? AND r.issuance_key LIKE ('auto:' || e.version || ':%') AND ((r.state = 'claimed' AND r.claim_expires_at > ?) OR (r.state = 'failed' AND r.retry_at > ?))))) ORDER BY s.deployment_id LIMIT ?",
+      "SELECT s.deployment_id, s.contract_id FROM deployment_entitlement_schedules s JOIN contracts c ON c.id = s.contract_id LEFT JOIN entitlement_versions e ON e.id = (SELECT current.id FROM entitlement_versions current WHERE current.deployment_id = s.deployment_id ORDER BY current.version DESC LIMIT 1) WHERE s.deployment_id > ? AND (s.next_check_at <= ? OR (e.id IS NOT NULL AND e.contract_id = s.contract_id AND e.contract_revision = c.entitlement_revision AND e.schedule_revision = s.state_revision AND (e.key_id <> ? OR COALESCE(json_extract(e.payload_json, '$.schemaVersion'), 0) <> CASE WHEN EXISTS (SELECT 1 FROM service_controls p WHERE p.deployment_id = s.deployment_id) THEN 3 ELSE 2 END) AND NOT EXISTS (SELECT 1 FROM entitlement_renewal_claims r WHERE r.deployment_id = s.deployment_id AND r.target_key_id = ? AND r.issuance_key LIKE ('auto:' || e.version || ':%') AND ((r.state = 'claimed' AND r.claim_expires_at > ?) OR (r.state = 'failed' AND r.retry_at > ?))))) ORDER BY s.deployment_id LIMIT ?",
     ).bind(cursor, now.toISOString(), activeKeyId, activeKeyId, now.toISOString(), now.toISOString(), RENEWAL_BATCH_SIZE)
       .all<{ deployment_id: string; contract_id: string }>()
     if (due.results.length === 0) break
@@ -770,9 +793,9 @@ export async function runEntitlementRenewal(environment: CloudflareBindings, clo
       const latestRow = await environment.CONTROL_DB.prepare(
         "SELECT id, deployment_id, contract_id, version, key_id, payload_json, signature, envelope_json, issuance_key, contract_revision, schedule_revision, issued_at FROM entitlement_versions WHERE deployment_id = ? ORDER BY version DESC LIMIT 1",
       ).bind(schedule.deployment_id).first<StoredEntitlementRow>()
-      if (latestRow === null || latestRow.contract_id !== row.contract_id ||
+      if (row.service_revision === null && (latestRow === null || latestRow.contract_id !== row.contract_id ||
           latestRow.contract_revision !== row.entitlement_revision ||
-          latestRow.schedule_revision !== row.state_revision) {
+          latestRow.schedule_revision !== row.state_revision)) {
         await updateScheduleFromSnapshot(
           environment.CONTROL_DB,
           row,
@@ -784,7 +807,7 @@ export async function runEntitlementRenewal(environment: CloudflareBindings, clo
         continue
       }
       const latest = latestRow ? fromStored(latestRow) : null
-      const latestCurrentLease = latest?.envelope.payload.schemaVersion === 2 ? latest.envelope.payload : null
+      const latestCurrentLease = latest && latest.envelope.payload.schemaVersion !== 1 ? latest.envelope.payload : null
       const materialChange = latestCurrentLease === null ||
         canonicalJson(comparableLease(latestCurrentLease)) !== canonicalJson(comparableLease(desired))
       const withinHorizon = latest === null || Date.parse(latest.envelope.payload.leaseExpiresAt) <= now.getTime() + RENEWAL_HORIZON_MS
@@ -861,13 +884,14 @@ export async function runEntitlementRenewal(environment: CloudflareBindings, clo
       const signingConfigurationInvalid = error instanceof SafeHttpError &&
         error.code === "signing_configuration_unavailable"
       const deterministic = signingConfigurationInvalid || error instanceof SafeHttpError
-      let delay = DAY_MS
+      let delay = activeSnapshot?.service_revision != null ? 60_000 : DAY_MS
       if (!deterministic && activeIssuanceKey !== null && activeClaimToken !== null) {
         const claim = await environment.CONTROL_DB.prepare(
           "SELECT attempt_count FROM entitlement_renewal_claims WHERE deployment_id = ? AND issuance_key = ? AND claim_token = ?",
         ).bind(schedule.deployment_id, activeIssuanceKey, activeClaimToken).first<{ attempt_count: number }>()
         delay = Math.min(120, 15 * 2 ** Math.max(0, (claim?.attempt_count ?? 1) - 1)) * 60 * 1_000
       }
+      if (activeSnapshot?.service_revision != null) delay = Math.min(delay, 5 * 60_000)
       const retryAt = new Date(now.getTime() + delay).toISOString()
       let failureStillOwned = true
       if (activeIssuanceKey !== null && activeClaimToken !== null) {
