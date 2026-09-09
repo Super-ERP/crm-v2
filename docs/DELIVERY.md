@@ -14,3 +14,5 @@ The local smoke deployment uses a disposable database and the signed production 
 Existing persistent staging data is retained, but new releases no longer start a public quick tunnel or change authentication origins.
 
 Four signed image artifacts remain in each ERP release, using existing build caches. Selective reuse of agent/backup images is deliberately deferred because the manifest currently associates every image with the release source commit.
+
+If GitHub misses a post-merge trigger, run the **quality** workflow manually on `main`. A successful exact-commit check resumes the normal release routing.

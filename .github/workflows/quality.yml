@@ -1,6 +1,7 @@
 name: quality
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
   push:
@@ -60,7 +61,7 @@ jobs:
         run: |
           export SOURCE_SHA="$(git rev-parse HEAD)"
           if [ -z "$BASE_SHA" ]; then
-            BASE_SHA="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/quality.yml/runs?event=push&status=success&per_page=100" --jq '.workflow_runs | map(select(.head_branch == "main" and .head_sha != env.SOURCE_SHA)) | .[0].head_sha // empty')"
+            BASE_SHA="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/quality.yml/runs?status=success&per_page=100" --jq '.workflow_runs | map(select(.head_branch == "main" and (.event == "push" or .event == "workflow_dispatch") and .head_sha != env.SOURCE_SHA)) | .[0].head_sha // empty')"
             export BASE_SHA
           fi
           node .github/workflows/scripts/release-scope.mjs

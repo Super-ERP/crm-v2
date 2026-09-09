@@ -32,7 +32,13 @@ jobs:
       - name: Determine affected services
         id: scope
         run: |
-          BASE_SHA="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/quality.yml/runs?event=push&status=success&per_page=100" --jq '.workflow_runs | map(select(.head_branch == "main" and .head_sha != env.SOURCE_SHA)) | .[0].head_sha // empty')"
+          labels="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SOURCE_SHA}/pulls" --jq '.[0].labels[].name' 2>/dev/null || true)"
+          if printf '%s\n' "$labels" | grep -qx 'release:none'; then
+            echo "erp=false" >> "$GITHUB_OUTPUT"
+            echo "vendor=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          BASE_SHA="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/quality.yml/runs?status=success&per_page=100" --jq '.workflow_runs | map(select(.head_branch == "main" and (.event == "push" or .event == "workflow_dispatch") and .head_sha != env.SOURCE_SHA)) | .[0].head_sha // empty')"
           export BASE_SHA
           node .github/workflows/scripts/release-scope.mjs
       - name: Create next release tag

@@ -6,3 +6,5 @@ const valid = { head_sha: sha, head_branch: 'main', event: 'push', path: '.githu
 test('reuses exact successful main verification', () => assert.equal(hasVerifiedQuality([valid], sha, repository), true))
 for (const override of [{head_sha:'b'.repeat(40)}, {head_branch:'feature'}, {event:'pull_request'}, {path:'.github/workflows/other.yml'}, {status:'in_progress'}, {conclusion:'failure'}, {repository:{full_name:'fork/repo'}}]) test(`rejects ${JSON.stringify(override)}`, () => assert.equal(hasVerifiedQuality([{...valid,...override}], sha, repository), false))
 test('missing evidence fails closed', () => assert.equal(hasVerifiedQuality([], sha, repository), false))
+
+test('manual recovery verifies only exact main commit', () => assert.equal(hasVerifiedQuality([{...valid,event:'workflow_dispatch'}], sha, repository), true))
