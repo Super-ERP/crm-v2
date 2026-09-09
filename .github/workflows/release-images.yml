@@ -3,6 +3,11 @@ name: release-images
 on:
   workflow_dispatch:
     inputs:
+      deploy_vendor:
+        description: Deploy matching vendor code after ERP (keep enabled for shared changes)
+        required: false
+        type: boolean
+        default: true
       ref:
         description: Release tag to build (must be annotated semantic version, e.g. v1.2.3)
         required: true
@@ -241,18 +246,13 @@ jobs:
         with:
           pattern: release-*
           path: release-inputs
-      - name: Determine affected services
-        id: scope
-        env:
-          SOURCE_SHA: ${{ env.SOURCE_COMMIT }}
-        run: node .github/workflows/scripts/release-scope.mjs
       - name: Compose release manifest
         shell: bash
         env:
           WORKFLOW_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release-images.yml@refs/heads/main
         run: |
           set -euo pipefail
-          DEPLOY_VENDOR="${{ steps.scope.outputs.vendor }}"
+          DEPLOY_VENDOR="${{ inputs.deploy_vendor }}"
           RELEASE_VERSION="${TARGET_REF#v}"
           MIGRATION_VERSION="$(jq -r '.entries[-1].tag' apps/web/db/migrations/meta/_journal.json | cut -d_ -f1)"
           jq -s \

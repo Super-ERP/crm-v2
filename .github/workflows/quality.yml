@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: quality-${{ github.event.pull_request.number || github.ref }}
@@ -47,14 +48,22 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.ref || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
       - name: Determine affected checks
         id: scope
         env:
           SOURCE_SHA: ${{ inputs.ref || github.sha }}
           CHECK_MODE: "true"
-        run: SOURCE_SHA="$(git rev-parse HEAD)" node .github/workflows/scripts/release-scope.mjs
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          export SOURCE_SHA="$(git rev-parse HEAD)"
+          if [ -z "$BASE_SHA" ]; then
+            BASE_SHA="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/quality.yml/runs?event=push&status=success&per_page=100" --jq '.workflow_runs | map(select(.head_branch == "main" and .head_sha != env.SOURCE_SHA)) | .[0].head_sha // empty')"
+            export BASE_SHA
+          fi
+          node .github/workflows/scripts/release-scope.mjs
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: 11.6.0
@@ -93,4 +102,4 @@ jobs:
           pnpm --filter control-plane exec wrangler deploy --dry-run --env=""
       - run: pnpm run test:workflows
       - run: pnpm run build
-        if: ${{ steps.scope.outputs.erp == 'true' && (github.event_name != 'workflow_call' || inputs.run_build) }}
+        if: ${{ steps.scope.outputs.erp == 'true' && inputs.run_build }}

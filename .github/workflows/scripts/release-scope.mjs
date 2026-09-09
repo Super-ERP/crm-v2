@@ -16,6 +16,9 @@ export function releaseScope(files, { includeTests = false } = {}) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const sha = process.env.SOURCE_SHA
   if (!/^[0-9a-f]{40}$/.test(sha ?? '')) throw new Error('Invalid source SHA')
-  const files = execFileSync('git', ['diff-tree', '--root', '--no-commit-id', '--name-only', '-r', '-m', sha], { encoding: 'utf8' }).trim().split('\n').filter(Boolean)
+  const base = process.env.BASE_SHA
+  if (base && !/^[0-9a-f]{40}$/.test(base)) throw new Error('Invalid base SHA')
+  const args = base ? ['diff', '--name-only', base, sha] : ['diff-tree', '--root', '--no-commit-id', '--name-only', '-r', '-m', sha]
+  const files = execFileSync('git', args, { encoding: 'utf8' }).trim().split('\n').filter(Boolean)
   for (const [key, value] of Object.entries(releaseScope(files, { includeTests: process.env.CHECK_MODE === 'true' }))) appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`)
 }
