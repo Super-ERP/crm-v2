@@ -62,11 +62,6 @@ function ServiceControlCard(props: { controls: ServiceControlsView }) {
         <div><span class="service-stat-label">Seat usage</span><strong>{controls.activeUsers === null ? "Not reported" : `${controls.activeUsers} active users`}</strong><small>{controls.reservedInvitations === null ? "Invitations not reported" : `${controls.reservedInvitations} reserved invitations`}</small></div>
         <div><span class="service-stat-label">Last connected</span><strong>{connectionTime(controls.lastConnectedAt)}</strong><small>Reported by the client's server</small></div>
       </div>
-      <details class="service-more">
-        <summary>Connection &amp; troubleshooting</summary>
-        <p>Server connection, diagnostics and recovery. You don’t need these to change access or seats.</p>
-        <a href={`/operator/deployments/${controls.deploymentId}/advanced`}>Open server tools →</a>
-      </details>
     </article>
   )
 }
@@ -93,7 +88,6 @@ export function ClientServicePage(props: { controls: ServiceControlsView[]; oper
       <header class="service-page-header"><p>Client service</p><h1>{clientName}</h1><span>Access and seats. All in one place.</span></header>
       <NoticePanel notice={props.notice} />
       {props.controls.length === 0 ? <p>No service environments are set up yet.</p> : props.controls.map((controls) => <ServiceControlCard controls={controls} />)}
-      {props.clientId ? <details class="service-more service-account-options"><summary>More options</summary><p>Initial server setup and historical account records.</p><a href={`/operator/clients/${props.clientId}/advanced`}>Open account setup →</a></details> : null}
     </div>
   </OperatorLayout>
 }
