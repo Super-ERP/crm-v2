@@ -301,7 +301,7 @@ beforeAll(async () => {
 })
 
 describe("operator onboarding workspace", () => {
-  it("keeps the everyday deployment page focused on ERP access and links maintenance explicitly", async () => {
+  it("keeps the everyday deployment page limited to ERP access and seats", async () => {
     const input = await fixture()
     const response = await serviceControlsRequest(input.deploymentId)
 
@@ -310,7 +310,7 @@ describe("operator onboarding workspace", () => {
     expect(html).toContain("ERP access")
     expect(html).toContain("Seats allowed")
     expect(html).toContain("Needs attention")
-    expect(html).toContain(`/operator/deployments/${input.deploymentId}/advanced`)
+    expect(html).not.toContain(`/operator/deployments/${input.deploymentId}/advanced`)
     expect(html).not.toMatch(/billing|invoice|signing workspace/i)
   })
 
