@@ -11,6 +11,7 @@ import * as schema from "@/db/schema"
 import { writeAuthAudit } from "@/server/audit"
 import { ROLE_TEMPLATES } from "@/lib/permissions"
 import { env, microsoftConfigured, isProd } from "@/lib/env"
+import { canUsePasswordLogin } from "@/lib/password-login-policy"
 import {
   autoJoinMembership,
   consumeInvitation,
@@ -138,13 +139,20 @@ async function passwordLoginAllowed(email: string): Promise<boolean> {
   if (!isProd) return true
   const [candidate] = await db
     .select({
+      isSuperadmin: schema.user.isSuperadmin,
       isBreakGlass: schema.user.isBreakGlass,
       twoFactorEnabled: schema.user.twoFactorEnabled,
     })
     .from(schema.user)
     .where(eq(schema.user.email, email.trim().toLowerCase()))
     .limit(1)
-  return candidate?.isBreakGlass === true && candidate.twoFactorEnabled === true
+  return candidate !== undefined && canUsePasswordLogin({
+    email,
+    platformMasterEmail: env.PLATFORM_MASTER_EMAIL,
+    isSuperadmin: candidate.isSuperadmin,
+    isBreakGlass: candidate.isBreakGlass,
+    twoFactorEnabled: candidate.twoFactorEnabled,
+  })
 }
 
 // A real directory (tenant) GUID is required when Microsoft sign-in is

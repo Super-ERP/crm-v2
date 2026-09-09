@@ -23,7 +23,7 @@ describe("simple service controls", () => {
     expect(html).toContain("Applied")
     expect(html).toContain("12 active users")
     expect(html).toContain("3 reserved invitations")
-    expect(html).toContain(`/operator/deployments/${control.deploymentId}/advanced`)
+    expect(html).not.toContain("advanced")
     expect(html).not.toMatch(/contract|billing|invoice|entitlement|signing/i)
   })
 
