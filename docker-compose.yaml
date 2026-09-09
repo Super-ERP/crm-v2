@@ -87,6 +87,7 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set (openssl rand -base64 32)}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
       APP_URL: ${APP_URL:-${BETTER_AUTH_URL:-http://localhost}}
+      PLATFORM_MASTER_EMAIL: ${PLATFORM_MASTER_EMAIL:?PLATFORM_MASTER_EMAIL must be set}
       # Machine-only deployment control. Identity and shared secret have no
       # defaults; release metadata is pinned by the deployed image/release.
       DEPLOYMENT_ID: ${DEPLOYMENT_ID:?DEPLOYMENT_ID must be set}

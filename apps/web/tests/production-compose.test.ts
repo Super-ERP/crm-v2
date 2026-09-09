@@ -61,23 +61,27 @@ describe("production Compose deployment-control environment", () => {
 
   it("passes required deployment identity, shared agent secret, immutable versions, and trust set to web only", () => {
     const config = composeConfig()
-    const expected = {
+    const expectedWebOnly = {
       DEPLOYMENT_ID: deploymentEnvironment.DEPLOYMENT_ID,
       AGENT_WEB_SECRET: deploymentEnvironment.AGENT_WEB_SECRET,
       APPLICATION_VERSION: deploymentEnvironment.APPLICATION_VERSION,
       MIGRATION_VERSION: deploymentEnvironment.MIGRATION_VERSION,
       VENDOR_ENTITLEMENT_TRUST_SET: deploymentEnvironment.VENDOR_ENTITLEMENT_TRUST_SET,
     }
-    expect(config.services.web.environment).toMatchObject(expected)
+    expect(config.services.web.environment).toMatchObject({
+      ...expectedWebOnly,
+      PLATFORM_MASTER_EMAIL: deploymentEnvironment.PLATFORM_MASTER_EMAIL,
+    })
 
     for (const serviceName of ["db", "migrate", "caddy", "backup"]) {
-      for (const key of Object.keys(expected)) {
+      for (const key of Object.keys(expectedWebOnly)) {
         expect(config.services[serviceName]?.environment).not.toHaveProperty(key)
       }
     }
   })
 
   it.each([
+    "PLATFORM_MASTER_EMAIL",
     "DEPLOYMENT_ID",
     "AGENT_WEB_SECRET",
     "APPLICATION_VERSION",
