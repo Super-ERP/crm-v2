@@ -41,7 +41,7 @@ function render(overrides = {}) {
 
 test("workflow retains all gates and renders protected environment config", () => {
   for (const gate of ["wrangler types", "d1 migrations apply", "vitest", "deploy --dry-run", "--remote", "wrangler deploy"]) {
-    assert.match(workflow, new RegExp(gate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
+    assert.match(workflow + readFileSync(new URL("../quality.yml", import.meta.url), "utf8"), new RegExp(gate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")))
   }
   assert.match(workflow, /environment:\s*production/)
   assert.match(workflow, /environment:\s*staging/)
@@ -107,3 +107,8 @@ for (const [label, overrides] of [
     assert.equal(existsSync(output), false)
   })
 }
+
+test('deployment consumes immutable verified commit instead of resolving a mutable input twice', () => {
+  assert.match(workflow, /source_commit: \$\{\{ steps.verified.outputs.source_commit \}\}/)
+  assert.equal((workflow.match(/ref: \$\{\{ needs.verify.outputs.source_commit \}\}/g) ?? []).length, 2)
+})

@@ -3,6 +3,10 @@ name: deploy-control-plane
 on:
   workflow_dispatch:
     inputs:
+      source_sha:
+        description: Verified main commit; defaults to current main
+        required: false
+        type: string
       environment:
         description: Control-plane target
         required: true
@@ -11,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: control-plane-${{ inputs.environment }}
@@ -18,31 +23,20 @@ concurrency:
 
 jobs:
   verify:
+    outputs:
+      source_commit: ${{ steps.verified.outputs.source_commit }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
-          version: 11.6.0
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Build shared protocol package
-        run: pnpm --filter @crm/control-protocol build
-      - name: Generate Workers binding types
-        run: pnpm --filter control-plane exec wrangler types --env-interface CloudflareBindings
-      - name: Check fresh migration chain
-        run: pnpm --filter control-plane exec wrangler d1 migrations apply CONTROL_DB --local --persist-to=/tmp/control-plane-migration-check
-      - name: Typecheck
-        run: pnpm --filter control-plane typecheck
-      - name: Workers Vitest
-        run: pnpm --filter control-plane exec vitest run
-      - name: Workflow contract test
-        run: node --test .github/workflows/tests/deploy-control-plane.test.mjs
-      - name: Bundle dry run
-        run: pnpm --filter control-plane exec wrangler deploy --dry-run --env=""
+          ref: ${{ inputs.source_sha || github.sha }}
+      - name: Reuse exact-commit quality evidence
+        id: verified
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SOURCE_SHA="$(git rev-parse HEAD)" node .github/workflows/scripts/verify-quality.mjs
+          echo "source_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   deploy-staging:
     if: inputs.environment == 'staging'
@@ -51,6 +45,8 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.verify.outputs.source_commit }}
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: 11.6.0
@@ -110,6 +106,8 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ needs.verify.outputs.source_commit }}
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
         with:
           version: 11.6.0

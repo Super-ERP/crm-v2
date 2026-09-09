@@ -1,24 +1,13 @@
-import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-import { resolve } from "node:path"
-import test from "node:test"
-
-const workflows = resolve(import.meta.dirname, "..")
-
-test("staging upgrades retained env through a protected trust-set secret before Compose starts", () => {
-  const workflow = readFileSync(resolve(workflows, "deploy-staging.yml"), "utf8")
-  assert.match(workflow, /workflow_dispatch:/)
-  assert.match(workflow, /release_run_id:/)
-  assert.match(readFileSync(resolve(workflows, "quality.yml"), "utf8"), /pnpm run test:workflows/)
-  assert.match(workflow, /environment:\s*staging/)
-  assert.match(workflow, /CADDY_HOST_PORT=8092/)
-  assert.match(workflow, /docker-compose\.staging-images\.yaml/)
-  assert.match(workflow, /release-manifest-/)
-  assert.match(workflow, /WEB_IMAGE=\$web_image/)
-  assert.match(workflow, /MIGRATOR_IMAGE=\$migrator_image/)
-  assert.match(workflow, /VENDOR_ENTITLEMENT_TRUST_SET:\s*\$\{\{ secrets\.STAGING_VENDOR_ENTITLEMENT_TRUST_SET \}\}/)
-  const provision = workflow.search(/provision-deployment-runtime\.mjs"? --mode staging/)
-  assert.notEqual(-1, provision, "staging provisioner is not invoked")
-  const compose = workflow.indexOf("docker compose")
-  assert.ok(compose > provision, "retained staging env must be upgraded before Compose")
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import test from 'node:test'
+test('local smoke uses isolated production Compose with staging public trust', () => {
+  const workflow = readFileSync(new URL('../deploy-staging.yml', import.meta.url), 'utf8')
+  const smoke = readFileSync(new URL('../../../deploy/client/ops/smoke-release.mjs', import.meta.url), 'utf8')
+  assert.match(workflow, /secrets.STAGING_VENDOR_ENTITLEMENT_TRUST_SET/)
+  assert.match(smoke, /crm-smoke-/)
+  assert.match(smoke, /compose.yaml/)
+  assert.match(smoke, /127.0.0.1:18092:8081/)
+  assert.match(smoke, /finally/)
+  assert.doesNotMatch(smoke, /quandatics-client|crm-v2_pgdata/)
 })

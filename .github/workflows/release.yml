@@ -29,7 +29,11 @@ jobs:
         with:
           ref: ${{ env.SOURCE_SHA }}
           fetch-depth: 0
+      - name: Determine affected services
+        id: scope
+        run: node .github/workflows/scripts/release-scope.mjs
       - name: Create next release tag
+        if: steps.scope.outputs.erp == 'true'
         id: version
         shell: bash
         run: |
@@ -77,3 +81,6 @@ jobs:
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: gh workflow run release-images.yml --ref main -f ref="$RELEASE_TAG"
+      - name: Deploy affected vendor service
+        if: steps.scope.outputs.vendor == 'true' && steps.scope.outputs.erp != 'true'
+        run: gh workflow run deploy-control-plane.yml --ref main -f environment=production -f source_sha="$SOURCE_SHA"

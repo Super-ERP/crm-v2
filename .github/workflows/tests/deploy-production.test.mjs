@@ -11,7 +11,7 @@ test("production deploy uses only a signed source-free release bundle", () => {
   assert.match(workflow, /environment: production/)
   assert.match(workflow, /client-deployment-bundle-/)
   assert.match(workflow, /gh run download/)
-  assert.doesNotMatch(workflow, /inputs\.operation/)
+  assert.match(workflow, /inputs\.operation/)
   assert.doesNotMatch(workflow, /Prepare signed backup evidence for deployed release/)
   assert.doesNotMatch(workflow, /ARTIFACT_ID/)
   assert.doesNotMatch(workflow, /\\bunzip\\b/)
@@ -32,4 +32,11 @@ test("manifest updater pins four exact vendor digest repositories", () => {
   }
   assert.match(updater, /sha256:\[0-9a-f\]\{64\}/)
   assert.match(updater, /\.images \| length == 4/)
+})
+
+test('rollback rejects migration downgrades before installing any bundle files', () => {
+  assert.match(workflow, /options: \[Deploy latest, Roll back\]/)
+  const guard = workflow.indexOf('Rollback crosses database migrations')
+  assert.ok(guard > 0 && guard < workflow.indexOf('install -d -m 0700'))
+  assert.match(workflow, /operation != 'Roll back'/)
 })
