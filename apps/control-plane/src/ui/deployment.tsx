@@ -160,16 +160,18 @@ export function DeploymentPage(props: { workspace: DeploymentWorkspace; operator
         { label: "Dashboard", href: "/operator" },
         { label: "Clients", href: "/operator/clients" },
         { label: workspace.client.displayName, href: `/operator/clients/${workspace.client.id}` },
-        { label: workspace.deployment.deploymentKey },
+        { label: workspace.deployment.deploymentKey, href: `/operator/deployments/${workspace.deployment.id}` },
+        { label: "Advanced maintenance" },
       ]}
     >
       <PageHeader
-        eyebrow="Deployment signing workspace"
+        eyebrow="Advanced maintenance"
         title={workspace.deployment.deploymentKey}
         description={`${workspace.client.displayName} · ${titleCase(workspace.deployment.environment)} environment`}
         actions={<><StatusBadge tone={statusTone(workspace.onboarding.licenceState)}>{licenceLabel(workspace.onboarding.licenceState)}</StatusBadge><StatusBadge tone={statusTone(workspace.onboarding.connectivityState)}>{connectivityLabel(workspace.onboarding.connectivityState)}</StatusBadge></>}
       />
       <NoticePanel notice={props.notice} />
+      <p><a class="text-action" href={`/operator/deployments/${workspace.deployment.id}`}>Back to service controls</a></p>
 
       <DataList items={[
         { term: "Client", details: workspace.client.displayName },
@@ -427,7 +429,7 @@ export function EntitlementReviewPage(props: {
     : workspace.compatibleContracts.find((candidate) => candidate.id === schedule.contractId)
   const canIssue = workspace.client.status === "active" && workspace.deployment.status === "active" &&
     workspace.registration !== null && schedule !== null && contract !== undefined
-  const workspaceHref = `/operator/deployments/${workspace.deployment.id}`
+  const workspaceHref = `/operator/deployments/${workspace.deployment.id}/advanced`
   const buttonLabel = workspace.latestEntitlement === null ? "Issue signed entitlement" : "Issue new version"
 
   return (

@@ -15,7 +15,7 @@ const issuedAt = "2026-08-10T00:00:00.000Z"
 const leaseExpiresAt = "2026-08-11T00:00:00.000Z"
 const graceUntil = "2026-08-18T00:00:00.000Z"
 
-function lease(overrides: Partial<EntitlementLease> = {}): EntitlementLease {
+function lease(overrides: Partial<Extract<EntitlementLease, { schemaVersion: 2 }>> = {}): EntitlementLease {
   return {
     schemaVersion: 2,
     revision: 1,
@@ -250,5 +250,28 @@ describe("evaluateLease", () => {
         writeAllowed: false,
       })
     }
+  })
+})
+
+describe("v3 vendor service controls", () => {
+  const enabled = () => ({ ...lease(), schemaVersion: 3 as const, serviceEnabled: true, serviceRevision: 1 })
+  it("strictly accepts v3 and requires its service switch", () => {
+    expect(EntitlementLeaseSchema.safeParse(enabled()).success).toBe(true)
+    expect(EntitlementLeaseSchema.safeParse({ ...enabled(), serviceRevision: undefined }).success).toBe(false)
+    const { serviceEnabled, ...missing } = enabled()
+    expect(EntitlementLeaseSchema.safeParse(missing).success).toBe(false)
+    expect(EntitlementLeaseSchema.safeParse({ ...lease(), serviceEnabled }).success).toBe(false)
+  })
+  it.each(["suspended", "cancelled", "past_due"] as const)("ignores legacy %s and commercial dates when On", (subscriptionStatus) => {
+    expect(evaluateLease({ ...enabled(), subscriptionStatus, contractEndsAt: issuedAt }, issuedAt))
+      .toEqual({ mode: "active", reason: "Lease is active", writeAllowed: true })
+  })
+  it("keeps technical offline grace and its expiry when On", () => {
+    expect(evaluateLease(enabled(), "2026-08-12T00:00:00Z").mode).toBe("grace")
+    expect(evaluateLease(enabled(), "2026-08-19T00:00:00Z").mode).toBe("read_only")
+  })
+  it.each([issuedAt, "2030-01-01T00:00:00Z", "invalid"])("blocks all service access while Off at %s", (now) => {
+    expect(evaluateLease({ ...enabled(), serviceEnabled: false }, now))
+      .toEqual({ mode: "service_disabled", reason: "Service is disabled", writeAllowed: false })
   })
 })

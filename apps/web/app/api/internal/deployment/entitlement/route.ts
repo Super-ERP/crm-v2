@@ -48,7 +48,7 @@ type EntitlementRouteDependencies = {
   loadEnvironment(): InternalDeploymentEnv
   readBody(request: Request): Promise<{ value: Record<string, unknown>; bodyBytes: number }>
   apply(value: unknown, deploymentId: string): Promise<EntitlementApplicationResult>
-  getAccess(): Promise<{ mode: "active" | "grace" | "read_only"; revision: number | null }>
+  getAccess(): Promise<{ mode: "active" | "grace" | "read_only" | "service_disabled"; revision: number | null }>
   invalidate(): void
   log(entry: InternalDeploymentApiLog): void
 }

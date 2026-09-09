@@ -55,6 +55,7 @@ const runtimeSchema = z.object({
   lastAppliedConfigurationVersion: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).nullable(),
   hasAppliedValidEntitlement: z.boolean(),
   lastHeartbeatSucceededAt: timestampSchema.nullable(),
+  pendingAcknowledgementRevision: z.number().int().min(1).max(2_147_483_647).nullable().optional(),
   lastErrorCode: z.string().regex(/^[a-z0-9_]{1,64}$/).nullable(),
 }).strict()
 
@@ -75,6 +76,7 @@ const emptyRuntime = (): AgentRuntime => ({
   lastAppliedConfigurationVersion: null,
   hasAppliedValidEntitlement: false,
   lastHeartbeatSucceededAt: null,
+  pendingAcknowledgementRevision: null,
   lastErrorCode: null,
 })
 

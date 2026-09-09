@@ -39,7 +39,7 @@ export function Dashboard(props: { operatorEmail: string; summary: DashboardSumm
       <section class="dashboard-section" aria-labelledby="attention-heading">
         <div class="section-heading-row"><div><h2 id="attention-heading">Needs attention</h2><p class="section-description">The next useful action, ordered by urgency.</p></div><a href="/operator/issues">See all issues</a></div>
         {summary.attentionItems.length === 0 ? (
-          <EmptyState title="Everything is healthy">No customer deployment or contract needs action right now.</EmptyState>
+          <EmptyState title="Everything is healthy">No client service needs action right now.</EmptyState>
         ) : (
           <div class="attention-list">
             {summary.attentionItems.map((item) => (
@@ -65,12 +65,12 @@ export function IssuesPage(props: { operatorEmail: string; summary: DashboardSum
       <PageHeader
         eyebrow="Operations inbox"
         title="Issues"
-        description="One queue for customer deployments and contracts that need a decision."
+        description="One queue for client services that need a decision."
         actions={<a class="button-link button-secondary" href="/operator">Back to dashboard</a>}
       />
       <NoticePanel notice={props.notice} />
       {summary.attentionItems.length === 0 ? (
-        <EmptyState title="No open issues">All monitored deployments and contracts are healthy.</EmptyState>
+        <EmptyState title="No open issues">All monitored client services are healthy.</EmptyState>
       ) : (
         <section class="dashboard-section" aria-labelledby="issues-list-heading">
           <div class="section-heading-row"><div><h2 id="issues-list-heading">Open issues</h2><p class="section-description">Refresh this page after a recovery action.</p></div><p class="issue-count">{summary.attentionCount} total</p></div>
@@ -104,7 +104,7 @@ export function ClientList(props: {
       <PageHeader
         eyebrow="Client administration"
         title="Clients"
-        description="Create a customer record, then add its contract before setting up a deployment."
+        description="Create a client record, then open it to manage service access."
         actions={<a class="button-link" href="#new-client">Create client</a>}
       />
       <NoticePanel notice={props.notice} />
@@ -122,7 +122,7 @@ export function ClientList(props: {
         <h2 id="client-list-heading">Client records</h2>
         {props.clients.length === 0 ? (
           <EmptyState title="No clients yet" action={{ href: "/operator/clients#new-client", label: "Create client" }}>
-            Create a customer record to begin contract and deployment setup.
+            Create a client record to begin service setup.
           </EmptyState>
         ) : (
           <div class="table-wrap">
@@ -221,9 +221,9 @@ export function ClientPage(props: { client: ClientDetail; operatorEmail: string;
         ) : client.contracts.items.length === 0 ? (
           <p class="field-hint">No contracts on this page.</p>
         ) : (
-          <div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Term</th><th scope="col">Seats</th><th scope="col">Status</th></tr></thead><tbody>{client.contracts.items.map((item) => <tr><th scope="row"><a href={`/operator/contracts/${item.id}`}>{item.startsAt} to {item.endsAt}</a></th><td>{item.seatLimit}</td><td><StatusBadge tone={statusTone(item.status)}>{titleCase(item.status)}</StatusBadge></td></tr>)}</tbody></table></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Term</th><th scope="col">Seats</th><th scope="col">Status</th></tr></thead><tbody>{client.contracts.items.map((item) => <tr><th scope="row"><a href={`/operator/contracts/${item.id}/advanced`}>{item.startsAt} to {item.endsAt}</a></th><td>{item.seatLimit}</td><td><StatusBadge tone={statusTone(item.status)}>{titleCase(item.status)}</StatusBadge></td></tr>)}</tbody></table></div>
         )}
-        <CollectionPager basePath={`/operator/clients/${client.id}`} name="contracts" collection={client.contracts} preserved={childPagination} />
+        <CollectionPager basePath={`/operator/clients/${client.id}/advanced`} name="contracts" collection={client.contracts} preserved={childPagination} />
       </section>
 
       <section class="workspace-section" aria-labelledby="deployments-heading">
@@ -242,9 +242,9 @@ export function ClientPage(props: { client: ClientDetail; operatorEmail: string;
         ) : client.deployments.items.length === 0 ? (
           <p class="field-hint">No deployments on this page.</p>
         ) : (
-          <div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Deployment</th><th scope="col">Environment</th><th scope="col">Status</th></tr></thead><tbody>{client.deployments.items.map((item) => <tr><th scope="row"><a href={item.href}>{item.deploymentKey}</a></th><td>{item.environment}</td><td><StatusBadge tone={statusTone(item.status)}>{titleCase(item.status)}</StatusBadge></td></tr>)}</tbody></table></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th scope="col">Deployment</th><th scope="col">Environment</th><th scope="col">Status</th></tr></thead><tbody>{client.deployments.items.map((item) => <tr><th scope="row"><a href={`${item.href}/advanced`}>{item.deploymentKey}</a></th><td>{item.environment}</td><td><StatusBadge tone={statusTone(item.status)}>{titleCase(item.status)}</StatusBadge></td></tr>)}</tbody></table></div>
         )}
-        <CollectionPager basePath={`/operator/clients/${client.id}`} name="deployments" collection={client.deployments} preserved={childPagination} />
+        <CollectionPager basePath={`/operator/clients/${client.id}/advanced`} name="deployments" collection={client.deployments} preserved={childPagination} />
       </section>
 
       <section class="workspace-section secondary-section" aria-labelledby="organisations-heading">
@@ -265,7 +265,7 @@ export function ClientPage(props: { client: ClientDetail; operatorEmail: string;
         ) : (
           <DataList items={client.organisations.items.map((item) => ({ term: item.displayName, details: <code>{item.organisationKey}</code> }))} />
         )}
-        <CollectionPager basePath={`/operator/clients/${client.id}`} name="organisations" collection={client.organisations} preserved={childPagination} />
+        <CollectionPager basePath={`/operator/clients/${client.id}/advanced`} name="organisations" collection={client.organisations} preserved={childPagination} />
       </section>
     </OperatorLayout>
   )

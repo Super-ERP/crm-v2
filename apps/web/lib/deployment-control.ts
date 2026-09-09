@@ -112,7 +112,7 @@ export type EntitlementApplicationResult = {
 }
 
 export type DeploymentAccess = {
-  mode: "active" | "grace" | "read_only"
+  mode: "active" | "grace" | "read_only" | "service_disabled"
   reason: string
   writeAllowed: boolean
   seatLimit: number

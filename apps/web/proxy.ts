@@ -1,12 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { getDeploymentAccess } from "@/lib/deployment-control"
 import { getSessionCookie } from "better-auth/cookies"
 
 /**
- * Optimistic redirects only — NOT the security boundary. Real auth + RBAC are
- * enforced in every Server Action / Route Handler / Server Component. This just
- * spares unauthenticated users a flash of protected UI. (Next 16: proxy.ts)
+ * Enforce the vendor service switch before customer routes, then perform
+ * optimistic session redirects. Auth + RBAC and service access are also
+ * enforced at server/API data boundaries. (Next 16: proxy.ts)
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const path = request.nextUrl.pathname
+  // Signed internal agent endpoints retain their own authentication and must
+  // stay reachable so a disabled service can receive its next enabled lease.
+  if (path === "/api/health" || path.startsWith("/api/internal/")) return NextResponse.next()
+  const access = await getDeploymentAccess()
+  if (access.mode === "service_disabled") {
+    const message = "Service is disabled. Contact your service provider."
+    return path.startsWith("/api/")
+      ? NextResponse.json({ error: { code: "SERVICE_DISABLED", message } }, { status: 403 })
+      : new NextResponse(message, { status: 403, headers: { "content-type": "text/plain; charset=utf-8" } })
+  }
+  if (path.startsWith("/api/")) return NextResponse.next()
+
   const sessionCookie = getSessionCookie(request)
   const { pathname } = request.nextUrl
   const isAuthRoute = pathname === "/sign-in"
@@ -21,8 +35,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Exclude framework internals AND static public files (anything with a file
-  // extension, e.g. /prefs-init.js) — redirecting those to /sign-in breaks
-  // beforeInteractive scripts and images for logged-out visitors.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  // Exclude only framework assets and known public files. A dot in a customer
+  // route (or API export filename) must never bypass the service switch.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico$|prefs-init.js$|file.svg$|globe.svg$|vercel.svg$|next.svg$|window.svg$).*)"],
 }

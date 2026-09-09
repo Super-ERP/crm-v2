@@ -14,12 +14,13 @@ export function formatUtc(value: string | null | undefined): string {
 export function statusTone(status: string): StatusTone {
   if (["active", "healthy", "online", "registered", "issued", "paid", "used", "success"].includes(status)) return "success"
   if (["grace", "stale", "past_due", "unsigned", "draft", "superseded", "awaiting", "pending"].includes(status)) return "warning"
-  if (["disabled", "read_only", "unhealthy", "never_connected", "suspended", "cancelled", "void", "denied", "expired", "error", "failed"].includes(status)) return "error"
+  if (["disabled", "service_disabled", "read_only", "unhealthy", "never_connected", "suspended", "cancelled", "void", "denied", "expired", "error", "failed"].includes(status)) return "error"
   return "neutral"
 }
 
 export function licenceLabel(state: DeploymentWorkspace["onboarding"]["licenceState"]): string {
   if (state === "active") return "Active licence"
+  if (state === "service_disabled") return "Service off"
   if (state === "grace") return "Grace period"
   if (state === "read_only") return "Read-only licence"
   return "Unsigned entitlement"

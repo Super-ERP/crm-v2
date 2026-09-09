@@ -55,6 +55,7 @@ export const DeploymentHeartbeatSchema = z
     applicationVersion: StrictSemverSchema,
     imageDigest: z.string().regex(/^sha256:[a-f0-9]{64}$/),
     entitlementVersion: OpaqueVersionSchema.nullable(),
+    supportedEntitlementSchemaVersion: z.literal(3).optional(),
     configurationVersion: OpaqueVersionSchema.nullable(),
     activeUserCount: z.number().int().min(0).max(100_000),
     reservedInvitationCount: z.number().int().min(0).max(100_000),

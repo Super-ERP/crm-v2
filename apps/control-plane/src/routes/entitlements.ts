@@ -16,7 +16,7 @@ import {
 import type { ControlPlaneEnvironment } from "../index"
 import { notFound, unauthorized } from "../http/errors"
 import { getActiveDeploymentKey } from "../repos/deployments"
-import { getEntitlement } from "../repos/entitlements"
+import { getCurrentEntitlementReference, getEntitlement } from "../repos/entitlements"
 import { isSafeOpaqueLegacyKeyId, storedPublicJwk, uuidPattern } from "./deployments"
 
 const LEGACY_PENDING_FINGERPRINT = "legacy:pending"
@@ -80,6 +80,18 @@ async function authenticateRetrieval(
 
 export function createEntitlementRoutes() {
   const routes = new Hono<ControlPlaneEnvironment>()
+  routes.get("/:id/entitlement/current", async (context) => {
+    const deploymentId = context.req.param("id")
+    const expectedPath = `/v1/deployments/${deploymentId}/entitlement/current`
+    if (new URL(context.req.url).pathname !== expectedPath) throw unauthorized()
+    await authenticateRetrieval(context.env.CONTROL_DB, context.req.raw, deploymentId)
+    const current = await getCurrentEntitlementReference(context.env.CONTROL_DB, deploymentId)
+    return context.json(
+      { version: current?.version ?? null },
+      200,
+      { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
+    )
+  })
   routes.get("/:id/entitlement/:version", async (context) => {
     const deploymentId = context.req.param("id")
     const versionValue = context.req.param("version")

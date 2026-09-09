@@ -919,6 +919,7 @@ describe("live agent/control interoperability", () => {
       environment: "development",
       entitlementVersion: null,
     }) as Parameters<typeof client.heartbeat>[1], signal)).resolves.toEqual({ accepted: true, entitlement: null })
+    await expect(restartedClient.currentEntitlement(identity, signal)).resolves.toBeNull()
     await expect(restartedClient.entitlement(identity, 1, signal)).rejects.toThrow("http_404")
 
     expect(await env.CONTROL_DB.prepare(
@@ -926,7 +927,7 @@ describe("live agent/control interoperability", () => {
     ).bind(deploymentId, keyId).first<{ count: number }>()).toEqual({ count: 1 })
     expect(await env.CONTROL_DB.prepare(
       "SELECT COUNT(*) AS count FROM deployment_request_nonces n JOIN deployment_keys k ON k.id = n.deployment_key_id WHERE k.deployment_id = ? AND k.key_id = ?",
-    ).bind(deploymentId, keyId).first<{ count: number }>()).toEqual({ count: 2 })
+    ).bind(deploymentId, keyId).first<{ count: number }>()).toEqual({ count: 3 })
   })
 })
 
@@ -937,12 +938,13 @@ describe("signed deployment heartbeats", () => {
       deploymentId: fixture.deploymentId,
       keyId: fixture.keyId,
       privateKey: fixture.pair.privateKey,
+      body: heartbeatBody(fixture.deploymentId, { supportedEntitlementSchemaVersion: 3 }),
     })
     expect(response.status).toBe(202)
     await expect(response.json()).resolves.toEqual({ accepted: true, entitlement: null })
 
     const row = await env.CONTROL_DB.prepare(
-      "SELECT occupied_seats, active_user_count, reserved_invitation_count, application_version, image_digest, enabled_module_ids_json, health_status, client_timestamp FROM heartbeat_rollups WHERE deployment_id = ?",
+      "SELECT occupied_seats, active_user_count, reserved_invitation_count, application_version, image_digest, enabled_module_ids_json, health_status, client_timestamp, supported_entitlement_schema_version FROM heartbeat_rollups WHERE deployment_id = ?",
     ).bind(fixture.deploymentId).first<Record<string, string | number>>()
     expect(row).toMatchObject({
       occupied_seats: 20,
@@ -952,6 +954,7 @@ describe("signed deployment heartbeats", () => {
       image_digest: `sha256:${"a".repeat(64)}`,
       enabled_module_ids_json: '["projects","salesOrders"]',
       health_status: "healthy",
+      supported_entitlement_schema_version: 3,
     })
     expect(row?.client_timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   })

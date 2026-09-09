@@ -349,6 +349,7 @@ export const heartbeatRollups = sqliteTable(
     lastRestoreTestAt: text("last_restore_test_at"),
     agentVersion: text("agent_version"),
     databaseConfigurationJson: text("database_configuration_json"),
+    supportedEntitlementSchemaVersion: integer("supported_entitlement_schema_version"),
     createdAt: text("created_at").notNull(),
   },
   (table) => [
@@ -424,3 +425,23 @@ export const operatorAuditLog = sqliteTable(
     index("operator_audit_log_action_created_idx").on(table.action, table.createdAt),
   ],
 )
+
+// Desired service policy is independent from retained commercial history.
+export const serviceControls = sqliteTable("service_controls", {
+  deploymentId: text("deployment_id").primaryKey().references(() => deployments.id),
+  enabled: integer("enabled", { mode: "boolean" }).notNull(),
+  seatLimit: integer("seat_limit").notNull(),
+  revision: integer("revision").notNull(),
+  basePayloadJson: text("base_payload_json").notNull(),
+  updatedAt: text("updated_at").notNull(),
+})
+
+export const serviceControlOperations = sqliteTable("service_control_operations", {
+  id: text("id").primaryKey(),
+  deploymentId: text("deployment_id").notNull().references(() => deployments.id),
+  expectedRevision: integer("expected_revision").notNull(),
+  expectedEntitlementVersion: integer("expected_entitlement_version").notNull(),
+  expectedHeartbeatId: text("expected_heartbeat_id"),
+  requestedSeatLimit: integer("requested_seat_limit").notNull(),
+  createdAt: text("created_at").notNull(),
+})

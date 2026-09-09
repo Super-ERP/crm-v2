@@ -54,7 +54,7 @@ test("workflow retains all gates and renders protected environment config", () =
 })
 
 test("committed config stays local-only without deployable resource identifiers", () => {
-  assert.match(wrangler, /"crons"\s*:\s*\["\*\/15 \* \* \* \*"\]/)
+  assert.match(wrangler, /"crons"\s*:\s*\["\* \* \* \* \*"\]/)
   assert.match(wrangler, /ENTITLEMENT_SIGNING_KEY_ID/)
   assert.doesNotMatch(wrangler, /"database_id"/)
   assert.doesNotMatch(wrangler, /"env"\s*:/)
@@ -68,7 +68,7 @@ test("renderer emits a non-secret deploy config only after validating protected 
   const config = JSON.parse(readFileSync(output, "utf8"))
   assert.equal(config.d1_databases[0].database_id, validEnvironment.CONTROL_DB_ID)
   assert.equal(config.vars.ENVIRONMENT, "staging")
-  assert.equal(config.triggers.crons[0], "*/15 * * * *")
+  assert.equal(config.triggers.crons[0], "* * * * *")
   assert.equal(config.services, undefined)
   assert.equal(statSync(output).mode & 0o777, 0o600)
   const serialized = JSON.stringify(config)

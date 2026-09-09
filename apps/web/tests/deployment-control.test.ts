@@ -18,7 +18,7 @@ const graceUntil = "2026-08-18T00:00:00.000Z"
 let privateJwk: JsonWebKey
 let publicJwk: JsonWebKey
 
-function lease(overrides: Partial<EntitlementLease> = {}): EntitlementLease {
+function lease(overrides: Partial<Extract<EntitlementLease, { schemaVersion: 2 }>> = {}): EntitlementLease {
   return {
     schemaVersion: 2,
     revision: 1,
@@ -150,6 +150,26 @@ describe("applySignedEntitlement", () => {
       trustSet: input?.trustSet ?? trustSet(),
       now: input?.now ?? (() => new Date(issuedAt)),
     })
+
+  it("applies signed v3 Off and a later On without changing seats or modules", async () => {
+    const service = applySignedService()
+    const disabled: EntitlementLease = {
+      ...lease(), schemaVersion: 3, serviceEnabled: false, serviceRevision: 1,
+    }
+    const off = await signed(disabled)
+    await expect(service.applySignedEntitlement(off, deploymentId)).resolves.toMatchObject({ outcome: "accepted" })
+    await expect(service.getDeploymentAccess(new Date(issuedAt))).resolves.toMatchObject({
+      mode: "service_disabled", writeAllowed: false, seatLimit: 25, moduleIds: ["projects", "salesOrders"],
+    })
+    await expect(service.applySignedEntitlement(await signed({
+      ...disabled, serviceEnabled: true, serviceRevision: 2, revision: 2,
+      subscriptionStatus: "cancelled", contractEndsAt: issuedAt,
+    }), deploymentId)).resolves.toMatchObject({ outcome: "accepted" })
+    await expect(service.getDeploymentAccess(new Date(issuedAt))).resolves.toMatchObject({
+      mode: "active", writeAllowed: true, seatLimit: 25, moduleIds: ["projects", "salesOrders"],
+    })
+    await expect(service.applySignedEntitlement(off, deploymentId)).resolves.toMatchObject({ outcome: "rejected" })
+  })
 
   it("verifies and persists exact canonical last-known-good bytes", async () => {
     const service = applySignedService()

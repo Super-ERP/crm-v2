@@ -503,7 +503,7 @@ describe("operator mutation protection and client administration", () => {
     })).status).toBe(303)
 
     const laterPage = await operatorRequest(
-      `/operator/clients/${clientId}?organisationsPage=2&organisationsPageSize=1&deploymentsPage=1&deploymentsPageSize=1&contractsPage=1&contractsPageSize=1`,
+      `/operator/clients/${clientId}/advanced?organisationsPage=2&organisationsPageSize=1&deploymentsPage=1&deploymentsPageSize=1&contractsPage=1&contractsPageSize=1`,
     )
     const html = await laterPage.text()
     expect(html).toContain("HQ")
@@ -581,14 +581,14 @@ describe("contract and invoice administration", () => {
       contractId,
     )).toBe(1)
 
-    const detail = await operatorRequest(`/operator/contracts/${contractId}`)
+    const detail = await operatorRequest(`/operator/contracts/${contractId}/advanced`)
     expect(detail.status).toBe(200)
     expect(detail.headers.get("Cache-Control")).toBe("no-store")
     expect(await detail.text()).toContain(`/operator/contracts/${contractId}/invoices`)
   })
 
   it("orders client onboarding as contract then deployment, with optional organisations secondary", async () => {
-    const page = await operatorRequest(`/operator/clients/${clientId}`)
+    const page = await operatorRequest(`/operator/clients/${clientId}/advanced`)
     const html = await page.text()
 
     expect(html).toContain('aria-label="Client onboarding"')
@@ -600,7 +600,7 @@ describe("contract and invoice administration", () => {
 
   it("keeps collection state and onboarding progress on out-of-range child pages", async () => {
     const page = await operatorRequest(
-      `/operator/clients/${clientId}?organisationsPage=3&organisationsPageSize=1&deploymentsPage=2&deploymentsPageSize=1&contractsPage=2&contractsPageSize=1`,
+      `/operator/clients/${clientId}/advanced?organisationsPage=3&organisationsPageSize=1&deploymentsPage=2&deploymentsPageSize=1&contractsPage=2&contractsPageSize=1`,
     )
     const html = await page.text()
 
