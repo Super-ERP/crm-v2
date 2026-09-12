@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import {
   ClipboardCheck,
   CalendarClock,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react"
 import { isBefore } from "date-fns"
 
-import { requireContext } from "@/lib/server-context"
+import { getServerContext } from "@/lib/server-context"
 import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
 import { EmptyState } from "@/components/empty-state"
@@ -119,7 +120,11 @@ function FirstRunHero({ name }: { name: string }) {
 }
 
 export default async function DashboardPage() {
-  const ctx = await requireContext()
+  // Child pages can render concurrently with the app layout. Guard here too so
+  // a stale session or an account without tenant access never becomes a 500
+  // from getDashboardData/requireContext.
+  const ctx = await getServerContext()
+  if (!ctx || !ctx.tenantId) redirect("/sign-in?callbackURL=/dashboard")
   const data = await getDashboardData()
   const now = new Date()
 
