@@ -7,6 +7,17 @@ import {
 } from "@/db/schema"
 import { bootstrapOwner } from "@/lib/deployment-seats"
 
+function isAlreadyClaimedError(error: unknown): boolean {
+  const seen = new Set<unknown>()
+  let current = error
+  while (current instanceof Error && !seen.has(current)) {
+    seen.add(current)
+    if (/already claimed|Already a member/i.test(current.message)) return true
+    current = current.cause
+  }
+  return false
+}
+
 /**
  * First-login provisioning. If the (deterministically selected) default entity
  * has no members yet, or the signed-in email matches BOOTSTRAP_OWNER_EMAIL,
@@ -47,7 +58,7 @@ export async function ensureBootstrap(
     })
     return activation.result.reason !== "idempotent"
   } catch (error) {
-    if (error instanceof Error && /already claimed|Already a member/.test(error.message)) {
+    if (isAlreadyClaimedError(error)) {
       return false
     }
     throw error

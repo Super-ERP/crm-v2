@@ -55,4 +55,14 @@ describe("bootstrap owner selection", () => {
   it("preserves the configured bootstrap owner path after another membership exists", async () => {
     await expect(ensureBootstrap("configured-user", " Configured@Example.com ")).resolves.toBe(true)
   })
+
+  it("treats a wrapped already-claimed database error as a no-op", async () => {
+    mocks.bootstrapOwner.mockRejectedValue(
+      Object.assign(new Error("Failed query: bootstrap_deployment_owner"), {
+        cause: new Error("bootstrap tenant is already claimed"),
+      })
+    )
+
+    await expect(ensureBootstrap("another-user", "another@example.com")).resolves.toBe(false)
+  })
 })
