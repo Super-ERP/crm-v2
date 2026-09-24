@@ -39,17 +39,21 @@ export function QuotationDescriptionEditor({
   label: string
 }) {
   const [preview, setPreview] = React.useState(false)
+  const [expanded, setExpanded] = React.useState(!value.trim())
   const { resolvedTheme } = useTheme()
 
   return (
-    <div className="min-w-80" data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}>
+    <div className="quotation-markdown min-w-0" data-color-mode={resolvedTheme === "dark" ? "dark" : "light"}>
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">Description</span>
-        <Button type="button" variant="ghost" size="sm" className="h-7" onClick={() => setPreview(!preview)}>
-          {preview ? "Edit" : "Preview"}
-        </Button>
+        <div className="flex items-center gap-1">
+          {expanded ? <Button type="button" variant="ghost" size="sm" className="h-7" onClick={() => setPreview(!preview)}>{preview ? "Edit" : "Preview"}</Button> : null}
+          <Button type="button" variant="ghost" size="sm" className="h-7" aria-label={`${expanded ? "Hide" : "Show"} ${label}`} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? "Hide" : "Show"}</Button>
+        </div>
       </div>
-      {preview ? (
+      {!expanded ? (
+        <QuotationDescription value={value} className="max-h-12 overflow-hidden text-xs text-muted-foreground" />
+      ) : preview ? (
         <QuotationDescription value={value} className="min-h-40 rounded-lg border bg-background p-3" />
       ) : (
         <MDEditor

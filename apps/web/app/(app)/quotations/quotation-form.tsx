@@ -773,7 +773,7 @@ export function QuotationForm({
             </Card>
 
             <Card>
-              <CardHeader className="flex-row items-center justify-between">
+              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
                 <CardTitle>Quote Line Items</CardTitle>
                 {canEditDraft ? (
                   <Button

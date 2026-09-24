@@ -149,11 +149,12 @@ function CcLines({ doc }: { doc: QuotationDocument }) {
       <tbody>{doc.lines.map((line, index) => {
         const { title, body } = splitQuotationDescriptionTitle(line.description)
         return <Fragment key={line.id}>{title ? (
-          <tr className="bg-amber-50 print:bg-amber-50">
-            <td colSpan={2} /><td colSpan={6} className="px-1 py-1 font-bold">{title}</td>
+          <tr>
+            <td colSpan={2} style={{ backgroundColor: "#fff4d6", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
+            <td colSpan={6} className="px-1 py-1 font-bold" style={{ backgroundColor: "#fff4d6", color: "#334155", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</td>
           </tr>
         ) : null}<tr className="align-top">
-          <td className="px-2 py-1">{index + 1}</td><td className="px-1 py-1">{line.sku ?? ""}</td><td className="px-1 py-1"><QuotationDescription value={body} className="text-[9px]" /></td>
+          <td className="px-2 py-1">{index + 1}</td><td className="px-1 py-1">{line.sku ?? ""}</td><td className="px-1 py-1"><QuotationDescription value={body} className="text-[9px] leading-relaxed text-slate-700 [&_em]:text-slate-500 [&_li]:text-slate-600 [&_strong]:text-slate-800" /></td>
           <td className="px-1 py-1 text-right">{Number(line.quantity)}</td><td className="px-1 py-1 text-right">{line.uom ?? ""}</td><td className="px-1 py-1 text-right">{plainMoney(line.unitPrice, doc.quotation.currency)}</td>
           <td className="px-1 py-1 text-right">{plainMoney(line.lineSubtotal, doc.quotation.currency)}</td><td className="px-1 py-1 text-right">{plainMoney(line.lineTotal, doc.quotation.currency)}</td>
         </tr></Fragment>
@@ -172,7 +173,7 @@ function Totals({ doc, template }: { doc: QuotationDocument; template: EntityTem
 
 export function EntityQuotationDocument({ doc, template }: { doc: QuotationDocument; template: EntityTemplateKey }) {
   return (
-    <div id="quote-doc" data-template={template} className="relative mx-auto min-h-[297mm] w-[210mm] max-w-full overflow-hidden bg-white px-[10mm] py-[10mm] font-sans text-black shadow-lg print:min-h-[297mm] print:w-[210mm] print:shadow-none">
+    <div id="quote-doc" data-template={template} className="relative mx-auto min-h-[297mm] w-[210mm] max-w-full overflow-hidden bg-white px-[10mm] py-[10mm] font-sans text-slate-800 shadow-lg print:min-h-[297mm] print:w-[210mm] print:shadow-none">
       <CompanyHeader doc={doc}/>
       <h1 className="border-y border-black py-1 text-center text-[16px] font-bold">QUOTATION</h1>
       <CustomerAndMeta doc={doc}/>
