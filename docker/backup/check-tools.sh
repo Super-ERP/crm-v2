@@ -44,7 +44,7 @@ package_version() {
 }
 
 for package_pin in \
-  ca-certificates=20260611-r0 \
+  ca-certificates=20260909-r0 \
   libpq=18.6-r0 \
   libcrypto3=3.5.8-r0 \
   libssl3=3.5.8-r0 \
@@ -56,7 +56,7 @@ for package_pin in \
   readline=8.3.1-r0 \
   rsync=3.5.0-r0 \
   openssh-client-default=10.2_p1-r0 \
-  tzdata=2026c-r0 \
+  tzdata=2026d-r0 \
   zstd-libs=1.5.7-r2
 do
   package=${package_pin%%=*}
