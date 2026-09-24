@@ -102,6 +102,10 @@ describe("EntityQuotationDocument", () => {
     } as QuotationDocument
     const html = renderToStaticMarkup(createElement(EntityQuotationDocument, { doc: withLine, template: "cc" }))
     expect(html.indexOf("Professional Services")).toBeLessThan(html.indexOf("Configure Cloudera nodes"))
+    expect(html).toContain('background-color:#fff4d6')
+    expect(html).toContain('print-color-adjust:exact')
+    expect(html).toContain('text-slate-700')
+    expect(html).toContain('text-slate-500')
     expect(html).toContain("<em>Estimate: 2-3 man-days</em>")
   })
 })

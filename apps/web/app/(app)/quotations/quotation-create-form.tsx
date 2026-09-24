@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { showActionError } from "@/lib/show-action-error"
 import {
   Card,
-  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -581,10 +580,9 @@ export function QuotationCreateForm({
           </Card>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
               <CardTitle className="text-base">Line items</CardTitle>
-              <CardAction>
-                <Button
+              <Button
                   type="button"
                   variant="outline"
                   size="sm"
@@ -601,8 +599,7 @@ export function QuotationCreateForm({
                   }
                 >
                   <Plus /> Add line
-                </Button>
-              </CardAction>
+              </Button>
             </CardHeader>
             <CardContent className="grid gap-3">
           {form.formState.errors.lines?.root ? (

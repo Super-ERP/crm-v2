@@ -192,6 +192,27 @@
   margin: 0;
 }
 
+.quotation-markdown[data-color-mode] {
+  --color-canvas-default: var(--background);
+  --color-canvas-subtle: var(--muted);
+  --color-fg-default: var(--foreground);
+  --color-fg-muted: var(--muted-foreground);
+  --color-border-default: var(--border);
+  --color-accent-fg: var(--primary);
+  --color-neutral-muted: var(--accent);
+}
+
+.quotation-markdown .w-md-editor-toolbar {
+  background-color: var(--muted);
+  border-color: var(--border);
+}
+
+.quotation-markdown .w-md-editor-toolbar li > button:hover,
+.quotation-markdown .w-md-editor-toolbar li > button:focus-visible {
+  background-color: var(--accent);
+  color: var(--foreground);
+}
+
 @media print {
   body * {
     visibility: hidden !important;
