@@ -1,3 +1,5 @@
+import { renderQuotationDescriptionHtml } from "@/lib/quotation-description"
+
 export type QuotationTemplateLineContext = {
   sku?: string | null
   description?: string | null
@@ -47,10 +49,14 @@ function resolveToken(token: string, context: QuotationTemplateContext): unknown
   }, context)
 }
 
-function renderHtmlTokens(template: string, context: QuotationTemplateContext): string {
-  return template.replace(TOKEN_PATTERN, (_match, token: string) =>
-    escapeHtml(displayValue(resolveToken(token, context)))
-  )
+function renderHtmlTokens(template: string, context: QuotationTemplateContext, line = false): string {
+  return template.replace(TOKEN_PATTERN, (_match, token: string) => {
+    const value = displayValue(resolveToken(token, context))
+    if (line && (token.trim() === "description" || token.trim() === "this.description")) {
+      return renderQuotationDescriptionHtml(value)
+    }
+    return escapeHtml(value)
+  })
 }
 
 function renderLineBlocks(template: string, context: QuotationTemplateContext): string {
@@ -65,7 +71,7 @@ function renderLineBlocks(template: string, context: QuotationTemplateContext): 
             "@index": index + 1,
             index: index + 1,
             this: line,
-          })
+          }, true)
         )
         .join("")
   )

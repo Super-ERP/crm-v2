@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { QuotationDescriptionEditor } from "@/components/quotation-description"
 import { Separator } from "@/components/ui/separator"
 import {
   Select,
@@ -609,8 +610,7 @@ export function QuotationCreateForm({
               {form.formState.errors.lines.root.message}
             </p>
           ) : null}
-          {/* Line-to-line billing table — same anatomy as the quotation edit
-              page, with unit price editable for custom lines. */}
+          {/* Line-to-line billing table — same anatomy as the quotation edit page. */}
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -619,7 +619,6 @@ export function QuotationCreateForm({
                   {products.length > 0 ? (
                     <th className="py-2 pr-2 font-medium">Product</th>
                   ) : null}
-                  <th className="py-2 pr-2 font-medium">Description</th>
                   <th className="w-20 py-2 pr-2 text-right font-medium">Qty</th>
                   <th className="w-14 py-2 pr-2 font-medium">UOM</th>
                   <th className="w-28 py-2 pr-2 text-right font-medium">
@@ -639,7 +638,8 @@ export function QuotationCreateForm({
                   const line = totals.lines[i]
                   const watched = watchedLines?.[i]
                   return (
-                    <tr key={f.id} className="border-b align-middle last:border-0">
+                    <React.Fragment key={f.id}>
+                    <tr className="align-top">
                       <td className="py-1.5 pr-2 pl-2 text-muted-foreground tabular-nums">
                         {i + 1}
                       </td>
@@ -658,18 +658,6 @@ export function QuotationCreateForm({
                       ) : null}
                       <td className="py-1.5 pr-2">
                         <Input
-                          className="min-w-44"
-                          placeholder="Service description"
-                          {...form.register(`lines.${i}.description`)}
-                        />
-                        {form.formState.errors.lines?.[i]?.description ? (
-                          <p className="mt-0.5 text-xs text-destructive">
-                            Required
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="py-1.5 pr-2">
-                        <Input
                           type="number"
                           step="0.001"
                           min="0"
@@ -677,8 +665,13 @@ export function QuotationCreateForm({
                           {...form.register(`lines.${i}.quantity`)}
                         />
                       </td>
-                      <td className="py-1.5 pr-2 text-muted-foreground">
-                        {watched?.uom || "—"}
+                      <td className="py-1.5 pr-2">
+                        <Input
+                          className="w-24"
+                          placeholder="UOM"
+                          aria-label={`Line ${i + 1} UOM`}
+                          {...form.register(`lines.${i}.uom`)}
+                        />
                       </td>
                       <td className="py-1.5 pr-2">
                         <Input
@@ -714,6 +707,26 @@ export function QuotationCreateForm({
                         </Button>
                       </td>
                     </tr>
+                    <tr className="border-b last:border-0">
+                      <td colSpan={products.length > 0 ? 8 : 7} className="px-3 pb-4 pt-1">
+                        <FormField
+                          control={form.control}
+                          name={`lines.${i}.description`}
+                          render={({ field }) => (
+                            <QuotationDescriptionEditor
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              label={`Line ${i + 1} description`}
+                            />
+                          )}
+                        />
+                        {form.formState.errors.lines?.[i]?.description ? (
+                          <p className="mt-0.5 text-xs text-destructive">Required</p>
+                        ) : null}
+                      </td>
+                    </tr>
+                    </React.Fragment>
                   )
                 })}
               </tbody>
