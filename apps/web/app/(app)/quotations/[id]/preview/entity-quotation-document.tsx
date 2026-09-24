@@ -1,4 +1,3 @@
-import { Fragment } from "react"
 import type { QuotationDocument } from "../../actions"
 import type { QuotationPdfTemplateKey } from "@/lib/quotation-pdf-template"
 import { formatMalaysianPhone } from "@/lib/format"
@@ -141,14 +140,14 @@ function QarLines({ doc }: { doc: QuotationDocument }) {
 
 function CcLines({ doc }: { doc: QuotationDocument }) {
   return (
-    <table className="w-full table-fixed border-collapse text-[9px]">
+    <table data-quotation-lines className="w-full table-fixed border-collapse text-[9px]">
       <colgroup><col className="w-[8%]"/><col className="w-[8%]"/><col className="w-[36%]"/><col className="w-[8%]"/><col className="w-[8%]"/><col className="w-[12%]"/><col className="w-[10%]"/><col className="w-[10%]"/></colgroup>
       <thead><tr className="h-8 border-b border-black">
         {['Item','SKU','Description','QTY','UOM',`Unit Price\n${doc.quotation.currency}`,`Subtotal\n${doc.quotation.currency}`,`Total Price\n${doc.quotation.currency}`].map((heading) => <th key={heading} className="px-1 text-right font-normal whitespace-pre-line first:text-left nth-[2]:text-left nth-[3]:text-left">{heading}</th>)}
       </tr></thead>
-      <tbody>{doc.lines.map((line, index) => {
+      {doc.lines.map((line, index) => {
         const { title, body } = splitQuotationDescriptionTitle(line.description)
-        return <Fragment key={line.id}>{title ? (
+        return <tbody key={line.id} data-quotation-line-group>{title ? (
           <tr data-quotation-section-row>
             <td colSpan={2} data-quotation-section-title style={{ backgroundColor: "#fff4d6", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
             <td colSpan={6} data-quotation-section-title className="px-1 py-1 font-bold" style={{ backgroundColor: "#fff4d6", color: "#334155", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</td>
@@ -157,8 +156,8 @@ function CcLines({ doc }: { doc: QuotationDocument }) {
           <td className="px-2 py-1">{index + 1}</td><td className="px-1 py-1">{line.sku ?? ""}</td><td data-quotation-description className="px-1 py-1"><QuotationDescription value={body} className="text-[9px] leading-relaxed" /></td>
           <td className="px-1 py-1 text-right">{Number(line.quantity)}</td><td className="px-1 py-1 text-right">{line.uom ?? ""}</td><td className="px-1 py-1 text-right">{plainMoney(line.unitPrice, doc.quotation.currency)}</td>
           <td className="px-1 py-1 text-right">{plainMoney(line.lineSubtotal, doc.quotation.currency)}</td><td className="px-1 py-1 text-right">{plainMoney(line.lineTotal, doc.quotation.currency)}</td>
-        </tr></Fragment>
-      })}</tbody>
+        </tr></tbody>
+      })}
     </table>
   )
 }

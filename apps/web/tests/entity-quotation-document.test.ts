@@ -107,7 +107,28 @@ describe("EntityQuotationDocument", () => {
     expect(html).toContain('data-quotation-section-title')
     expect(html).toContain('data-quotation-section-row')
     expect(html).toContain('data-quotation-description')
+    expect(html).toContain('data-quotation-lines')
+    expect(html).toContain('data-quotation-line-group')
     expect(html).toContain('class="avoid-break flex')
     expect(html).toContain("<em>Estimate: 2-3 man-days</em>")
+  })
+
+  it("keeps each Citrus Cloud title and item in its own print group", () => {
+    const lines = Array.from({ length: 6 }, (_, index) => ({
+      id: `line-${index + 1}`,
+      description: `# Service ${index + 1}\n\nDetails for item ${index + 1}`,
+      sku: null,
+      quantity: "1",
+      uom: "unit",
+      unitPrice: "0.00",
+      lineSubtotal: "0.00",
+      lineTotal: "0.00",
+    }))
+    const html = renderToStaticMarkup(createElement(EntityQuotationDocument, {
+      doc: { ...doc, lines } as QuotationDocument,
+      template: "cc",
+    }))
+    expect(html.match(/data-quotation-line-group/g)).toHaveLength(6)
+    expect(html.indexOf("Service 6")).toBeLessThan(html.indexOf("Total (excl. of SST)"))
   })
 })

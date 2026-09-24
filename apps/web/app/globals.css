@@ -192,6 +192,11 @@
   margin: 0;
 }
 
+@page cc-quotation {
+  size: A4;
+  margin: 10mm;
+}
+
 .quotation-markdown[data-color-mode] .w-md-editor {
   --color-canvas-default: var(--card);
   --color-canvas-subtle: var(--muted);
@@ -275,11 +280,39 @@
     box-shadow: none !important;
     border-radius: 0 !important;
   }
+  #quote-doc[data-template="cc"] {
+    page: cc-quotation;
+    width: 190mm !important;
+    padding: 0 !important;
+  }
   .no-print {
     display: none !important;
   }
-  /* Clean pagination: repeat the line-item header on every page, never split a
-     row, and keep the totals/notes blocks whole across the A4 page break. */
+  /* Chrome can paint a fragmented table row after following totals. Print CC
+     line groups as normal flow blocks so totals remain after every item. */
+  #quote-doc[data-template="cc"] [data-quotation-lines],
+  #quote-doc[data-template="cc"] [data-quotation-lines] thead,
+  #quote-doc[data-template="cc"] [data-quotation-line-group] {
+    display: block !important;
+    width: 100%;
+  }
+  #quote-doc[data-template="cc"] [data-quotation-lines] colgroup {
+    display: none !important;
+  }
+  #quote-doc[data-template="cc"] [data-quotation-lines] tr {
+    display: grid !important;
+    grid-template-columns: 8% 8% 36% 8% 8% 12% 10% 10%;
+  }
+  #quote-doc[data-template="cc"] [data-quotation-lines] [colspan="2"] {
+    grid-column: span 2;
+  }
+  #quote-doc[data-template="cc"] [data-quotation-lines] [colspan="6"] {
+    grid-column: span 6;
+  }
+  #quote-doc[data-template="cc"] [data-quotation-line-group] {
+    break-inside: avoid-page;
+  }
+  /* Keep headers for other entity templates and short tables. */
   #quote-doc thead {
     display: table-header-group;
   }
