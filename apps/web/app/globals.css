@@ -256,6 +256,10 @@
 }
 
 @media print {
+  html:has(#quote-doc[data-template="citruscloud"]),
+  body:has(#quote-doc[data-template="citruscloud"]) {
+    background-color: #fff !important;
+  }
   body:has(#quote-doc) > :not(:has(#quote-doc)),
   body *:has(#quote-doc) > :not(:has(#quote-doc)):not(#quote-doc) {
     display: none !important;
@@ -304,12 +308,18 @@
   body *:has(> #quote-doc[data-template="citruscloud"]),
   #quote-doc[data-template="citruscloud"] {
     background: #fff !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: 0 !important;
   }
   #quote-doc[data-template="citruscloud"] .q-template--cc {
     position: static !important;
     width: 190mm !important;
     min-height: 0 !important;
     padding: 0 !important;
+    background: #fff !important;
+    border: 0 !important;
+    box-shadow: none !important;
   }
   #quote-doc[data-template="citruscloud"] .q-lines,
   #quote-doc[data-template="citruscloud"] .q-lines thead,
