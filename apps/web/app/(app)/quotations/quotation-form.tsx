@@ -12,6 +12,8 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { QuotationDescriptionEditor } from "@/components/quotation-description"
+import { QuotationDescription } from "@/components/quotation-description-view"
 import { Combobox } from "@/components/ui/combobox"
 import { Badge } from "@/components/ui/badge"
 import type { ProductOption } from "@/lib/lookups"
@@ -809,7 +811,6 @@ export function QuotationForm({
                         <tr className="border-b text-left text-xs text-muted-foreground">
                           <th className="w-8 py-2 pr-2 font-medium">#</th>
                           <th className="py-2 pr-2 font-medium">Product</th>
-                          <th className="py-2 pr-2 font-medium">Description</th>
                           <th className="w-14 py-2 pr-2 font-medium">UOM</th>
                           <th className="w-20 py-2 pr-2 text-right font-medium">
                             Quantity
@@ -817,12 +818,8 @@ export function QuotationForm({
                           <th className="w-28 py-2 pr-2 text-right font-medium">
                             Unit Price
                           </th>
-                          <th className="w-28 py-2 pr-2 text-right font-medium">
-                            Item Discount ({quotation.currency})
-                          </th>
-                          <th className="w-28 py-2 pr-2 text-right font-medium">
-                            Sub-total
-                          </th>
+                          <th className="w-28 py-2 pr-2 text-right font-medium">Discount ({quotation.currency})</th>
+                          <th className="w-28 py-2 pr-2 text-right font-medium">Line total</th>
                           {canEditDraft ? <th className="w-8 py-2" /> : null}
                         </tr>
                       </thead>
@@ -830,10 +827,8 @@ export function QuotationForm({
                         {fields.map((f, i) => {
                           const line = watchedLines?.[i]
                           return (
-                            <tr
-                              key={f.id}
-                              className="border-b align-middle last:border-0"
-                            >
+                            <React.Fragment key={f.id}>
+                            <tr className="align-top">
                               <td className="py-1.5 pr-2 text-muted-foreground tabular-nums">
                                 {i + 1}
                               </td>
@@ -856,15 +851,16 @@ export function QuotationForm({
                                 )}
                               </td>
                               <td className="py-1.5 pr-2">
-                                <Input
-                                  className="min-w-44"
-                                  placeholder="Description"
-                                  disabled={!canEditDraft}
-                                  {...form.register(`lines.${i}.description`)}
-                                />
-                              </td>
-                              <td className="py-1.5 pr-2 text-muted-foreground">
-                                {line?.uom || "—"}
+                                {canEditDraft ? (
+                                  <Input
+                                    className="w-24"
+                                    placeholder="UOM"
+                                    aria-label={`Line ${i + 1} UOM`}
+                                    {...form.register(`lines.${i}.uom`)}
+                                  />
+                                ) : (
+                                  <span className="text-muted-foreground">{line?.uom || "—"}</span>
+                                )}
                               </td>
                               <td className="py-1.5 pr-2">
                                 <Input
@@ -876,13 +872,20 @@ export function QuotationForm({
                                   {...form.register(`lines.${i}.quantity`)}
                                 />
                               </td>
-                              <td
-                                className="py-1.5 pr-2 text-right tabular-nums text-muted-foreground"
-                                title="Inherited from the product — pick a product to set it"
-                              >
-                                {formatMoney(
-                                  line?.unitPrice ?? 0,
-                                  quotation.currency
+                              <td className="py-1.5 pr-2">
+                                {canEditDraft ? (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className="w-26 text-right tabular-nums"
+                                    aria-label={`Line ${i + 1} unit price`}
+                                    {...form.register(`lines.${i}.unitPrice`)}
+                                  />
+                                ) : (
+                                  <span className="block text-right tabular-nums text-muted-foreground">
+                                    {formatMoney(line?.unitPrice ?? 0, quotation.currency)}
+                                  </span>
                                 )}
                               </td>
                               <td className="py-1.5 pr-2">
@@ -913,19 +916,36 @@ export function QuotationForm({
                                 </td>
                               ) : null}
                             </tr>
+                            <tr className="border-b last:border-0">
+                              <td colSpan={canEditDraft ? 8 : 7} className="px-3 pb-4 pt-1">
+                                {canEditDraft ? (
+                                  <FormField
+                                    control={form.control}
+                                    name={`lines.${i}.description`}
+                                    render={({ field }) => (
+                                      <QuotationDescriptionEditor
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        onBlur={field.onBlur}
+                                        label={`Line ${i + 1} description`}
+                                      />
+                                    )}
+                                  />
+                                ) : (
+                                  <QuotationDescription value={line?.description ?? ""} className="py-2" />
+                                )}
+                                {form.formState.errors.lines?.[i]?.description ? (
+                                  <p className="mt-0.5 text-xs text-destructive">Required</p>
+                                ) : null}
+                              </td>
+                            </tr>
+                            </React.Fragment>
                           )
                         })}
                       </tbody>
                     </table>
                   </div>
                 )}
-                {canEditDraft ? (
-                  <p className="text-xs text-muted-foreground">
-                    Pick a product to set the line — its <strong>unit price</strong>{" "}
-                    is inherited and can&apos;t be edited here. Adjust qty and
-                    discount inline.
-                  </p>
-                ) : null}
               </CardContent>
             </Card>
 
@@ -1437,7 +1457,7 @@ export function QuotationForm({
                         <td className="py-2 pr-2 text-zinc-400 tabular-nums">
                           {i + 1}
                         </td>
-                        <td className="py-2 pr-2">{l.description || "—"}</td>
+                        <td className="py-2 pr-2"><QuotationDescription value={l.description || "—"} /></td>
                         <td className="py-2 pr-2 text-zinc-500">
                           {l.uom || "—"}
                         </td>

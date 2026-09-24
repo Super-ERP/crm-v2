@@ -631,6 +631,13 @@
 			"when": 1788944400000,
 			"tag": "0089_service_controls",
 			"breakpoints": true
+		},
+		{
+			"idx": 90,
+			"version": "7",
+			"when": 1790240873579,
+			"tag": "0090_citrus_cloudera_quotation_description",
+			"breakpoints": true
 		}
 	]
 }

@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { ArrowLeftIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { QuotationDescription } from "@/components/quotation-description-view"
 import { formatMoney, formatDate, formatMalaysianPhone } from "@/lib/format"
 import { getQuotationDocument } from "../../actions"
 import { PrintButton } from "./print-button"
@@ -302,7 +303,7 @@ export default async function QuotationPreviewPage({
             {lines.map((l, i) => (
               <tr key={l.id} className="border-b align-top">
                 <td className="py-2 pr-2 pl-2 text-zinc-500">{i + 1}</td>
-                <td className="py-2 pr-2">{l.description}</td>
+                <td className="py-2 pr-2"><QuotationDescription value={l.description} /></td>
                 <td className="py-2 pr-2">{l.uom ?? "—"}</td>
                 <td className="py-2 pr-2 text-right tabular-nums">
                   {Number(l.quantity)}

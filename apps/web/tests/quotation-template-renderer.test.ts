@@ -21,8 +21,8 @@ describe("renderQuotationTemplate", () => {
     })
 
     expect(result.html).toContain("&lt;Trusted Entity&gt;")
-    expect(result.html).toContain("1 First &lt;service&gt;")
-    expect(result.html).toContain("2 Second")
+    expect(result.html).toContain("1 <p>First &lt;service&gt;</p>")
+    expect(result.html).toContain("2 <p>Second</p>")
     expect(result.html).toContain('src="/api/tenant-logo"')
     expect(result.html).not.toContain("<script")
     expect(result.html).not.toContain("onclick")
@@ -43,5 +43,17 @@ describe("renderQuotationTemplate", () => {
     })
 
     expect(result.html).toBe("14 days|30 days|Saved &lt;note&gt;|Ada Contact")
+  })
+
+  it("renders formatted line descriptions while escaping user HTML", () => {
+    const result = renderQuotationTemplate({
+      htmlTemplate: "{{#each lines}}<div>{{description}}</div>{{/each}}",
+      context: { lines: [{ description: "**Bold** *italic* ++underlined++\nNext line <script>alert(1)</script>" }] },
+    })
+    expect(result.html).toContain("<strong>Bold</strong>")
+    expect(result.html).toContain("<em>italic</em>")
+    expect(result.html).toContain("<ins>underlined</ins>")
+    expect(result.html).toContain("Next line &lt;script&gt;alert(1)&lt;/script&gt;")
+    expect(result.html).not.toContain("<script>")
   })
 })

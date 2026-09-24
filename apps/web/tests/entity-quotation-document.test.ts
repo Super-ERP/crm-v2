@@ -85,4 +85,23 @@ describe("EntityQuotationDocument", () => {
       "Ada Contact|A-08-01, Kuala Lumpur, Malaysia|14 days|30 days|Saved customer note|04/08/2026|100.00|SST @ 8%|+603-2857 8098"
     )
   })
+
+  it("places a leading Citrus Cloud description title above the priced row", () => {
+    const withLine = {
+      ...doc,
+      lines: [{
+        id: "line-1",
+        description: "# Professional Services\n\nConfigure Cloudera nodes\n\n*Estimate: 2-3 man-days*",
+        sku: null,
+        quantity: "1",
+        uom: "unit",
+        unitPrice: "9000.00",
+        lineSubtotal: "9000.00",
+        lineTotal: "9000.00",
+      }],
+    } as QuotationDocument
+    const html = renderToStaticMarkup(createElement(EntityQuotationDocument, { doc: withLine, template: "cc" }))
+    expect(html.indexOf("Professional Services")).toBeLessThan(html.indexOf("Configure Cloudera nodes"))
+    expect(html).toContain("<em>Estimate: 2-3 man-days</em>")
+  })
 })
