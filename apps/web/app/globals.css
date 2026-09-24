@@ -195,6 +195,12 @@
 @page cc-quotation {
   size: A4;
   margin: 10mm;
+
+  @bottom-right {
+    content: counter(page);
+    color: #64748b;
+    font: 8px Arial, sans-serif;
+  }
 }
 
 .quotation-markdown[data-color-mode] .w-md-editor {
@@ -247,6 +253,10 @@
 }
 
 @media print {
+  html,
+  body {
+    background: #fff !important;
+  }
   body:has(#quote-doc) > :not(:has(#quote-doc)),
   body *:has(#quote-doc) > :not(:has(#quote-doc)):not(#quote-doc) {
     display: none !important;
