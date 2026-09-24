@@ -182,7 +182,7 @@ export function EntityQuotationDocument({ doc, template }: { doc: QuotationDocum
         <Totals doc={doc} template={template}/>
       </div>
       <div className="avoid-break">
-        <div className="pt-2 text-[9px] font-bold">Please Quote Our Reference Number When Placing An Order</div>
+        <div className="pt-2 text-[9px] font-bold">**Please Quote Our Reference Number When Placing An Order**</div>
         {template === "cc" && doc.preparedBy ? <div className="ml-auto -mt-3 w-[26%] text-[9px]"><div>Prepared by,</div><div className="font-bold">{doc.preparedBy.name}</div><div>{doc.preparedBy.email}</div></div> : null}
         {doc.company.quoteFooter ? (
           <section className="mt-6 border-t border-black pt-2 text-[8px]">

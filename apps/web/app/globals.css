@@ -195,11 +195,14 @@
 @page cc-quotation {
   size: A4;
   margin: 10mm;
+}
 
+@page citruscloud-quotation {
+  size: A4;
+  margin: 10mm 10mm 16mm;
   @bottom-right {
     content: counter(page);
-    color: #64748b;
-    font: 8px Arial, sans-serif;
+    font: 8px Arial, Helvetica, sans-serif;
   }
 }
 
@@ -253,10 +256,6 @@
 }
 
 @media print {
-  html,
-  body {
-    background: #fff !important;
-  }
   body:has(#quote-doc) > :not(:has(#quote-doc)),
   body *:has(#quote-doc) > :not(:has(#quote-doc)):not(#quote-doc) {
     display: none !important;
@@ -294,6 +293,55 @@
     page: cc-quotation;
     width: 190mm !important;
     padding: 0 !important;
+  }
+  /* The stored Citrus Cloud template has a one-page table height and an
+     absolutely positioned footer. Keep its columns while letting whole line
+     items, totals, and the footer follow the document flow across pages. */
+  #quote-doc[data-template="citruscloud"] {
+    page: citruscloud-quotation;
+    width: 190mm !important;
+  }
+  body *:has(> #quote-doc[data-template="citruscloud"]),
+  #quote-doc[data-template="citruscloud"] {
+    background: #fff !important;
+  }
+  #quote-doc[data-template="citruscloud"] .q-template--cc {
+    position: static !important;
+    width: 190mm !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+  #quote-doc[data-template="citruscloud"] .q-lines,
+  #quote-doc[data-template="citruscloud"] .q-lines thead,
+  #quote-doc[data-template="citruscloud"] .q-lines tbody {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+  #quote-doc[data-template="citruscloud"] .q-lines tr {
+    display: grid !important;
+    grid-template-columns: 9% 8% 37% 6% 7% 12% 10% 11%;
+    break-inside: avoid-page;
+  }
+  #quote-doc[data-template="citruscloud"] .q-lines th,
+  #quote-doc[data-template="citruscloud"] .q-lines td {
+    width: auto !important;
+  }
+  #quote-doc[data-template="citruscloud"] .q-total-block {
+    height: auto !important;
+    min-height: 21mm;
+    break-inside: avoid-page;
+  }
+  #quote-doc[data-template="citruscloud"] .q-signoff {
+    break-inside: avoid-page;
+  }
+  #quote-doc[data-template="citruscloud"] .q-footer {
+    position: static !important;
+    margin-top: 5mm;
+    break-inside: avoid-page;
+  }
+  #quote-doc[data-template="citruscloud"] .q-footer span:last-child {
+    display: none;
   }
   .no-print {
     display: none !important;
