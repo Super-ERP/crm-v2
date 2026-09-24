@@ -149,12 +149,12 @@ function CcLines({ doc }: { doc: QuotationDocument }) {
       <tbody>{doc.lines.map((line, index) => {
         const { title, body } = splitQuotationDescriptionTitle(line.description)
         return <Fragment key={line.id}>{title ? (
-          <tr>
-            <td colSpan={2} style={{ backgroundColor: "#fff4d6", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-            <td colSpan={6} className="px-1 py-1 font-bold" style={{ backgroundColor: "#fff4d6", color: "#334155", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</td>
+          <tr data-quotation-section-row>
+            <td colSpan={2} data-quotation-section-title style={{ backgroundColor: "#fff4d6", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
+            <td colSpan={6} data-quotation-section-title className="px-1 py-1 font-bold" style={{ backgroundColor: "#fff4d6", color: "#334155", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</td>
           </tr>
         ) : null}<tr className="align-top">
-          <td className="px-2 py-1">{index + 1}</td><td className="px-1 py-1">{line.sku ?? ""}</td><td className="px-1 py-1"><QuotationDescription value={body} className="text-[9px] leading-relaxed text-slate-700 [&_em]:text-slate-500 [&_li]:text-slate-600 [&_strong]:text-slate-800" /></td>
+          <td className="px-2 py-1">{index + 1}</td><td className="px-1 py-1">{line.sku ?? ""}</td><td data-quotation-description className="px-1 py-1"><QuotationDescription value={body} className="text-[9px] leading-relaxed" /></td>
           <td className="px-1 py-1 text-right">{Number(line.quantity)}</td><td className="px-1 py-1 text-right">{line.uom ?? ""}</td><td className="px-1 py-1 text-right">{plainMoney(line.unitPrice, doc.quotation.currency)}</td>
           <td className="px-1 py-1 text-right">{plainMoney(line.lineSubtotal, doc.quotation.currency)}</td><td className="px-1 py-1 text-right">{plainMoney(line.lineTotal, doc.quotation.currency)}</td>
         </tr></Fragment>
@@ -173,24 +173,26 @@ function Totals({ doc, template }: { doc: QuotationDocument; template: EntityTem
 
 export function EntityQuotationDocument({ doc, template }: { doc: QuotationDocument; template: EntityTemplateKey }) {
   return (
-    <div id="quote-doc" data-template={template} className="relative mx-auto min-h-[297mm] w-[210mm] max-w-full overflow-hidden bg-white px-[10mm] py-[10mm] font-sans text-slate-800 shadow-lg print:min-h-[297mm] print:w-[210mm] print:shadow-none">
+    <div id="quote-doc" data-template={template} className="relative mx-auto min-h-[297mm] w-[210mm] max-w-full overflow-hidden bg-white px-[10mm] py-[10mm] font-sans text-slate-700 shadow-lg print:min-h-[297mm] print:w-[210mm] print:shadow-none">
       <CompanyHeader doc={doc}/>
       <h1 className="border-y border-black py-1 text-center text-[16px] font-bold">QUOTATION</h1>
       <CustomerAndMeta doc={doc}/>
       {template === "qar" ? <QarLines doc={doc}/> : <CcLines doc={doc}/>}
-      <div className="flex min-h-[29mm] border-b border-black">
+      <div className="avoid-break flex min-h-[29mm] border-b border-black">
         <div className="flex-1 px-8 py-4 text-[9px] whitespace-pre-wrap">{doc.quotation.notes ? `Note:\n${doc.quotation.notes}` : ""}</div>
         <Totals doc={doc} template={template}/>
       </div>
-      <div className="pt-2 text-[9px] font-bold">**Please Quote Our Reference Number When Placing An Order**</div>
-      {template === "cc" && doc.preparedBy ? <div className="ml-auto -mt-3 w-[26%] text-[9px]"><div>Prepared by,</div><div className="font-bold">{doc.preparedBy.name}</div><div>{doc.preparedBy.email}</div></div> : null}
-      {doc.company.quoteFooter ? (
-        <section className="mt-6 border-t border-black pt-2 text-[8px]">
-          <div className="font-bold">Terms</div>
-          <div className="whitespace-pre-wrap font-normal">{doc.company.quoteFooter}</div>
-        </section>
-      ) : null}
-      <div className="pt-8 text-[8px] italic">This Quotation is computer generated and no signature is required.</div>
+      <div className="avoid-break">
+        <div className="pt-2 text-[9px] font-bold">**Please Quote Our Reference Number When Placing An Order**</div>
+        {template === "cc" && doc.preparedBy ? <div className="ml-auto -mt-3 w-[26%] text-[9px]"><div>Prepared by,</div><div className="font-bold">{doc.preparedBy.name}</div><div>{doc.preparedBy.email}</div></div> : null}
+        {doc.company.quoteFooter ? (
+          <section className="mt-6 border-t border-black pt-2 text-[8px]">
+            <div className="font-bold">Terms</div>
+            <div className="whitespace-pre-wrap font-normal">{doc.company.quoteFooter}</div>
+          </section>
+        ) : null}
+        <div className="pt-8 text-[8px] italic">This Quotation is computer generated and no signature is required.</div>
+      </div>
     </div>
   )
 }

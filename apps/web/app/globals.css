@@ -192,19 +192,30 @@
   margin: 0;
 }
 
-.quotation-markdown[data-color-mode] {
-  --color-canvas-default: var(--background);
+.quotation-markdown[data-color-mode] .w-md-editor {
+  --color-canvas-default: var(--card);
   --color-canvas-subtle: var(--muted);
   --color-fg-default: var(--foreground);
   --color-fg-muted: var(--muted-foreground);
   --color-border-default: var(--border);
   --color-accent-fg: var(--primary);
   --color-neutral-muted: var(--accent);
+  color: var(--foreground);
+  background-color: var(--card);
 }
 
 .quotation-markdown .w-md-editor-toolbar {
   background-color: var(--muted);
   border-color: var(--border);
+}
+
+.quotation-markdown .w-md-editor-toolbar li > button {
+  color: var(--foreground);
+}
+
+.quotation-markdown .w-md-editor-text {
+  color: var(--foreground);
+  caret-color: var(--foreground);
 }
 
 .quotation-markdown .w-md-editor-toolbar li > button:hover,
@@ -213,7 +224,40 @@
   color: var(--foreground);
 }
 
+#quote-doc[data-template="cc"] .border-black {
+  border-color: #64748b;
+}
+
+#quote-doc[data-template="cc"] [data-quotation-description] {
+  color: #475569;
+}
+
+#quote-doc[data-template="cc"] [data-quotation-description] em,
+#quote-doc[data-template="cc"] [data-quotation-description] li {
+  color: #64748b;
+}
+
+#quote-doc[data-template="cc"] [data-quotation-description] strong {
+  color: #334155;
+}
+
 @media print {
+  body:has(#quote-doc) > :not(:has(#quote-doc)),
+  body *:has(#quote-doc) > :not(:has(#quote-doc)):not(#quote-doc) {
+    display: none !important;
+  }
+  body *:has(#quote-doc) {
+    display: contents !important;
+  }
+  #quote-doc[data-template="cc"] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #quote-doc[data-template="cc"] [data-quotation-section-title] {
+    background-color: #fff4d6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
   body * {
     visibility: hidden !important;
   }
@@ -222,13 +266,12 @@
     visibility: visible !important;
   }
   #quote-doc {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     width: 210mm !important;
-    min-height: 297mm !important;
+    min-height: 0 !important;
     max-width: none !important;
     margin: 0 !important;
+    overflow: visible !important;
     box-shadow: none !important;
     border-radius: 0 !important;
   }
@@ -243,6 +286,9 @@
   #quote-doc tr,
   #quote-doc .avoid-break {
     break-inside: avoid;
+  }
+  #quote-doc [data-quotation-section-row] {
+    break-after: avoid-page;
   }
 }
 /* Per-user text-size preference (components/text-size-toggle.tsx). The UI is
