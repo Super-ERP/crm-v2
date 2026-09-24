@@ -131,5 +131,4 @@ describe("EntityQuotationDocument", () => {
     expect(html.match(/data-quotation-line-group/g)).toHaveLength(6)
     expect(html.indexOf("Service 6")).toBeLessThan(html.indexOf("Total (excl. of SST)"))
   })
-
 })

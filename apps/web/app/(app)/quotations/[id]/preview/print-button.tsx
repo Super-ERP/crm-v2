@@ -5,7 +5,7 @@ import { DownloadIcon, PrinterIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 /** Triggers the browser's native print dialog (Save as PDF). */
-export function PrintButton({ quotationId, quoteNumber, pdfPreview = false }: { quotationId: string; quoteNumber: string; pdfPreview?: boolean }) {
+export function PrintButton({ quotationId, quoteNumber }: { quotationId: string; quoteNumber: string }) {
   const [downloading, setDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState<string | null>(null)
 
@@ -63,10 +63,6 @@ export function PrintButton({ quotationId, quoteNumber, pdfPreview = false }: { 
         variant="outline"
         size="sm"
         onClick={() => {
-          if (pdfPreview) {
-            window.open(`/api/quotations/${quotationId}/pdf?inline=1`, "_blank", "noopener,noreferrer")
-            return
-          }
           const previousTitle = document.title
           document.title = quoteNumber
           window.print()
@@ -74,7 +70,7 @@ export function PrintButton({ quotationId, quoteNumber, pdfPreview = false }: { 
         }}
       >
         <PrinterIcon className="size-4" />
-        {pdfPreview ? "Open PDF to print" : "Print"}
+        Print
       </Button>
       {downloadError ? (
         <span role="alert" className="text-xs text-destructive">

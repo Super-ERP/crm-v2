@@ -104,24 +104,6 @@ export default async function QuotationPreviewPage({
     contact?.name ?? account?.name ?? "—"
   const logoUrl = `/api/tenant-logo?v=${encodeURIComponent(company.logoVersion ?? "none")}`
 
-  if (quotationTemplate?.code === "citruscloud") {
-    return (
-      <div className="min-h-screen bg-muted/30 py-6">
-        <div className="mx-auto mb-4 flex max-w-4xl items-center justify-between px-4">
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/quotations/${q.id}`} />}>
-            <ArrowLeftIcon className="size-4" /> Back to quotation
-          </Button>
-          <PrintButton quotationId={q.id} quoteNumber={q.quoteNumber} pdfPreview />
-        </div>
-        <iframe
-          title={`${q.quoteNumber} quotation PDF`}
-          src={`/api/quotations/${q.id}/pdf?inline=1`}
-          className="mx-auto block h-[calc(100vh-8rem)] min-h-[700px] w-[min(100%,900px)] border bg-white shadow-lg"
-        />
-      </div>
-    )
-  }
-
   if (quotationTemplate?.renderMode === "html" && quotationTemplate.htmlTemplate) {
     return (
       <div className="bg-muted/30 py-6 print:bg-white print:py-0">
