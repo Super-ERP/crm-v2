@@ -1,4 +1,7 @@
 import { getQuotationDocument } from "@/app/(app)/quotations/actions"
+import { renderCitrusCloudPdf } from "@/lib/citrus-cloud-pdf"
+import { storage } from "@/lib/storage"
+import sharp from "sharp"
 
 function safeFilename(value: string): string {
   const filename = value.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "")
@@ -16,6 +19,29 @@ export async function GET(
   }
 
   try {
+    const inline = new URL(request.url).searchParams.get("inline") === "1"
+    if (document.quotationTemplate?.code === "citruscloud") {
+      let logo: { data: string } | null = null
+      if (document.company.logoStorageKey) {
+        try {
+          const bytes = await storage.get(document.company.logoStorageKey)
+          const png = await sharp(bytes).png().toBuffer()
+          logo = { data: `data:image/png;base64,${png.toString("base64")}` }
+        } catch (error) {
+          console.error("[quotation-pdf] logo unavailable", { quotationId: id, error })
+        }
+      }
+      const pdf = await renderCitrusCloudPdf(document, logo)
+      return new Response(new Uint8Array(pdf), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeFilename(document.quotation.quoteNumber)}"`,
+          "Content-Length": String(pdf.length),
+          "Cache-Control": "private, no-store",
+        },
+      })
+    }
+
     const cookieHeader = request.headers.get("cookie") ?? ""
     const form = new FormData()
     form.set("url", `http://web:3000/quotation-preview/${id}`)
@@ -48,7 +74,7 @@ export async function GET(
     return new Response(pdf, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${safeFilename(document.quotation.quoteNumber)}"`,
+        "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeFilename(document.quotation.quoteNumber)}"`,
         "Content-Length": String(pdf.length),
         "Cache-Control": "private, no-store",
       },

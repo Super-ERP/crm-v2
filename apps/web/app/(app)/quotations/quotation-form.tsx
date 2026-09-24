@@ -347,6 +347,7 @@ export function QuotationForm({
     resolvedEntityTemplate === "qar" || resolvedEntityTemplate === "cc"
       ? resolvedEntityTemplate
       : null
+  const citrusPdfPreview = preview?.quotationTemplate?.code === "citruscloud"
   const liveEntityPreview = preview && isDraft
     ? {
         ...preview,
@@ -1384,14 +1385,20 @@ export function QuotationForm({
       <TabsContent value="preview" className="grid gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">
-            This is how your quotation prints as a PDF.
+            {citrusPdfPreview ? "Save changes to update this PDF preview." : "This is how your quotation prints as a PDF."}
           </p>
-          <PrintButton quotationId={quotation.id} quoteNumber={quotation.quoteNumber} />
+          <PrintButton quotationId={quotation.id} quoteNumber={quotation.quoteNumber} pdfPreview={citrusPdfPreview} />
         </div>
 
         {/* PDF-style A4 document floating on a desk background. */}
         <div className="flex justify-center rounded-lg bg-muted/40 p-4 sm:p-6">
-          {liveEntityPreview && entityTemplate ? (
+          {citrusPdfPreview ? (
+            <iframe
+              title={`${quotation.quoteNumber} quotation PDF`}
+              src={`/api/quotations/${quotation.id}/pdf?inline=1`}
+              className="h-[850px] w-full max-w-[900px] border bg-white shadow-lg"
+            />
+          ) : liveEntityPreview && entityTemplate ? (
             <EntityQuotationDocument doc={liveEntityPreview} template={entityTemplate} />
           ) : (
             <div className="w-[210mm] max-w-full min-h-[297mm] overflow-hidden rounded-sm bg-white text-zinc-900 shadow-lg ring-1 ring-zinc-200">

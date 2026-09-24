@@ -2,7 +2,6 @@ import type { QuotationDocument } from "../../actions"
 import type { QuotationTemplateSpec } from "@/lib/quotation-template-registry"
 import { renderQuotationTemplate } from "@/lib/quotation-template-renderer"
 import { formatMalaysianPhone } from "@/lib/format"
-import { EntityQuotationDocument } from "./entity-quotation-document"
 
 function formatQuotationDate(value: Date | string | null | undefined): string {
   if (!value) return "—"
@@ -100,12 +99,6 @@ export function ExternalQuotationDocument({
   doc: QuotationDocument
   template: QuotationTemplateSpec
 }) {
-  // The legacy Citrus Cloud HTML template fixes the line table height and
-  // absolutely positions its footer. Use the code-owned paged layout instead.
-  if (template.code === "citruscloud") {
-    return <EntityQuotationDocument doc={doc} template="cc" />
-  }
-
   if (!template.htmlTemplate) return null
 
   const rendered = renderQuotationTemplate({

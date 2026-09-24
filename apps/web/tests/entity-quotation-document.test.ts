@@ -132,32 +132,4 @@ describe("EntityQuotationDocument", () => {
     expect(html.indexOf("Service 6")).toBeLessThan(html.indexOf("Total (excl. of SST)"))
   })
 
-  it("uses the paged layout for the stored Citrus Cloud template", () => {
-    const lines = Array.from({ length: 6 }, (_, index) => ({
-      id: `line-${index + 1}`,
-      description: `# Professional Services\n\nDetails for item ${index + 1}`,
-      sku: null,
-      quantity: "1",
-      uom: "unit",
-      unitPrice: "0.00",
-      lineSubtotal: "0.00",
-      lineTotal: "0.00",
-    }))
-    const html = renderToStaticMarkup(createElement(ExternalQuotationDocument, {
-      doc: { ...doc, lines } as QuotationDocument,
-      template: {
-        code: "citruscloud",
-        label: "Citrus Cloud",
-        legacyTemplateCode: null,
-        renderMode: "html",
-        htmlTemplate: '<div class="q-template--cc">Legacy fixed layout</div>',
-        cssTemplate: ".q-template--cc { height: 297mm; }",
-      },
-    }))
-
-    expect(html).toContain('data-template="cc"')
-    expect(html.match(/data-quotation-line-group/g)).toHaveLength(6)
-    expect(html.indexOf("Details for item 6")).toBeLessThan(html.indexOf("Total (excl. of SST)"))
-    expect(html).not.toContain("Legacy fixed layout")
-  })
 })
