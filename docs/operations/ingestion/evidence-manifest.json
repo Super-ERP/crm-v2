@@ -1,0 +1,32 @@
+{
+  "savedDate": "2026-09-25",
+  "localDatabase": "crm_confirmed_final",
+  "tenant": "remap-audit",
+  "evidence": [
+    {
+      "workspaceRelativePath": "import-audit-20260925/confirmed-dryrun/migration-report.json",
+      "sha256": "27770f11e012a2f4cbc45162ae1c83452f21c321946f96408aeecebb4eb7b12a",
+      "bytes": 17289675
+    },
+    {
+      "workspaceRelativePath": "import-audit-20260925/confirmed-commit/migration-report.json",
+      "sha256": "561116ef6a0db754d6c2a272075b773be24ecb0de349fd939cf0002aaeb44a64",
+      "bytes": 17289674
+    },
+    {
+      "workspaceRelativePath": "import-audit-20260925/confirmed-repeat/migration-report.json",
+      "sha256": "568a2369bb0486f724c6d1a682ca69b785767fdcea6fe6e2ebc54b9f7acf1209",
+      "bytes": 17858736
+    },
+    {
+      "workspaceRelativePath": "import-audit-20260925/confirmed-database-verification.json",
+      "sha256": "0043da34522706b349eda601ccf8d76483a10db000404bee159046d7213f425a",
+      "bytes": 1415
+    },
+    {
+      "workspaceRelativePath": "outputs/crm-confirmed-migration-20260925/CRM-confirmed-migration-results.xlsx",
+      "sha256": "31cf8c806bdfb46699ff43e1c3becc665e6ca7fe20b24c13246d0b110f219bdc",
+      "bytes": 1444183
+    }
+  ]
+}

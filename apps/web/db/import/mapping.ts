@@ -3,8 +3,8 @@
  * project/QM_Data. Object model (confirmed from the data):
  *   Opportunity_ID__c  (custom)  = the Opportunity CONTAINER → crm-v2 `opportunities`
  *   Opportunity        (standard)= the FUNNEL / deal          → crm-v2 `funnels`
- *   Company__c                    = Lead's Company            → (no table; phase 2)
- *   OpportunityLineItem           = Opportunity Product        → (no table; phase 2)
+ *   Company__c                    = Lead's Company            → lead_companies
+ *   OpportunityLineItem           = Opportunity Product        → opportunity_products
  *
  * Import order below is FK-safe (parents first). The dry-run reports any CSV
  * header with no mapping here (your remaining parity gap).
@@ -19,7 +19,7 @@ export type Ctx = {
   warn: (msg: string) => void
 }
 
-export type Xform = (value: string, ctx: Ctx) => unknown
+export type Xform = ((value: string, ctx: Ctx) => unknown) & { reference?: string }
 export type FieldMap = { col: string; xform?: Xform }
 
 export type ObjectMap = {
@@ -54,10 +54,10 @@ export const numOr =
     const n = Number(v)
     return v !== "" && Number.isFinite(n) ? n : d
   }
-export const ref =
-  (object: string): Xform =>
-  (v, ctx) =>
-    v ? ctx.detId(object, v) : null
+export const ref = (object: string): Xform => Object.assign(
+  (v: string, ctx: Ctx) => v ? ctx.detId(object, v) : null,
+  { reference: object },
+)
 export const owner: Xform = (v, ctx) => ctx.resolveOwner(v)
 
 /** Salesforce StageName → crm-v2 stage code (matches the real QM labels). */
@@ -97,6 +97,7 @@ export const MAPPINGS: ObjectMap[] = [
     sfId: "Id",
     fields: {
       Name: { col: "name", xform: asText },
+      CurrencyIsoCode: { col: "currency", xform: asCurrency },
       AccountNumber: { col: "code", xform: asText },
       Industry: { col: "industry", xform: asText },
       Website: { col: "website", xform: asText },
@@ -107,7 +108,7 @@ export const MAPPINGS: ObjectMap[] = [
       ParentId: { col: "parent_account_id", xform: ref("Account") },
     },
     deferCols: ["parent_account_id"],
-    consumes: ["Type", "BillingStreet", "BillingCity", "BillingState", "BillingPostalCode", "BillingCountry"],
+    consumes: ["Name", "Company_Name__c", "Type", "BillingStreet", "BillingCity", "BillingState", "BillingPostalCode", "BillingCountry"],
     defaults: (r) => {
       const type = (r.Type || "").toLowerCase()
       const addr = {
@@ -119,6 +120,7 @@ export const MAPPINGS: ObjectMap[] = [
       }
       const hasAddr = Object.values(addr).some(Boolean)
       return {
+        name: r.Name || r.Company_Name__c || null,
         account_type: type === "reseller" ? "reseller" : "client",
         is_customer: type === "customer",
         billing_address: hasAddr ? addr : null,
@@ -132,6 +134,7 @@ export const MAPPINGS: ObjectMap[] = [
     fields: {
       Name: { col: "name", xform: asText },
       ProductCode: { col: "product_code", xform: asText },
+      CurrencyIsoCode: { col: "currency", xform: asCurrency },
       Description: { col: "description", xform: asText },
       IsActive: { col: "is_active", xform: asBool },
       Product_Subcategory__c: { col: "subcategory", xform: asText },
@@ -151,8 +154,14 @@ export const MAPPINGS: ObjectMap[] = [
       OwnerId: { col: "owner_member_id", xform: owner },
       AccountId: { col: "account_id", xform: ref("Account") },
     },
-    consumes: ["FirstName"],
-    defaults: (r) => ({ first_name: r.FirstName || r.LastName || "—" }),
+    consumes: ["Name", "FirstName", "LastName", "Title", "Contact_Designation__c", "Department", "Contact_Department__c", "Phone", "MobilePhone", "Full_Mobile_Number__c"],
+    defaults: (r) => ({
+      first_name: r.FirstName || r.Name || r.LastName || null,
+      last_name: r.FirstName ? r.LastName || null : null,
+      title: r.Title || r.Contact_Designation__c || null,
+      department: r.Department || r.Contact_Department__c || null,
+      phone: r.Phone || r.Full_Mobile_Number__c || r.MobilePhone || null,
+    }),
   },
   {
     object: "Lead",
@@ -170,13 +179,14 @@ export const MAPPINGS: ObjectMap[] = [
       ConvertedAccountId: { col: "converted_account_id", xform: ref("Account") },
       ConvertedContactId: { col: "converted_person_id", xform: ref("Contact") },
       ConvertedOpportunityId: { col: "converted_opportunity_id", xform: ref("Opportunity") },
+      ConvertedDate: { col: "converted_at", xform: asText },
     },
     deferCols: ["lead_company_id", "converted_account_id", "converted_person_id", "converted_opportunity_id"],
-    consumes: ["FirstName", "LastName", "Company", "Status"],
+    consumes: ["Name", "FirstName", "LastName", "Company", "Status", "IsConverted"],
     defaults: (r) => ({
-      name: [r.FirstName, r.LastName].filter(Boolean).join(" ") || r.Company || "—",
+      name: r.Name || [r.FirstName, r.LastName].filter(Boolean).join(" ") || null,
       company_name: r.Company || null,
-      status: LEAD_STATUS[(r.Status || "").toLowerCase()] ?? "new",
+      status: /^(true|1|yes)$/i.test(r.IsConverted || "") ? "converted" : LEAD_STATUS[(r.Status || "").toLowerCase()] ?? "new",
     }),
   },
   {
@@ -187,6 +197,15 @@ export const MAPPINGS: ObjectMap[] = [
       Name: { col: "name", xform: asText },
       Account_Name_c__c: { col: "account_id", xform: ref("Account") },
       Opp_Contact__c: { col: "primary_person_id", xform: ref("Contact") },
+      Power_Sponsor_Contact__c: { col: "power_sponsor_contact_id", xform: ref("Contact") },
+      Opp_Budget_Limit__c: { col: "owner_budget_limit", xform: asNum },
+      Power_Sponsor_Budget_Limit__c: { col: "power_sponsor_budget_limit", xform: asNum },
+      Estimated_Budget__c: { col: "estimated_budget", xform: asNum },
+      Estimated_Close_Date__c: { col: "estimated_close_date", xform: asDate },
+      Assigned_Presales__c: { col: "assigned_presales", xform: asText },
+      Competitor__c: { col: "competitor", xform: asText },
+      Renewal_Opportunity__c: { col: "is_renewal", xform: asBool },
+      Show_Dashboards__c: { col: "show_dashboards", xform: asBool },
       OwnerId: { col: "owner_member_id", xform: owner },
       Opportunity_Description__c: { col: "description", xform: asText },
       Pain__c: { col: "pain", xform: asText },
@@ -195,7 +214,7 @@ export const MAPPINGS: ObjectMap[] = [
       Total_Estimated_Funnel_Amount__c: { col: "total_estimated_funnel_amount", xform: asNum },
       CurrencyIsoCode: { col: "currency", xform: asCurrency },
     },
-    deferCols: ["primary_person_id"],
+    deferCols: ["primary_person_id", "owner_contact_id", "power_sponsor_contact_id"],
     consumes: ["Opportunity_Year__c", "Opportunity_Number__c"],
     defaults: (r, ctx) => {
       const year = Math.trunc(Number(r.Opportunity_Year__c)) || new Date().getUTCFullYear()
@@ -204,6 +223,7 @@ export const MAPPINGS: ObjectMap[] = [
       // rows that share a duplicate opportunity number).
       const num = ctx.nextFreeOppNumber(year, raw)
       return {
+        owner_contact_id: r.Opp_Contact__c ? ctx.detId("Contact", r.Opp_Contact__c) : null,
         opportunity_year: year,
         opportunity_number: num,
         code: `OPP-${year}-${String(num).padStart(4, "0")}`,
@@ -231,9 +251,15 @@ export const MAPPINGS: ObjectMap[] = [
       Vision__c: { col: "vision", xform: asText },
       Value__c: { col: "value", xform: asText },
       CurrencyIsoCode: { col: "currency", xform: asCurrency },
+      Purchase_Order_Number__c: { col: "purchase_order_number", xform: asText },
+      Negotiation_done__c: { col: "negotiation_done", xform: asBool },
+      Negotiation_Date__c: { col: "negotiation_date", xform: asDate },
+      Expected_Invoice_Month__c: { col: "expected_invoice_month", xform: asText },
+      Expected_Invoice_Year__c: { col: "expected_invoice_year", xform: asInt },
+      PP_Stage__c: { col: "procurement_stage", xform: asText },
     },
     deferCols: ["primary_person_id", "primary_quotation_id"],
-    consumes: ["StageName"],
+    consumes: ["StageName", "Point_of_Contact__c", "Closed_Remarks__c"],
     defaults: (r, ctx) => {
       const stage = ctx.resolveStage(r.StageName ?? "")
       if (!stage) { ctx.warn(`no stage for "${r.StageName}"`); return {} }
@@ -241,6 +267,9 @@ export const MAPPINGS: ObjectMap[] = [
         pipeline_id: stage.pipelineId,
         current_stage_id: stage.stageId,
         status: STAGE_STATUS[stage.code] ?? "open",
+        primary_person_id: r.Point_of_Contact__c || r.ContactId ? ctx.detId("Contact", r.Point_of_Contact__c || r.ContactId) : null,
+        lost_reason: stage.code === "lost" ? r.Closed_Remarks__c || null : null,
+        kiv_reason: stage.code === "kiv" ? r.Closed_Remarks__c || null : null,
       }
     },
   },
@@ -257,17 +286,24 @@ export const MAPPINGS: ObjectMap[] = [
       Total_Excluding_Tax__c: { col: "subtotal", xform: asNum },
       Total_Discount__c: { col: "discount_total", xform: asNum },
       CurrencyIsoCode: { col: "currency", xform: asCurrency },
+      Note__c: { col: "notes", xform: asText },
+      Delivery__c: { col: "delivery", xform: asText },
+      Payment_Term__c: { col: "payment_term", xform: asText },
+      ContactId: { col: "attention_contact_id", xform: ref("Contact") },
+      Tax_Percentage__c: { col: "tax_rate_snapshot", xform: asNum },
     },
-    consumes: ["Status"],
-    // SF exports no grand-total and Tax is 0 for every quote → total =
-    // subtotal - discount, tax 0 (matches server/services/quotation-math.ts).
+    consumes: ["Status", "Tax_Amount__c", "Total_Including_Tax__c", "Total_Discount__c"],
+    // This export's subtotal is already NET of its line discounts. The plan
+    // additionally verifies these values with the application's shared math.
     defaults: (r) => {
       const sub = Number(r.Total_Excluding_Tax__c) || 0
-      const disc = Number(r.Total_Discount__c) || 0
+      const tax = Number(r.Tax_Amount__c) || 0
       return {
         status: QUOTE_STATUS[(r.Status || "").toLowerCase()] ?? "draft",
-        tax_total: 0,
-        total: Math.max(0, Math.round((sub - disc) * 100) / 100),
+        discount_total: 0,
+        header_discount: 0,
+        tax_total: tax,
+        total: r.Total_Including_Tax__c ? Number(r.Total_Including_Tax__c) : sub + tax,
       }
     },
   },
@@ -284,6 +320,7 @@ export const MAPPINGS: ObjectMap[] = [
       // `discount_percent` column is mapped to `discountAmount` in the schema.
       Item_Discount__c: { col: "discount_percent", xform: numOr(0) },
       SortOrder: { col: "sort_order", xform: intOr(0) },
+      UOM_1__c: { col: "uom", xform: asText },
     },
     consumes: ["Description", "Description__c"],
     // SF has no per-line subtotal/tax/total → net = max(0, qty*price - disc).
@@ -330,6 +367,7 @@ export const MAPPINGS: ObjectMap[] = [
     sfId: "Id",
     fields: {
       OpportunityId: { col: "funnel_id", xform: ref("Opportunity") },
+      Product2Id: { col: "product_id", xform: ref("Product2") },
       Quantity: { col: "quantity", xform: numOr(1) },
       UnitPrice: { col: "unit_price", xform: numOr(0) },
       Discount: { col: "discount", xform: numOr(0) },
@@ -358,6 +396,7 @@ export const MAPPINGS: ObjectMap[] = [
       Product_Category__c: { col: "product_category", xform: asText },
       Product_Subcategory__c: { col: "product_subcategory", xform: asText },
       Is_Default__c: { col: "is_default", xform: asBool },
+      Remarks__c: { col: "description", xform: asText },
     },
     deferCols: ["funnel_id"],
     consumes: ["Name", "Status__c"],

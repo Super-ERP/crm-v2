@@ -1,4 +1,5 @@
 import "server-only"
+import { projectQuoteProduct } from "./quote-sync-projection"
 import { and, asc, eq } from "drizzle-orm"
 import type { Tx } from "@/db"
 import { opportunityProducts, quotationLineItems, products } from "@/db/schema"
@@ -57,17 +58,6 @@ export async function syncFunnelProductsFromQuote(
   if (lines.length === 0) return
 
   await tx.insert(opportunityProducts).values(
-    lines.map((line) => ({
-      tenantId,
-      funnelId,
-      productId: line.productId,
-      description: line.description,
-      quantity: line.quantity,
-      unitPrice: line.unitPrice,
-      totalPrice: line.lineTotal,
-      uom: line.uom,
-      productCategory: line.productCategory,
-      sortOrder: line.sortOrder,
-    }))
+    lines.map((line) => projectQuoteProduct(line, tenantId, funnelId))
   )
 }
