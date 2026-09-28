@@ -1,7 +1,6 @@
 "use server"
 
 import { and, eq } from "drizzle-orm"
-import { z } from "zod"
 import { runInTenant, type Tx } from "@/db"
 import { savedViews } from "@/db/schema"
 import { requireContext } from "@/lib/actions"
@@ -9,19 +8,15 @@ import { runAction, type ActionResult } from "@/lib/action-result"
 
 import {
   createSavedViewService,
-  savedViewPayloadSchema,
+  savedViewIdSchema,
+  savedViewInputSchema,
+  savedViewNameSchema,
+  type SavedViewInput,
   type SavedView,
   type SavedViewPayload,
   type SavedViewRepository,
   type SavedViewRepositoryRow,
 } from "@/lib/saved-views"
-
-const listKeySchema = z.string().trim().min(1).max(100)
-const nameSchema = z.string().trim().min(1).max(100)
-const viewIdSchema = z.string().uuid()
-const saveViewInputSchema = z
-  .object({ listKey: listKeySchema, name: nameSchema, payload: savedViewPayloadSchema })
-  .strict()
 
 function createSqlSavedViewRepository(tx: Tx): SavedViewRepository {
   return {
@@ -61,9 +56,6 @@ function createSqlSavedViewRepository(tx: Tx): SavedViewRepository {
           )
         )
     },
-    async transaction(fn) {
-      return fn(this)
-    },
   }
 }
 
@@ -98,10 +90,10 @@ export async function listSavedViews(listKey: string): Promise<SavedView[]> {
 }
 
 export async function saveView(
-  input: z.input<typeof saveViewInputSchema>
+  input: SavedViewInput
 ): Promise<ActionResult<SavedView>> {
   return runAction(async () => {
-    const parsed = saveViewInputSchema.parse(input)
+    const parsed = savedViewInputSchema.parse(input)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
       const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
@@ -115,8 +107,8 @@ export async function renameView(
   name: string
 ): Promise<ActionResult<SavedView>> {
   return runAction(async () => {
-    const parsedId = viewIdSchema.parse(id)
-    const parsedName = nameSchema.parse(name)
+    const parsedId = savedViewIdSchema.parse(id)
+    const parsedName = savedViewNameSchema.parse(name)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
       const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
@@ -130,8 +122,8 @@ export async function duplicateView(
   name: string
 ): Promise<ActionResult<SavedView>> {
   return runAction(async () => {
-    const parsedId = viewIdSchema.parse(id)
-    const parsedName = nameSchema.parse(name)
+    const parsedId = savedViewIdSchema.parse(id)
+    const parsedName = savedViewNameSchema.parse(name)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
       const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
@@ -142,7 +134,7 @@ export async function duplicateView(
 
 export async function setDefaultView(id: string): Promise<ActionResult<SavedView>> {
   return runAction(async () => {
-    const parsedId = viewIdSchema.parse(id)
+    const parsedId = savedViewIdSchema.parse(id)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
       const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
@@ -153,7 +145,7 @@ export async function setDefaultView(id: string): Promise<ActionResult<SavedView
 
 export async function deleteView(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    const parsedId = viewIdSchema.parse(id)
+    const parsedId = savedViewIdSchema.parse(id)
     const ctx = requireMember(await requireContext())
     await runInTenant(ctx.tenantId, async (tx) => {
       const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
