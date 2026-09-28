@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  matchesGlobalSearch,
   matchesFilter,
   parseDataTableFilterParam,
   validateFilterValue,
@@ -112,6 +113,18 @@ describe("typed data table filters", () => {
   it("matches a relation by record ID", () => {
     expect(matchesFilter("account-42", { type: "relation", value: "account-42" })).toBe(true)
     expect(matchesFilter("account-7", { type: "relation", value: "account-42" })).toBe(false)
+    expect(
+      matchesFilter(
+        { id: "account-42", label: "Acme Ltd" },
+        { type: "relation", value: "account-42" }
+      )
+    ).toBe(true)
+  })
+
+  it("searches relation columns by their visible label", () => {
+    const account = { id: "account-42", label: "Acme Ltd" }
+    expect(matchesGlobalSearch(account, "acme")).toBe(true)
+    expect(matchesGlobalSearch(account, "account-42")).toBe(false)
   })
 
   it("treats empty values as inactive", () => {

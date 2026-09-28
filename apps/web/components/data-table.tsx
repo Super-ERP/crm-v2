@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import {
+  matchesGlobalSearch,
   matchesFilter,
   parseDataTableFilterParam,
   validateFilterValue,
@@ -157,9 +158,7 @@ const globalFilterFn = (
   columnId: string,
   value: string
 ) => {
-  const cell = row.getValue(columnId)
-  if (cell == null) return false
-  return String(cell).toLowerCase().includes(String(value).toLowerCase())
+  return matchesGlobalSearch(row.getValue(columnId), value)
 }
 
 export function DataTable<TData, TValue>({

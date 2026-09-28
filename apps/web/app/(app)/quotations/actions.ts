@@ -62,6 +62,12 @@ export type QuotationRow = typeof quotations.$inferSelect
 export type QuotationLineRow = typeof quotationLineItems.$inferSelect
 
 export type QuotationListItem = QuotationRow & {
+  accountId: string | null
+  accountName: string | null
+  accountCode: string | null
+  funnelName: string | null
+  opportunityId: string | null
+  opportunityCode: string | null
   opportunityName: string | null
   lineItemCount: number
 }
