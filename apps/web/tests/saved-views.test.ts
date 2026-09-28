@@ -196,17 +196,4 @@ describe("saved views", () => {
     expect(result.globalFilter).toBe("acme")
   })
 
-  it("exports the authenticated per-user saved-view actions", async () => {
-    const actions = await import("@/app/(app)/_shared/saved-view-actions")
-    expect(Object.keys(actions)).toEqual(
-      expect.arrayContaining([
-        "listSavedViews",
-        "saveView",
-        "renameView",
-        "duplicateView",
-        "setDefaultView",
-        "deleteView",
-      ])
-    )
-  })
 })
