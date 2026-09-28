@@ -35,6 +35,41 @@ export type ActivityRow = {
   changes: ChangeEntry[] | null
 }
 
+const activitySelection = {
+  id: activities.id,
+  type: activities.type,
+  subject: activities.subject,
+  body: activities.body,
+  outcome: activities.outcome,
+  nextStep: activities.nextStep,
+  dueAt: activities.dueAt,
+  occurredAt: activities.occurredAt,
+  memberName: user.name,
+  changes: activities.changes,
+}
+
+type ActivityRowData = {
+  id: string
+  type: ActivityKind
+  subject: string | null
+  body: string | null
+  outcome: string | null
+  nextStep: string | null
+  dueAt: Date | null
+  memberName: string | null
+  occurredAt: Date
+  changes: unknown
+}
+
+function toActivityRow(row: ActivityRowData): ActivityRow {
+  return {
+    ...row,
+    dueAt: row.dueAt?.toISOString() ?? null,
+    occurredAt: row.occurredAt.toISOString(),
+    changes: row.changes as ChangeEntry[] | null,
+  }
+}
+
 /** Timeline for one entity, newest first. Gated by the per-type view
  *  permission and record-scope access (mirrors the attachment actions). */
 export async function listActivities(
@@ -48,18 +83,7 @@ export async function listActivities(
     if (!(await canAccessAttachable(tx, ctx, entityType, entityId, "view")))
       return []
     const rows = await tx
-      .select({
-        id: activities.id,
-        type: activities.type,
-        subject: activities.subject,
-        body: activities.body,
-        outcome: activities.outcome,
-        nextStep: activities.nextStep,
-        dueAt: activities.dueAt,
-        occurredAt: activities.occurredAt,
-        memberName: user.name,
-        changes: activities.changes,
-      })
+      .select(activitySelection)
       .from(activities)
       .leftJoin(member, eq(activities.memberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
@@ -71,18 +95,7 @@ export async function listActivities(
       )
       .orderBy(desc(activities.occurredAt))
       .limit(200)
-    return rows.map((r) => ({
-      id: r.id,
-      type: r.type,
-      subject: r.subject,
-      body: r.body,
-      outcome: r.outcome,
-      nextStep: r.nextStep,
-      dueAt: r.dueAt ? r.dueAt.toISOString() : null,
-      memberName: r.memberName,
-      occurredAt: r.occurredAt.toISOString(),
-      changes: r.changes as ChangeEntry[] | null,
-    }))
+    return rows.map(toActivityRow)
   })
 }
 
@@ -186,17 +199,8 @@ export async function listEntityTimeline(
     if (!conds.length) return []
     const rows = await tx
       .select({
-        id: activities.id,
-        type: activities.type,
-        subject: activities.subject,
-        body: activities.body,
-        outcome: activities.outcome,
-        nextStep: activities.nextStep,
-        dueAt: activities.dueAt,
-        occurredAt: activities.occurredAt,
-        memberName: user.name,
+        ...activitySelection,
         sourceType: activities.entityType,
-        changes: activities.changes,
       })
       .from(activities)
       .leftJoin(member, eq(activities.memberId, member.id))
@@ -204,19 +208,7 @@ export async function listEntityTimeline(
       .where(or(...conds))
       .orderBy(desc(activities.occurredAt))
       .limit(200)
-    return rows.map((r) => ({
-      id: r.id,
-      type: r.type,
-      subject: r.subject,
-      body: r.body,
-      outcome: r.outcome,
-      nextStep: r.nextStep,
-      dueAt: r.dueAt ? r.dueAt.toISOString() : null,
-      memberName: r.memberName,
-      occurredAt: r.occurredAt.toISOString(),
-      sourceType: r.sourceType,
-      changes: r.changes as ChangeEntry[] | null,
-    }))
+    return rows.map((row) => ({ ...toActivityRow(row), sourceType: row.sourceType }))
   })
 }
 

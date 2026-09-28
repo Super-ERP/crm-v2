@@ -54,6 +54,26 @@ export function hasStandingTenantAccess(input: Pick<
   return input.status === "active" && !input.tenantSuspended
 }
 
+function createTenantlessContext(
+  identity: Pick<ServerContext, "userId" | "userName" | "userEmail">,
+  isSuperadmin: boolean,
+  status: "active" | "disabled"
+): ServerContext {
+  return {
+    ...identity,
+    isSuperadmin,
+    tenantId: "",
+    memberId: null,
+    tierLevel: 0,
+    roleName: null,
+    status,
+    tenantSuspended: false,
+    subscriptionInactive: false,
+    permissions: new Set(),
+    can: () => isSuperadmin,
+  }
+}
+
 /**
  * Resolve the authenticated request context: user, active tenant, member,
  * effective permissions. Returns null when unauthenticated.
@@ -68,6 +88,11 @@ export async function getServerContext(): Promise<ServerContext | null> {
   if (!session) return null
 
   const sessionUser = session.user
+  const identity = {
+    userId: sessionUser.id,
+    userName: sessionUser.name,
+    userEmail: sessionUser.email,
+  }
   const activeOrgId = session.session.activeOrganizationId ?? null
 
   // is_superadmin lives on our user table extension.
@@ -115,39 +140,11 @@ export async function getServerContext(): Promise<ServerContext | null> {
   // Support identities are operational principals, never tenant principals.
   // Even a stale legacy member row must not grant standing CRM access.
   if (u?.isVendorSupport) {
-    return {
-      userId: sessionUser.id,
-      userName: sessionUser.name,
-      userEmail: sessionUser.email,
-      isSuperadmin: false,
-      tenantId: "",
-      memberId: null,
-      tierLevel: 0,
-      roleName: null,
-      status: "disabled",
-      tenantSuspended: false,
-      subscriptionInactive: false,
-      permissions: new Set(),
-      can: () => false,
-    }
+    return createTenantlessContext(identity, false, "disabled")
   }
 
   if (!tenantId) {
-    return {
-      userId: sessionUser.id,
-      userName: sessionUser.name,
-      userEmail: sessionUser.email,
-      isSuperadmin,
-      tenantId: "",
-      memberId: null,
-      tierLevel: 0,
-      roleName: null,
-      status: "active",
-      tenantSuspended: false,
-      subscriptionInactive: false,
-      permissions: new Set(),
-      can: () => isSuperadmin,
-    }
+    return createTenantlessContext(identity, isSuperadmin, "active")
   }
 
   // First resolve with no active org yet: persist the deterministic choice so
@@ -247,9 +244,7 @@ export async function getServerContext(): Promise<ServerContext | null> {
   const perms = new Set(isActive ? resolved.permKeys : [])
 
   return {
-    userId: sessionUser.id,
-    userName: sessionUser.name,
-    userEmail: sessionUser.email,
+    ...identity,
     isSuperadmin,
     tenantId,
     memberId: memberRow?.id ?? null,

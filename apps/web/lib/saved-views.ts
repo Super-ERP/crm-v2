@@ -1,6 +1,5 @@
-import { and, eq } from "drizzle-orm"
 import { z } from "zod"
-import { savedViews, type SavedViewRow } from "@/db/schema"
+import type { SavedViewRow } from "@/db/schema"
 import { validateFilterValue, type DataTableFilterValue } from "@/lib/data-table-filters"
 
 export type SavedViewFilters = {
@@ -70,9 +69,18 @@ export function validateSavedViewPayload(input: unknown):
   }
 }
 
-const listKeySchema = z.string().trim().min(1).max(100)
-const nameSchema = z.string().trim().min(1).max(100)
-const viewIdSchema = z.string().uuid()
+export const savedViewListKeySchema = z.string().trim().min(1).max(100)
+export const savedViewNameSchema = z.string().trim().min(1).max(100)
+export const savedViewIdSchema = z.string().uuid()
+export const savedViewInputSchema = z
+  .object({
+    listKey: savedViewListKeySchema,
+    name: savedViewNameSchema,
+    payload: savedViewPayloadSchema,
+  })
+  .strict()
+
+export type SavedViewInput = z.input<typeof savedViewInputSchema>
 
 type SavedViewOwner = { tenantId: string; memberId: string }
 
@@ -100,7 +108,6 @@ export interface SavedViewRepository {
   ): Promise<SavedViewRepositoryRow | undefined>
   delete(id: string): Promise<boolean>
   clearDefaults(listKey: string, owner: SavedViewOwner): Promise<void>
-  transaction<T>(fn: (repository: SavedViewRepository) => Promise<T>): Promise<T>
 }
 
 export function savedViewRlsAllows(
@@ -127,7 +134,7 @@ export function createSavedViewService(
 ) {
   return {
     async list(listKey: string) {
-      const parsedListKey = listKeySchema.parse(listKey)
+      const parsedListKey = savedViewListKeySchema.parse(listKey)
       const rows = await repository.list(parsedListKey)
       return rows
         .filter(
@@ -138,17 +145,10 @@ export function createSavedViewService(
         .sort((a, b) => a.name.localeCompare(b.name))
     },
     async get(id: string) {
-      return assertOwned(await repository.get(viewIdSchema.parse(id)), owner)
+      return assertOwned(await repository.get(savedViewIdSchema.parse(id)), owner)
     },
-    async save(input: {
-      listKey: string
-      name: string
-      payload: unknown
-    }) {
-      const parsed = z
-        .object({ listKey: listKeySchema, name: nameSchema, payload: savedViewPayloadSchema })
-        .strict()
-        .parse(input)
+    async save(input: SavedViewInput) {
+      const parsed = savedViewInputSchema.parse(input)
       return repository.insert({
         organizationId: owner.tenantId,
         memberId: owner.memberId,
@@ -162,16 +162,16 @@ export function createSavedViewService(
       })
     },
     async rename(id: string, name: string) {
-      const row = assertOwned(await repository.get(viewIdSchema.parse(id)), owner)
-      const parsedName = nameSchema.parse(name)
+      const row = assertOwned(await repository.get(savedViewIdSchema.parse(id)), owner)
+      const parsedName = savedViewNameSchema.parse(name)
       return assertOwned(
         await repository.update(row.id, { name: parsedName, updatedAt: new Date() }),
         owner
       )
     },
     async duplicate(id: string, name: string) {
-      const source = assertOwned(await repository.get(viewIdSchema.parse(id)), owner)
-      const parsedName = nameSchema.parse(name)
+      const source = assertOwned(await repository.get(savedViewIdSchema.parse(id)), owner)
+      const parsedName = savedViewNameSchema.parse(name)
       return repository.insert({
         organizationId: owner.tenantId,
         memberId: owner.memberId,
@@ -184,34 +184,22 @@ export function createSavedViewService(
         isDefault: false,
       })
     },
+    // Call inside the tenant transaction so clearing and setting stay atomic.
     async setDefault(id: string) {
-      const parsedId = viewIdSchema.parse(id)
-      return repository.transaction(async (transactionRepository) => {
-        const selected = assertOwned(await transactionRepository.get(parsedId), owner)
-        await transactionRepository.clearDefaults(selected.listKey, owner)
-        return assertOwned(
-          await transactionRepository.update(selected.id, {
-            isDefault: true,
-            updatedAt: new Date(),
-          }),
-          owner
-        )
-      })
+      const parsedId = savedViewIdSchema.parse(id)
+      const selected = assertOwned(await repository.get(parsedId), owner)
+      await repository.clearDefaults(selected.listKey, owner)
+      return assertOwned(
+        await repository.update(selected.id, {
+          isDefault: true,
+          updatedAt: new Date(),
+        }),
+        owner
+      )
     },
     async delete(id: string) {
-      const row = assertOwned(await repository.get(viewIdSchema.parse(id)), owner)
+      const row = assertOwned(await repository.get(savedViewIdSchema.parse(id)), owner)
       if (!(await repository.delete(row.id))) throw new Error("Saved view not found.")
     },
   }
-}
-
-export function savedViewOwnerWhere(
-  ctx: { tenantId: string; memberId: string },
-  id: string
-) {
-  return and(
-    eq(savedViews.id, id),
-    eq(savedViews.organizationId, ctx.tenantId),
-    eq(savedViews.memberId, ctx.memberId)
-  )!
 }
