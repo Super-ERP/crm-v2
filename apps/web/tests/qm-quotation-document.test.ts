@@ -90,3 +90,22 @@ describe("QM quotation document", () => {
     )
   })
 })
+
+describe("QA quotation document", () => {
+  it("uses the QM layout with the Academy logo and company details", () => {
+    const doc = documentWithTax("8.000", null)
+    doc.company.legalName = "Quandatics Academy Sdn Bhd"
+    doc.company.registrationNo = "201701022646 (1236812-W)"
+    doc.company.address = "A-08-01 & 02, Ekocheras, No. 693, Jalan Cheras Batu 5,\n56000 Kuala Lumpur."
+    doc.company.phone = "+60 3 8681 9808"
+    doc.company.email = "training@quandatics.com"
+    const html = renderToStaticMarkup(createElement(QmQuotationDocument, { doc, template: "qa" }))
+    expect(html).toContain('data-template="qa"')
+    expect(html).toContain('src="/qa-academy-logo.png"')
+    expect(html).toContain("Quandatics Academy Sdn Bhd")
+    expect(html).toContain("201701022646 (1236812-W)")
+    expect(html).toContain("training@quandatics.com")
+    expect(html).toContain("qm-lines")
+    expect(html).toContain("SST@8%")
+  })
+})

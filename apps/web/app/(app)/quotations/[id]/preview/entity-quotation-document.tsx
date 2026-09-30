@@ -4,7 +4,7 @@ import { formatMalaysianPhone } from "@/lib/format"
 import { QuotationDescription } from "@/components/quotation-description-view"
 import { splitQuotationDescriptionTitle } from "@/lib/quotation-description"
 
-type EntityTemplateKey = Exclude<QuotationPdfTemplateKey, "default">
+type EntityTemplateKey = Exclude<QuotationPdfTemplateKey, "default" | "qm" | "qa">
 
 function addressLines(address: QuotationDocument["account"] extends infer A
   ? A extends { address: infer Address }

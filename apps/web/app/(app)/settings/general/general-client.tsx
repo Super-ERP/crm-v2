@@ -591,6 +591,7 @@ function CompanyProfileCard({
               <option value="qar">QAR</option>
               <option value="cc">Citrus Cloud</option>
               <option value="qm">Quandatics Malaysia</option>
+              <option value="qa">Quandatics Academy</option>
             </select>
             <p className="text-xs text-muted-foreground">Used for new quotations unless the account has its own template.</p>
           </div>

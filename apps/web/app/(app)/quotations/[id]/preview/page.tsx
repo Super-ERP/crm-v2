@@ -119,7 +119,7 @@ export default async function QuotationPreviewPage({
     )
   }
 
-  if (entityTemplate === "qm") {
+  if (entityTemplate === "qm" || entityTemplate === "qa") {
     return (
       <div className="bg-muted/30 py-6 print:bg-white print:py-0">
         <div className="no-print mx-auto mb-4 flex max-w-3xl items-center justify-between px-4">
@@ -128,7 +128,7 @@ export default async function QuotationPreviewPage({
           </Button>
           <PrintButton quotationId={q.id} quoteNumber={q.quoteNumber} />
         </div>
-        <QmQuotationDocument doc={doc} />
+        <QmQuotationDocument doc={doc} template={entityTemplate} />
       </div>
     )
   }
