@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "pnpm --filter @crm/control-protocol run build && next dev",
     "build": "next build",
     "build:migrator": "node ../../scripts/build-migrator.mjs",
     "start": "next start",

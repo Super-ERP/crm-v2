@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import assert from "node:assert/strict"
 import test from "node:test"
 
@@ -22,4 +23,9 @@ test("plain Node imports deployment authentication helpers", async () => {
     deploymentAuth.lowercaseHex(await deploymentAuth.sha256(new TextEncoder().encode("abc"))),
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
   )
+})
+
+test("development condition imports compiled protocol without a TypeScript loader", () => {
+  const result = execFileSync(process.execPath, ["--conditions=development", "--input-type=module", "-e", 'const [protocol] = await Promise.all([import("@crm/control-protocol"), import("@crm/control-protocol/billing"), import("@crm/control-protocol/heartbeat"), import("@crm/control-protocol/deployment-auth")]); console.log(protocol.canonicalJson({ready:true}))'], {encoding:"utf8"})
+  assert.equal(result.trim(), '{"ready":true}')
 })

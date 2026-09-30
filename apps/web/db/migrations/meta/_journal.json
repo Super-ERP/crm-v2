@@ -638,6 +638,13 @@
 			"when": 1790240873579,
 			"tag": "0090_citrus_cloudera_quotation_description",
 			"breakpoints": true
+		},
+		{
+			"idx": 91,
+			"version": "7",
+			"when": 1790294400000,
+			"tag": "0091_quandatics_quotation_template",
+			"breakpoints": true
 		}
 	]
 }

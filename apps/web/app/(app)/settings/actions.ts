@@ -134,8 +134,11 @@ export type TenantSettingsView = {
 }
 
 export type CompanyProfile = {
+  legalName: string
   address: string
   registrationNo: string
+  sstRegistrationNo: string
+  quotationTemplateCode: string
   phone: string
   email: string
   website: string
@@ -323,8 +326,11 @@ function toView(
     lossReasons: row.lossReasons ?? [],
     soDocumentKinds: row.soDocumentKinds ?? [],
     companyProfile: {
+      legalName: row.companyLegalName ?? "",
       address: row.companyAddress ?? "",
       registrationNo: row.companyRegistrationNo ?? "",
+      sstRegistrationNo: row.companySstRegistrationNo ?? "",
+      quotationTemplateCode: row.quotationTemplateCode ?? "default",
       phone: row.companyPhone ?? "",
       email: row.companyEmail ?? "",
       website: row.companyWebsite ?? "",
@@ -476,14 +482,21 @@ export async function updateCompanyProfile(
     assertCan(ctx, PERMISSIONS.TENANT_SETTINGS)
 
     const clip = (s: string, max: number) => (s ?? "").trim().slice(0, max)
+    const templateCode = clip(input.quotationTemplateCode, 24).toLowerCase() || "default"
+    if (!["default", "qar", "cc", "qm"].includes(templateCode)) {
+      throw new Error("Choose a quotation template from the list.")
+    }
     const values = {
+      companyLegalName: clip(input.legalName, 180) || null,
       companyAddress: clip(input.address, 500) || null,
       companyRegistrationNo: clip(input.registrationNo, 120) || null,
+      companySstRegistrationNo: clip(input.sstRegistrationNo, 120) || null,
       companyPhone: clip(input.phone, 60) || null,
       companyEmail: clip(input.email, 200) || null,
       companyWebsite: clip(input.website, 200) || null,
       bankDetails: clip(input.bankDetails, 1000) || null,
       quoteFooter: clip(input.quoteFooter, 2000) || null,
+      quotationTemplateCode: templateCode,
       updatedAt: new Date(),
     }
 

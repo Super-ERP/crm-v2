@@ -1,10 +1,11 @@
-export type QuotationPdfTemplateKey = "default" | "qar" | "cc"
+export type QuotationPdfTemplateKey = "default" | "qar" | "cc" | "qm"
 export type QuotationPdfTemplateCode = string
 
 export const QUOTATION_PDF_TEMPLATE_OPTIONS = [
   { key: "default" as const, label: "Default" },
   { key: "qar" as const, label: "QAR" },
   { key: "cc" as const, label: "CC" },
+  { key: "qm" as const, label: "Quandatics Malaysia" },
 ] as const
 
 const QUOTATION_PDF_TEMPLATE_KEYS = new Set(
@@ -42,6 +43,7 @@ type ResolveQuotationPdfTemplateLegacyInput = ResolveQuotationPdfTemplateInputBa
 const TEMPLATE_ALIASES: Record<Exclude<QuotationPdfTemplateKey, "default">, string[]> = {
   qar: ["qar", "qarmour", "qarmoursdnbhd"],
   cc: ["cc", "citruscloud", "citruscloudsdnbhd"],
+  qm: ["qm", "quandatics", "quandaticsm", "quandaticsmalaysia", "quandaticsmsdnbhd"],
 }
 
 export function normalizeQuotationPdfTemplateCode(

@@ -18,7 +18,8 @@ export async function GET(
   try {
     const cookieHeader = request.headers.get("cookie") ?? ""
     const form = new FormData()
-    form.set("url", `http://web:3000/quotation-preview/${id}`)
+    const previewOrigin = process.env.QUOTATION_PREVIEW_BASE_URL ?? "http://web:3000"
+    form.set("url", new URL(`/quotation-preview/${encodeURIComponent(id)}`, previewOrigin).toString())
     // Forward the browser session exactly as received. Using Gotenberg's
     // cookie-object form field forces a synthetic `web` cookie domain and can
     // make Chromium reject secure/prefix cookies before loading the preview.

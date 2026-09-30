@@ -28,9 +28,9 @@ export async function proxy(request: NextRequest) {
   if (!sessionCookie && !isAuthRoute) {
     return NextResponse.redirect(new URL("/sign-in", request.url))
   }
-  if (sessionCookie && isAuthRoute) {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
-  }
+  // Cookie presence does not prove that the session still exists. Allow the
+  // sign-in page to load so an expired/revoked cookie cannot cause a loop with
+  // the dashboard's authenticated server components.
   return NextResponse.next()
 }
 
