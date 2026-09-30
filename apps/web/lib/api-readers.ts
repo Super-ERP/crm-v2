@@ -446,6 +446,9 @@ export type OpportunityContainerRow = {
   name: string
   accountId: string
   accountName: string
+  accountCode: string | null
+  accountOwnerMemberId: string | null
+  accountOwnerName: string | null
   ownerName: string | null
   totalEstimatedFunnelAmount: string | null
   funnelCount: number
@@ -459,6 +462,8 @@ export async function opportunitiesList(
   { limit, offset }: PagingOpts
 ): Promise<ReadResult<OpportunityContainerRow>> {
   const visible = await visibleMemberIds(tx, ctx)
+  const accountOwnerMember = alias(member, "opportunity_account_owner_member")
+  const accountOwnerUser = alias(user, "opportunity_account_owner_user")
   const where = and(
     isNull(opportunities.deletedAt),
     ownerScope(opportunities.ownerMemberId, visible)
@@ -471,6 +476,9 @@ export async function opportunitiesList(
         name: opportunities.name,
         accountId: opportunities.accountId,
         accountName: accounts.name,
+        accountCode: accounts.code,
+        accountOwnerMemberId: accounts.ownerMemberId,
+        accountOwnerName: accountOwnerUser.name,
         ownerName: user.name,
         totalEstimatedFunnelAmount: opportunities.totalEstimatedFunnelAmount,
         currency: opportunities.currency,
@@ -478,6 +486,8 @@ export async function opportunitiesList(
       })
       .from(opportunities)
       .innerJoin(accounts, eq(opportunities.accountId, accounts.id))
+      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .leftJoin(member, eq(opportunities.ownerMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
       .where(where)
