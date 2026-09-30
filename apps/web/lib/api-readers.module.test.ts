@@ -17,7 +17,7 @@ import {
   stageApprovalRequests,
 } from "@/db/schema"
 import { createDisabledModuleMap } from "@/lib/module-registry"
-import { funnelsGet, funnelsList, personsGet } from "@/lib/api-readers"
+import { funnelsGet, funnelsList, personsGet, quotationsList } from "@/lib/api-readers"
 import type { QuotationStatus } from "@/lib/quotation-transitions"
 import type { Tx } from "@/db"
 import type { ServerContext } from "@/lib/server-context"
@@ -47,9 +47,11 @@ const ctx = {
 
 function tableTx(entries: Array<[object, unknown[]]>): Tx & {
   whereCalls: Array<{ table: object | undefined; condition: unknown }>
+  joins: object[]
 } {
   const queues = new Map(entries.map(([table, values]) => [table, [...values]]))
   const whereCalls: Array<{ table: object | undefined; condition: unknown }> = []
+  const joins: object[] = []
   return {
     select: vi.fn(() => {
       let value: unknown = []
@@ -61,8 +63,14 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
           value = queues.get(table)?.shift() ?? []
           return chain
         }),
-        innerJoin: vi.fn(() => chain),
-        leftJoin: vi.fn(() => chain),
+        innerJoin: vi.fn((table: object) => {
+          joins.push(table)
+          return chain
+        }),
+        leftJoin: vi.fn((table: object) => {
+          joins.push(table)
+          return chain
+        }),
         where: vi.fn((condition: unknown) => {
           whereCalls.push({ table: currentTable, condition })
           return chain
@@ -77,7 +85,11 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
       return chain
     }),
     whereCalls,
-  } as unknown as Tx & { whereCalls: Array<{ table: object | undefined; condition: unknown }> }
+    joins,
+  } as unknown as Tx & {
+    whereCalls: Array<{ table: object | undefined; condition: unknown }>
+    joins: object[]
+  }
 }
 
 describe("module-owned nested API readers", () => {
@@ -170,6 +182,38 @@ describe("module-owned nested API readers", () => {
     expect(quotationWhere).toBeDefined()
     const query = new PgDialect().sqlToQuery(quotationWhere!.condition as SQL<unknown>)
     expect(query.sql).not.toContain('"quotations"."deleted_at"')
+  })
+
+  it("returns account, funnel, and parent opportunity details for quotation filters", async () => {
+    const tx = tableTx([
+      [quotations, [[{
+        q: { id: "quote-1", quoteNumber: "Q10001-1", funnelId: "funnel-1" },
+        accountId: "account-1",
+        accountName: "Acme Ltd",
+        accountCode: "ACM-01",
+        funnelId: "funnel-1",
+        funnelName: "ERP migration",
+        opportunityId: "opportunity-1",
+        opportunityCode: "OPP-27-001",
+        opportunityName: "FY27 Modernization",
+        lineItemCount: 2,
+      }], [{ count: 1 }]]],
+    ])
+
+    const result = await quotationsList(tx, ctx, { limit: 500, offset: 0 })
+
+    expect(result.rows[0]).toMatchObject({
+      id: "quote-1",
+      accountId: "account-1",
+      accountName: "Acme Ltd",
+      accountCode: "ACM-01",
+      funnelName: "ERP migration",
+      opportunityId: "opportunity-1",
+      opportunityCode: "OPP-27-001",
+      opportunityName: "FY27 Modernization",
+    })
+    expect(tx.joins).toContain(accounts)
+    expect(tx.joins).toContain(opportunities)
   })
 
   it("does not query or return parties or partner responses from funnel detail", async () => {

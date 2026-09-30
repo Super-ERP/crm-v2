@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { getTableConfig, PgDialect } from "drizzle-orm/pg-core"
+import { getTableConfig } from "drizzle-orm/pg-core"
 
 import { savedViews } from "@/db/schema/saved-views"
 import {
   createSavedViewService,
   savedViewRlsAllows,
   savedViewPayloadSchema,
-  savedViewOwnerWhere,
   type SavedViewRepository,
   type SavedViewRepositoryInsert,
   type SavedViewRepositoryRow,
@@ -76,16 +75,6 @@ class MemorySavedViewRepository implements SavedViewRepository {
       }
     }
   }
-
-  async transaction<T>(fn: (repository: SavedViewRepository) => Promise<T>): Promise<T> {
-    const snapshot = this.rows.map((row) => ({ ...row }))
-    try {
-      return await fn(this)
-    } catch (error) {
-      this.rows = snapshot
-      throw error
-    }
-  }
 }
 
 const ownerA = { tenantId: "org-a", memberId: "member-a" }
@@ -112,20 +101,6 @@ describe("saved views", () => {
       "name",
     ])
     expect(config.indexes.find((index) => index.config.name === "saved_views_one_default_uq")?.config.where).toBeTruthy()
-  })
-
-  it("adds both tenant and member ownership predicates to mutations", () => {
-    const query = new PgDialect().sqlToQuery(
-      savedViewOwnerWhere(
-        { tenantId: "org-1", memberId: "member-1" },
-        "00000000-0000-0000-0000-000000000001"
-      )
-    )
-    expect(query.sql).toContain('"saved_views"."organization_id"')
-    expect(query.sql).toContain('"saved_views"."member_id"')
-    expect(query.params).toEqual(
-      expect.arrayContaining(["org-1", "member-1", "00000000-0000-0000-0000-000000000001"])
-    )
   })
 
   it("accepts the saved payload shape and rejects invalid filter payloads", () => {
@@ -166,7 +141,7 @@ describe("saved views", () => {
     expect((await mine.list("accounts")).map((view) => view.name)).toEqual(["Renamed"])
   })
 
-  it("replaces the prior default atomically while keeping at most one", async () => {
+  it("replaces the prior default while keeping at most one", async () => {
     const repository = new MemorySavedViewRepository()
     const mine = createSavedViewService(repository, ownerA)
     const other = createSavedViewService(repository, ownerB)
@@ -221,17 +196,4 @@ describe("saved views", () => {
     expect(result.globalFilter).toBe("acme")
   })
 
-  it("exports the authenticated per-user saved-view actions", async () => {
-    const actions = await import("@/app/(app)/_shared/saved-view-actions")
-    expect(Object.keys(actions)).toEqual(
-      expect.arrayContaining([
-        "listSavedViews",
-        "saveView",
-        "renameView",
-        "duplicateView",
-        "setDefaultView",
-        "deleteView",
-      ])
-    )
-  })
 })

@@ -1067,6 +1067,12 @@ export type QuotationRow = typeof quotations.$inferSelect
 export type QuotationLineRow = typeof quotationLineItems.$inferSelect
 
 export type QuotationListItem = QuotationRow & {
+  accountId: string | null
+  accountName: string | null
+  accountCode: string | null
+  funnelName: string | null
+  opportunityId: string | null
+  opportunityCode: string | null
   opportunityName: string | null
   lineItemCount: number
 }
@@ -1085,7 +1091,13 @@ export async function quotationsList(
     tx
       .select({
         q: quotations,
-        opportunityName: funnels.name,
+        accountId: funnels.accountId,
+        accountName: accounts.name,
+        accountCode: accounts.code,
+        funnelName: funnels.name,
+        opportunityId: opportunities.id,
+        opportunityCode: opportunities.code,
+        opportunityName: opportunities.name,
         lineItemCount: sql<number>`(
           select count(*) from ${quotationLineItems}
           where ${quotationLineItems.quotationId} = ${quotations.id}
@@ -1093,6 +1105,8 @@ export async function quotationsList(
       })
       .from(quotations)
       .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
+      .leftJoin(accounts, eq(funnels.accountId, accounts.id))
+      .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .where(where)
       .orderBy(desc(quotations.createdAt))
       .limit(limit)
@@ -1106,6 +1120,12 @@ export async function quotationsList(
   return {
     rows: rows.map((r) => ({
       ...r.q,
+      accountId: r.accountId,
+      accountName: r.accountName,
+      accountCode: r.accountCode,
+      funnelName: r.funnelName,
+      opportunityId: r.opportunityId,
+      opportunityCode: r.opportunityCode,
       opportunityName: r.opportunityName,
       lineItemCount: r.lineItemCount,
     })),

@@ -270,6 +270,15 @@ function rowRelationId(value: unknown): string | null {
   return null
 }
 
+export function matchesGlobalSearch(rowValue: unknown, search: string): boolean {
+  if (rowValue == null) return false
+  const searchableValue =
+    isRecord(rowValue) && typeof rowValue.label === "string"
+      ? rowValue.label
+      : String(rowValue)
+  return searchableValue.toLowerCase().includes(search.toLowerCase())
+}
+
 export function matchesFilter(rowValue: unknown, filter: DataTableFilterValue): boolean {
   const validation = validateFilterValue(filter)
   if (!validation.success) return false
