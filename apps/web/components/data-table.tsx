@@ -467,40 +467,42 @@ export function DataTable<TData, TValue>({
           </div>
         ) : null}
 
-        {(filters ?? []).map((filter) => {
-          const col = table.getColumn(filter.columnId)
-          if (!col) return null
-          return (
-            <TypedFilter
-              key={filter.columnId}
-              column={col}
-              definition={filter}
-            />
-          )
-        })}
+        <div className={renderFilteredView ? "order-3 flex w-full min-w-0 flex-wrap items-center gap-2" : "contents"}>
+          {(filters ?? []).map((filter) => {
+            const col = table.getColumn(filter.columnId)
+            if (!col) return null
+            return (
+              <TypedFilter
+                key={filter.columnId}
+                column={col}
+                definition={filter}
+              />
+            )
+          })}
 
-        {(facets ?? []).map((f) => {
-          if (filterIds.has(f.columnId)) return null
-          const col = table.getColumn(f.columnId)
-          if (!col) return null
-          return <FacetFilter key={f.columnId} column={col} title={f.title} />
-        })}
+          {(facets ?? []).map((f) => {
+            if (filterIds.has(f.columnId)) return null
+            const col = table.getColumn(f.columnId)
+            if (!col) return null
+            return <FacetFilter key={f.columnId} column={col} title={f.title} />
+          })}
 
-        {hasActiveFilters ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setColumnFilters([])
-              setGlobalFilter("")
-            }}
-            className="text-muted-foreground"
-          >
-            <X className="size-4" /> Reset
-          </Button>
-        ) : null}
+          {hasActiveFilters ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setColumnFilters([])
+                setGlobalFilter("")
+              }}
+              className="text-muted-foreground"
+            >
+              <X className="size-4" /> Reset
+            </Button>
+          ) : null}
+        </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className={cn("ml-auto flex items-center gap-2", renderFilteredView && "order-2 shrink-0")}>
           {toolbar}
           {tableId && savedViews ? (
             <SavedViewMenu
