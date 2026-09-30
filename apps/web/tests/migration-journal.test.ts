@@ -4,22 +4,26 @@ import { describe, expect, it } from "vitest"
 import { resolveAccountCurrencyBackfill } from "@/server/services/tenant-currency"
 
 describe("migration journal", () => {
-  it("keeps the service controls and quotation correction migrations ordered", async () => {
+  it("keeps the service controls, quotation, and account-owner migrations ordered", async () => {
     const journal = JSON.parse(
       await readFile(path.resolve(process.cwd(), "db/migrations/meta/_journal.json"), "utf8")
     ) as { entries: Array<{ idx: number; tag: string }> }
 
-    expect(journal.entries.at(-3)).toMatchObject({
+    expect(journal.entries.at(-4)).toMatchObject({
       idx: 89,
       tag: "0089_service_controls",
     })
-    expect(journal.entries.at(-2)).toMatchObject({
+    expect(journal.entries.at(-3)).toMatchObject({
       idx: 90,
       tag: "0090_citrus_cloudera_quotation_description",
     })
-    expect(journal.entries.at(-1)).toMatchObject({
+    expect(journal.entries.at(-2)).toMatchObject({
       idx: 91,
       tag: "0091_quandatics_quotation_template",
+    })
+    expect(journal.entries.at(-1)).toMatchObject({
+      idx: 92,
+      tag: "0092_account_owner_pipeline_alignment",
     })
   })
 

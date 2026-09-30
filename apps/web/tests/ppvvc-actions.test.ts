@@ -89,6 +89,7 @@ function chain(value: unknown, updates: Update[]): Record<string, unknown> {
     from: vi.fn(() => q),
     where: vi.fn(() => q),
     limit: vi.fn(() => q),
+    for: vi.fn(() => q),
     orderBy: vi.fn(() => q),
     set: vi.fn((values: Record<string, unknown>) => {
       updates.push({ table: undefined, values })
@@ -177,7 +178,7 @@ describe("PPVVC action payload seams", () => {
   })
 
   it("Funnel action submits only changed PPVVC keys and leaves untouched fields to the sync service", async () => {
-    const { tx, updates } = txFixture([[funnel], [{ customFunnelFields: [] }]])
+    const { tx, updates } = txFixture([[funnel], [{ customFunnelFields: [] }], [{ ownerMemberId: ctx.memberId }]])
     mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, ctx))
     mocks.updateFunnelPpvvc.mockResolvedValue({
       opportunityId: funnel.opportunityId,

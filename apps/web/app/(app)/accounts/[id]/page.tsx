@@ -105,7 +105,6 @@ export default async function AccountDetailPage({
         entityOptions={entities}
         financeEnabled={modules.finance}
         currencies={currencies}
-        defaultOwnerMemberId={ctx.memberId}
         trigger={
           <Button size="sm">
             <Plus className="size-4" />

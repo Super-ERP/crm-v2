@@ -137,6 +137,7 @@ export async function createPerson(
         .from(accounts)
         .where(and(eq(accounts.id, input.accountId), isNull(accounts.deletedAt)))
         .limit(1)
+        .for("share")
       if (!account) throw new Error("Account not found")
       if (
         !canManageAllRecords(ctx) &&
@@ -152,6 +153,7 @@ export async function createPerson(
         .values({
           tenantId: ctx.tenantId,
           accountId: input.accountId,
+          ownerMemberId: account.ownerMemberId,
           firstName: normalized.firstName,
           lastName: normalized.lastName || null,
           title: normalized.title || null,
@@ -214,13 +216,16 @@ export async function updatePerson(
       // Reassigning to a different account: validate the destination exists in
       // this tenant and the caller owns/manages it (mirrors createPerson) —
       // closes the cross-tenant FK / record-scope bypass on the destination.
+      let destinationOwnerMemberId = before.ownerMemberId
       if (input.accountId !== before.accountId) {
         const [dest] = await tx
           .select({ ownerMemberId: accounts.ownerMemberId })
           .from(accounts)
           .where(and(eq(accounts.id, input.accountId), isNull(accounts.deletedAt)))
           .limit(1)
+          .for("share")
         if (!dest) throw new Error("Account not found")
+        destinationOwnerMemberId = dest.ownerMemberId
         if (
           !canManageAllRecords(ctx) &&
           !ownsOrManages(visible, dest.ownerMemberId)
@@ -233,6 +238,7 @@ export async function updatePerson(
 
       const updated = {
         accountId: input.accountId,
+        ownerMemberId: destinationOwnerMemberId,
         firstName: normalized.firstName,
         lastName: normalized.lastName || null,
         title: normalized.title || null,

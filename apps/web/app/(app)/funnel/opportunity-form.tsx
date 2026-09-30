@@ -60,7 +60,6 @@ const schema = z.object({
   primaryPersonId: z.string().optional(),
   pipelineId: z.string().min(1, "Funnel is required"),
   currentStageId: z.string().min(1, "Stage is required"),
-  ownerMemberId: z.string().min(1, "Owner is required"),
   currency: z.string().min(1, "Currency is required"),
   expectedCloseDate: z.string().optional(),
   estimatedAmount: z.string().optional(),
@@ -101,7 +100,6 @@ export function OpportunityForm({
   entityOptions = [],
   financeEnabled = false,
   currencies = DEFAULT_CURRENCIES,
-  defaultOwnerMemberId,
   opportunity,
   opportunityId,
   presetAccountId,
@@ -120,7 +118,6 @@ export function OpportunityForm({
   financeEnabled?: boolean
   /** Tenant currency picklist (Settings → General); first = default. */
   currencies?: string[]
-  defaultOwnerMemberId: string | null
   opportunity?: OpportunityListRow
   /**
    * Creating a Funnel under an existing Opportunity container (e.g. from its
@@ -168,7 +165,6 @@ export function OpportunityForm({
           primaryPersonId: "",
           pipelineId: opportunity.pipelineId,
           currentStageId: opportunity.stageId,
-          ownerMemberId: opportunity.ownerMemberId,
           currency: opportunity.currency ?? "MYR",
           expectedCloseDate: opportunity.expectedCloseDate ?? "",
           estimatedAmount: opportunity.estimatedAmount ?? "",
@@ -194,7 +190,6 @@ export function OpportunityForm({
           primaryPersonId: "",
           pipelineId: defaultFunnel?.id ?? "",
           currentStageId: firstOpenStage?.id ?? "",
-          ownerMemberId: defaultOwnerMemberId ?? "",
           currency: initialAccount?.currency ?? currencies[0] ?? "MYR",
           expectedCloseDate: "",
           estimatedAmount: "",
@@ -215,6 +210,8 @@ export function OpportunityForm({
   // Picker options become local state seeded from props so inline "+ Create"
   // can append the new record and have it be immediately selectable.
   const [accountOptions, setAccountOptions] = React.useState(accounts)
+  const selectedAccountOwnerId = accountOptions.find((account) => account.id === selectedAccountId)?.ownerMemberId
+  const selectedAccountOwnerName = members.find((member) => member.memberId === selectedAccountOwnerId)?.name ?? "No account owner assigned"
   const [allPersons, setAllPersons] = React.useState(persons)
 
   // Inline quick-create dialog state for the Account / Contact pickers.
@@ -253,7 +250,6 @@ export function OpportunityForm({
         primaryPersonId: values.primaryPersonId || null,
         pipelineId: values.pipelineId,
         currentStageId: values.currentStageId,
-        ownerMemberId: values.ownerMemberId,
         currency: values.currency,
         expectedCloseDate: values.expectedCloseDate || null,
         estimatedAmount: values.estimatedAmount || null,
@@ -276,7 +272,6 @@ export function OpportunityForm({
         name: values.name,
         accountId: values.accountId,
         primaryPersonId: values.primaryPersonId || null,
-        ownerMemberId: values.ownerMemberId,
         currency: values.currency,
         expectedCloseDate: values.expectedCloseDate || null,
         estimatedAmount: values.estimatedAmount || null,
@@ -505,29 +500,11 @@ export function OpportunityForm({
               </div>
             ) : null}
 
-            <FormField
-              control={form.control}
-              name="ownerMemberId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel required>Owner</FormLabel>
-                  <FormControl>
-                    <Combobox
-                      value={field.value}
-                      onChange={field.onChange}
-                      options={members.map((m) => ({
-                        value: m.memberId,
-                        label: m.name,
-                      }))}
-                      placeholder="Pick an owner…"
-                      searchPlaceholder="Search members…"
-                      emptyMessage="No members found."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormItem>
+              <FormLabel>Owner</FormLabel>
+              <div className="text-sm">{selectedAccountOwnerName}</div>
+              <FormDescription>Inherited from the account owner.</FormDescription>
+            </FormItem>
 
             <FormField
               control={form.control}

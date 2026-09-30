@@ -123,6 +123,7 @@ export async function convertLead(
     // and the caller owns/manages it (mirrors createPerson) — closes the
     // cross-tenant FK / record-scope bypass.
     let accountId = input.existingAccountId ?? null
+    let accountOwnerMemberId: string | null = null
     if (accountId) {
       const visible = await visibleMemberIds(tx, ctx)
       const [dest] = await tx
@@ -130,7 +131,9 @@ export async function convertLead(
         .from(accounts)
         .where(and(eq(accounts.id, accountId), isNull(accounts.deletedAt)))
         .limit(1)
+        .for("share")
       if (!dest) throw new Error("Account not found")
+      accountOwnerMemberId = dest.ownerMemberId
       if (
         !canManageAllRecords(ctx) &&
         !ownsOrManages(visible, dest.ownerMemberId)
@@ -185,7 +188,9 @@ export async function convertLead(
         })
         .returning()
       accountId = acc.id
+      accountOwnerMemberId = acc.ownerMemberId
     }
+    if (!accountOwnerMemberId) throw new Error("Assign an account owner before converting this lead.")
 
     // Person under that account.
     const parts = (lead.name || "").trim().split(/\s+/)
@@ -196,6 +201,7 @@ export async function convertLead(
       .values({
         tenantId: ctx.tenantId,
         accountId,
+        ownerMemberId: accountOwnerMemberId,
         firstName,
         lastName,
         email: lead.email,
@@ -250,7 +256,7 @@ export async function convertLead(
         undefined,
         account?.currency
       )
-      const ownerMemberId = lead.ownerMemberId ?? ctx.memberId ?? ""
+      const ownerMemberId = accountOwnerMemberId
       // Lead → Opportunity CONTAINER, with a first funnel under it.
       const container = await createOpportunityContainer(tx, ctx, {
         accountId,

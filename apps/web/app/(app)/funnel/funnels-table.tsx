@@ -10,19 +10,34 @@ import type { OpportunityListRow } from "./actions"
 
 const columns: ColumnDef<OpportunityListRow>[] = [
   {
-    accessorKey: "name",
+    id: "id",
+    accessorFn: (row) => ({ id: row.id, label: row.name }),
     header: ({ column }) => <SortableHeader column={column} title="Name" />,
     cell: linkCell(
       (r) => `/funnel/${r.id}`,
       (r) => r.name
     ),
+    sortingFn: (a, b) => a.original.name.localeCompare(b.original.name),
   },
   {
-    accessorKey: "accountName",
+    id: "accountId",
+    accessorFn: (row) => ({ id: row.accountId, label: row.accountName }),
     header: ({ column }) => <SortableHeader column={column} title="Account" />,
     cell: ({ row }) => (
       <span className="text-muted-foreground">{row.original.accountName}</span>
     ),
+  },
+  {
+    id: "opportunityId",
+    accessorFn: (row) => ({ id: row.opportunityId, label: row.opportunityName }),
+    header: "Opportunity",
+    cell: ({ row }) => row.original.opportunityName,
+  },
+  {
+    id: "accountOwnerMemberId",
+    accessorFn: (row) => row.accountOwnerMemberId ? { id: row.accountOwnerMemberId, label: row.accountOwnerName ?? "Unknown" } : null,
+    header: "Account owner",
+    cell: ({ row }) => row.original.accountOwnerName ?? "—",
   },
   {
     id: "amount",
@@ -50,8 +65,8 @@ const columns: ColumnDef<OpportunityListRow>[] = [
     cell: ({ row }) => formatDate(row.original.expectedCloseDate),
   },
   {
-    accessorKey: "stageName",
-    id: "stageName",
+    id: "stageId",
+    accessorFn: (row) => ({ id: row.stageId, label: row.stageName }),
     header: "Sales stage",
     cell: ({ row }) => (
       <StageBadge
@@ -62,8 +77,8 @@ const columns: ColumnDef<OpportunityListRow>[] = [
     ),
   },
   {
-    id: "ownerName",
-    accessorFn: (row) => row.ownerName ?? "Unassigned",
+    id: "ownerMemberId",
+    accessorFn: (row) => ({ id: row.ownerMemberId, label: row.ownerName ?? "Unassigned" }),
     header: "Owner",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
@@ -82,18 +97,34 @@ const columns: ColumnDef<OpportunityListRow>[] = [
 export function OpportunitiesTable({
   data,
   toolbar,
+  renderBoard,
 }: {
   data: OpportunityListRow[]
   toolbar?: React.ReactNode
+  renderBoard?: (rows: OpportunityListRow[]) => React.ReactNode
 }) {
+  const options = (id: (row: OpportunityListRow) => string | null, label: (row: OpportunityListRow) => string | null) =>
+    Array.from(new Map(data.map((row) => [id(row), label(row)]).filter((entry): entry is [string, string] => Boolean(entry[0] && entry[1]))), ([value, label]) => ({ value, label }))
   return (
     <DataTable
       columns={columns}
       data={data}
       emptyMessage="No pipelines yet."
       toolbar={toolbar}
-      tableId="funnel-shared"
+      renderFilteredView={renderBoard}
+      tableId="funnel"
       cap={1000}
+      searchColumn="name"
+      searchPlaceholder="Search funnels…"
+      filters={[
+        { type: "relation", columnId: "accountId", title: "Account", options: options((row) => row.accountId, (row) => row.accountName) },
+        { type: "relation", columnId: "opportunityId", title: "Opportunity", options: options((row) => row.opportunityId, (row) => [row.opportunityCode, row.opportunityName].filter(Boolean).join(" — ")) },
+        { type: "relation", columnId: "id", title: "Funnel", options: options((row) => row.id, (row) => row.name) },
+        { type: "relation", columnId: "accountOwnerMemberId", title: "Account owner", options: options((row) => row.accountOwnerMemberId, (row) => row.accountOwnerName) },
+        { type: "relation", columnId: "ownerMemberId", title: "Funnel owner", options: options((row) => row.ownerMemberId, (row) => row.ownerName) },
+        { type: "relation", columnId: "stageId", title: "Stage", options: options((row) => row.stageId, (row) => row.stageName) },
+        { type: "enum", columnId: "status", title: "Status", options: [...new Set(data.map((row) => row.status))].map((value) => ({ value, label: value })) },
+      ]}
     />
   )
 }

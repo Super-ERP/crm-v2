@@ -360,10 +360,10 @@ integration("PPVVC PostgreSQL boundary", () => {
       values (${tenantId}, ${memberId}, ${roleId}::uuid, now(), now())
     `
     await admin`
-      insert into accounts (id, tenant_id, name, currency, created_at, updated_at)
+      insert into accounts (id, tenant_id, name, currency, owner_member_id, created_at, updated_at)
       values
-        (${accountId}::uuid, ${tenantId}, 'Task 5 Account', 'MYR', now(), now()),
-        (${otherAccountId}::uuid, ${otherTenantId}, 'Task 5 Other Account', 'MYR', now(), now())
+        (${accountId}::uuid, ${tenantId}, 'Task 5 Account', 'MYR', ${memberId}, now(), now()),
+        (${otherAccountId}::uuid, ${otherTenantId}, 'Task 5 Other Account', 'MYR', ${otherMemberId}, now(), now())
     `
     await admin`
       insert into pipelines (id, tenant_id, name, is_default, created_at, updated_at)

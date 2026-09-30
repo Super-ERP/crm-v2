@@ -27,6 +27,7 @@ import {
   projects,
   quotations,
   tenantSettings,
+  member,
 } from "@/db/schema"
 import {
   normalizePhoneInput,
@@ -80,8 +81,8 @@ export type AccountInput = {
   endUserAccountId?: string | null
   /**
    * Account owner / account manager (Salesforce "Account Owner"). When changed
-   * on update, the new owner cascades to the account's child persons,
-   * opportunities, and funnels. Omit to leave the current owner unchanged.
+   * on update, the new owner cascades to its contacts, opportunities, funnels,
+   * projects and contracts. Omit to leave the current owner unchanged.
    */
   ownerMemberId?: string | null
   industry?: string | null
@@ -571,6 +572,7 @@ export async function updateAccount(
         .from(accounts)
         .where(and(eq(accounts.id, id), isNull(accounts.deletedAt)))
         .limit(1)
+        .for("update")
       if (!before) throw new Error("Account not found.")
 
       const visible = await visibleMemberIds(tx, ctx)
@@ -600,6 +602,17 @@ export async function updateAccount(
         input.ownerMemberId !== undefined
           ? input.ownerMemberId
           : before.ownerMemberId
+      if (input.ownerMemberId === null && before.ownerMemberId) {
+        throw new Error("Assign another owner instead of clearing the account owner.")
+      }
+      if (newOwnerMemberId && newOwnerMemberId !== before.ownerMemberId) {
+        const [targetOwner] = await tx
+          .select({ id: member.id })
+          .from(member)
+          .where(and(eq(member.id, newOwnerMemberId), eq(member.organizationId, ctx.tenantId)))
+          .limit(1)
+        if (!targetOwner) throw new Error("Owner must be a member of this organization.")
+      }
 
       const updated = {
         name: normalized.name,
@@ -619,10 +632,9 @@ export async function updateAccount(
 
       await tx.update(accounts).set(updated).where(eq(accounts.id, id))
 
-      // Salesforce owner cascade: on an actual owner change, push the new owner
-      // to the account's child persons/opportunities/funnels so record-scoped
-      // access stays consistent. Skip no-ops and null owners (child owner
-      // columns are NOT NULL — there's nothing valid to cascade).
+      // On an actual owner change, push the new owner through related records
+      // so record-scoped access stays consistent. Legacy accounts without an
+      // owner have no valid owner to propagate until one is assigned.
       if (
         newOwnerMemberId &&
         newOwnerMemberId !== before.ownerMemberId
@@ -654,6 +666,11 @@ export async function updateAccount(
     })
     revalidatePath("/accounts")
     revalidatePath(`/accounts/${id}`)
+    revalidatePath("/persons")
+    revalidatePath("/opportunities")
+    revalidatePath("/funnel")
+    revalidatePath("/quotations")
+    revalidatePath("/projects")
     return row
   })
 }
