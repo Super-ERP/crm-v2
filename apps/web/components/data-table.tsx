@@ -98,6 +98,8 @@ export interface DataTableProps<TData, TValue> {
   /** Optional call-to-action (e.g. a create button) for the empty state. */
   emptyAction?: React.ReactNode
   toolbar?: React.ReactNode
+  /** Render a second view using the same filtered rows and toolbar state. */
+  renderFilteredView?: (rows: TData[]) => React.ReactNode
   pageSize?: number
   /** Typed, datatype-aware column filters. */
   filters?: DataTableFilterDefinition[]
@@ -171,6 +173,7 @@ export function DataTable<TData, TValue>({
   emptyIcon,
   emptyAction,
   toolbar,
+  renderFilteredView,
   pageSize = 25,
   filters,
   facets,
@@ -544,7 +547,7 @@ export function DataTable<TData, TValue>({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border">
+      {renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original)) : <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -584,7 +587,7 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
-      </div>
+      </div>}
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm text-muted-foreground">
@@ -592,7 +595,7 @@ export function DataTable<TData, TValue>({
             ? `${table.getFilteredRowModel().rows.length} of ${data.length} row(s)`
             : `${data.length} row(s)`}
         </span>
-        <div className="flex items-center gap-2">
+        {!renderFilteredView ? <div className="flex items-center gap-2">
           <span className="hidden text-sm text-muted-foreground sm:inline">Per page</span>
           <Select
             value={String(table.getState().pagination.pageSize)}
@@ -631,7 +634,7 @@ export function DataTable<TData, TValue>({
             Next
             <ChevronRight className="size-4" />
           </Button>
-        </div>
+        </div> : null}
       </div>
     </div>
   )

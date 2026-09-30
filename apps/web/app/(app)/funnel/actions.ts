@@ -216,6 +216,10 @@ export type OpportunityListRow = {
   name: string
   accountId: string
   accountName: string
+  accountOwnerMemberId: string | null
+  accountOwnerName: string | null
+  opportunityName: string
+  opportunityCode: string | null
   /** Quoted amount (synced from the primary quotation), display only. */
   amount: string | null
   /** Estimated Funnel Amount — the deal's headline value; drives the forecast. */

@@ -76,6 +76,14 @@ export function QuotationsTable({
         (a.original.opportunityName ?? "").localeCompare(b.original.opportunityName ?? ""),
     },
     {
+      id: "accountOwnerMemberId",
+      header: "Account owner",
+      accessorFn: (row) => row.accountOwnerMemberId
+        ? { id: row.accountOwnerMemberId, label: row.accountOwnerName ?? "Unknown" }
+        : null,
+      cell: ({ row }) => row.original.accountOwnerName ?? "—",
+    },
+    {
       id: "funnelId",
       header: ({ column }) => (
         <SortableHeader column={column} title="Funnel" />
@@ -165,6 +173,12 @@ export function QuotationsTable({
                 ? [row.accountCode, row.accountName].filter(Boolean).join(" — ")
                 : null
           ),
+        },
+        {
+          type: "relation",
+          columnId: "accountOwnerMemberId",
+          title: "Account owner",
+          options: relationOptions(data, (row) => row.accountOwnerMemberId, (row) => row.accountOwnerName),
         },
         {
           type: "relation",

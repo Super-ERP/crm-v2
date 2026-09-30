@@ -728,6 +728,10 @@ export type OpportunityListRow = {
   name: string
   accountId: string
   accountName: string
+  accountOwnerMemberId: string | null
+  accountOwnerName: string | null
+  opportunityName: string
+  opportunityCode: string | null
   amount: string | null
   estimatedAmount: string | null
   recognizedPercent: string | null
@@ -764,6 +768,8 @@ export async function funnelsList(
   { limit, offset }: PagingOpts
 ): Promise<ReadResult<OpportunityListRow>> {
   const financeEnabled = (await getEntitledModuleMap()).finance
+  const accountOwnerMember = alias(member, "funnel_account_owner_member")
+  const accountOwnerUser = alias(user, "funnel_account_owner_user")
   const visible = await visibleMemberIds(tx, ctx)
   const where = and(isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible))
   const [rows, totalRows] = await Promise.all([
@@ -774,6 +780,10 @@ export async function funnelsList(
         name: funnels.name,
         accountId: funnels.accountId,
         accountName: accounts.name,
+        accountOwnerMemberId: accounts.ownerMemberId,
+        accountOwnerName: accountOwnerUser.name,
+        opportunityName: opportunities.name,
+        opportunityCode: opportunities.code,
         amount: funnels.amount,
         estimatedAmount: funnels.estimatedAmount,
         recognizedPercent: funnels.recognizedPercent,
@@ -809,6 +819,8 @@ export async function funnelsList(
       .innerJoin(pipelines, eq(funnels.pipelineId, pipelines.id))
       .leftJoin(member, eq(funnels.ownerMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
+      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(and(where, isNull(opportunities.deletedAt)))
       .orderBy(desc(funnels.createdAt))
       .limit(limit)
@@ -1070,6 +1082,8 @@ export type QuotationListItem = QuotationRow & {
   accountId: string | null
   accountName: string | null
   accountCode: string | null
+  accountOwnerMemberId: string | null
+  accountOwnerName: string | null
   funnelName: string | null
   opportunityId: string | null
   opportunityCode: string | null
@@ -1083,6 +1097,8 @@ export async function quotationsList(
   { limit, offset }: PagingOpts
 ): Promise<ReadResult<QuotationListItem>> {
   const visible = await visibleMemberIds(tx, ctx)
+  const accountOwnerMember = alias(member, "quotation_account_owner_member")
+  const accountOwnerUser = alias(user, "quotation_account_owner_user")
   const where = and(
     isNull(quotations.deletedAt),
     ownerScope(funnels.ownerMemberId, visible)
@@ -1094,6 +1110,8 @@ export async function quotationsList(
         accountId: funnels.accountId,
         accountName: accounts.name,
         accountCode: accounts.code,
+        accountOwnerMemberId: accounts.ownerMemberId,
+        accountOwnerName: accountOwnerUser.name,
         funnelName: funnels.name,
         opportunityId: opportunities.id,
         opportunityCode: opportunities.code,
@@ -1106,6 +1124,8 @@ export async function quotationsList(
       .from(quotations)
       .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
       .leftJoin(accounts, eq(funnels.accountId, accounts.id))
+      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .where(where)
       .orderBy(desc(quotations.createdAt))
@@ -1123,6 +1143,8 @@ export async function quotationsList(
       accountId: r.accountId,
       accountName: r.accountName,
       accountCode: r.accountCode,
+      accountOwnerMemberId: r.accountOwnerMemberId,
+      accountOwnerName: r.accountOwnerName,
       funnelName: r.funnelName,
       opportunityId: r.opportunityId,
       opportunityCode: r.opportunityCode,
