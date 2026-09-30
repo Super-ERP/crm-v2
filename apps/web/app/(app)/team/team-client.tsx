@@ -210,6 +210,7 @@ function EditMemberDialog({
 }) {
   const router = useRouter()
   const [saving, setSaving] = React.useState(false)
+  const [name, setName] = React.useState(member.name)
   const [roleIds, setRoleIds] = React.useState<string[]>(member.roleIds)
   const [managerId, setManagerId] = React.useState<string>(
     member.managerMemberId ?? "none"
@@ -240,6 +241,7 @@ function EditMemberDialog({
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
+      setName(member.name)
       setRoleIds(member.roleIds)
       setManagerId(member.managerMemberId ?? "none")
     }
@@ -249,6 +251,7 @@ function EditMemberDialog({
     e.preventDefault()
     setSaving(true)
     const res = await updateMember(member.memberId, {
+      name,
       roleIds,
       managerMemberId: managerId === "none" ? null : managerId,
     })
@@ -270,6 +273,10 @@ function EditMemberDialog({
           <DialogDescription>{member.email}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="team-member-name">Display name</Label>
+            <Input id="team-member-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required />
+          </div>
           <div className="grid gap-2">
             <Label>Roles</Label>
             <p className="text-xs text-muted-foreground">

@@ -197,7 +197,9 @@ export const tenantSettings = pgTable("tenant_settings", {
   // ── Company profile — rendered onto customer-facing documents (quotes) ──
   /** Postal address block (multiline). */
   companyAddress: text("company_address"),
+  companyLegalName: text("company_legal_name"),
   companyRegistrationNo: text("company_registration_no"),
+  companySstRegistrationNo: text("company_sst_registration_no"),
   companyPhone: text("company_phone"),
   companyEmail: text("company_email"),
   companyWebsite: text("company_website"),

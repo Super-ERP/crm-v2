@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { migrationId, planMigration, roundNumeric, type Dataset } from "../db/import/plan"
+import { migrationId, planMigration, roundNumeric, TECHNIQUES, type Dataset } from "../db/import/plan"
 const options = { tenantId: "tenant-a", entityCode: "QM", ctx: {
   resolveOwner: () => "member-a",
   resolveStage: () => ({ pipelineId: "pipeline",stageId: "stage",code: "0e" }),
@@ -103,4 +103,51 @@ it("keeps revisions increasing when a linked quotation series collides",()=>{
   const p=planMigration(d,options),qs=p.records.filter(r=>r.object==="Quote")
   expect(qs.map(r=>r.values.version)).toEqual([1,2,3])
   expect(qs[2].values.revision_of_id).toBe(qs[1].values.id)
+})
+
+it("keeps converted lead contacts only when they belong to the converted account",()=>{
+  const d=fixture()
+  d.Account=source([
+    {Id:"a",Name:"Acme",CurrencyIsoCode:"MYR"},
+    {Id:"b",Name:"Other Co",CurrencyIsoCode:"MYR"},
+  ])
+  d.Contact=source([
+    {Id:"c1",AccountId:"a",FirstName:"Asha",LastName:"Tan"},
+    {Id:"c2",AccountId:"b",FirstName:"Ben",LastName:"Lee"},
+  ])
+  d.Lead=source([
+    {Id:"matched",Name:"Matched",IsConverted:"true",ConvertedAccountId:"a",ConvertedContactId:"c1"},
+    {Id:"mismatched",Name:"Mismatched",IsConverted:"true",ConvertedAccountId:"a",ConvertedContactId:"c2"},
+    {Id:"missing-account",Name:"Missing account",IsConverted:"true",ConvertedAccountId:"missing",ConvertedContactId:"c2"},
+    {Id:"contact-only",Name:"Contact only",IsConverted:"true",ConvertedContactId:"c1"},
+  ])
+
+  const p=planMigration(d,options)
+  const lead=(id:string)=>p.records.find(r=>r.object==="Lead"&&r.sourceId===id)!
+  expect(lead("matched").values).toMatchObject({
+    converted_account_id:migrationId(options.tenantId,"Account","a"),
+    converted_person_id:migrationId(options.tenantId,"Contact","c1"),
+  })
+  expect(lead("mismatched").values).toMatchObject({
+    converted_account_id:migrationId(options.tenantId,"Account","a"),
+    converted_person_id:null,
+  })
+  expect(lead("missing-account").values).toMatchObject({
+    converted_account_id:null,
+    converted_person_id:null,
+  })
+  expect(lead("contact-only").values.converted_person_id).toBe(migrationId(options.tenantId,"Contact","c1"))
+  expect(p.notes).toContainEqual(expect.objectContaining({
+    object:"Lead",sourceId:"mismatched",fields:"ConvertedContactId",
+    technique:expect.stringContaining("different Account than ConvertedAccountId"),
+  }))
+  expect(p.notes).toContainEqual(expect.objectContaining({
+    object:"Lead",sourceId:"missing-account",fields:"ConvertedContactId",
+  }))
+})
+
+it("records converted account/contact links and the mismatch workaround in field techniques",()=>{
+  const technique=TECHNIQUES.Lead.find(({fields})=>fields.includes("ConvertedContactId"))
+  expect(technique?.targets).toEqual(["converted_account_id","converted_person_id"])
+  expect(technique?.technique).toContain("omit the incompatible optional contact link")
 })

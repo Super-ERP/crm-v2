@@ -134,8 +134,10 @@ export type QuotationDocument = {
   quotationTemplate: QuotationTemplateSpec | null
   /** Company profile from Settings — the sender block, bank details, footer. */
   company: {
+    legalName: string | null
     address: string | null
     registrationNo: string | null
+    sstRegistrationNo: string | null
     phone: string | null
     email: string | null
     website: string | null
@@ -284,8 +286,10 @@ export async function getQuotationDocument(
 
     const [profile] = await tx
       .select({
+        legalName: tenantSettings.companyLegalName,
         address: tenantSettings.companyAddress,
         registrationNo: tenantSettings.companyRegistrationNo,
+        sstRegistrationNo: tenantSettings.companySstRegistrationNo,
         phone: tenantSettings.companyPhone,
         email: tenantSettings.companyEmail,
         website: tenantSettings.companyWebsite,
@@ -331,8 +335,10 @@ export async function getQuotationDocument(
       resolvedTemplateCode,
       quotationTemplate,
       company: {
+        legalName: profile?.legalName ?? null,
         address: profile?.address ?? null,
         registrationNo: profile?.registrationNo ?? null,
+        sstRegistrationNo: profile?.sstRegistrationNo ?? null,
         phone: profile?.phone ?? null,
         email: profile?.email ?? null,
         website: profile?.website ?? null,

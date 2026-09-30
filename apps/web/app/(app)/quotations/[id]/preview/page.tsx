@@ -9,6 +9,7 @@ import { formatMoney, formatDate, formatMalaysianPhone } from "@/lib/format"
 import { getQuotationDocument } from "../../actions"
 import { PrintButton } from "./print-button"
 import { EntityQuotationDocument } from "./entity-quotation-document"
+import { QmQuotationDocument } from "./qm-quotation-document"
 import { ExternalQuotationDocument } from "./external-quotation-document"
 import { resolveQuotationPdfTemplate } from "@/lib/quotation-pdf-template"
 
@@ -114,6 +115,20 @@ export default async function QuotationPreviewPage({
           <PrintButton quotationId={q.id} quoteNumber={q.quoteNumber} />
         </div>
         <ExternalQuotationDocument doc={doc} template={quotationTemplate} />
+      </div>
+    )
+  }
+
+  if (entityTemplate === "qm") {
+    return (
+      <div className="bg-muted/30 py-6 print:bg-white print:py-0">
+        <div className="no-print mx-auto mb-4 flex max-w-3xl items-center justify-between px-4">
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/quotations/${q.id}`} />}>
+            <ArrowLeftIcon className="size-4" /> Back to quotation
+          </Button>
+          <PrintButton quotationId={q.id} quoteNumber={q.quoteNumber} />
+        </div>
+        <QmQuotationDocument doc={doc} />
       </div>
     )
   }

@@ -761,6 +761,7 @@ export async function revokePendingInvite(
 export async function updateMember(
   memberId: string,
   input: {
+    name?: string
     /** Full set of roles for the member (many-to-many). Union = effective access. */
     roleIds?: string[]
     managerMemberId?: string | null
@@ -770,6 +771,11 @@ export async function updateMember(
   const advancedRoles = (await getEntitledModuleMap()).advancedRoles
   const ctx = await requireContext()
   assertCan(ctx, PERMISSIONS.TENANT_MANAGE_USERS)
+
+  const displayName = input.name?.trim().replace(/\s+/g, " ")
+  if (input.name !== undefined && (!displayName || displayName.length > 100)) {
+    throw new Error("Name must be between 1 and 100 characters.")
+  }
 
   if (input.managerMemberId && input.managerMemberId === memberId) {
     throw new Error("A member can't manage themselves.")
@@ -784,6 +790,14 @@ export async function updateMember(
       .where(eq(membershipProfiles.memberId, memberId))
       .limit(1)
     if (!target) throw new Error("Member profile not found.")
+
+    if (displayName) {
+      const [targetMember] = await tx.select({ userId: member.userId }).from(member)
+        .where(and(eq(member.id, memberId), eq(member.organizationId, ctx.tenantId))).limit(1)
+      if (!targetMember) throw new Error("Member not found.")
+      await tx.update(user).set({ name: displayName, updatedAt: new Date() })
+        .where(eq(user.id, targetMember.userId))
+    }
 
     // ── Roles (many-to-many) ─────────────────────────────────────────────
     if (input.roleIds !== undefined) {
@@ -885,11 +899,12 @@ export async function updateMember(
       action: "member.updated",
       entityType: "member",
       entityId: memberId,
-      after: { roleIds: input.roleIds, managerMemberId: input.managerMemberId },
+      after: { name: displayName, roleIds: input.roleIds, managerMemberId: input.managerMemberId },
     })
   })
 
   revalidatePath("/team")
+  if (displayName) revalidatePath("/funnel")
   })
 }
 

@@ -7,6 +7,7 @@ import postgres from "postgres"
 import { parseCsv } from "./csv"
 import { MAPPINGS, stageCode } from "./mapping"
 import { migrationId, planMigration, references, TECHNIQUES, type Dataset, type PlannedRecord } from "./plan"
+import { activeRecordOwnerIds } from "./active-record-owners"
 
 type Column = { table_name: string; column_name: string; data_type: string; is_nullable: string; column_default: string | null; numeric_scale: number | null }
 type Outcome = { object: string; sourceId: string; status: "inserted" | "existing" | "quarantined" | "failed" | "not_attempted" | "superseded"; reason: string; generated?: boolean; verified?: boolean }
@@ -71,10 +72,14 @@ export async function runImport(args=process.argv.slice(2)) {
       const validMembers=await tx`select id from member where organization_id=${tenant}`
       if(!validMembers.some(m=>m.id===defaultOwner))throw new Error("Default owner must belong to target tenant")
       const ownerMap=new Map<string,string>()
+      const activeOwners=activeRecordOwnerIds(dataset)
       const userRows=[...(dataset.User?.rows??[])].sort((a,b)=>a.Id.localeCompare(b.Id))
       for(const r of userRows){
         if(!/^(true|1|yes)$/i.test(r.IsActive||"")||(r.UserType&&r.UserType!=="Standard")){
           users.push({sourceId:r.Id,status:"omitted",memberId:null,technique:"Inactive/non-Standard user: no login or role created; owned records use explicit map or default owner"});continue
+        }
+        if(!activeOwners.has(r.Id)){
+          users.push({sourceId:r.Id,status:"omitted",memberId:null,technique:"No retained owned CRM records; no login or role created"});continue
         }
         const email=(r.Email||r.Username||"").trim().toLowerCase()
         if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){users.push({sourceId:r.Id,status:"omitted",memberId:null,technique:"Invalid or missing email; no fabricated email/login"});continue}

@@ -10,11 +10,8 @@ vi.mock("better-auth/next-js", () => ({
 }))
 vi.mock("@/lib/auth", () => ({ auth: { handler: vi.fn() } }))
 
-import {
-  POST,
-  createAuthPostHandler,
-  resolveAuthPostOperation,
-} from "@/app/api/auth/[...all]/route"
+import { POST } from "@/app/api/auth/[...all]/route"
+import { createAuthPostHandler, resolveAuthPostOperation } from "@/app/api/auth/[...all]/post-handler"
 import type { DeploymentAccess } from "@/lib/deployment-control"
 import {
   createRouteWriteGuard,

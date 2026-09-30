@@ -27,7 +27,8 @@ export const TECHNIQUES: Record<string, { fields: string[]; targets: string[]; t
   Product2: [{fields:["Product_Category__c","Product_Subcategory__c"],targets:["product_code","subcategory"],technique:"Normalize category codes and allocate subcategory codes using the application taxonomy helper; retain labels in tenant settings."}],
   Contact: [{ fields: ["Name","FirstName","LastName"], targets:["first_name","last_name"],technique:"Prefer split names when supplied; otherwise keep the entire Name in first_name without guessing name boundaries." },
     {fields:["Phone","Full_Mobile_Number__c","MobilePhone","Title","Contact_Designation__c","Department","Contact_Department__c"],targets:["phone","title","department"],technique:"Choose first nonempty standard field then custom equivalent; full mobile number precedes raw mobile."}],
-  Lead:[{fields:["Name","FirstName","LastName","IsConverted","Status"],targets:["name","status"],technique:"Preserve person name. IsConverted overrides lead Status; conversion references are checked independently."}],
+  Lead:[{fields:["Name","FirstName","LastName","IsConverted","Status"],targets:["name","status"],technique:"Preserve person name. IsConverted overrides lead Status."},
+    {fields:["ConvertedAccountId","ConvertedContactId"],targets:["converted_account_id","converted_person_id"],technique:"Link source IDs to the imported Account and Contact. Keep the contact only when its AccountId matches ConvertedAccountId; otherwise preserve the account link, omit the incompatible optional contact link, and report the reason."}],
   Opportunity_ID__c:[{fields:["Name","Opportunity_Year__c","Opportunity_Number__c"],targets:["code","name","opportunity_year","opportunity_number"],technique:"Allocate duplicate numbers deterministically and generate name/code with formatOpportunityCode. Original identifiers remain in the change ledger."},
     {fields:["Opportunity_Nature__c"],targets:["project_nature_code","project_natures"],technique:"Extract the source parenthesized nature code; normalize code into the tenant nature picklist."},
     {fields:["Opp_Contact__c"],targets:["owner_contact_id","primary_person_id"],technique:"Preserve both the owner-contact role and primary person reference."},
@@ -270,6 +271,17 @@ export function planMigration(data: Dataset, options: PlanOptions) {
   for(const r of records.filter(r=>r.status==="ready"))for(const [col] of Object.entries(references[r.object]??{})){
     const value=r.values[col];if(value&&(!byId.has(String(value))||byId.get(String(value))!.status!=="ready")){
       change(r,col,null,"Optional reference omitted because target is absent/quarantined");note(r,col,"Optional target absent/quarantined; link omitted")
+    }
+  }
+  for(const lead of group("Lead").filter(r=>r.status==="ready"&&r.values.status==="converted")){
+    const sourceAccountId=original(lead).ConvertedAccountId
+    const personId=lead.values.converted_person_id as string|null
+    if(!sourceAccountId||!personId)continue
+    const person=byId.get(personId)
+    const expectedAccountId=ctx.detId("Account",sourceAccountId)
+    if(person?.status==="ready"&&person.values.account_id!==expectedAccountId){
+      change(lead,"converted_person_id",null,"Omit converted contact because Contact.AccountId does not match ConvertedAccountId; preserve the source converted-account link")
+      note(lead,"ConvertedContactId","Converted Contact belongs to a different Account than ConvertedAccountId; contact link omitted while the converted-account link is retained")
     }
   }
   for(const [funnelId,quotes] of quoteGroups) {

@@ -576,6 +576,25 @@ function CompanyProfileCard({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5 sm:col-span-2">
+            <label className="text-xs text-muted-foreground">Company legal name</label>
+            <Input value={values.legalName} onChange={set("legalName")} placeholder="QUANDATICS (M) SDN BHD" />
+          </div>
+          <div className="grid gap-1.5 sm:col-span-2">
+            <label className="text-xs text-muted-foreground">Quotation template</label>
+            <select
+              aria-label="Quotation template"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={values.quotationTemplateCode}
+              onChange={(event) => setValues((current) => ({ ...current, quotationTemplateCode: event.target.value }))}
+            >
+              <option value="default">Default</option>
+              <option value="qar">QAR</option>
+              <option value="cc">Citrus Cloud</option>
+              <option value="qm">Quandatics Malaysia</option>
+            </select>
+            <p className="text-xs text-muted-foreground">Used for new quotations unless the account has its own template.</p>
+          </div>
+          <div className="grid gap-1.5 sm:col-span-2">
             <label className="text-xs text-muted-foreground">Address</label>
             <Textarea
               rows={3}
@@ -593,6 +612,10 @@ function CompanyProfileCard({
               onChange={set("registrationNo")}
               placeholder="202001012345 (1234567-X)"
             />
+          </div>
+          <div className="grid gap-1.5">
+            <label className="text-xs text-muted-foreground">SST registration no.</label>
+            <Input value={values.sstRegistrationNo} onChange={set("sstRegistrationNo")} placeholder="W10-1808-31033978" />
           </div>
           <div className="grid gap-1.5">
             <PhoneInput

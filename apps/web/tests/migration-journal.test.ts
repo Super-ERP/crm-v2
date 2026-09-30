@@ -9,13 +9,17 @@ describe("migration journal", () => {
       await readFile(path.resolve(process.cwd(), "db/migrations/meta/_journal.json"), "utf8")
     ) as { entries: Array<{ idx: number; tag: string }> }
 
-    expect(journal.entries.at(-2)).toMatchObject({
+    expect(journal.entries.at(-3)).toMatchObject({
       idx: 89,
       tag: "0089_service_controls",
     })
-    expect(journal.entries.at(-1)).toMatchObject({
+    expect(journal.entries.at(-2)).toMatchObject({
       idx: 90,
       tag: "0090_citrus_cloudera_quotation_description",
+    })
+    expect(journal.entries.at(-1)).toMatchObject({
+      idx: 91,
+      tag: "0091_quandatics_quotation_template",
     })
   })
 
