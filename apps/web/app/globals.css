@@ -267,7 +267,7 @@
 .qm-quote-meta { display: block; }
 .qm-quote-meta > div { position: relative; top: 2.3pt; display: grid; grid-template-columns: 87pt 1fr; column-gap: 4pt; margin-bottom: 0.7pt; }
 .qm-quote-meta > div > span { min-width: 0; }
-.qm-order-instruction { display: block; grid-column: 1 / -1; margin-top: 8.6pt; font-size: 7pt; font-weight: 400; }
+.qm-order-instruction { display: block; grid-column: 1 / -1; margin-top: 8.6pt; font-size: 7pt; font-weight: 700; }
 .qm-lines { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 7.6pt; }
 .qm-lines .qm-col-item { width: 5.5%; }
 .qm-lines .qm-col-description { width: 55%; }

@@ -21,6 +21,19 @@ function money(value: string | number, currency: string): string {
   return `${currency}${amount}`
 }
 
+function taxLabel(doc: QuotationDocument): string {
+  const snapshot = doc.quotation.taxRateSnapshot
+  const selected = doc.taxSetting
+  // A sent quotation keeps its frozen rate even if the live tax setting is
+  // subsequently edited. Drafts use the currently selected setting's name.
+  if (selected?.name.trim() && (snapshot == null || Number(snapshot) === Number(selected.ratePercent))) {
+    return selected.name.trim()
+  }
+  const rate = snapshot ?? selected?.ratePercent
+  const numericRate = rate == null ? NaN : Number(rate)
+  return Number.isFinite(numericRate) ? `SST@${numericRate}%` : "Tax"
+}
+
 function addressLines(doc: QuotationDocument): string[] {
   const address = doc.account?.address
   if (!address) return []
@@ -129,7 +142,7 @@ export function QmQuotationDocument({ doc }: { doc: QuotationDocument }) {
             <div><b>Delivery</b><span>{quote.delivery ?? ""}</span></div>
             <div><b>Payment Term</b><span>{quote.paymentTerm ?? ""}</span></div>
             <div><b>Quote Validity</b><span>{date(quote.validUntil)}</span></div>
-            <span className="qm-order-instruction">Please Quote Our Ref No When Placing An Order</span>
+            <strong className="qm-order-instruction">Please Quote Our Ref No When Placing An Order</strong>
           </div>
         </section>
 
@@ -171,7 +184,7 @@ export function QmQuotationDocument({ doc }: { doc: QuotationDocument }) {
               <div><strong>Discount</strong><span>-{money(discount, currency)}</span></div>
             </> : null}
             <div><strong>Total Excluding Tax</strong><span>{money(netSubtotal, currency)}</span></div>
-            <div><strong>SST@{Number(quote.taxRateSnapshot)}%</strong><span>{money(quote.taxTotal, currency)}</span></div>
+            <div><strong>{taxLabel(doc)}</strong><span>{money(quote.taxTotal, currency)}</span></div>
             <div><strong>Total Including Tax</strong><span>{money(quote.total, currency)}</span></div>
         </div>
         {notes.length ? (
