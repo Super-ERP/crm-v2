@@ -9,6 +9,20 @@ import { Badge } from "@/components/ui/badge"
 import { formatMoney } from "@/lib/format"
 import type { OpportunityContainerRow } from "./actions"
 
+function relationOptions(
+  rows: OpportunityContainerRow[],
+  getId: (row: OpportunityContainerRow) => string | null,
+  getLabel: (row: OpportunityContainerRow) => string | null
+) {
+  const options = new Map<string, string>()
+  for (const row of rows) {
+    const id = getId(row)
+    const label = getLabel(row)
+    if (id && label) options.set(id, label)
+  }
+  return Array.from(options, ([value, label]) => ({ value, label }))
+}
+
 export function OpportunitiesTable({ data }: { data: OpportunityContainerRow[] }) {
   const columns = React.useMemo<ColumnDef<OpportunityContainerRow>[]>(
     // Opportunity name and code are identical system-generated values, so the
@@ -23,9 +37,14 @@ export function OpportunitiesTable({ data }: { data: OpportunityContainerRow[] }
         ),
       },
       {
-        accessorKey: "accountName",
+        id: "accountId",
+        accessorFn: (row) => ({
+          id: row.accountId,
+          label: [row.accountCode, row.accountName].filter(Boolean).join(" — "),
+        }),
         header: ({ column }) => <SortableHeader column={column} title="Account" />,
         cell: ({ row }) => row.original.accountName ?? "—",
+        sortingFn: (a, b) => a.original.accountName.localeCompare(b.original.accountName),
       },
       {
         accessorKey: "totalEstimatedFunnelAmount",
@@ -48,11 +67,16 @@ export function OpportunitiesTable({ data }: { data: OpportunityContainerRow[] }
         ),
       },
       {
-        accessorKey: "ownerName",
-        header: "Owner",
+        id: "accountOwnerMemberId",
+        accessorFn: (row) => row.accountOwnerMemberId
+          ? { id: row.accountOwnerMemberId, label: row.accountOwnerName ?? "Unknown" }
+          : null,
+        header: "Account owner",
         cell: ({ row }) => (
-          <span className="text-muted-foreground">{row.original.ownerName ?? "—"}</span>
+          <span className="text-muted-foreground">{row.original.accountOwnerName ?? "—"}</span>
         ),
+        sortingFn: (a, b) =>
+          (a.original.accountOwnerName ?? "").localeCompare(b.original.accountOwnerName ?? ""),
       },
     ],
     []
@@ -64,6 +88,28 @@ export function OpportunitiesTable({ data }: { data: OpportunityContainerRow[] }
       data={data}
       tableId="opportunities"
       cap={2000}
+      filters={[
+        {
+          type: "relation",
+          columnId: "accountId",
+          title: "Account",
+          options: relationOptions(
+            data,
+            (row) => row.accountId,
+            (row) => [row.accountCode, row.accountName].filter(Boolean).join(" — ")
+          ),
+        },
+        {
+          type: "relation",
+          columnId: "accountOwnerMemberId",
+          title: "Account owner",
+          options: relationOptions(
+            data,
+            (row) => row.accountOwnerMemberId,
+            (row) => row.accountOwnerName ?? "Unknown"
+          ),
+        },
+      ]}
       searchColumn="name"
       searchPlaceholder="Search opportunities…"
       emptyIcon={Briefcase}
