@@ -126,6 +126,8 @@ export async function getQuotation(id: string): Promise<QuotationDetail | null> 
 
 export type QuotationDocument = {
   quotation: QuotationRow
+  /** Selected tax setting for draft labels; sent quotes retain their rate snapshot. */
+  taxSetting: { name: string; ratePercent: string } | null
   lines: Array<QuotationLineRow & { sku: null }>
   entityName: string
   entityCode: string | null
@@ -198,6 +200,19 @@ export async function getQuotationDocument(
       .limit(1)
     if (!row) return null
     if (!ownsOrManages(visible, row.oppOwner)) return null
+
+    const [taxSetting] = row.q.taxSettingId
+      ? await tx
+          .select({ name: taxSettings.name, ratePercent: taxSettings.ratePercent })
+          .from(taxSettings)
+          .where(
+            and(
+              eq(taxSettings.id, row.q.taxSettingId),
+              eq(taxSettings.tenantId, ctx.tenantId)
+            )
+          )
+          .limit(1)
+      : []
 
     const lines = await tx
       .select({
@@ -329,6 +344,7 @@ export async function getQuotationDocument(
 
     return {
       quotation: row.q,
+      taxSetting: taxSetting ?? null,
       lines,
       entityName: org?.name ?? "Quotation",
       entityCode: profile?.entityCode ?? null,
