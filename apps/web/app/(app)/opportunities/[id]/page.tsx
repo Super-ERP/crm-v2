@@ -62,7 +62,7 @@ export default async function OpportunityDetailPage({
     <OpportunityForm
       mode="create"
       opportunityId={o.id}
-      accounts={[{ id: detail.accountId, name: detail.accountName, currency: detail.accountCurrency }]}
+      accounts={[{ id: detail.accountId, name: detail.accountName, currency: detail.accountCurrency, ownerMemberId: o.ownerMemberId }]}
       persons={persons}
       members={members}
       pipelines={pipelines}
@@ -70,7 +70,6 @@ export default async function OpportunityDetailPage({
       entityOptions={entities}
       financeEnabled={modules.finance}
       currencies={currencies}
-      defaultOwnerMemberId={ctx.memberId}
     />
   ) : undefined
   // The container has no rollup sources (unlike the funnel's Documents tab,

@@ -22,7 +22,7 @@ import {
 import type { ProductCategory } from "@/app/(app)/settings/constants"
 
 export type MemberOption = { memberId: string; name: string; email: string }
-export type Option = { id: string; name: string; currency?: string }
+export type Option = { id: string; name: string; currency?: string; ownerMemberId?: string | null }
 
 /** Members of the active tenant — for owner / assignee selects. */
 export async function listMembers(): Promise<MemberOption[]> {
@@ -39,7 +39,7 @@ export async function listAccountOptions(): Promise<Option[]> {
   return runInTenant(ctx.tenantId, async (tx) => {
     const visible = await visibleMemberIds(tx, ctx)
     return tx
-      .select({ id: accounts.id, name: accounts.name, currency: accounts.currency })
+      .select({ id: accounts.id, name: accounts.name, currency: accounts.currency, ownerMemberId: accounts.ownerMemberId })
       .from(accounts)
       .where(
         and(

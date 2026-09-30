@@ -7,7 +7,6 @@ import { PERMISSIONS } from "@/lib/permissions"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import {
   listAccountOptions,
-  listMembers,
   listFunnelsWithStages,
   listProjectNatures,
   listCustomFunnelFields,
@@ -48,7 +47,6 @@ export default async function OpportunityDetailPage({
     ctx,
     accounts,
     persons,
-    members,
     pipelines,
     projectNatures,
     customFunnelFields,
@@ -67,7 +65,6 @@ export default async function OpportunityDetailPage({
     requireContext(),
     listAccountOptions(),
     listPersonsWithAccount(),
-    listMembers(),
     listFunnelsWithStages(),
     listProjectNatures(),
     listCustomFunnelFields(),
@@ -264,9 +261,7 @@ export default async function OpportunityDetailPage({
           accountName={accountName}
           accountOptions={accounts}
           container={container}
-          ownerMemberId={opp.ownerMemberId}
           ownerName={ownerName}
-          members={members}
           personId={opp.primaryPersonId}
           personName={personName}
           persons={persons}

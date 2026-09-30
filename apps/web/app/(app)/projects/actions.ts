@@ -189,11 +189,17 @@ export async function createProject(
     PERMISSIONS.PROJECT_CREATE,
     async (tx, ctx) => {
       const [acct] = await tx
-        .select({ code: accounts.code })
+        .select({ code: accounts.code, ownerMemberId: accounts.ownerMemberId })
         .from(accounts)
         .where(and(eq(accounts.id, input.accountId), isNull(accounts.deletedAt)))
         .limit(1)
+        .for("share")
       if (!acct) throw new Error("Account not found")
+      if (!acct.ownerMemberId) throw new Error("Assign an account owner before creating a project.")
+      const visible = await visibleMemberIds(tx, ctx)
+      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, acct.ownerMemberId)) {
+        throw new Error("FORBIDDEN: not permitted on this account")
+      }
 
       // An intercompany-delivery project must reference a deal actually
       // assigned to THIS tenant as handling partner (the two-sided RLS lets
@@ -288,7 +294,7 @@ export async function createProject(
             funnelId: input.funnelId || null,
             quotationId: input.quotationId || null,
             intercompanyDealId: input.intercompanyDealId || null,
-            ownerMemberId: ctx.memberId,
+            ownerMemberId: acct.ownerMemberId,
             status: isStatus(input.status) ? input.status : "planning",
             value: input.value ? input.value : null,
             // Carry the source deal currency through; fall back to the tenant's

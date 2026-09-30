@@ -268,7 +268,6 @@ export type OpportunityInput = {
   control?: string | null
   pipelineId: string
   currentStageId: string
-  ownerMemberId: string
   /** Estimated Funnel Amount (manual) — drives the forecast + recognized amount. */
   estimatedAmount?: string | null
   /** Manual recognized % override — ignored/recomputed when isIntercompany + parties are set. */
@@ -395,10 +394,6 @@ export async function createOpportunity(
       if (!firstOpenStage || firstOpenStage.id !== stage.id)
         throw new Error("A new Funnel must start at its pipeline's first stage.")
 
-      // owner_member_id is NOT NULL — default to the creator when unspecified.
-      const ownerMemberId = input.ownerMemberId || ctx.memberId
-      if (!ownerMemberId) throw new Error("No owner for the Funnel")
-
       const estimatedAmount = normalizeMoneyInput(input.estimatedAmount, "Estimated funnel amount")
       const expectedCloseDate = normalizeDateInput(
         input.expectedCloseDate,
@@ -475,10 +470,18 @@ export async function createOpportunity(
         nature = pickNature(input)
       }
       const [account] = await tx
-        .select({ currency: accounts.currency })
+        .select({ currency: accounts.currency, ownerMemberId: accounts.ownerMemberId })
         .from(accounts)
-        .where(eq(accounts.id, containerAccountId))
+        .where(and(eq(accounts.id, containerAccountId), isNull(accounts.deletedAt)))
         .limit(1)
+        .for("share")
+      if (!account) throw new Error("Account not found")
+      if (!account.ownerMemberId) throw new Error("Assign an account owner before creating a Funnel.")
+      const visible = await visibleMemberIds(tx, ctx)
+      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, account.ownerMemberId)) {
+        throw new Error("FORBIDDEN: not permitted on this account")
+      }
+      const ownerMemberId = account.ownerMemberId
       const currency = await tenantCurrencyForRecord(
         tx,
         ctx.tenantId,
@@ -682,14 +685,27 @@ export async function updateOpportunity(
         ? existing.recognizedPercent
         : input.recognizedPercent || null
 
+    const nextAccountId = input.accountId ?? existing.accountId
+    const [accountOwner] = await tx
+      .select({ ownerMemberId: accounts.ownerMemberId })
+      .from(accounts)
+      .where(and(eq(accounts.id, nextAccountId), isNull(accounts.deletedAt)))
+      .limit(1)
+      .for("share")
+    if (!accountOwner) throw new Error("Account not found")
+    if (!accountOwner.ownerMemberId) throw new Error("Assign an account owner before updating a Funnel.")
+    if (!canManageAllRecords(ctx) && !ownsOrManages(visible, accountOwner.ownerMemberId)) {
+      throw new Error("FORBIDDEN: not permitted on this account")
+    }
+
     const updated = {
       name: input.name ?? existing.name,
-      accountId: input.accountId ?? existing.accountId,
+      accountId: nextAccountId,
       primaryPersonId:
         input.primaryPersonId === undefined
           ? existing.primaryPersonId
           : input.primaryPersonId || null,
-      ownerMemberId: input.ownerMemberId ?? existing.ownerMemberId,
+      ownerMemberId: accountOwner.ownerMemberId,
       // amount is quote-derived (never user-edited here).
       estimatedAmount: nextEstimated,
       recognizedPercent: recognizedPercentValue,

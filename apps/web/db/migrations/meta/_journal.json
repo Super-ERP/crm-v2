@@ -645,6 +645,13 @@
 			"when": 1790294400000,
 			"tag": "0091_quandatics_quotation_template",
 			"breakpoints": true
+		},
+		{
+			"idx": 92,
+			"version": "7",
+			"when": 1790740783000,
+			"tag": "0092_account_owner_pipeline_alignment",
+			"breakpoints": true
 		}
 	]
 }

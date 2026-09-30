@@ -49,7 +49,7 @@ export function AccountQuickCreate({
   open: boolean
   onOpenChange: (open: boolean) => void
   defaultName?: string
-  onCreated: (rec: { id: string; name: string }) => void
+  onCreated: (rec: { id: string; name: string; ownerMemberId: string | null }) => void
 }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -69,7 +69,7 @@ export function AccountQuickCreate({
       return
     }
     toast.success("Account created")
-    onCreated({ id: res.data.id, name: res.data.name })
+    onCreated({ id: res.data.id, name: res.data.name, ownerMemberId: res.data.ownerMemberId })
     onOpenChange(false)
   }
 

@@ -38,7 +38,7 @@ import { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
 import { formatDate, formatMoney } from "@/lib/format"
 import { partyShare, deriveOriginRecognizedAmount } from "@/lib/interco-share"
-import type { Option, MemberOption } from "@/lib/lookups"
+import type { Option } from "@/lib/lookups"
 import {
   formatCustomFieldValue,
   groupCustomFields,
@@ -116,10 +116,7 @@ export type FunnelDetailData = {
   /** Every account, for the inline Account picker. */
   accountOptions: Option[]
   container: OpportunityDetail["container"]
-  ownerMemberId: string
   ownerName: string | null
-  /** Every tenant member, for the inline Owner picker. */
-  members: MemberOption[]
   personId: string | null
   personName: string | null
   /** Every person (with account), for the inline Contact picker — filtered client-side to `accountId`. */
@@ -215,9 +212,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
     accountName,
     accountOptions,
     container,
-    ownerMemberId,
     ownerName,
-    members,
     personId,
     personName,
     persons,
@@ -289,10 +284,6 @@ export function FunnelDetailBody(props: FunnelDetailData) {
     () =>
       persons.filter((p) => p.accountId === accountId).map((p) => ({ value: p.id, label: p.name })),
     [persons, accountId]
-  )
-  const memberOptions = React.useMemo(
-    () => members.map((m) => ({ value: m.memberId, label: m.name })),
-    [members]
   )
   const currencyLocked = !!primaryQuotationId
   const currencyOptions = React.useMemo(
@@ -883,19 +874,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
               )}
             </FieldRow>
             <FieldRow label="Owner">
-              {canEdit ? (
-                <InlineCombobox
-                  value={ownerMemberId}
-                  display={ownerName ?? "—"}
-                  options={memberOptions}
-                  onSave={(next) => saveField({ ownerMemberId: next })}
-                  searchPlaceholder="Search members…"
-                  emptyMessage="No members found."
-                  title="Click to change owner"
-                />
-              ) : (
-                ownerName ?? "—"
-              )}
+              {ownerName ?? "—"}
             </FieldRow>
             <FieldRow label="Contact">
               {canEdit ? (

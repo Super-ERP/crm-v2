@@ -53,7 +53,6 @@ export default async function OpportunitiesPage() {
       entityOptions={entities}
       financeEnabled={modules.finance}
       currencies={currencies}
-      defaultOwnerMemberId={ctx.memberId}
     />
   ) : undefined
 
