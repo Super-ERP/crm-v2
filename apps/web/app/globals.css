@@ -245,6 +245,7 @@
 }
 .qm-logo-slot { padding: 2pt 0 0 52pt; }
 .qm-logo-slot img { display: block; width: 150pt; height: 75pt; object-fit: fill; }
+.qm-logo-slot img.qm-logo-qa { object-fit: contain; }
 .qm-company-details { padding-top: 10pt; font-size: 8pt; line-height: 1.13; }
 .qm-company-details > strong { display: block; margin-bottom: 0; font-size: 8pt; }
 .qm-company-address { white-space: pre-line; text-transform: uppercase; }
@@ -515,9 +516,9 @@ html.text-scale-xl {
 }
 
 @media print {
-  html:has(#quote-doc[data-template="qm"]),
-  body:has(#quote-doc[data-template="qm"]) { background: #fff !important; }
-  #quote-doc[data-template="qm"] {
+  html:has(#quote-doc:is([data-template="qm"], [data-template="qa"])),
+  body:has(#quote-doc:is([data-template="qm"], [data-template="qa"])) { background: #fff !important; }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) {
     page: qm-quotation;
     width: 612pt !important;
     min-height: 0 !important;
@@ -528,7 +529,7 @@ html.text-scale-xl {
     color: #111 !important;
     font-family: "Times New Roman", Times, serif !important;
   }
-  #quote-doc[data-template="qm"] .qm-page {
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-page {
     width: 612pt !important;
     min-height: 792pt !important;
     padding: 42pt 42pt 54pt !important;
@@ -536,27 +537,27 @@ html.text-scale-xl {
     box-shadow: none !important;
     break-after: auto;
   }
-  #quote-doc[data-template="qm"] .qm-first-page { padding-bottom: 40pt !important; }
-  #quote-doc[data-template="qm"] .qm-first-page { break-after: auto; }
-  #quote-doc[data-template="qm"] .qm-signoff-page {
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-first-page { padding-bottom: 40pt !important; }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-first-page { break-after: auto; }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-signoff-page {
     min-height: 0 !important;
     break-before: auto;
     break-after: auto;
     break-inside: avoid-page;
   }
-  #quote-doc[data-template="qm"] .qm-signoff-page { padding-top: 45pt !important; }
-  #quote-doc[data-template="qm"] .qm-footer-screen { display: none !important; }
-  #quote-doc[data-template="qm"] .qm-footer-print {
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-signoff-page { padding-top: 45pt !important; }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-footer-screen { display: none !important; }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-footer-print {
     display: grid !important;
     position: fixed !important;
     right: 42pt;
     bottom: 13pt;
     left: 42pt;
   }
-  #quote-doc[data-template="qm"] .qm-lines tr,
-  #quote-doc[data-template="qm"] .qm-totals,
-  #quote-doc[data-template="qm"] .qm-notes li { break-inside: avoid-page; }
-  #quote-doc[data-template="qm"] .qm-notes {
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-lines tr,
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-totals,
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-notes li { break-inside: avoid-page; }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-notes {
     break-inside: avoid-page;
     page-break-inside: avoid;
   }

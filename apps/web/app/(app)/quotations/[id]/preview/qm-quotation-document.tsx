@@ -102,7 +102,7 @@ function Footer({ doc, screen = false }: { doc: QuotationDocument; screen?: bool
   )
 }
 
-export function QmQuotationDocument({ doc }: { doc: QuotationDocument }) {
+export function QmQuotationDocument({ doc, template = "qm" }: { doc: QuotationDocument; template?: "qm" | "qa" }) {
   const quote = doc.quotation
   const notes = parseNotes(quote.notes)
   const currency = quote.currency || "MYR"
@@ -110,12 +110,16 @@ export function QmQuotationDocument({ doc }: { doc: QuotationDocument }) {
   const netSubtotal = Number(quote.subtotal) - discount
 
   return (
-    <div id="quote-doc" data-template="qm" className="qm-document">
+    <div id="quote-doc" data-template={template} className="qm-document">
       <section className="qm-page qm-first-page">
         <header className="qm-company-header">
           <div className="qm-logo-slot">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/qm-quandatics-logo.png" alt="Quandatics" />
+            <img
+              src={template === "qa" ? "/qa-academy-logo.png" : "/qm-quandatics-logo.png"}
+              alt={template === "qa" ? "Quandatics Academy" : "Quandatics Malaysia"}
+              className={template === "qa" ? "qm-logo-qa" : undefined}
+            />
           </div>
           <div className="qm-company-details">
             <strong>{doc.company.legalName || doc.entityName}</strong>

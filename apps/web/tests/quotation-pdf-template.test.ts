@@ -8,6 +8,7 @@ describe("resolveQuotationPdfTemplate", () => {
     [null, "q-armour", "Q Armour", "qar"],
     ["CC", "anything", "anything", "cc"],
     [null, "citrus-cloud", "Citrus Cloud", "cc"],
+    ["QA", "quandatics-academy", "Quandatics Academy", "qa"],
   ])("maps code %s / entity %s / %s to %s", (code, slug, name, expected) => {
     expect(resolveQuotationPdfTemplate({ entityCode: code, entitySlug: slug, entityName: name })).toBe(
       expected

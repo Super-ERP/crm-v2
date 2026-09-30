@@ -483,7 +483,7 @@ export async function updateCompanyProfile(
 
     const clip = (s: string, max: number) => (s ?? "").trim().slice(0, max)
     const templateCode = clip(input.quotationTemplateCode, 24).toLowerCase() || "default"
-    if (!["default", "qar", "cc", "qm"].includes(templateCode)) {
+    if (!["default", "qar", "cc", "qm", "qa"].includes(templateCode)) {
       throw new Error("Choose a quotation template from the list.")
     }
     const values = {
