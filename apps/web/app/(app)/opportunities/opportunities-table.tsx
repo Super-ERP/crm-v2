@@ -75,6 +75,8 @@ export function OpportunitiesTable({ data }: { data: OpportunityContainerRow[] }
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.original.accountOwnerName ?? "—"}</span>
         ),
+        sortingFn: (a, b) =>
+          (a.original.accountOwnerName ?? "").localeCompare(b.original.accountOwnerName ?? ""),
       },
     ],
     []
