@@ -135,6 +135,15 @@ export function planMigration(data: Dataset, options: PlanOptions) {
       quarantine(account,"Company_Name__c lookup has no available Company__c.Name")
     }
   }
+  // The CRM owns a customer's pipeline through its account. Preserve the
+  // source owner differences in the change ledger, but give every imported
+  // account child the same owner as its account from the first write.
+  for(const object of ["Contact","Opportunity_ID__c","Contract"])
+    for(const record of group(object)){
+      const account=target(record,"account_id")
+      if(account?.status!=="ready")continue
+      change(record,"owner_member_id",account.values.owner_member_id,"Account owner is authoritative for related records")
+    }
   for(const [sourceId,override] of Object.entries(options.quoteFunnelOverrides??{})){
     const q=group("Quote").find(r=>r.sourceId===sourceId)
     const f=group("Opportunity").find(r=>r.sourceId===override.funnelId)
@@ -180,6 +189,8 @@ export function planMigration(data: Dataset, options: PlanOptions) {
     if(p)for(const field of ["account_id","owner_member_id","pain","power","vision","value","control","project_natures"])
       change(r,field,p.values[field]??null,"Opportunity container is authoritative; matches manual cascade")
     if(p) {r.values.product_type_code=p.values.project_nature_code??null;r.values.is_renewal=p.values.is_renewal??false}
+    const account=target(r,"account_id")
+    if(account?.status==="ready")change(r,"owner_member_id",account.values.owner_member_id,"Account owner is authoritative for related records")
     // Cross-deal parties are entities, not customer accounts. Do not invent
     // intercompany assignments from source names; keep historical percentages.
     if(original(r).Cross_Deal__c==="true")note(r,"Cross_Deal__c; Cross_Deal_Company__c","Intercompany entity/party model not migrated. Historical recognized percent retained, automation flag remains false.")

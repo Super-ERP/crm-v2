@@ -151,3 +151,16 @@ it("records converted account/contact links and the mismatch workaround in field
   expect(technique?.targets).toEqual(["converted_account_id","converted_person_id"])
   expect(technique?.technique).toContain("omit the incompatible optional contact link")
 })
+
+it("imports account children under the account owner and records source owner differences",()=>{
+  const d=fixture()
+  d.Account.rows[0].OwnerId="account-owner"
+  d.Contact=source([{Id:"c",AccountId:"a",FirstName:"Asha",OwnerId:"contact-owner"}])
+  d.Opportunity_ID__c.rows[0].OwnerId="container-owner"
+  d.Opportunity.rows[0].OwnerId="funnel-owner"
+  d.Contract=source([{Id:"contract",AccountId:"a",OwnerId:"contract-owner"}])
+  const p=planMigration(d,{...options,ctx:{...options.ctx,resolveOwner:id=>`member-${id}`}})
+  for(const id of ["c","o","f","contract"])
+    expect(p.records.find(r=>r.sourceId===id)?.values.owner_member_id).toBe("member-account-owner")
+  expect(p.changes.filter(c=>c.field==="owner_member_id"&&c.after==="member-account-owner").length).toBeGreaterThanOrEqual(4)
+})
