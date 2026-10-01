@@ -32,7 +32,7 @@ The **Forecast** dashboard provides real-time visibility into your sales pipelin
 * **Breakdowns**:
   * View projected revenue by fiscal quarter or month.
   * Filter by sales team, individual rep, or product category.
-  * Compare pipeline stage distribution (`0E` through `4A`) against quarterly sales targets.
+  * Compare pipeline stage distribution (`0e` through `4a`) against quarterly sales targets.
 
 ---
 

@@ -42,22 +42,22 @@ Deals progress through standard stages:
 
 ```mermaid
 flowchart LR
-    S0["0E: Exploration"] --> S1["1E: Engagement"]
-    S1 --> S2["2E: Evaluation"]
-    S2 --> S3["3E: Proposal"]
-    S3 --> S4["4A: Commitment"]
+    S0["0e: Identified"] --> S1["1d: Qualified"]
+    S1 --> S2["2c: Proposal"]
+    S2 --> S3["3b: Negotiation"]
+    S3 --> S4["4a: Commit"]
     S4 --> CW["Closed Won (Terminal)"]
     S4 --> CL["Closed Lost (Terminal)"]
 ```
 
 ### Stage Definitions
 
-1. **`0E` Exploration**: Initial scoping after lead conversion or new pursuit creation.
-2. **`1E` Engagement / Identification**: Active stakeholder discussions and requirement gathering.
-3. **`2E` Evaluation**: Technical and commercial feasibility assessment; drafting architecture.
-4. **`3E` Solution / Proposal**: Formal proposal and quotation submitted to the client.
-5. **`4A` Commitment / Negotiation**:
-   * **Project Code Allocation**: The moment a deal enters stage `4A` for the first time, the system **automatically allocates the official Delivery Project Code**. This allows delivery managers to begin resource planning before final contract signature.
+1. **`0e` Identified**: Initial scoping after lead conversion or new pursuit creation.
+2. **`1d` Qualified**: Active stakeholder discussions and requirement gathering.
+3. **`2c` Proposal**: Technical and commercial feasibility assessment; drafting architecture.
+4. **`3b` Negotiation**: Formal proposal and quotation submitted to the client.
+5. **`4a` Commit**:
+   * **Project Code Allocation**: The moment a deal enters stage `4a` for the first time, the system **automatically allocates the official Delivery Project Code**. This allows delivery managers to begin resource planning before final contract signature.
 6. **Closed Won** *(Terminal)*:
    * Contract executed and deal won.
    * **Automatic Action**: Sets all live payment milestones to `Won`.
@@ -71,7 +71,7 @@ flowchart LR
 ## Stage Advancement & Rollback Rules
 
 * **Advancing Forward**: Advancing to a higher stage runs stage-gate verification (e.g., verifying PPVVC completeness, valid quotation presence, or required manager sign-off).
-* **Rolling Backward**: You can roll back to any prior non-terminal stage (e.g., from `3E` back to `2E`) without restrictions if negotiations require re-scoping.
+* **Rolling Backward**: You can roll back to any prior non-terminal stage (e.g., from `3b` back to `2c`) without restrictions if negotiations require re-scoping.
 * **Terminal Stages**: Once an opportunity is marked **Closed Won** or **Closed Lost**, it cannot be moved to any other stage.
 
 ---

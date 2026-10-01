@@ -71,7 +71,7 @@ Once a lead has been qualified and is ready for a commercial proposal, convert i
 [ Opportunity: Acme Corp Opportunity ]
  │
  ▼
-[ Funnel Deal: Stage 0E ]
+[ Funnel Deal: Stage 0e ]
 ```
 
 ### Step-by-Step Conversion Flow:
@@ -86,7 +86,7 @@ Once a lead has been qualified and is ready for a commercial proposal, convert i
    * **Opportunity & Funnel Section**:
      * **Opportunity Name**: Defaults to `[Company Name] opportunity` (customizable).
      * **Expected Close Date**: Set the estimated closing target date.
-     * The deal is automatically seeded into the sales funnel at the initial stage **`0E` (Exploration)**.
+     * The deal is automatically seeded into the sales funnel at the initial stage **`0e` (Identified)**.
 4. Click **Confirm Conversion**.
 
 > [!IMPORTANT]

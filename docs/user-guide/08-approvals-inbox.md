@@ -13,7 +13,7 @@ The **Approvals Hub** (`/approvals`) is a unified inbox designed for **Managers 
 │ Pending Approvals Queue                                │
 ├────────────────────────────────────────────────────────┤
 │ • Quotation QDT-2026-0042 (18% Discount Request)       │
-│ • Stage Advance: Acme Corp (Stage 3E ➔ 4A Commitment) │
+│ • Stage Advance: Acme Corp (Stage 3b ➔ 4a Commit) │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -25,7 +25,7 @@ The **Approvals Hub** (`/approvals`) is a unified inbox designed for **Managers 
    * Line item or total quotation discounts exceeding standard sales delegation limits.
    * Custom payment terms or non-standard contractual conditions.
 2. **Stage-Gate Advancements**:
-   * Advancing high-value opportunities into final stages (e.g., entering `4A Commitment` or marking `Closed Won`).
+   * Advancing high-value opportunities into final stages (e.g., entering `4a Commit` or marking `Closed Won`).
 
 ---
 
