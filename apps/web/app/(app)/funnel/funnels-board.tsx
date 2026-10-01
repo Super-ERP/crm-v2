@@ -118,6 +118,7 @@ function StageColumn({
   cards: OpportunityListRow[]
   draggable: boolean
 }) {
+  const [visibleCount, setVisibleCount] = React.useState(25)
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
     data: { stageId: stage.id },
@@ -154,13 +155,18 @@ function StageColumn({
       </div>
 
       <div className="flex min-h-2 flex-col gap-2">
-        {cards.map((c) => (
+        {cards.slice(0, visibleCount).map((c) => (
           <DraggableCard
             key={c.id}
             c={c}
             draggable={draggable}
           />
         ))}
+        {cards.length > visibleCount ? (
+          <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => setVisibleCount((count) => count + 25)}>
+            Show 25 more ({cards.length - visibleCount} remaining)
+          </Button>
+        ) : null}
         {cards.length === 0 ? (
           <p className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
             No pipelines

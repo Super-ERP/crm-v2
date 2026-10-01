@@ -583,7 +583,7 @@ export function DataTable<TData, TValue>({
           ) : null}
         </div>
 
-        <div className={cn("ml-auto flex items-center gap-2", renderFilteredView && "order-2 shrink-0")}>
+        <div className={cn("ml-auto flex flex-wrap items-center justify-end gap-2", renderFilteredView && "order-2 shrink-0")}>
           {toolbar}
           {tableId && savedViews ? (
             <SavedViewMenu
@@ -681,7 +681,7 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>}
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">
           {server
             ? `${serverTotal} matching row(s)`
@@ -689,7 +689,7 @@ export function DataTable<TData, TValue>({
             ? `${table.getFilteredRowModel().rows.length} of ${data.length} row(s)`
             : `${data.length} row(s)`}
         </span>
-        {!renderFilteredView ? <div className="flex items-center gap-2">
+        {!renderFilteredView ? <div className="flex flex-wrap items-center gap-2">
           <span className="hidden text-sm text-muted-foreground sm:inline">Per page</span>
           <Select
             value={String(table.getState().pagination.pageSize)}
@@ -699,7 +699,7 @@ export function DataTable<TData, TValue>({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {TABLE_PAGE_SIZES.map((n) => (
+              {[...new Set([pageSize, ...TABLE_PAGE_SIZES])].sort((a, b) => a - b).map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
                 </SelectItem>
@@ -1056,6 +1056,9 @@ function OptionFilter({
   const options = (definition.options ?? []).filter((option) =>
     option.label.toLocaleLowerCase().includes(query.toLocaleLowerCase())
   )
+  const displayedOptions = options.length > 100
+    ? [...options.filter((option) => selected.has(option.value)), ...options.filter((option) => !selected.has(option.value))].slice(0, 100)
+    : options
 
   function toggle(value: string) {
     const next = new Set(selected)
@@ -1094,7 +1097,7 @@ function OptionFilter({
           <div className="px-1 py-2 text-xs text-muted-foreground">No values</div>
         ) : (
           <DropdownMenuGroup>
-            {options.map((option) => (
+            {displayedOptions.map((option) => (
               <DropdownMenuCheckboxItem
                 key={option.value}
                 checked={selected.has(option.value)}
@@ -1106,6 +1109,9 @@ function OptionFilter({
             ))}
           </DropdownMenuGroup>
         )}
+        {options.length > displayedOptions.length ? (
+          <p className="px-2 py-1 text-xs text-muted-foreground">Showing {displayedOptions.length} of {options.length}. Search to narrow the list.</p>
+        ) : null}
         {active ? (
           <>
             <DropdownMenuSeparator />
