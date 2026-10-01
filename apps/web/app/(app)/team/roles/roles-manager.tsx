@@ -38,7 +38,6 @@ import {
   updateRole,
   deleteRole,
   type RoleWithPermissions,
-  type PermissionAdmin,
 } from "../actions"
 
 // Group the permission catalog into tabbed areas.
@@ -76,12 +75,10 @@ function areaGroups(areaId: string, permissionGroups: PermissionGroup[]): Permis
 // group lacks entitlement drop out entirely rather than showing an empty tab.
 export function RolesManager({
   roles,
-  admins,
   initialRoleId,
   permissionGroups,
 }: {
   roles: RoleWithPermissions[]
-  admins: PermissionAdmin[]
   initialRoleId?: string
   permissionGroups: PermissionGroup[]
 }) {
@@ -237,22 +234,6 @@ export function RolesManager({
           </div>
         </CardHeader>
         <CardContent>
-          {admins.length > 0 ? (
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs dark:border-amber-900/50 dark:bg-amber-950/30">
-              <span className="font-medium">Who can change permissions:</span>{" "}
-              <span className="text-muted-foreground">
-                only members with the “Manage roles” permission —{" "}
-                {admins.map((a, i) => (
-                  <span key={a.memberId}>
-                    {i > 0 ? ", " : ""}
-                    <span className="font-medium text-foreground">{a.name}</span>{" "}
-                    ({a.roleNames.join(", ")})
-                  </span>
-                ))}
-                .
-              </span>
-            </div>
-          ) : null}
           <Tabs value={area} onValueChange={setArea}>
             <TabsList>
               {visibleAreas.map((a) => (
