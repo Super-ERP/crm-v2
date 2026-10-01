@@ -124,8 +124,8 @@ export type DashboardData = {
    *  routed to them. Mirrors /approvals "Incoming" so the two never disagree. */
   pendingApprovals: PendingApproval[]
   pendingApprovalsCount: number
-  /** True for platform superadmins (sees/acts on all pending requests),
-   *  so the UI titles the card "Pending Approvals" rather than "Assigned to me". */
+  /** True for platform superadmins (sees/acts on all pending stage requests),
+   *  so the UI titles the card "Pending stage approvals". */
   canApproveAll: boolean
   followUpsDue: FollowUpDue[]
   followUpsDueCount: number

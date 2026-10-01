@@ -132,8 +132,8 @@ export default async function DashboardPage() {
   const followUpsCount = data.followUpsDueCount
   const hasOverdue = data.followUpsDue.some((f) => isBefore(f.dueAt, now))
   const approvalsTitle = data.canApproveAll
-    ? "Pending Approvals"
-    : "Approvals Assigned to Me"
+    ? "Pending stage approvals"
+    : "Stage approvals assigned to me"
 
   const checklist: ChecklistItem[] = [
     {

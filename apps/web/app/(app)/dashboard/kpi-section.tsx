@@ -146,7 +146,7 @@ export function KpiSection({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <PipelineCards scope={scope} p={pipeline} />
         <KpiCard
-          label={canApproveAll ? "Pending Approvals" : "Approvals Assigned to Me"}
+          label={canApproveAll ? "Pending stage approvals" : "Stage approvals assigned to me"}
           icon={ClipboardCheck}
           chip={approvalsCount > 0 ? "amber" : "muted"}
           attention={approvalsCount > 0 ? "amber" : undefined}
