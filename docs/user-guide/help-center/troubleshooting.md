@@ -18,10 +18,36 @@ Start with the problem that matches what you see. Keep the exact error message; 
 
 ## A module, button, or record is missing
 
-1. Check the active organization in the sidebar.
-2. Clear search and filters, or switch back to an unfiltered list view.
-3. Ask your administrator to check your role permissions, reporting relationships, and enabled modules.
-4. For a particular record, provide its name or identifier so your administrator can check ownership and access scope.
+{% stepper %}
+{% step %}
+
+#### Check the active organization
+
+Check the active organization in the sidebar.
+
+{% endstep %}
+{% step %}
+
+#### Clear list filters
+
+Clear search and filters, or switch back to an unfiltered list view.
+
+{% endstep %}
+{% step %}
+
+#### Review access configuration
+
+Ask your administrator to check your role permissions, reporting relationships, and enabled modules.
+
+{% endstep %}
+{% step %}
+
+#### Identify the missing record
+
+For a particular record, provide its name or identifier so your administrator can check ownership and access scope.
+
+{% endstep %}
+{% endstepper %}
 
 **Expected result:** the record appears if you have access. If it still does not, your administrator can explain or correct the access configuration.
 
@@ -29,10 +55,36 @@ See [Workspace & personal views](../01-workspace-and-views.md) and [Administrati
 
 ## A funnel stage change is blocked
 
-1. Read the requirements shown in the stage-change dialog. Requirements are configured by your organization; do not assume every stage needs the same fields.
-2. Complete the listed fields on the opportunity or funnel, save, and retry.
-3. If approval is required, check **Sales → Approvals → My requests**. The approver uses **Incoming**.
-4. If the deal is Closed Won or Closed Lost, it cannot change stages. For a new sales pursuit, create a new opportunity rather than trying to reopen it.
+{% stepper %}
+{% step %}
+
+#### Read stage requirements
+
+Read the requirements shown in the stage-change dialog. Requirements are configured by your organization; do not assume every stage needs the same fields.
+
+{% endstep %}
+{% step %}
+
+#### Save missing information
+
+Complete the listed fields on the opportunity or funnel, save, and retry.
+
+{% endstep %}
+{% step %}
+
+#### Check the approval request
+
+If approval is required, check **Sales → Approvals → My requests**. The approver uses **Incoming**.
+
+{% endstep %}
+{% step %}
+
+#### Check for a closed deal
+
+If the deal is Closed Won or Closed Lost, it cannot change stages. For a new sales pursuit, create a new opportunity rather than trying to reopen it.
+
+{% endstep %}
+{% endstepper %}
 
 **Expected result:** an eligible change succeeds, or a pending request clearly identifies the next approver.
 
@@ -55,9 +107,29 @@ See [Managing revisions](../05-quotations-and-revisions.md#managing-revisions).
 
 ## Account creation needs a currency
 
-1. In the account form or lead conversion wizard, find **Currency**.
-2. Select the customer's billing currency before saving.
-3. If the currency you need is unavailable, ask your administrator to review the configured options.
+{% stepper %}
+{% step %}
+
+#### Find the currency field
+
+In the account form or lead conversion wizard, find **Currency**.
+
+{% endstep %}
+{% step %}
+
+#### Choose a billing currency
+
+Select the customer's billing currency before saving.
+
+{% endstep %}
+{% step %}
+
+#### Ask about missing options
+
+If the currency you need is unavailable, ask your administrator to review the configured options.
+
+{% endstep %}
+{% endstepper %}
 
 **Expected result:** the account has a valid currency before you prepare related pricing.
 
@@ -65,10 +137,36 @@ See [Accounts & contacts](../03-accounts-and-contacts.md).
 
 ## A milestone cannot become Invoiced
 
-1. Check the milestone's current status. Only **Won → Invoiced** is an allowed manual status change.
-2. If it is **Planned**, check the linked funnel. Planned milestones become Won when that funnel reaches Closed Won.
-3. If it is already **Invoiced**, the status cannot be reverted.
-4. The current repository screens show status badges without a status-editing control. If your deployed version also has no action, contact your administrator or support team; this is not necessarily a permission issue.
+{% stepper %}
+{% step %}
+
+#### Check the current status
+
+Check the milestone's current status. Only **Won → Invoiced** is an allowed manual status change.
+
+{% endstep %}
+{% step %}
+
+#### Check the linked funnel
+
+If it is **Planned**, check the linked funnel. Planned milestones become Won when that funnel reaches Closed Won.
+
+{% endstep %}
+{% step %}
+
+#### Check whether billing is already recorded
+
+If it is already **Invoiced**, the status cannot be reverted.
+
+{% endstep %}
+{% step %}
+
+#### Check the interface limitation
+
+The current repository screens show status badges without a status-editing control. If your deployed version also has no action, contact your administrator or support team; this is not necessarily a permission issue.
+
+{% endstep %}
+{% endstepper %}
 
 {% hint style="warning" %}
 Record the customer's actual commercial outcome. Do not close a deal as Won just to enable a milestone action.
@@ -80,10 +178,36 @@ See [Payment milestones](../06-payment-milestones.md).
 
 ## The quotation PDF looks wrong
 
-1. Open the quotation's **Preview** and review the template, recipient, items, totals, and terms.
-2. Open the print/PDF action and check the browser's print preview before saving.
-3. Choose **Save as PDF**. Check page breaks, clipped text, and all totals in the saved file.
-4. If the issue remains, note the quotation number, selected template, browser, and the affected page when reporting it.
+{% stepper %}
+{% step %}
+
+#### Review the quotation preview
+
+Open the quotation's **Preview** and review the template, recipient, items, totals, and terms.
+
+{% endstep %}
+{% step %}
+
+#### Check the print preview
+
+Open the print/PDF action and check the browser's print preview before saving.
+
+{% endstep %}
+{% step %}
+
+#### Save and inspect the PDF
+
+Choose **Save as PDF**. Check page breaks, clipped text, and all totals in the saved file.
+
+{% endstep %}
+{% step %}
+
+#### Report remaining layout issues
+
+If the issue remains, note the quotation number, selected template, browser, and the affected page when reporting it.
+
+{% endstep %}
+{% endstepper %}
 
 **Expected result:** the saved PDF reflects the quotation preview and includes all pages you intend to share.
 

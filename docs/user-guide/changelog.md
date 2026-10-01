@@ -7,6 +7,14 @@ icon: clock-rotate-left
 
 This page tracks documentation updates. Feature availability depends on the application version deployed for your organization, your permissions, and enabled modules.
 
+## October 1, 2026 — Full documentation and reference
+
+* Added a dedicated documentation overview and sidebar section.
+* Added terminology, stages and statuses, and permissions and approval-routing references.
+* Added a product changelog sourced from merged changes, separate from guide updates.
+* Rebuilt the landing page with linked guide cards and a first-time walkthrough.
+* Converted procedures and role checklists to GitBook step blocks.
+
 ## October 1, 2026 — Easier navigation and clearer workflows
 
 * Added quick start, troubleshooting, and FAQs to the sidebar.

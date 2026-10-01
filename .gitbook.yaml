@@ -2,3 +2,16 @@ root: ./docs/user-guide
 structure:
   readme: README.md
   summary: SUMMARY.md
+
+redirects:
+  customer-core-crm/02-leads-management: 02-leads-management.md
+  customer-core-crm/03-accounts-and-contacts: 03-accounts-and-contacts.md
+  sales-pipeline/04-opportunities-and-funnel: 04-opportunities-and-funnel.md
+  sales-pipeline/05-quotations-and-revisions: 05-quotations-and-revisions.md
+  sales-pipeline/06-payment-milestones: 06-payment-milestones.md
+  delivery-and-operations/07-projects-and-sales-orders: 07-projects-and-sales-orders.md
+  delivery-and-operations/08-approvals-inbox: 08-approvals-inbox.md
+  system-administration/09-admin-and-settings: 09-admin-and-settings.md
+  help-and-updates/troubleshooting: help-center/troubleshooting.md
+  help-and-updates/faqs: help-center/faqs.md
+  help-and-updates/changelog: changelog.md

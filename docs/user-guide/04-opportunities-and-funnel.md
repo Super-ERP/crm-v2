@@ -7,6 +7,8 @@ icon: filter
 
 Qualify a customer need and keep each sales pursuit at the right stage.
 
+**New to these terms?** Read the [terminology reference](reference/terminology.md#opportunity).
+
 ## On this page
 
 * [Record PPVVC](#the-ppvvc-qualification-framework)
@@ -18,8 +20,9 @@ Qualify a customer need and keep each sales pursuit at the right stage.
 ## The Opportunity Model
 
 In Q-App, sales pursuits are managed through a structured two-tier structure:
-1. **Opportunity Container**: The top-level commercial record holding overall customer relationship context, PPVVC qualification, and target budget.
-2. **Funnel Deal**: The active sales pursuit tracking the exact deal stage, line items, quotations, costs, and closing timeline.
+
+* **Opportunity Container**: The top-level commercial record holding overall customer relationship context, PPVVC qualification, and target budget.
+* **Funnel Deal**: The active sales pursuit tracking the exact deal stage, line items, quotations, costs, and closing timeline.
 
 ### Opportunity Codes
 Every Opportunity is assigned a system-generated, immutable identifier:
@@ -66,17 +69,17 @@ flowchart TD
 
 ### Stage Definitions
 
-1. **`0e` Identified**: Initial scoping after lead conversion or new pursuit creation.
-2. **`1d` Qualified**: Active stakeholder discussions and requirement gathering.
-3. **`2c` Proposal**: Technical and commercial feasibility assessment; drafting architecture.
-4. **`3b` Negotiation**: Formal proposal and quotation submitted to the client.
-5. **`4a` Commit**:
+* **`0e` Identified**: Initial scoping after lead conversion or new pursuit creation.
+* **`1d` Qualified**: Active stakeholder discussions and requirement gathering.
+* **`2c` Proposal**: Technical and commercial feasibility assessment; drafting architecture.
+* **`3b` Negotiation**: Formal proposal and quotation submitted to the client.
+* **`4a` Commit**:
    * **Project Code Allocation**: The moment a deal enters stage `4a` for the first time, the system **automatically allocates the official Delivery Project Code**. This allows delivery managers to begin resource planning before final contract signature.
-6. **Closed Won** *(Terminal)*:
+* **Closed Won** *(Terminal)*:
    * Contract executed and deal won.
    * **Automatic Action**: Sets live Planned payment milestones to `Won`; Invoiced milestones retain their status.
    * Locks the stage from further changes.
-7. **Closed Lost** *(Terminal)*:
+* **Closed Lost** *(Terminal)*:
    * Prospect decided against the purchase or chose a competitor.
    * Requires written **Lost reason (close remarks)**. Complete any other fields requested by your organization.
 
@@ -93,6 +96,7 @@ flowchart TD
 ## Multi-Year Contracts and Deal Costs
 
 Inside the Funnel detail page:
+
 * **Contract Panel**: For multi-year service contracts, specify annual breakdown figures (Year 1, Year 2, Year 3 ARR) to support financial forecasting.
 * **Costs Panel**: Record estimated third-party vendor costs, hardware procurement, or subcontractor fees to track gross margin before issuing quotes.
 

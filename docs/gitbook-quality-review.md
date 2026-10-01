@@ -68,3 +68,22 @@ again with the Mermaid CLI (neutral theme, Arial, white background, scale 2),
 replace the corresponding asset, and update its alt text and caption if needed.
 Keep user-visible instructions in text as well as diagrams. Local assets remain
 inside the mapped GitBook space so sync can resolve them.
+
+## Full documentation and reference follow-up
+
+Added a dedicated Documentation overview with nested module guides, a Reference
+section covering terminology, stages/statuses, and permissions/approval routing,
+and a Changelog section separating product changes from guide updates. The
+landing page now uses GitBook cards and a first-time stepper. All procedures and
+role checklists use native step blocks; definitions remain reference lists/tables.
+Product-change dates come from merged PRs #238–#241 and do not claim deployments.
+Legacy grouped URLs are mapped through redirects in both GitBook configurations.
+
+GitBook format references: [Stepper](https://gitbook.com/docs/create-content/blocks/stepper)
+and [Cards](https://gitbook.com/docs/create-content/blocks/cards).
+
+Follow-up validation: 19 pages and 19 unique navigation entries; 168 Markdown
+links/anchors plus four landing-card targets; 27 balanced steppers containing 103
+titled steps; 11 existing redirect targets in each GitBook configuration. No
+plain numbered procedures remain. Existing Mermaid source and PNG assets are
+unchanged. `git diff --check` passed.
