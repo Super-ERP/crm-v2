@@ -1,6 +1,6 @@
-# Super-ERP (Quandatics CRM) End-to-End User Guide
+# Q-App End-to-End User Guide
 
-A complete, practical guide to operating Super-ERP (Quandatics CRM v2) through the web interface across the full customer lifecycle.
+A complete, practical guide to operating Q-App through the web interface across the full customer lifecycle.
 
 ---
 
@@ -21,7 +21,7 @@ A complete, practical guide to operating Super-ERP (Quandatics CRM v2) through t
 
 ## System Overview & Lifecycle
 
-Super-ERP connects sales, delivery, and commercial planning through a single business lifecycle:
+Q-App connects sales, delivery, and commercial planning through a single business lifecycle:
 
 ```mermaid
 flowchart LR
@@ -62,7 +62,7 @@ A **Lead** (`/leads`) captures unverified inbound interest (web forms, events, r
 ### Creating & Qualifying Leads
 1. Navigate to **CRM → Leads** and click **+ New Lead**.
 2. Complete contact details, company name, lead source, estimated value, and assigned owner.
-3. Advance the lead status: `New` ➔ `Contacted` ➔ `Qualified` or `Disqualified`.
+3. Advance the lead status: `New` -> `Contacted` -> `Qualified` or `Disqualified`.
 4. If **Disqualified**, select a required reason (e.g., *No Budget, Out of Scope*). Disqualified leads can be restored back to `Contacted` at any time.
 
 ### The Conversion Transaction (`/leads/[id]/convert`)

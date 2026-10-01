@@ -17,7 +17,7 @@ As a sales representative, your primary objective is capturing interest, qualify
 {% step %}
 #### Review Assigned Leads
 * Open **CRM → Leads** and set your view to *"My Open Leads"*.
-* Reach out to new prospects and update their status from `New` ➔ `Contacted`.
+* Reach out to new prospects and update their status from `New` -> `Contacted`.
 * If a prospect is disqualified, select a structured reason (*No Budget, Out of Scope*).
 {% endstep %}
 
@@ -31,7 +31,7 @@ As a sales representative, your primary objective is capturing interest, qualify
 #### Complete PPVVC & Advance Pipeline
 * Open **Sales → Funnel** and select your deal.
 * Fill out the **PPVVC** panel (*Power Sponsor, Pain, Vision, Value, Control*).
-* Advance the deal stage as discovery progresses (`0e` ➔ `1d` ➔ `2c` ➔ `3b`).
+* Advance the deal stage as discovery progresses (`0e` -> `1d` -> `2c` -> `3b`).
 {% endstep %}
 
 {% step %}

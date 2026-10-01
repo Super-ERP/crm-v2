@@ -13,7 +13,7 @@ The **Approvals Hub** (`/approvals`) is a unified inbox designed for **Managers 
 │ Pending Approvals Queue                                │
 ├────────────────────────────────────────────────────────┤
 │ • Quotation QDT-2026-0042 (18% Discount Request)       │
-│ • Stage Advance: Acme Corp (Stage 3b ➔ 4a Commit) │
+│ • Stage Advance: Acme Corp (Stage 3b -> 4a Commit) │
 └────────────────────────────────────────────────────────┘
 ```
 

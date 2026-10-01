@@ -53,7 +53,7 @@ jobs:
           jq -e '
             (.source_commit | test("^[0-9a-f]{40}$")) and
             (.images | length == 4) and
-            all(.images[]; (.image_ref | test("^ghcr.io/super-erp/crm-[a-z-]+@sha256:[0-9a-f]{64}$")))
+            all(.images[]; (.image_ref | test("^ghcr.io/q-app/crm-[a-z-]+@sha256:[0-9a-f]{64}$")))
           ' "$manifest" >/dev/null
           source_sha="$(jq -er '.source_commit' "$manifest")"
           web_image="$(jq -er '.images[] | select(.name == "web") | .image_ref' "$manifest")"

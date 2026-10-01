@@ -17,7 +17,7 @@ describe("createGithubIssue", () => {
 
     expect(result).toEqual({ number: 42 })
     expect(fetchImpl).toHaveBeenCalledWith(
-      "https://api.github.com/repos/Super-ERP/crm-v2/issues",
+      "https://api.github.com/repos/Q-App/crm-v2/issues",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
