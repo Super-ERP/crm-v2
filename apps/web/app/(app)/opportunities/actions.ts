@@ -6,7 +6,9 @@ import { withTenant } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
 import { runAction, type ActionResult } from "@/lib/action-result"
 import { recordChanges } from "@/server/services/changes/record"
-import { opportunitiesList, opportunitiesGet } from "@/lib/api-readers"
+import { opportunitiesList, opportunitiesGet, opportunitiesFilterOptions } from "@/lib/api-readers"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import {
   visibleMemberIds,
   ownsOrManages,
@@ -38,19 +40,13 @@ export type OpportunityContainerRow = {
   createdAt: Date
 }
 
-// The original query had no .limit() — every visible container was returned.
-// Preserve that by passing an effectively-unbounded page to the shared reader.
-const UNBOUNDED_LIMIT = 1_000_000
+export async function listOpportunityPage(input: ServerTableQuery): Promise<{ rows: OpportunityContainerRow[]; total: number }> {
+  return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => opportunitiesList(tx, ctx,
+    normalizeRecordListQuery(input, ["name", "accountId", "totalEstimatedFunnelAmount", "funnelCount", "accountOwnerMemberId"], ["accountId", "accountOwnerMemberId"])))
+}
 
-/** All Opportunity containers visible to the caller, with funnel counts. */
-export async function listOpportunities(): Promise<OpportunityContainerRow[]> {
-  return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, async (tx, ctx) => {
-    const { rows } = await opportunitiesList(tx, ctx, {
-      limit: UNBOUNDED_LIMIT,
-      offset: 0,
-    })
-    return rows
-  })
+export async function listOpportunityFilterOptions() {
+  return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => opportunitiesFilterOptions(tx, ctx))
 }
 
 export type OpportunityContainerDetail = {

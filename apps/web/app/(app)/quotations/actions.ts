@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
 import { runAction, type ActionResult } from "@/lib/action-result"
-import { quotationsList, quotationsGet } from "@/lib/api-readers"
+import { quotationsList, quotationsGet, quotationsFilterOptions, type QuotationFilterOptions } from "@/lib/api-readers"
+import { normalizeQuotationListQuery } from "@/lib/quotation-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import { assertValidQuotationNumbers } from "@/lib/validation-quotation"
 import {
   visibleMemberIds,
@@ -109,15 +111,15 @@ export type QuotationDetail = {
   accountName: string | null
 }
 
-/** Largest page returned by the list action (mirrors the original inline .limit(500)). */
-const LIST_LIMIT = 500
-
-/** All non-deleted quotations with their opportunity name, newest first. */
-export async function listQuotations(): Promise<QuotationListItem[]> {
+/** One bounded page, filtered and sorted across all visible quotations. */
+export async function listQuotationPage(input: ServerTableQuery): Promise<{ rows: QuotationListItem[]; total: number }> {
   return withTenant(PERMISSIONS.QUOTATION_VIEW, async (tx, ctx) => {
-    const { rows } = await quotationsList(tx, ctx, { limit: LIST_LIMIT, offset: 0 })
-    return rows
+    return quotationsList(tx, ctx, normalizeQuotationListQuery(input))
   })
+}
+
+export async function listQuotationFilterOptions(): Promise<QuotationFilterOptions> {
+  return withTenant(PERMISSIONS.QUOTATION_VIEW, (tx, ctx) => quotationsFilterOptions(tx, ctx))
 }
 
 export async function getQuotation(id: string): Promise<QuotationDetail | null> {

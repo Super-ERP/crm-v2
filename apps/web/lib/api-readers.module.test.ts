@@ -8,6 +8,7 @@ import {
   funnelStageHistory,
   intercompanyDealParties,
   intercompanyDeals,
+  leads,
   member,
   opportunities,
   persons,
@@ -17,7 +18,7 @@ import {
   stageApprovalRequests,
 } from "@/db/schema"
 import { createDisabledModuleMap } from "@/lib/module-registry"
-import { funnelsGet, funnelsList, personsGet, quotationsList } from "@/lib/api-readers"
+import { accountsList, funnelsGet, funnelsList, leadsList, opportunitiesList, personsGet, personsList, quotationsList } from "@/lib/api-readers"
 import type { QuotationStatus } from "@/lib/quotation-transitions"
 import type { Tx } from "@/db"
 import type { ServerContext } from "@/lib/server-context"
@@ -48,10 +49,14 @@ const ctx = {
 function tableTx(entries: Array<[object, unknown[]]>): Tx & {
   whereCalls: Array<{ table: object | undefined; condition: unknown }>
   joins: object[]
+  limits: number[]
+  offsets: number[]
 } {
   const queues = new Map(entries.map(([table, values]) => [table, [...values]]))
   const whereCalls: Array<{ table: object | undefined; condition: unknown }> = []
   const joins: object[] = []
+  const limits: number[] = []
+  const offsets: number[] = []
   return {
     select: vi.fn(() => {
       let value: unknown = []
@@ -77,8 +82,14 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
         }),
         orderBy: vi.fn(() => chain),
         groupBy: vi.fn(() => chain),
-        limit: vi.fn(() => chain),
-        offset: vi.fn(() => chain),
+        limit: vi.fn((value: number) => {
+          limits.push(value)
+          return chain
+        }),
+        offset: vi.fn((value: number) => {
+          offsets.push(value)
+          return chain
+        }),
         then: (resolve: (result: unknown) => unknown, reject: (error: unknown) => unknown) =>
           promise().then(resolve, reject),
       }
@@ -86,9 +97,13 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
     }),
     whereCalls,
     joins,
+    limits,
+    offsets,
   } as unknown as Tx & {
     whereCalls: Array<{ table: object | undefined; condition: unknown }>
     joins: object[]
+    limits: number[]
+    offsets: number[]
   }
 }
 
@@ -214,6 +229,68 @@ describe("module-owned nested API readers", () => {
     })
     expect(tx.joins).toContain(accounts)
     expect(tx.joins).toContain(opportunities)
+  })
+
+  it("applies quotation search and filters before limiting a page", async () => {
+    const tx = tableTx([[quotations, [[], [{ count: 42 }]]]])
+    await quotationsList(tx, ctx, {
+      limit: 25,
+      offset: 50,
+      query: { search: "Acme", accountIds: ["account-1"], statuses: ["draft"] },
+    })
+
+    expect(tx.limits).toEqual([25])
+    expect(tx.offsets).toEqual([50])
+    const where = tx.whereCalls.filter(({ table }) => table === quotations)
+    expect(where).toHaveLength(2)
+    for (const call of where) {
+      const compiled = new PgDialect().sqlToQuery(call.condition as SQL<unknown>)
+      expect(compiled.params).toContain("account-1")
+      expect(compiled.params).toContain("draft")
+      expect(compiled.params).toContain("%Acme%")
+    }
+  })
+
+  it("uses the same bounded funnel stage, owner, and search conditions for rows and totals", async () => {
+    const tx = tableTx([[funnels, [[], [{ count: 31, valueTotal: "130000" }]]]])
+    const result = await funnelsList(tx, ctx, {
+      limit: 25, offset: 25, stageId: "stage-1",
+      query: { search: "Acme", selections: { accountOwnerMemberId: ["member-2"], status: ["open"] } },
+    })
+    expect(result).toMatchObject({ total: 31, valueTotal: "130000" })
+    expect(tx.limits).toEqual([25])
+    expect(tx.offsets).toEqual([25])
+    const where = tx.whereCalls.filter(({ table }) => table === funnels)
+    expect(where).toHaveLength(2)
+    for (const call of where) {
+      const params = new PgDialect().sqlToQuery(call.condition as SQL<unknown>).params
+      expect(params).toContain("stage-1")
+      expect(params).toContain("member-2")
+      expect(params).toContain("open")
+      expect(params).toContain("%Acme%")
+    }
+  })
+
+  it("filters accounts, contacts, leads, and opportunities before their page limits", async () => {
+    const cases = [
+      { table: accounts, run: (tx: Tx) => accountsList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { industry: ["Technology"] } } }), selected: "Technology" },
+      { table: persons, run: (tx: Tx) => personsList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { accountName: ["Acme"] } } }), selected: "Acme" },
+      { table: leads, run: (tx: Tx) => leadsList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { status: ["new"] } } }), selected: "new" },
+      { table: opportunities, run: (tx: Tx) => opportunitiesList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { accountId: ["account-1"] } } }), selected: "account-1" },
+    ]
+    for (const item of cases) {
+      const tx = tableTx([[item.table, [[], [{ count: 0 }]]]])
+      await item.run(tx)
+      expect(tx.limits).toEqual([25])
+      expect(tx.offsets).toEqual([50])
+      const where = tx.whereCalls.filter(({ table }) => table === item.table)
+      expect(where).toHaveLength(2)
+      for (const call of where) {
+        const params = new PgDialect().sqlToQuery(call.condition as SQL<unknown>).params
+        expect(params).toContain("%Acme%")
+        expect(params).toContain(item.selected)
+      }
+    }
   })
 
   it("does not query or return parties or partner responses from funnel detail", async () => {

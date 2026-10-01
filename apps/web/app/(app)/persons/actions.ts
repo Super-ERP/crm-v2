@@ -5,6 +5,8 @@ import { and, eq, isNull, ne } from "drizzle-orm"
 import { withTenant, type Tx } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
 import { personsList, personsGet } from "@/lib/api-readers"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import {
   visibleMemberIds,
   ownsOrManages,
@@ -20,9 +22,6 @@ import {
   normalizePhoneInput,
   normalizeTextInput,
 } from "@/lib/input-validation"
-
-/** Largest page we ever return from a list endpoint (defense against unbounded scans). */
-const LIST_LIMIT = 1000
 
 export type PersonRow = typeof persons.$inferSelect
 
@@ -88,11 +87,9 @@ export type PersonInput = {
 }
 
 /** All non-deleted persons with their account name resolved. */
-export async function listPersons(): Promise<PersonListItem[]> {
-  return withTenant(PERMISSIONS.PERSON_VIEW, async (tx, ctx) => {
-    const { rows } = await personsList(tx, ctx, { limit: LIST_LIMIT, offset: 0 })
-    return rows
-  })
+export async function listPersonPage(input: ServerTableQuery): Promise<{ rows: PersonListItem[]; total: number }> {
+  return withTenant(PERMISSIONS.PERSON_VIEW, (tx, ctx) => personsList(tx, ctx,
+    normalizeRecordListQuery(input, ["name", "accountName", "title", "email", "primary"], ["accountName", "primary"])))
 }
 
 /**

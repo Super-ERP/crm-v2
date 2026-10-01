@@ -34,7 +34,7 @@ import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
 import type { Option, CountryOption } from "@/lib/lookups"
 import { AccountForm } from "./account-form"
-import { deleteAccount, restoreAccount, type AccountListItem } from "./actions"
+import { deleteAccount, restoreAccount, listAccountPage, type AccountListItem } from "./actions"
 
 function RowActions({
   account,
@@ -165,14 +165,16 @@ function RowActions({
 }
 
 export function AccountsTable({
-  data,
+  initialPage,
+  filterOptions,
   parentOptions,
   industries,
   countries,
   currencies,
   presets,
 }: {
-  data: AccountListItem[]
+  initialPage: { rows: AccountListItem[]; total: number }
+  filterOptions: { types: string[]; industries: string[]; owners: string[] }
   parentOptions: Option[]
   industries: string[]
   countries: CountryOption[]
@@ -180,6 +182,7 @@ export function AccountsTable({
   /** Tenant form presets (default country / phone prefix) for the create form. */
   presets?: { defaultCountry: string; phonePrefix: string }
 }) {
+  const data = initialPage.rows
   const router = useRouter()
   const perms = usePermissions()
   const canCreate = perms.has(PERMISSIONS.ACCOUNT_CREATE)
@@ -278,12 +281,12 @@ export function AccountsTable({
     <DataTable
       columns={columns}
       data={data}
+      server={{ total: initialPage.total, loadPage: listAccountPage }}
       tableId="accounts"
-      cap={1000}
       filters={[
-        { type: "enum", columnId: "accountType", title: "Type", options: Array.from(new Set(data.map((row) => row.accountType).filter((value): value is string => Boolean(value)))).map((value) => ({ value, label: value })) },
-        { type: "enum", columnId: "industry", title: "Industry", options: Array.from(new Set(data.map((row) => row.industry).filter((value): value is string => Boolean(value)))).map((value) => ({ value, label: value })) },
-        { type: "relation", columnId: "ownerName", title: "Owner", options: Array.from(new Set(data.map((row) => row.ownerName).filter((value): value is string => Boolean(value)))).map((value) => ({ value, label: value })) },
+        { type: "enum", columnId: "accountType", title: "Type", options: filterOptions.types.map((value) => ({ value, label: value })) },
+        { type: "enum", columnId: "industry", title: "Industry", options: filterOptions.industries.map((value) => ({ value, label: value })) },
+        { type: "relation", columnId: "ownerName", title: "Owner", options: filterOptions.owners.map((value) => ({ value, label: value })) },
       ]}
       searchColumn="name"
       searchPlaceholder="Search accounts…"

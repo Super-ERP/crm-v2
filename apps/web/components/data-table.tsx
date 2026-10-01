@@ -59,6 +59,7 @@ import { EmptyState } from "@/components/empty-state"
 import { SavedViewMenu } from "@/components/saved-view-menu"
 import type { SavedViewPayload } from "@/lib/saved-views"
 import { applySavedViewPayload } from "@/lib/data-table-saved-views"
+import { normalizeTablePageSize, TABLE_PAGE_SIZES, type ServerTableQuery } from "@/lib/table-pagination"
 import type { LucideIcon } from "lucide-react"
 import {
   DropdownMenu,
@@ -99,7 +100,7 @@ export interface DataTableProps<TData, TValue> {
   emptyAction?: React.ReactNode
   toolbar?: React.ReactNode
   /** Render a second view using the same filtered rows and toolbar state. */
-  renderFilteredView?: (rows: TData[]) => React.ReactNode
+  renderFilteredView?: (rows: TData[], query: ServerTableQuery) => React.ReactNode
   pageSize?: number
   /** Typed, datatype-aware column filters. */
   filters?: DataTableFilterDefinition[]
@@ -114,6 +115,11 @@ export interface DataTableProps<TData, TValue> {
    * know the list is truncated and should refine their search.
    */
   cap?: number
+  /** Fetch a bounded page after search, filters, sorting, or page controls change. */
+  server?: {
+    total: number
+    loadPage: (query: ServerTableQuery) => Promise<{ rows: TData[]; total: number }>
+  }
 }
 
 const facetFilterFn = (
@@ -180,6 +186,7 @@ export function DataTable<TData, TValue>({
   tableId,
   savedViews = true,
   cap,
+  server,
 }: DataTableProps<TData, TValue>) {
   const filterIds = React.useMemo(
     () => new Set((filters ?? []).map((filter) => filter.columnId)),
@@ -250,7 +257,10 @@ export function DataTable<TData, TValue>({
     if (hidden) for (const c of hidden.split(",")) columnVisibility[c] = false
 
     const pageIndex = Math.max(0, (Number(searchParams.get(key("page"))) || 1) - 1)
-    const size = Number(searchParams.get(key("size"))) || pageSize
+    const requestedSize = Number(searchParams.get(key("size")))
+    const size = TABLE_PAGE_SIZES.some((option) => option === requestedSize)
+      ? requestedSize
+      : pageSize
 
     return {
       sorting,
@@ -277,6 +287,13 @@ export function DataTable<TData, TValue>({
     initial.pagination
   )
   const [rowSelection, setRowSelection] = React.useState({})
+  const [serverRows, setServerRows] = React.useState(data)
+  const [serverTotal, setServerTotal] = React.useState(server?.total ?? data.length)
+  const [serverLoading, setServerLoading] = React.useState(false)
+  const [serverError, setServerError] = React.useState(false)
+  const [refreshKey, setRefreshKey] = React.useState(0)
+  const serverLoadPage = server?.loadPage
+  const serverInitialTotal = server?.total
 
   const hasInitialUrlState =
     initial.sorting.length > 0 ||
@@ -285,6 +302,56 @@ export function DataTable<TData, TValue>({
     Object.keys(initial.columnVisibility).length > 0 ||
     initial.pagination.pageIndex > 0 ||
     initial.pagination.pageSize !== pageSize
+
+  const skipFirstServerFetch = React.useRef(!hasInitialUrlState)
+  const initialDataSynced = React.useRef(false)
+  React.useEffect(() => {
+    if (serverInitialTotal == null) return
+    if (!initialDataSynced.current) {
+      initialDataSynced.current = true
+      return
+    }
+    setServerRows(data)
+    setServerTotal(serverInitialTotal)
+    setRefreshKey((key) => key + 1)
+  }, [data, serverInitialTotal])
+
+  React.useEffect(() => {
+    if (!serverLoadPage) return
+    if (skipFirstServerFetch.current) {
+      skipFirstServerFetch.current = false
+      return
+    }
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      setServerLoading(true)
+      setServerError(false)
+      serverLoadPage({
+        pageIndex: pagination.pageIndex,
+        pageSize: pagination.pageSize,
+        search: globalFilter,
+        sorting,
+        filters: columnFilters as ServerTableQuery["filters"],
+      }).then((result) => {
+        if (cancelled) return
+        setServerRows(result.rows)
+        setServerTotal(result.total)
+        setServerLoading(false)
+        const lastPage = Math.max(0, Math.ceil(result.total / pagination.pageSize) - 1)
+        if (pagination.pageIndex > lastPage) {
+          setPagination((current) => ({ ...current, pageIndex: lastPage }))
+        }
+      }).catch(() => {
+        if (cancelled) return
+        setServerLoading(false)
+        setServerError(true)
+      })
+    }, globalFilter ? 180 : 0)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [serverLoadPage, pagination.pageIndex, pagination.pageSize, globalFilter, sorting, columnFilters, refreshKey])
 
   // Write state back to the URL whenever it changes, using history.replaceState
   // (NOT router.replace): a soft router navigation re-runs the server component,
@@ -368,7 +435,7 @@ export function DataTable<TData, TValue>({
   ])
 
   const table = useReactTable({
-    data,
+    data: server ? serverRows : data,
     columns: tableColumns,
     state: {
       sorting,
@@ -378,9 +445,18 @@ export function DataTable<TData, TValue>({
       pagination,
       rowSelection,
     },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onGlobalFilterChange: setGlobalFilter,
+    onSortingChange: (updater) => {
+      setSorting(updater)
+      setPagination((current) => ({ ...current, pageIndex: 0 }))
+    },
+    onColumnFiltersChange: (updater) => {
+      setColumnFilters(updater)
+      setPagination((current) => ({ ...current, pageIndex: 0 }))
+    },
+    onGlobalFilterChange: (updater) => {
+      setGlobalFilter(updater)
+      setPagination((current) => ({ ...current, pageIndex: 0 }))
+    },
     globalFilterFn,
     onColumnVisibilityChange: setColumnVisibility,
     onPaginationChange: setPagination,
@@ -391,6 +467,10 @@ export function DataTable<TData, TValue>({
     getPaginationRowModel: getPaginationRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    manualPagination: !!server,
+    manualFiltering: !!server,
+    manualSorting: !!server,
+    rowCount: server ? serverTotal : undefined,
   })
 
   // Search is shown whenever a caller opts in via `searchColumn` (kept as the
@@ -427,10 +507,10 @@ export function DataTable<TData, TValue>({
       setColumnFilters(result.columnFilters)
       setGlobalFilter(payload.filters.global ?? "")
       setColumnVisibility(result.columnVisibility)
-      setPagination({ pageIndex: 0, pageSize: result.pageSize })
+      setPagination({ pageIndex: 0, pageSize: server ? normalizeTablePageSize(result.pageSize) : result.pageSize })
       if (result.stale) toast.warning("Some saved view columns are no longer available.")
     },
-    [columns, facets, filters]
+    [columns, facets, filters, server]
   )
 
   const resetToBaseView = React.useCallback(() => {
@@ -451,14 +531,20 @@ export function DataTable<TData, TValue>({
               placeholder={searchPlaceholder}
               aria-label={searchPlaceholder}
               value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              onChange={(e) => {
+                setGlobalFilter(e.target.value)
+                setPagination((current) => ({ ...current, pageIndex: 0 }))
+              }}
               className="px-8"
             />
             {globalFilter ? (
               <button
                 type="button"
                 aria-label="Clear search"
-                onClick={() => setGlobalFilter("")}
+                onClick={() => {
+                  setGlobalFilter("")
+                  setPagination((current) => ({ ...current, pageIndex: 0 }))
+                }}
                 className="absolute top-1/2 right-2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
               >
                 <X className="size-4" />
@@ -494,6 +580,7 @@ export function DataTable<TData, TValue>({
               onClick={() => {
                 setColumnFilters([])
                 setGlobalFilter("")
+                setPagination((current) => ({ ...current, pageIndex: 0 }))
               }}
               className="text-muted-foreground"
             >
@@ -502,7 +589,7 @@ export function DataTable<TData, TValue>({
           ) : null}
         </div>
 
-        <div className={cn("ml-auto flex items-center gap-2", renderFilteredView && "order-2 shrink-0")}>
+        <div className={cn("ml-auto flex flex-wrap items-center justify-end gap-2", renderFilteredView && "order-2 shrink-0")}>
           {toolbar}
           {tableId && savedViews ? (
             <SavedViewMenu
@@ -543,13 +630,23 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      {cap != null && data.length >= cap ? (
+      {serverError ? (
+        <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive/30 px-3 py-2 text-sm">
+          Could not load this page.
+          <Button variant="outline" size="sm" onClick={() => setRefreshKey((key) => key + 1)}>Retry</Button>
+        </div>
+      ) : null}
+
+      {!server && cap != null && data.length >= cap ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
           Showing the most recent {cap} — refine your search to see more.
         </div>
       ) : null}
 
-      {renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original)) : <div className="overflow-hidden rounded-lg border">
+      {renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original), {
+        pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, search: globalFilter,
+        sorting, filters: columnFilters as ServerTableQuery["filters"],
+      }) : <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -565,7 +662,9 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? (
+            {serverLoading ? (
+              <TableRow><TableCell colSpan={columns.length} className="py-8 text-center text-muted-foreground">Loading records…</TableCell></TableRow>
+            ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
@@ -591,13 +690,15 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>}
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm text-muted-foreground">
-          {hasActiveFilters
+          {server
+            ? `${serverTotal} matching row(s)`
+            : hasActiveFilters
             ? `${table.getFilteredRowModel().rows.length} of ${data.length} row(s)`
             : `${data.length} row(s)`}
         </span>
-        {!renderFilteredView ? <div className="flex items-center gap-2">
+        {!renderFilteredView ? <div className="flex flex-wrap items-center gap-2">
           <span className="hidden text-sm text-muted-foreground sm:inline">Per page</span>
           <Select
             value={String(table.getState().pagination.pageSize)}
@@ -607,7 +708,7 @@ export function DataTable<TData, TValue>({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[25, 50, 100].map((n) => (
+              {[...new Set([pageSize, ...TABLE_PAGE_SIZES])].sort((a, b) => a - b).map((n) => (
                 <SelectItem key={n} value={String(n)}>
                   {n}
                 </SelectItem>
@@ -964,6 +1065,9 @@ function OptionFilter({
   const options = (definition.options ?? []).filter((option) =>
     option.label.toLocaleLowerCase().includes(query.toLocaleLowerCase())
   )
+  const displayedOptions = options.length > 100
+    ? [...options.filter((option) => selected.has(option.value)), ...options.filter((option) => !selected.has(option.value))].slice(0, 100)
+    : options
 
   function toggle(value: string) {
     const next = new Set(selected)
@@ -990,7 +1094,7 @@ function OptionFilter({
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-0 text-xs text-muted-foreground">{title}</DropdownMenuLabel>
         </DropdownMenuGroup>
-        {definition.type === "relation" ? (
+        {(definition.type === "relation" || (definition.options?.length ?? 0) > 20) ? (
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -1002,7 +1106,7 @@ function OptionFilter({
           <div className="px-1 py-2 text-xs text-muted-foreground">No values</div>
         ) : (
           <DropdownMenuGroup>
-            {options.map((option) => (
+            {displayedOptions.map((option) => (
               <DropdownMenuCheckboxItem
                 key={option.value}
                 checked={selected.has(option.value)}
@@ -1014,6 +1118,9 @@ function OptionFilter({
             ))}
           </DropdownMenuGroup>
         )}
+        {options.length > displayedOptions.length ? (
+          <p className="px-2 py-1 text-xs text-muted-foreground">Showing {displayedOptions.length} of {options.length}. Search to narrow the list.</p>
+        ) : null}
         {active ? (
           <>
             <DropdownMenuSeparator />
@@ -1035,7 +1142,7 @@ function FilterOptionLabel({ label }: { label: string }) {
       <span className="font-mono text-xs font-medium text-muted-foreground">
         {label.slice(0, splitAt)}
       </span>
-      <span className="min-w-0 truncate">
+      <span className="min-w-0 truncate" title={label.slice(splitAt + separator.length)}>
         {label.slice(splitAt + separator.length)}
       </span>
     </span>

@@ -62,10 +62,13 @@ import {
 import { type CustomFunnelField } from "@/lib/stage-gate"
 import {
   funnelsList,
+  funnelsFilterOptions,
   funnelsGet,
   loadPartiesByOpportunity,
   type PartyRow,
 } from "@/lib/api-readers"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import type { QuotationStatus } from "@/lib/quotation-transitions"
 
 export type PartyInput = {
@@ -300,16 +303,26 @@ export type OpportunityInput = {
 // funnels reader) and is imported above; it's still used by the mutation
 // actions below (createOpportunity / updateOpportunity).
 
-// The original query had no .limit() — every visible funnel was returned.
-// Preserve that by passing an effectively-unbounded page to the shared reader.
-const UNBOUNDED_LIMIT = 1_000_000
+const FUNNEL_SORTS = ["id", "accountId", "amount", "expectedCloseDate", "ownerMemberId", "status"]
+const FUNNEL_FILTERS = ["accountId", "opportunityId", "id", "accountOwnerMemberId", "ownerMemberId", "stageId", "status"]
 
-/** All open + closed funnels (non-deleted), with denormalized lookups. */
-export async function listOpportunities(): Promise<OpportunityListRow[]> {
-  return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, async (tx, ctx) => {
-    const { rows } = await funnelsList(tx, ctx, { limit: UNBOUNDED_LIMIT, offset: 0 })
-    return rows
-  })
+export async function listFunnelPage(input: ServerTableQuery): Promise<{ rows: OpportunityListRow[]; total: number }> {
+  return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsList(tx, ctx,
+    normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS)))
+}
+
+export async function listFunnelStagePage(input: ServerTableQuery & { stageId: string }): Promise<{ rows: OpportunityListRow[]; total: number; valueTotal: string }> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.stageId)) {
+    return { rows: [], total: 0, valueTotal: "0" }
+  }
+  return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsList(tx, ctx, {
+    ...normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS),
+    stageId: input.stageId,
+  }))
+}
+
+export async function listFunnelFilterOptions() {
+  return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsFilterOptions(tx, ctx))
 }
 
 export type OpportunityDetail = {

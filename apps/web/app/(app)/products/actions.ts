@@ -1,7 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { and, asc, desc, eq, isNull } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import { withTenant } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
 import { writeAudit } from "@/server/audit"
@@ -48,17 +50,30 @@ function normalizePrice(v?: string | null): string {
   return n.toFixed(2)
 }
 
-/** All non-deleted products in the tenant, by name. */
-export async function listProducts(): Promise<ProductRow[]> {
+/** One bounded, searchable page of products. */
+export async function listProductPage(input: ServerTableQuery): Promise<{ rows: ProductRow[]; total: number }> {
   return withTenant(PERMISSIONS.PRODUCT_VIEW, async (tx, ctx) => {
-    return tx
+    const { limit, offset, query } = normalizeRecordListQuery(input,
+      ["name", "productCode", "subcategory", "uom", "standardPrice", "isActive"], ["productCode", "isActive"])
+    const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+    const active = query.selections.isActive?.includes("true") && !query.selections.isActive.includes("false")
+      ? true : query.selections.isActive?.includes("false") && !query.selections.isActive.includes("true") ? false : undefined
+    const where = and(eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt),
+      search ? or(ilike(products.name, search), ilike(products.productCode, search), ilike(products.subcategory, search), ilike(products.description, search)) : undefined,
+      query.selections.productCode?.length ? inArray(products.productCode, query.selections.productCode) : undefined,
+      active === undefined ? undefined : eq(products.isActive, active))
+    const sortColumns = { name: products.name, productCode: products.productCode, subcategory: products.subcategory, uom: products.uom, standardPrice: products.standardPrice, isActive: products.isActive }
+    const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+    const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : asc(products.name)
+    const [rows, totalRows] = await Promise.all([tx
       .select()
       .from(products)
-      .where(
-        and(eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt))
-      )
-      .orderBy(asc(products.name))
-      .limit(LIST_LIMIT)
+      .where(where)
+      .orderBy(ordering, asc(products.id))
+      .limit(limit).offset(offset),
+      tx.select({ count: sql<number>`count(*)::int` }).from(products).where(where),
+    ])
+    return { rows, total: totalRows[0]?.count ?? 0 }
   })
 }
 

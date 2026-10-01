@@ -9,27 +9,17 @@ import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/status-badge"
 import { Plus } from "lucide-react"
 import { formatMoney, formatDate } from "@/lib/format"
-import type { QuotationListItem } from "./actions"
-
-function relationOptions(
-  rows: QuotationListItem[],
-  getId: (row: QuotationListItem) => string | null,
-  getLabel: (row: QuotationListItem) => string | null
-) {
-  const options = new Map<string, string>()
-  for (const row of rows) {
-    const id = getId(row)
-    const label = getLabel(row)
-    if (id && label) options.set(id, label)
-  }
-  return Array.from(options, ([value, label]) => ({ value, label }))
-}
+import { QUOTATION_STATUSES } from "@/lib/quotation-transitions"
+import type { QuotationFilterOptions } from "@/lib/api-readers"
+import { listQuotationPage, type QuotationListItem } from "./actions"
 
 export function QuotationsTable({
-  data,
+  initialPage,
+  filterOptions,
   canCreate,
 }: {
-  data: QuotationListItem[]
+  initialPage: { rows: QuotationListItem[]; total: number }
+  filterOptions: QuotationFilterOptions
   canCreate: boolean
 }) {
   const columns: ColumnDef<QuotationListItem>[] = [
@@ -157,70 +147,43 @@ export function QuotationsTable({
   return (
     <DataTable
       columns={columns}
-      data={data}
+      data={initialPage.rows}
+      server={{ total: initialPage.total, loadPage: listQuotationPage }}
       tableId="quotations"
-      cap={500}
       filters={[
         {
           type: "relation",
           columnId: "accountId",
           title: "Account",
-          options: relationOptions(
-            data,
-            (row) => row.accountId,
-            (row) =>
-              row.accountName
-                ? [row.accountCode, row.accountName].filter(Boolean).join(" — ")
-                : null
-          ),
+          options: filterOptions.accounts,
         },
         {
           type: "relation",
           columnId: "accountOwnerMemberId",
           title: "Account owner",
-          options: relationOptions(data, (row) => row.accountOwnerMemberId, (row) => row.accountOwnerName),
+          options: filterOptions.accountOwners,
         },
         {
           type: "relation",
           columnId: "opportunityId",
           title: "Opportunity",
-          options: relationOptions(
-            data,
-            (row) => row.opportunityId,
-            (row) =>
-              row.opportunityName
-                ? [row.opportunityCode, row.opportunityName]
-                    .filter(Boolean)
-                    .join(" — ")
-                : null
-          ),
+          options: filterOptions.opportunities,
         },
         {
           type: "relation",
           columnId: "funnelId",
           title: "Funnel",
-          options: relationOptions(
-            data,
-            (row) => row.funnelId,
-            (row) =>
-              row.funnelName
-                ? [row.opportunityCode, row.funnelName]
-                    .filter(Boolean)
-                    .join(" — ")
-                : null
-          ),
+          options: filterOptions.funnels,
         },
         {
           type: "enum",
           columnId: "status",
           title: "Status",
-          options: Array.from(
-            new Set(data.map((row) => row.status).filter(Boolean))
-          ).map((value) => ({ value, label: value })),
+          options: QUOTATION_STATUSES.map((value) => ({ value, label: value.replaceAll("_", " ") })),
         },
       ]}
       searchColumn="quoteNumber"
-      searchPlaceholder="Search by number…"
+      searchPlaceholder="Search quotations…"
       emptyMessage="No quotations yet."
       toolbar={
         canCreate ? (

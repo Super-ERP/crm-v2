@@ -38,6 +38,7 @@ import {
   deletePerson,
   restorePerson,
   setPrimaryPerson,
+  listPersonPage,
   type PersonListItem,
 } from "./actions"
 
@@ -168,14 +169,15 @@ function RowActions({
 }
 
 export function PersonsTable({
-  data,
+  initialPage,
   accounts,
   defaultCountry,
 }: {
-  data: PersonListItem[]
+  initialPage: { rows: PersonListItem[]; total: number }
   accounts: Option[]
   defaultCountry?: string
 }) {
+  const data = initialPage.rows
   const router = useRouter()
   const perms = usePermissions()
   const canCreate = perms.has(PERMISSIONS.PERSON_CREATE)
@@ -275,6 +277,7 @@ export function PersonsTable({
     <DataTable
       columns={columns}
       data={data}
+      server={{ total: initialPage.total, loadPage: listPersonPage }}
       searchColumn="name"
       searchPlaceholder="Search contacts…"
       emptyIcon={Users}
@@ -296,11 +299,10 @@ export function PersonsTable({
         ) : undefined
       }
       filters={[
-        { type: "relation", columnId: "accountName", title: "Account", options: Array.from(new Set(data.map((row) => row.accountName).filter((value): value is string => Boolean(value)))).map((value) => ({ value, label: value })) },
+        { type: "relation", columnId: "accountName", title: "Account", options: accounts.map((account) => ({ value: account.name, label: account.name })) },
         { type: "enum", columnId: "primary", title: "Primary", options: [{ value: "Primary", label: "Primary" }, { value: "Other", label: "Other" }] },
       ]}
       tableId="persons"
-      cap={1000}
       toolbar={
         canCreate ? (
           <PersonForm

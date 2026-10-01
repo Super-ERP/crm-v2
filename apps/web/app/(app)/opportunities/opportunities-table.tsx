@@ -7,23 +7,12 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable, SortableHeader, linkCell } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
 import { formatMoney } from "@/lib/format"
-import type { OpportunityContainerRow } from "./actions"
+import { listOpportunityPage, type OpportunityContainerRow } from "./actions"
 
-function relationOptions(
-  rows: OpportunityContainerRow[],
-  getId: (row: OpportunityContainerRow) => string | null,
-  getLabel: (row: OpportunityContainerRow) => string | null
-) {
-  const options = new Map<string, string>()
-  for (const row of rows) {
-    const id = getId(row)
-    const label = getLabel(row)
-    if (id && label) options.set(id, label)
-  }
-  return Array.from(options, ([value, label]) => ({ value, label }))
-}
-
-export function OpportunitiesTable({ data }: { data: OpportunityContainerRow[] }) {
+export function OpportunitiesTable({ initialPage, filterOptions }: {
+  initialPage: { rows: OpportunityContainerRow[]; total: number }
+  filterOptions: { accounts: Array<{ value: string; label: string }>; owners: Array<{ value: string; label: string }> }
+}) {
   const columns = React.useMemo<ColumnDef<OpportunityContainerRow>[]>(
     // Opportunity name and code are identical system-generated values, so the
     // list renders one identifier column instead of duplicating it.
@@ -85,29 +74,21 @@ export function OpportunitiesTable({ data }: { data: OpportunityContainerRow[] }
   return (
     <DataTable
       columns={columns}
-      data={data}
+      data={initialPage.rows}
+      server={{ total: initialPage.total, loadPage: listOpportunityPage }}
       tableId="opportunities"
-      cap={2000}
       filters={[
         {
           type: "relation",
           columnId: "accountId",
           title: "Account",
-          options: relationOptions(
-            data,
-            (row) => row.accountId,
-            (row) => [row.accountCode, row.accountName].filter(Boolean).join(" — ")
-          ),
+          options: filterOptions.accounts,
         },
         {
           type: "relation",
           columnId: "accountOwnerMemberId",
           title: "Account owner",
-          options: relationOptions(
-            data,
-            (row) => row.accountOwnerMemberId,
-            (row) => row.accountOwnerName ?? "Unknown"
-          ),
+          options: filterOptions.owners,
         },
       ]}
       searchColumn="name"

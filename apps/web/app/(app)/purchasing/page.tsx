@@ -5,7 +5,7 @@ import { PERMISSIONS } from "@/lib/permissions"
 import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
 import {
-  listFinanceDocs,
+  listFinanceDocPage,
   listFinanceSources,
   getReminderSchedule,
 } from "@/app/(app)/billing/actions"
@@ -18,7 +18,7 @@ export default async function PurchasingPage() {
   // Sources feed the create dialog only — a manager-level payload.
   const canManage = ctx.can(PERMISSIONS.FINANCE_MANAGE)
   const [docs, sources, reminderSchedule] = await Promise.all([
-    listFinanceDocs("purchase"),
+    listFinanceDocPage("purchase", { pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
     canManage
       ? listFinanceSources()
       : Promise.resolve({ salesOrders: [], docs: [], milestones: [] }),
@@ -36,7 +36,7 @@ export default async function PurchasingPage() {
         </p>
         <FinanceDocsTable
           direction="purchase"
-          data={docs}
+          initialPage={docs}
           sources={sources}
           reminderSchedule={reminderSchedule}
         />

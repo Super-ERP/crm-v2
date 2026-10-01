@@ -1,6 +1,8 @@
 "use server"
 
-import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
+import { normalizeRecordListQuery, type RecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
 import { withTenant, withModule, requireContext, assertCan } from "@/lib/actions"
 import { runInTenant } from "@/db"
@@ -124,12 +126,26 @@ async function fetchRows(
   tx: Parameters<Parameters<typeof withTenant>[1]>[0],
   ctx: Parameters<Parameters<typeof withTenant>[1]>[1],
   projectId?: string,
-  salesOrderId?: string
+  salesOrderId?: string,
+  paging?: { limit: number; offset: number; query: RecordListQuery }
 ): Promise<SalesOrderRow[]> {
   // Sales orders inherit visibility from their parent project's owner.
   // Approvers must still see every submitted SO, so they bypass owner scoping.
   const visible = await visibleMemberIds(tx, ctx)
   const scopeSO = ctx.can(PERMISSIONS.SALES_ORDER_APPROVE) ? null : visible
+  const search = paging?.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+  const statuses = paging?.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
+  const where = and(
+    isNull(projects.deletedAt),
+    projectId ? eq(salesOrders.projectId, projectId) : undefined,
+    salesOrderId ? eq(salesOrders.id, salesOrderId) : undefined,
+    ownerScope(projects.ownerMemberId, scopeSO),
+    statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
+    search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
+  )
+  const sortColumns = { projectName: projects.name, status: salesOrders.status, submittedAt: salesOrders.submittedAt }
+  const sortColumn = paging?.query.sort?.id ? sortColumns[paging.query.sort.id as keyof typeof sortColumns] : undefined
+  const ordering = sortColumn ? paging?.query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(salesOrders.submittedAt)
   const rows = (await tx
     .select({
       id: salesOrders.id,
@@ -155,20 +171,10 @@ async function fetchRows(
     // and the accepted quotation it was based on (both optional).
     .leftJoin(funnels, eq(projects.funnelId, funnels.id))
     .leftJoin(quotations, eq(projects.quotationId, quotations.id))
-    .where(
-      and(
-        // Never surface SOs whose parent project was soft-deleted — soft-delete
-        // doesn't fire the cascade FK, so they'd otherwise dangle in this list.
-        isNull(projects.deletedAt),
-        projectId ? eq(salesOrders.projectId, projectId) : undefined,
-        salesOrderId ? eq(salesOrders.id, salesOrderId) : undefined,
-        ownerScope(projects.ownerMemberId, scopeSO)
-      )
-    )
-    .orderBy(desc(salesOrders.submittedAt))
-    // Capped server-side; the global list table surfaces a "refine your search"
-    // notice at this count (cap={1000}) so rows never silently vanish.
-    .limit(1000)) as Array<{
+    .where(where)
+    .orderBy(ordering, desc(salesOrders.id))
+    .limit(paging?.limit ?? 1000)
+    .offset(paging?.offset ?? 0)) as Array<{
     id: string
     projectId: string
     projectName: string
@@ -788,11 +794,26 @@ export async function listSalesOrderSubmitOptions(): Promise<{
   })
 }
 
-/** All tenant sales orders, newest submission first. */
-export async function listSalesOrders(): Promise<SalesOrderRow[]> {
-  return withModule("salesOrders", PERMISSIONS.SALES_ORDER_VIEW, (tx, ctx) =>
-    fetchRows(tx, ctx)
-  )
+export async function listSalesOrderPage(input: ServerTableQuery): Promise<{ rows: SalesOrderRow[]; total: number }> {
+  return withModule("salesOrders", PERMISSIONS.SALES_ORDER_VIEW, async (tx, ctx) => {
+    const paging = normalizeRecordListQuery(input, ["projectName", "status", "submittedAt"], ["status"])
+    const visible = await visibleMemberIds(tx, ctx)
+    const scopeSO = ctx.can(PERMISSIONS.SALES_ORDER_APPROVE) ? null : visible
+    const statuses = paging.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
+    const search = paging.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+    const where = and(isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, scopeSO),
+      statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
+      search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined)
+    const [rows, countRows] = await Promise.all([
+      fetchRows(tx, ctx, undefined, undefined, paging),
+      tx.select({ count: sql<number>`count(*)::int` }).from(salesOrders)
+        .innerJoin(projects, eq(salesOrders.projectId, projects.id))
+        .leftJoin(funnels, eq(projects.funnelId, funnels.id))
+        .leftJoin(quotations, eq(projects.quotationId, quotations.id))
+        .where(where),
+    ])
+    return { rows, total: countRows[0]?.count ?? 0 }
+  })
 }
 
 /** Sales orders for a single project, newest submission first. */

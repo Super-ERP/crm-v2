@@ -53,11 +53,11 @@ vi.mock("@/db", () => ({
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
-import { listSalesOrders } from "@/app/(app)/sales-orders/actions"
-import { listFinanceDocs } from "@/app/(app)/billing/actions"
-import { listInboundIntercompanyDeals } from "@/app/(app)/intercompany/actions"
+import { listSalesOrderPage } from "@/app/(app)/sales-orders/actions"
+import { listFinanceDocPage } from "@/app/(app)/billing/actions"
+import { listInboundIntercompanyDealPage } from "@/app/(app)/intercompany/actions"
 import { getForecast } from "@/app/(app)/forecast/actions"
-import { listAudit } from "@/app/(app)/audit/actions"
+import { listAuditPage } from "@/app/(app)/audit/actions"
 
 describe("direct optional action denial matrix", () => {
   beforeEach(() => {
@@ -66,11 +66,11 @@ describe("direct optional action denial matrix", () => {
   })
 
   it.each([
-    ["sales order", "salesOrders", () => listSalesOrders()],
-    ["billing", "finance", () => listFinanceDocs("sale")],
-    ["intercompany", "finance", () => listInboundIntercompanyDeals()],
+    ["sales order", "salesOrders", () => listSalesOrderPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] })],
+    ["billing", "finance", () => listFinanceDocPage("sale", { pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] })],
+    ["intercompany", "finance", () => listInboundIntercompanyDealPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] })],
     ["forecast", "forecast", () => getForecast()],
-    ["audit", "audit", () => listAudit()],
+    ["audit", "audit", () => listAuditPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] })],
   ] as const)("denies the real %s action before context or tenant work", async (_label, moduleId, invoke) => {
     await expect(invoke()).rejects.toMatchObject({ moduleId })
     expect(mocks.requireContext).not.toHaveBeenCalled()

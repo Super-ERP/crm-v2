@@ -1,12 +1,12 @@
 import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
 import { listProductCodes, listCurrencies } from "@/lib/lookups"
-import { listProducts } from "./actions"
+import { listProductPage } from "./actions"
 import { ProductsTable } from "./products-table"
 
 export default async function ProductsPage() {
   const [products, productCodes, currencies] = await Promise.all([
-    listProducts(),
+    listProductPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
     listProductCodes(),
     listCurrencies(),
   ])
@@ -15,7 +15,7 @@ export default async function ProductsPage() {
     <>
       <SiteHeader title="Products" />
       <PageBody>
-        <ProductsTable data={products} productCodes={productCodes} currencies={currencies} />
+        <ProductsTable initialPage={products} productCodes={productCodes} currencies={currencies} />
       </PageBody>
     </>
   )

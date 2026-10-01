@@ -3,12 +3,15 @@ import { PageBody } from "@/components/page-header"
 import { requireContext } from "@/lib/server-context"
 import { requireEntitledRoute } from "@/lib/module-guard"
 import { PERMISSIONS } from "@/lib/permissions"
-import { listSalesOrders, listSubmittableProjects } from "./actions"
+import { listSalesOrderPage, listSubmittableProjects } from "./actions"
 import { SalesOrdersTable } from "./sales-orders-table"
 
 export default async function SalesOrdersPage() {
   await requireEntitledRoute("salesOrders")
-  const [rows, ctx] = await Promise.all([listSalesOrders(), requireContext()])
+  const [rows, ctx] = await Promise.all([
+    listSalesOrderPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
+    requireContext(),
+  ])
   const canApprove = ctx.can(PERMISSIONS.SALES_ORDER_APPROVE)
   const canSubmit = ctx.can(PERMISSIONS.SALES_ORDER_SUBMIT)
   // Only fetch the project picker options when the user can actually submit.
@@ -18,7 +21,7 @@ export default async function SalesOrdersPage() {
       <SiteHeader title="Sales Orders" />
       <PageBody>
         <SalesOrdersTable
-          data={rows}
+          initialPage={rows}
           canApprove={canApprove}
           canSubmit={canSubmit}
           projects={projects}

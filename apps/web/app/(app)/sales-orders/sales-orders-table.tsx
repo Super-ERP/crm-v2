@@ -27,19 +27,21 @@ import {
 import {
   type SalesOrderRow,
   type SalesOrderProjectOption,
+  listSalesOrderPage,
 } from "./actions"
 
 export function SalesOrdersTable({
-  data,
+  initialPage,
   canApprove,
   canSubmit,
   projects,
 }: {
-  data: SalesOrderRow[]
+  initialPage: { rows: SalesOrderRow[]; total: number }
   canApprove: boolean
   canSubmit: boolean
   projects: SalesOrderProjectOption[]
 }) {
+  const data = initialPage.rows
   const router = useRouter()
   const [approveTarget, setApproveTarget] = React.useState<SalesOrderRow | null>(
     null
@@ -243,13 +245,13 @@ export function SalesOrdersTable({
       <DataTable
         columns={columns}
         data={data}
+        server={{ total: initialPage.total, loadPage: listSalesOrderPage }}
         tableId="sales-orders"
-        cap={1000}
         filters={[{
           type: "enum",
           columnId: "status",
           title: "Status",
-          options: Array.from(new Set(data.map((row) => row.status).filter(Boolean))).map((value) => ({ value, label: value })),
+          options: ["submitted", "approved", "rejected"].map((value) => ({ value, label: value })),
         }]}
         searchColumn="projectName"
         searchPlaceholder="Search by project…"
