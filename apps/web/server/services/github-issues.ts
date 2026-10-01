@@ -18,7 +18,7 @@ export async function createGithubIssue(
   input: CreateGithubIssueInput
 ): Promise<CreatedGithubIssue> {
   const response = await (input.fetchImpl ?? fetch)(
-    "https://api.github.com/repos/Super-ERP/crm-v2/issues",
+    "https://api.github.com/repos/Q-App/crm-v2/issues",
     {
       method: "POST",
       headers: {

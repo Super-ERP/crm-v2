@@ -1,11 +1,11 @@
 ---
-description: Comprehensive operational walkthrough for Super-ERP across the full lead-to-cash lifecycle.
+description: Comprehensive operational walkthrough for Q-App across the full lead-to-cash lifecycle.
 icon: book-open
 ---
 
-# Super-ERP (Quandatics CRM) User Guide
+# Q-App User Guide
 
-Welcome to the end-to-end user guide for **Super-ERP (Quandatics CRM v2)**. This guide provides a complete, step-by-step walkthrough of how to use each module directly within the user interface.
+Welcome to the end-to-end user guide for **Q-App**. This guide provides a complete, step-by-step walkthrough of how to use each module directly within the user interface.
 
 ## The Lead-to-Cash Lifecycle
 
@@ -26,7 +26,7 @@ flowchart LR
 | :--- | :--- | :--- |
 | **Capture** | **Leads** (`/leads`) | Record inbound inquiries, qualify fit, and convert into durable records. |
 | **Customer Core** | **Accounts & Contacts** (`/accounts`, `/persons`) | Maintain company profiles, required ISO currencies, and stakeholder contacts. |
-| **Sales Pursuit** | **Opportunities & Funnel** (`/funnel`) | Track deal qualification using **PPVVC**, advance stages from `0E` to `4A`, and allocate project codes. |
+| **Sales Pursuit** | **Opportunities & Funnel** (`/funnel`) | Track deal qualification using **PPVVC**, advance stages from `0e` to `4a`, and allocate project codes. |
 | **Pricing & Terms** | **Quotations** (`/quotations`) | Generate itemized offers, apply tax settings, submit for approval, manage revisions, and download client PDFs. |
 | **Deal Closure** | **Payment Milestones** (`/payment-milestones`) | Track revenue billing events; milestones automatically transition to `Won` upon deal closing, then to `Invoiced` upon billing. |
 | **Delivery Handover** | **Projects & Sales Orders** (`/projects`, `/sales-orders`) | Connect sales commitments to operational delivery and track confirmed customer purchase orders. |

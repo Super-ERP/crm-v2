@@ -2,21 +2,21 @@
 
 Quandatics' multitenant CRM for the full lead-to-cash lifecycle.
 
-## [Open the documentation →](https://github.com/Super-ERP/docs)
+## [Open the documentation →](https://github.com/Q-App/docs)
 
 The documentation portal is the canonical product, module, workflow, API, and
 architecture directory.
 
 | Go to | Purpose |
 | --- | --- |
-| **[Documentation](https://github.com/Super-ERP/docs)** | Central platform directory |
+| **[Documentation](https://github.com/Q-App/docs)** | Central platform directory |
 | [Production CRM](https://app.quandatics.com) | Live application |
-| [Latest staging deployment](https://github.com/Super-ERP/crm-v2/actions/workflows/deploy-staging.yml) | Preview URL in the latest run summary |
-| [Module directory](https://github.com/Super-ERP/docs/tree/main/pages/product/module-directory.mdx) | Every capability and its code map |
-| [External developer guide](https://github.com/Super-ERP/docs/tree/main/pages/external-developers/overview.mdx) | API integration and public contribution path |
-| [Add a module](https://github.com/Super-ERP/docs/tree/main/pages/extensibility/adding-a-module.mdx) | Placement and integration checklist |
-| [Contributing](https://github.com/Super-ERP/docs/blob/main/pages/contributing.md) | Local setup and review rules |
-| [Operations](https://github.com/Super-ERP/docs/blob/main/pages/operations.mdx) | Deploy flow, runbooks, and operator workspace |
+| [Latest staging deployment](https://github.com/Q-App/crm-v2/actions/workflows/deploy-staging.yml) | Preview URL in the latest run summary |
+| [Module directory](https://github.com/Q-App/docs/tree/main/pages/product/module-directory.mdx) | Every capability and its code map |
+| [External developer guide](https://github.com/Q-App/docs/tree/main/pages/external-developers/overview.mdx) | API integration and public contribution path |
+| [Add a module](https://github.com/Q-App/docs/tree/main/pages/extensibility/adding-a-module.mdx) | Placement and integration checklist |
+| [Contributing](https://github.com/Q-App/docs/blob/main/pages/contributing.md) | Local setup and review rules |
+| [Operations](https://github.com/Q-App/docs/blob/main/pages/operations.mdx) | Deploy flow, runbooks, and operator workspace |
 | [Release log](./docs/operations/release-log.md) | Signed immutable release record |
 
 ## Module map
@@ -80,7 +80,7 @@ crm-v2/
 │   └── control-protocol/    Signed envelope + command contract, shared by
 │                            control-plane and deployment-agent
 ├── docs/
-│   └── operations/          Release log (machine-appended; runbooks live in Super-ERP/docs)
+│   └── operations/          Release log (machine-appended; runbooks live in Q-App/docs)
 ├── ops/                     Operational scripts and operator notes
 ├── deploy/client/           Pull-only, Cosign-verified production bundle
 ├── .github/                 CI, production, and staging workflows
@@ -145,7 +145,7 @@ docs/operations/release-log.md
 ## Production
 
 Production uses the pull-only, Cosign-verified bundle in `deploy/client/`.
-Follow the [client deployment runbook](https://github.com/Super-ERP/docs/blob/main/archive/operations/deploy-client-README.md); do not build the
+Follow the [client deployment runbook](https://github.com/Q-App/docs/blob/main/archive/operations/deploy-client-README.md); do not build the
 source Compose stack on a client production host.
 
 ## Operator workspace
@@ -155,7 +155,7 @@ control-plane UI. Create the client, current contract, and deployment; open the
 deployment workspace; issue its one-time install token; then register, configure,
 review, sign, and verify its heartbeat. Use the same workspace to issue a new
 immutable signed version after a contract, configuration, or approved-release
-change. See [operator onboarding, signing, and recovery](https://github.com/Super-ERP/docs/blob/main/archive/operations/OPERATIONS.md#operator-workspace-client-onboarding-and-signing).
+change. See [operator onboarding, signing, and recovery](https://github.com/Q-App/docs/blob/main/archive/operations/OPERATIONS.md#operator-workspace-client-onboarding-and-signing).
 
 This is an operator workflow, not a customer or integration-partner interface.
 No documentation update records a live deployment or signed release; only
