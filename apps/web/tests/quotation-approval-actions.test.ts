@@ -14,7 +14,8 @@ const mocks = vi.hoisted(() => ({
   ownsOrManages: vi.fn(() => true),
   writeAudit: vi.fn(),
   revalidatePath: vi.fn(),
-  winOpportunity: vi.fn(),
+  findManagerApprover: vi.fn(),
+  requireManagerApprover: vi.fn(),
   syncOpportunityAmount: vi.fn(),
   syncFunnelProductsFromQuote: vi.fn(),
   seedDefaultFunnelMilestone: vi.fn(),
@@ -29,7 +30,7 @@ vi.mock("@/lib/access-scope", () => ({
   ownerScope: vi.fn(),
 }))
 vi.mock("@/server/audit", () => ({ writeAudit: mocks.writeAudit }))
-vi.mock("@/server/services/stage", () => ({ winOpportunity: mocks.winOpportunity }))
+vi.mock("@/server/services/approval-routing", () => ({ findManagerApprover: mocks.findManagerApprover, requireManagerApprover: mocks.requireManagerApprover }))
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }))
 vi.mock("@/server/services/activity", () => ({ logActivity: vi.fn() }))
 vi.mock("@/server/services/value", () => ({
@@ -105,15 +106,46 @@ const ctx = {
 describe("quotation approval actions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.findManagerApprover.mockResolvedValue("member-1")
+    mocks.requireManagerApprover.mockResolvedValue("manager-1")
     mocks.withTenant.mockImplementation(async (_permission, work) => work(currentTx, ctx))
   })
 
   let currentTx: ReturnType<typeof txWithSelects>["tx"]
 
+  it("rejects quotation approval by someone outside its owner's manager route", async () => {
+    mocks.findManagerApprover.mockResolvedValue("manager-other")
+    currentTx = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "rep" }],
+    ]).tx
+    const result = await approveQuotation("quote-1")
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("reporting manager") })
+  })
+
+  it("blocks the salesperson from approving their own quotation", async () => {
+    currentTx = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "member-1" }],
+    ]).tx
+    expect(await approveQuotation("quote-1")).toMatchObject({ ok: false, error: expect.stringContaining("reporting manager") })
+  })
+
+  it("refuses submission instead of routing to unrelated people when no manager is eligible", async () => {
+    mocks.requireManagerApprover.mockRejectedValueOnce(new Error("No eligible manager"))
+    const fixture = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "draft" }],
+      [{ ownerMemberId: "rep" }],
+    ])
+    currentTx = fixture.tx
+    expect(await submitQuotationForApproval("quote-1")).toMatchObject({ ok: false, error: "No eligible manager" })
+    expect(fixture.updates).toEqual([])
+  })
+
   it("submits Draft for approval with row locking and audit", async () => {
     const fixture = txWithSelects([
       [{ id: "quote-1", funnelId: "funnel-1", status: "draft" }],
-      [{ ownerMemberId: "member-1" }],
+      [{ ownerMemberId: "rep" }],
       [{ id: "quote-1", status: "pending_approval" }],
     ])
     currentTx = fixture.tx
@@ -124,6 +156,7 @@ describe("quotation approval actions", () => {
     expect(fixture.tx.select.mock.results[0]?.value.for).toHaveBeenCalledWith("update")
     expect(fixture.updates[0]).toMatchObject({
       status: "pending_approval",
+      approverMemberId: "manager-1",
       rejectionReason: null,
     })
     expect(mocks.writeAudit).toHaveBeenCalledWith(
@@ -136,7 +169,7 @@ describe("quotation approval actions", () => {
   it("rejects approval and records reason while returning quote to Draft", async () => {
     const fixture = txWithSelects([
       [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
-      [{ ownerMemberId: "member-1" }],
+      [{ ownerMemberId: "rep" }],
     ])
     currentTx = fixture.tx
 
@@ -154,7 +187,7 @@ describe("quotation approval actions", () => {
   it("approves Pending Approval with approver metadata and audit", async () => {
     const fixture = txWithSelects([
       [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
-      [{ ownerMemberId: "member-1" }],
+      [{ ownerMemberId: "rep" }],
     ])
     currentTx = fixture.tx
 
@@ -176,7 +209,7 @@ describe("quotation approval actions", () => {
   it("requires explicit reset before editing an Approved quotation", async () => {
     const fixture = txWithSelects([
       [{ id: "quote-1", funnelId: "funnel-1", status: "approved" }],
-      [{ ownerMemberId: "member-1" }],
+      [{ ownerMemberId: "rep" }],
     ])
     currentTx = fixture.tx
 
@@ -194,7 +227,7 @@ describe("quotation approval actions", () => {
   it("does not send Draft even when sender has send permission", async () => {
     const fixture = txWithSelects([
       [{ id: "quote-1", funnelId: "funnel-1", status: "draft" }],
-      [{ ownerMemberId: "member-1", status: "open" }],
+      [{ ownerMemberId: "rep", status: "open" }],
     ])
     currentTx = fixture.tx
 
@@ -217,7 +250,7 @@ describe("quotation approval actions", () => {
         quoteNumber: "Q-1",
         total: "100.00",
       }],
-      [{ ownerMemberId: "member-1", status: "open", accountId: "account-1" }],
+      [{ ownerMemberId: "rep", status: "open", accountId: "account-1" }],
       [],
     ])
     currentTx = fixture.tx
@@ -236,7 +269,7 @@ describe("quotation approval actions", () => {
     expect(mocks.syncFunnelProductsFromQuote).not.toHaveBeenCalled()
     expect(mocks.seedDefaultFunnelMilestone).not.toHaveBeenCalled()
     expect(JSON.stringify(result)).not.toContain("project")
-    expect(mocks.winOpportunity).not.toHaveBeenCalled()
+    expect(mocks.findManagerApprover).not.toHaveBeenCalled()
   })
 
   it("allows customer rejection only from Sent", async () => {
@@ -247,7 +280,7 @@ describe("quotation approval actions", () => {
         status: "sent",
         isPrimary: false,
       }],
-      [{ ownerMemberId: "member-1" }],
+      [{ ownerMemberId: "rep" }],
     ])
     currentTx = fixture.tx
 

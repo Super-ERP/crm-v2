@@ -10,6 +10,7 @@ import { PageBody } from "@/components/page-header"
 import { listEntityAttachments } from "@/app/(app)/_shared/attachment-actions"
 import {
   getQuotation,
+  canApproveQuotation,
   getQuotationDocument,
   getProjectForQuotation,
   getQuotationFormMeta,
@@ -47,6 +48,7 @@ export default async function QuotationDetailPage({
     modules,
     formMeta,
     preview,
+    canApprove,
   ] = await Promise.all([
     listTaxOptions(),
     getTaxInclusive(),
@@ -58,11 +60,12 @@ export default async function QuotationDetailPage({
     getEntitledModuleMap(),
     getQuotationFormMeta(detail.quotation.funnelId),
     getQuotationDocument(id),
+    canApproveQuotation(id),
   ])
 
   const perms = {
     canUpdate: ctx.can(PERMISSIONS.QUOTATION_UPDATE),
-    canApprove: ctx.can(PERMISSIONS.QUOTATION_APPROVE),
+    canApprove,
     canSend: ctx.can(PERMISSIONS.QUOTATION_SEND),
     canAccept: ctx.can(PERMISSIONS.QUOTATION_ACCEPT),
     canDelete: ctx.can(PERMISSIONS.QUOTATION_DELETE),

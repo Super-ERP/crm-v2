@@ -6,7 +6,7 @@ This chapter covers user management, RBAC tiers, forecasting, audit trails, and 
 
 ## 1. Team & Roles (`/team`)
 
-User administration is managed by users with the **Owner** or **Manager** role.
+User administration requires **Manage users**, granted to Owner and Admin by default. Configure each salesperson’s reporting manager here for approval routing.
 
 ### Inviting Team Members
 1. Navigate to **Admin → Team & roles** in the sidebar.
@@ -51,7 +51,7 @@ Super-ERP maintains an immutable, compliance-ready record of all platform activi
 
 ## 4. Tenant Settings (`/settings`)
 
-Users with the **Owner** role configure organizational defaults under **Admin → Settings**:
+Users with **Manage tenant settings** permission (Owner and Admin by default) configure organizational defaults under **Admin → Settings**:
 
 ### General Settings (`/settings/general`)
 * **Organization Name**: Official legal entity name.
@@ -65,5 +65,5 @@ Users with the **Owner** role configure organizational defaults under **Admin �
 
 ### Document Settings (`/settings/documents`)
 * **Default Payment Terms**: e.g., *"30 Days from invoice date"*.
-* **Delivery Notes**: Standard warranty and delivery clauses printed on quote footers.
-* **Tax Configurations**: Set default tax rates (e.g., *8% Service Tax / SST*) and toggle tax-inclusive vs. tax-exclusive line item pricing.
+* **Delivery**: Default delivery text copied into new quotations. Existing quotations retain their snapshots.
+* Tax-inclusive pricing is configured in General; tax rates are maintained in the quotation tax configuration.

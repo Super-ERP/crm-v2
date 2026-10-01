@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ServerContext } from "@/lib/server-context"
 
 const runInTenant = vi.hoisted(() => vi.fn())
+const routing = vi.hoisted(() => ({ findManagerApprover: vi.fn(), requireManagerApprover: vi.fn() }))
+vi.mock("@/server/services/approval-routing", () => routing)
 
 vi.mock("@/db", () => ({ runInTenant }))
 vi.mock("@/server/services/numbering", () => ({ nextProjectCode: vi.fn() }))
@@ -136,6 +138,36 @@ const later = {
 describe("stage approval lifecycle hardening", () => {
   beforeEach(() => {
     runInTenant.mockReset()
+    routing.findManagerApprover.mockResolvedValue("approver-1")
+  })
+
+  it("does not let an unrelated permission holder reject a manager's assigned request", async () => {
+    const request = { id: "request-1", status: "pending", requesterMemberId: "rep", approverMemberId: "manager" }
+    const { tx } = makeTx([[request]], [[{ id: request.id }]])
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    const unrelated = { ...ctx, isSuperadmin: false, memberId: "unrelated", can: () => true }
+    await expect(decideApproval(unrelated, { requestId: request.id, decision: "rejected" })).rejects.toThrow("Not authorized")
+  })
+
+  it("allows only the assigned eligible manager and checks their current permission", async () => {
+    const request = { id: "request-1", status: "pending", requesterMemberId: "rep", approverMemberId: "manager" }
+    routing.findManagerApprover.mockResolvedValue("manager")
+    for (const granted of [false, true]) {
+      const { tx } = makeTx([[request]], [[{ id: request.id }]])
+      runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+      const manager = { ...ctx, memberId: "manager", isSuperadmin: false, can: () => granted }
+      const result = decideApproval(manager, { requestId: request.id, decision: "rejected" })
+      if (granted) await expect(result).resolves.toMatchObject({ status: "rejected" })
+      else await expect(result).rejects.toThrow("Not authorized")
+    }
+  })
+
+  it("blocks a former manager after the reporting route changes", async () => {
+    const request = { id: "request-1", status: "pending", requesterMemberId: "rep", approverMemberId: "old-manager" }
+    routing.findManagerApprover.mockResolvedValue("new-manager")
+    const { tx } = makeTx([[request]])
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    await expect(decideApproval({ ...ctx, memberId: "old-manager", isSuperadmin: false, can: () => true }, { requestId: request.id, decision: "approved" })).rejects.toThrow("Not authorized")
   })
 
   it("cancels pending approvals in same transaction as rollback", async () => {
@@ -194,7 +226,7 @@ describe("stage approval lifecycle hardening", () => {
 
     await expect(
       decideApproval(
-        { ...ctx, isSuperadmin: false, can: () => true } as ServerContext,
+        { ...ctx, memberId: "approver-1", isSuperadmin: false, can: () => true } as ServerContext,
         { requestId: request.id, decision: "approved" }
       )
     ).resolves.toMatchObject({ status: "obsolete" })
@@ -238,7 +270,7 @@ describe("stage approval lifecycle hardening", () => {
 
     await expect(
       decideApproval(
-        { ...ctx, isSuperadmin: false, can: () => true } as ServerContext,
+        { ...ctx, memberId: "approver-1", isSuperadmin: false, can: () => true } as ServerContext,
         { requestId: request.id, decision: "approved" }
       )
     ).resolves.toMatchObject({ status: "obsolete" })

@@ -32,7 +32,6 @@ vi.mock("@/server/services/value", () => ({
   quoteNet: vi.fn(),
   syncOpportunityAmount: vi.fn(),
 }))
-vi.mock("@/server/services/stage", () => ({ winOpportunity: vi.fn() }))
 vi.mock("@/server/services/numbering", () => ({ nextQuoteNumber: vi.fn() }))
 vi.mock("@/app/(app)/payment-milestones/actions", () => ({
   seedDefaultFunnelMilestone: vi.fn(),

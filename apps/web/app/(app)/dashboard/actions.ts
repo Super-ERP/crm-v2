@@ -1,5 +1,5 @@
 import "server-only"
-import { and, eq, isNull, lte, asc, sql, type SQL } from "drizzle-orm"
+import { and, eq, isNull, lte, asc, sql, count, type SQL } from "drizzle-orm"
 import { requireContext } from "@/lib/server-context"
 import { db, runInTenant } from "@/db"
 import {
@@ -121,10 +121,11 @@ export type GettingStarted = {
 
 export type DashboardData = {
   /** Pending stage-approval requests the user can actually action: every
-   *  pending request in the tenant for a broad approver, otherwise only those
+   *  pending request in the tenant for a platform superadmin, otherwise only those
    *  routed to them. Mirrors /approvals "Incoming" so the two never disagree. */
   pendingApprovals: PendingApproval[]
-  /** True when the user is a broad approver (sees/acts on all pending requests),
+  pendingApprovalsCount: number
+  /** True for platform superadmins (sees/acts on all pending requests),
    *  so the UI titles the card "Pending Approvals" rather than "Assigned to me". */
   canApproveAll: boolean
   followUpsDue: FollowUpDue[]
@@ -165,25 +166,17 @@ export async function getDashboardData(): Promise<DashboardData> {
   const ctx = await requireContext()
   const memberId = ctx.memberId
   const canViewAll = canViewAllRecords(ctx)
-  // A broad approver (or superadmin) can decide ANY pending request — see
-  // listIncomingApprovals()/decideApproval() — so the dashboard must count those
-  // too, otherwise it says "all caught up" while /approvals shows Incoming (n).
-  const canApproveAll =
-    ctx.isSuperadmin || ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)
-
+  const canApproveAll = ctx.isSuperadmin
+  // Match the manager-only inbox; ordinary permission holders cannot act on unrelated requests.
   return runInTenant(ctx.tenantId, async (tx) => {
-    // Broad approvers see every pending request in the tenant; everyone else
-    // only the ones routed to them. With no member row and no broad approval,
-    // there is nothing actionable to surface.
-    const approvalWhere: SQL | undefined = canApproveAll
+    const approvalWhere: SQL | undefined = ctx.isSuperadmin
       ? eq(stageApprovalRequests.status, "pending")
-      : memberId
-        ? and(
-            eq(stageApprovalRequests.approverMemberId, memberId),
-            eq(stageApprovalRequests.status, "pending")
-          )
+      : memberId && ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)
+        ? and(eq(stageApprovalRequests.approverMemberId, memberId), eq(stageApprovalRequests.status, "pending"))
         : undefined
 
+    const [approvalCount] = approvalWhere ? await tx.select({ value: count() }).from(stageApprovalRequests).where(approvalWhere) : []
+    const pendingApprovalsCount = approvalCount?.value ?? 0
     const pendingApprovals: PendingApproval[] = approvalWhere
       ? (
           await tx
@@ -200,7 +193,8 @@ export async function getDashboardData(): Promise<DashboardData> {
               eq(funnels.id, stageApprovalRequests.funnelId)
             )
             .where(approvalWhere)
-            .orderBy(asc(stageApprovalRequests.requestedAt))
+            .orderBy(asc(stageApprovalRequests.requestedAt), asc(stageApprovalRequests.id))
+            .limit(5)
         ).map((r) => ({
           id: r.id,
           funnelId: r.funnelId,
@@ -507,6 +501,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
     return {
       pendingApprovals,
+      pendingApprovalsCount,
       canApproveAll,
       followUpsDue,
       staleDeals,

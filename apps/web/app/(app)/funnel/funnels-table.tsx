@@ -78,16 +78,6 @@ const columns: ColumnDef<OpportunityListRow>[] = [
     ),
   },
   {
-    id: "ownerMemberId",
-    accessorFn: (row) => ({ id: row.ownerMemberId, label: row.ownerName ?? "Unassigned" }),
-    header: "Owner",
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {row.original.ownerName ?? "—"}
-      </span>
-    ),
-  },
-  {
     accessorKey: "status",
     id: "status",
     header: "Status",
@@ -126,7 +116,6 @@ export function OpportunitiesTable({
         { type: "relation", columnId: "opportunityId", title: "Opportunity", options: filterOptions.opportunities },
         { type: "relation", columnId: "id", title: "Funnel", options: filterOptions.funnels },
         { type: "relation", columnId: "accountOwnerMemberId", title: "Account owner", options: filterOptions.accountOwners },
-        { type: "relation", columnId: "ownerMemberId", title: "Funnel owner", options: filterOptions.owners },
         { type: "relation", columnId: "stageId", title: "Stage", options: filterOptions.stages },
         { type: "enum", columnId: "status", title: "Status", options: ["open", "won", "lost", "on_hold"].map((value) => ({ value, label: value })) },
       ]}

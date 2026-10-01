@@ -1,57 +1,44 @@
-# 8. Approvals Hub
+# 8. Approvals
 
-This chapter covers governance workflows and the centralized Approvals dashboard used by managers and team leaders.
+## Two different decisions
 
----
+Quotation approval authorizes a proposal before it is sent. Funnel-stage approval authorizes entry into an approval-gated sales stage. Customer acceptance is a separate commercial decision and never closes the funnel automatically.
 
-## Overview
+## Who approves?
 
-The **Approvals Hub** (`/approvals`) is a unified inbox designed for **Managers (Tier 60)** and **Owners (Tier 100)** to review, approve, or reject business exceptions before they reach customers or advance in the pipeline.
+Configure each salesperson’s reporting manager in **Team**. The app walks that reporting line and selects the first active manager with the required permission:
 
-```
-┌────────────────────────────────────────────────────────┐
-│ Pending Approvals Queue                                │
-├────────────────────────────────────────────────────────┤
-│ • Quotation QDT-2026-0042 (18% Discount Request)       │
-│ • Stage Advance: Acme Corp (Stage 3b ➔ 4a Commit) │
-└────────────────────────────────────────────────────────┘
-```
+- Quotations: **Approve quotations** (`quotation.approve`). The reporting line starts from the account salesperson who owns the quotation’s funnel.
+- Funnel-stage requests: **Approve stage advances** (`stage.advance.approve`). The reporting line starts from the person requesting the advance.
 
----
+Permissions from all assigned roles count. Legacy primary-role grants are used only when no multi-role assignments exist. Role names and seniority tiers do not determine approval eligibility.
 
-## What Triggers an Approval Request?
+Only the eligible reporting manager can approve or reject a quotation. Only the assigned manager who is still eligible can decide a stage request. Other Owner, Admin or Manager members do not gain permission to decide somebody else’s request just by holding the approval capability. Platform superadmins retain an operational override.
 
-1. **Quotation Approvals**:
-   * Line item or total quotation discounts exceeding standard sales delegation limits.
-   * Custom payment terms or non-standard contractual conditions.
-2. **Stage-Gate Advancements**:
-   * Advancing high-value opportunities into final stages (e.g., entering `4a Commit` or marking `Closed Won`).
+If no eligible manager exists, submission explains what must be configured instead of routing to an unrelated approver. Stage approvers can still advance stages directly using their stage-approval capability. An ordinary requester cannot approve their own stage request; a salesperson is never their own quotation approver.
 
----
+## Funnel-stage inbox (`/approvals`)
 
-## Navigating the Approvals Inbox
+- **Incoming** shows pending stage requests assigned to you.
+- **My requests** shows the stage requests you submitted, including their decisions.
+- The selected tab loads 25 requests per page. Use **Previous** and **Next** for more.
+- Review the funnel, requested stage, reason, requester and date. Attachments load only when opened. Approve or Reject opens a confirmation dialog with an optional decision note.
+- Approval moves the funnel only if its current stage and entry requirements still allow it. Obsolete requests are closed with an explanation rather than silently forcing a move.
+- The requester can cancel a pending request. After a reporting-manager change, cancel and resubmit a stale assigned request so it reaches the current manager.
 
-1. Navigate to **Sales → Approvals** in the sidebar.
-2. Review the list of requests organized under two primary tabs:
-   * **Pending**: Requests awaiting your decision.
-   * **History**: An audit trail of previously approved or rejected requests.
+## Quotation approval
 
-### Reviewing a Request
-Click on any request to open the review panel:
-* **Context**: View the Account, Opportunity name, Sales Rep, and request timestamp.
-* **Financial Details**: Original price, discounted total, margin impact, and requested terms.
-* **Justification Notes**: Business rationale submitted by the sales representative.
+Open the quotation itself; quotations do not appear in the stage inbox.
 
----
+1. Complete and save the **Draft** quotation.
+2. Choose **Submit for approval**. Every quotation needs approval before sending; there is no discount-threshold exemption.
+3. The eligible reporting manager opens the quotation and approves it or rejects it with a mandatory explanation.
+4. Approval changes the status to **Approved**. Rejection returns it to **Draft** for corrections.
+5. A member with send permission marks the approved quotation **Sent** after delivering it to the customer.
+6. A member with acceptance permission records **Accepted** or customer **Rejected**.
 
-## Approving or Rejecting Requests
+Sent quotations remain historical documents; create a revision for new terms. Acceptance does not move the funnel, create a project or mark planned milestones Won. Move the funnel to **Closed Won** separately when the deal is won.
 
-Inside the review dialog:
-* **To Approve**:
-  * Click **Approve**.
-  * Add optional notes (e.g., *"Approved per Q4 executive alignment"*).
-  * The quote status immediately updates to **`Approved`**, and the sales rep is notified.
-* **To Reject**:
-  * Click **Reject**.
-  * **Mandatory Review Note**: You must enter explanatory feedback explaining why the request was declined (e.g., *"Discount exceeds margin target; cap at 12%"*).
-  * The quote returns to **`Draft`** status so the sales rep can adjust the terms and resubmit.
+## Audit records
+
+Submission, approval, rejection and cancellation record audit events. Quotations store the approver and approval time; stage requests store the requester, assigned approver, decision and time. Do not assume email notifications are sent by these actions.

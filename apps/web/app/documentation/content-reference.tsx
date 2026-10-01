@@ -71,17 +71,17 @@ flowchart TD
         rows={[
           ["Owner / Admin", "100 / 90", "Everything (wildcard grant, kept in sync with the catalog)."],
           ["Manager", "60", "Rep powers + approvals (stage advances, quotation approval, sales orders), send/accept/delete quotes, tax & funnel config, audit, intercompany, finance.manage."],
-          ["Senior Rep", "40", "Rep powers + send quotations; advances stages without approval (above the default bypass tier)."],
+          ["Senior Rep", "40", "Rep powers + send approved quotations; gated stages still require manager approval."],
           ["Rep", "20", "Create/update CRM + sales records; gated stage advances require upline approval."],
           ["Viewer", "10", "Read-only across the workspace (view permissions + records.view_all)."],
         ]}
       />
       <P>
-        <Code>approval_bypass_tier</Code> decides which tiers skip
-        stage-approval gates. Custom roles are freely editable per tenant in
-        Team &amp; roles. Assign <Code>quotation.approve</Code> explicitly to
-        members who may approve or reject pending quotations; quotation-create
-        permission is separate.
+        Approval eligibility uses the union of permissions from all assigned roles,
+        not legacy tiers. Custom roles are editable in Team &amp; roles.
+        Quotation decisions require <Code>quotation.approve</Code> and the account
+        salesperson&apos;s eligible reporting-manager route. Stage requests can be decided
+        only by the assigned eligible manager. Platform superadmins retain an operational override.
       </P>
 
       <H2>Membership & entity switches</H2>
@@ -133,7 +133,6 @@ export const settingsReferencePage: DocPage = {
           [<Code key="s">currencies / payment_terms</Code>, "built-ins", "Configured ISO-currency and payment-term picklists; Account currency is never free text."],
           [<Code key="s">fiscal_year_start_month</Code>, "1", "FY windows on /forecast."],
           [<Code key="s">tax_inclusive</Code>, "off", "Quotation math treats unit prices as tax-inclusive."],
-          [<Code key="s">approval_bypass_tier</Code>, "40", "Role tiers ≥ this skip stage-approval gates."],
           [<Code key="s">default_country / phone_prefix</Code>, "—", "Prefills on new account/lead/contact forms (create only)."],
           [<Code key="s">company_* / bank_details / quote_footer / logo</Code>, "—", "Letterhead + payment block on the customer-facing quotation document."],
         ]}
@@ -624,7 +623,7 @@ export const changelogPage: DocPage = {
           every tenant-owned table.
         </Li>
         <Li>
-          <B>Behavior:</B> lead convert, stage approvals with role tiers,
+          <B>Behavior:</B> lead convert, stage approvals through eligible reporting managers,
           quotation math (absolute discounts, tax inclusive/exclusive),
           payment-milestone planning, SO approval minting the SO number,
           record-level owner + managed-subtree scoping.

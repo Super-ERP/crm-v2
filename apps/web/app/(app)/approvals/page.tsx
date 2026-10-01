@@ -6,18 +6,17 @@ import { PERMISSIONS } from "@/lib/permissions"
 import {
   listIncomingApprovals,
   listMyApprovals,
-  getApprovalGateInfo,
 } from "./actions"
 import { ApprovalsClient } from "./approvals-client"
 
-export default async function ApprovalsPage() {
+export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string }> }) {
   // The nav hides Approvals from roles that take no part in the gate, but the
   // route itself is open (the actions only require a context, not a specific
   // permission). Mirror the nav client-side so a Viewer who lands here by URL
   // sees a friendly access-denied state rather than an empty approver workbench
   // implying access they lack. Approvers and requesters (anyone who can advance
   // a stage) still get the full page; the server actions remain the source of
-  // truth and are unchanged.
+  // truth.
   const ctx = await getServerContext()
   const canParticipate =
     !!ctx &&
@@ -35,20 +34,17 @@ export default async function ApprovalsPage() {
     )
   }
 
-  const [incoming, mine, gate] = await Promise.all([
-    listIncomingApprovals(),
-    listMyApprovals(),
-    getApprovalGateInfo(),
-  ])
+  const params = await searchParams
+  const tab = params.tab === "mine" ? "mine" : "incoming"
+  const approvals = tab === "mine" ? await listMyApprovals(params.page) : await listIncomingApprovals(params.page)
 
   return (
     <>
       <SiteHeader title="Approvals" />
       <PageBody>
         <ApprovalsClient
-          incoming={incoming}
-          mine={mine}
-          bypassTier={gate.bypassTier}
+          tab={tab}
+          page={approvals}
         />
       </PageBody>
     </>

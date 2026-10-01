@@ -1,5 +1,7 @@
 "use server"
 
+import { findManagerApprover, requireManagerApprover } from "@/server/services/approval-routing"
+
 import { and, asc, desc, eq, isNull, ne, notInArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
@@ -996,7 +998,7 @@ async function assertQuotationAccess(
   tx: Tx,
   ctx: Parameters<typeof visibleMemberIds>[1],
   quotation: QuotationRow
-): Promise<void> {
+): Promise<string | null> {
   const visible = await visibleMemberIds(tx, ctx)
   const [funnel] = await tx
     .select({ ownerMemberId: funnels.ownerMemberId })
@@ -1006,6 +1008,25 @@ async function assertQuotationAccess(
   if (!canManageAllRecords(ctx) && !ownsOrManages(visible, funnel?.ownerMemberId ?? null)) {
     throw new Error("FORBIDDEN: not permitted on this quotation")
   }
+  return funnel?.ownerMemberId ?? null
+}
+
+async function assertQuotationApprover(tx: Tx, ctx: Parameters<typeof visibleMemberIds>[1], quotation: QuotationRow) {
+  const ownerId = await assertQuotationAccess(tx, ctx, quotation)
+  if (!ctx.isSuperadmin && (!ctx.memberId || !ownerId || ctx.memberId === ownerId || await findManagerApprover(tx, ownerId, PERMISSIONS.QUOTATION_APPROVE) !== ctx.memberId)) {
+    throw new Error("Only the quotation owner's eligible reporting manager can approve or reject this quotation.")
+  }
+}
+
+/** Used by the page as well as enforced independently by the mutation actions. */
+export async function canApproveQuotation(id: string): Promise<boolean> {
+  return withTenant(PERMISSIONS.QUOTATION_VIEW, async (tx, ctx) => {
+    if (!ctx.can(PERMISSIONS.QUOTATION_APPROVE)) return false
+    const [quotation] = await tx.select().from(quotations).where(and(eq(quotations.id, id), isNull(quotations.deletedAt))).limit(1)
+    if (!quotation || quotation.status !== "pending_approval") return false
+    const ownerId = await assertQuotationAccess(tx, ctx, quotation)
+    return ctx.isSuperadmin || !!ctx.memberId && !!ownerId && ctx.memberId !== ownerId && await findManagerApprover(tx, ownerId, PERMISSIONS.QUOTATION_APPROVE) === ctx.memberId
+  })
 }
 
 /**
@@ -1183,14 +1204,16 @@ export async function submitQuotationForApproval(
   return runAction(async () => {
     await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
       const quotation = await getLockedQuotation(tx, id)
-      await assertQuotationAccess(tx, ctx, quotation)
+      const ownerId = await assertQuotationAccess(tx, ctx, quotation)
+      if (!ownerId) throw new Error("Assign an account owner before requesting quotation approval.")
+      const approverId = await requireManagerApprover(tx, ownerId, PERMISSIONS.QUOTATION_APPROVE)
       assertQuotationTransition(quotation.status, "pending_approval")
 
       await tx
         .update(quotations)
         .set({
           status: "pending_approval",
-          approverMemberId: null,
+          approverMemberId: approverId,
           approvedAt: null,
           rejectionReason: null,
           updatedAt: new Date(),
@@ -1201,7 +1224,7 @@ export async function submitQuotationForApproval(
         entityType: "quotation",
         entityId: id,
         before: { status: quotation.status },
-        after: { status: "pending_approval" },
+        after: { status: "pending_approval", approverMemberId: approverId },
       })
     })
     revalidatePath("/quotations")
@@ -1213,7 +1236,7 @@ export async function approveQuotation(id: string): Promise<ActionResult<void>> 
   return runAction(async () => {
     await withTenant(PERMISSIONS.QUOTATION_APPROVE, async (tx, ctx) => {
       const quotation = await getLockedQuotation(tx, id)
-      await assertQuotationAccess(tx, ctx, quotation)
+      await assertQuotationApprover(tx, ctx, quotation)
       assertQuotationTransition(quotation.status, "approved")
 
       await tx
@@ -1247,7 +1270,7 @@ export async function rejectQuotation(
   return runAction(async () => {
     await withTenant(PERMISSIONS.QUOTATION_APPROVE, async (tx, ctx) => {
       const quotation = await getLockedQuotation(tx, id)
-      await assertQuotationAccess(tx, ctx, quotation)
+      await assertQuotationApprover(tx, ctx, quotation)
       if (quotation.status !== "pending_approval") {
         throw new Error("Only pending approval quotations can be rejected")
       }

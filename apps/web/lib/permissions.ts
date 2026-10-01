@@ -366,7 +366,7 @@ export type RoleTemplate = {
   permissions: PermissionKey[] | "*"
 }
 
-/** Seeded once per tenant. Tier drives the "low tier needs approval" gate. */
+/** Seeded once per tenant. Approval eligibility uses effective permissions, not legacy tiers. */
 export const ROLE_TEMPLATES: RoleTemplate[] = [
   { name: "Owner", description: "Full control of the workspace", tier: 100, permissions: "*" },
   { name: "Admin", description: "Administer users, roles, and settings", tier: 90, permissions: "*" },
@@ -384,7 +384,7 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
   },
   {
     name: "Senior Rep",
-    description: "Senior salesperson — advances stages without approval",
+    description: "Senior salesperson — sends approved quotations",
     tier: 40,
     permissions: [...REP_BASE, PERMISSIONS.QUOTATION_SEND],
   },

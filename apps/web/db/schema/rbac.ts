@@ -33,8 +33,10 @@ export const tenantSettings = pgTable("tenant_settings", {
   defaultCurrency: char("default_currency", { length: 3 }).notNull().default("MYR"),
   status: orgStatus("status").notNull().default("active"),
   fiscalYearStartMonth: integer("fiscal_year_start_month").notNull().default(1),
+  /** Retired compatibility column; approval eligibility is permission-based. */
   approvalBypassTier: integer("approval_bypass_tier").notNull().default(40),
   taxInclusive: boolean("tax_inclusive").notNull().default(false),
+  /** Retired compatibility column; quotation acceptance never closes the funnel. */
   autoWinOnQuoteAccept: boolean("auto_win_on_quote_accept").notNull().default(true),
   allowPasswordLogin: boolean("allow_password_login").notNull().default(true),
   /** Configurable industry picklist for accounts. */
