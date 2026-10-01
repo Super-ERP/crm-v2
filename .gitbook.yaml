@@ -1,0 +1,4 @@
+root: ./docs/user-guide
+structure:
+  readme: README.md
+  summary: SUMMARY.md
