@@ -1,29 +1,44 @@
 ---
-description: Find the right task, learn the sales workflow, and get help using Q-App.
-icon: book-open
+description: Learn Q-App, follow a task guide, look up a term, or check what has changed.
+icon: house
 ---
 
-# Q-App User Guide
+# Welcome to Q-App
 
-Use Q-App to manage customer relationships, prepare quotations, track sales, and hand work over to delivery. Start with the task you need today; you do not need to read every chapter first.
+Q-App brings customer records, sales pursuits, quotations, and delivery handovers into one workspace. This is your starting point for learning the app and finding answers while you work.
 
-## Start here
+## Choose your next step
 
-| What do you want to do? | Open this guide |
-| --- | --- |
-| Learn where things are | [Workspace & personal views](01-workspace-and-views.md) |
-| Follow your daily workflow | [Quick start by role](quick-start.md) |
-| Add a prospect or convert a lead | [Leads & conversion](02-leads-management.md) |
-| Update a company or contact | [Accounts & contacts](03-accounts-and-contacts.md) |
-| Qualify a deal or change its stage | [Opportunities & sales funnel](04-opportunities-and-funnel.md) |
-| Prepare, revise, or print a quote | [Quotations & revisions](05-quotations-and-revisions.md) |
-| Track planned billing | [Payment milestones](06-payment-milestones.md) |
-| Review a stage approval request | [Stage approvals](08-approvals-inbox.md) |
-| Manage delivery or a customer order | [Projects & sales orders](07-projects-and-sales-orders.md) |
-| Manage team access or settings | [Administration & settings](09-admin-and-settings.md) |
+<table data-view="cards"><thead><tr><th>Guide</th><th>Description</th><th data-hidden data-card-target data-type="content-ref">Link</th></tr></thead><tbody><tr><td><strong>Get started</strong></td><td>Follow a short checklist for sales, approvers, delivery, or administration.</td><td><a href="quick-start.md">Quick start by role</a></td></tr><tr><td><strong>Read the documentation</strong></td><td>Find a task guide for each module, with steps and workflow explanations.</td><td><a href="documentation.md">Documentation overview</a></td></tr><tr><td><strong>Look up a term</strong></td><td>Understand accounts, opportunities, PPVVC, quotations, and billing terms.</td><td><a href="reference/terminology.md">Terminology</a></td></tr><tr><td><strong>See what changed</strong></td><td>Read product changes and documentation updates.</td><td><a href="product-changelog.md">Product changelog</a></td></tr></tbody></table>
+
+## First time here?
+
+{% stepper %}
+{% step %}
+
+#### Find your workspace
+
+Sign in and check the active organization. Read [Workspace and personal views](01-workspace-and-views.md) to find the modules and list controls.
+
+{% endstep %}
+{% step %}
+
+#### Choose your workflow
+
+Open [Quick start by role](quick-start.md) and follow the checklist closest to your daily work.
+
+{% endstep %}
+{% step %}
+
+#### Learn as you work
+
+Use the [Documentation overview](documentation.md) for detailed tasks and [Terminology](reference/terminology.md) for unfamiliar words. The [Stages and statuses](reference/stages-and-statuses.md) reference explains what each label means.
+
+{% endstep %}
+{% endstepper %}
 
 {% hint style="info" %}
-**Cannot find a button or module?** Your role permissions and the modules enabled for your organization determine what you can see. Check that you are in the correct organization, then ask your administrator to review your access.
+**Cannot find a button or module?** Check your active organization. Your permissions and enabled modules determine what appears. See [Permissions and approval routing](reference/permissions-and-approvals.md) or ask your administrator.
 {% endhint %}
 
 ## How the workflow fits together
@@ -49,15 +64,6 @@ flowchart TD
 
 </details>
 
-## Terms you will see
-
-* **Account:** a company or organization you work with.
-* **Contact:** a person associated with an account.
-* **Opportunity:** the customer need and qualification context.
-* **Funnel deal:** the sales pursuit with a stage, quotations, and expected close date.
-* **Quotation:** the proposal you prepare for the customer.
-* **Payment milestone:** a planned billing event; marking it Invoiced records billing status.
-
 ## Need help?
 
-Use [Troubleshooting](help-center/troubleshooting.md) for a blocked action, or [Frequently asked questions](help-center/faqs.md) for a short explanation. [Guide updates](changelog.md) explains changes to this documentation.
+Open [Troubleshooting](help-center/troubleshooting.md) for a blocked action or [Frequently asked questions](help-center/faqs.md) for a short answer. Check [Product changelog](product-changelog.md) for application changes and [Guide updates](changelog.md) for documentation changes.

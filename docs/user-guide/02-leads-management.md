@@ -7,6 +7,8 @@ icon: user-plus
 
 Capture prospects, qualify them, and convert the right leads.
 
+**New to these terms?** Read the [terminology reference](reference/terminology.md#lead).
+
 ## On this page
 
 * [Create a lead](#creating-a-lead)
@@ -23,17 +25,44 @@ A **Lead** represents an unverified inbound expression of interest (e.g., from a
 
 ## Creating a Lead
 
-1. Navigate to **CRM → Leads** in the left sidebar.
-2. Click the **+ New Lead** button in the top right corner.
-3. Fill in the lead information:
-   * **Contact Name**: First Name and Last Name.
-   * **Company Name**: The prospective organization name.
-   * **Email & Phone**: Primary communication channels.
-   * **Lead Source**: Where the lead originated (e.g., *Website, Referral, Event, Cold Outreach*).
-   * **Estimated Value**: Anticipated initial deal size.
-   * **Owner**: The sales representative assigned to nurture the lead (defaults to you).
-   * **Notes**: Any initial context or background details.
-4. Click **Create Lead**.
+{% stepper %}
+{% step %}
+
+#### Open Leads
+
+Navigate to **CRM → Leads** in the left sidebar.
+
+{% endstep %}
+{% step %}
+
+#### Start a new lead
+
+Click the **+ New Lead** button in the top right corner.
+
+{% endstep %}
+{% step %}
+
+#### Enter prospect details
+
+Fill in the lead information:
+
+* **Contact Name**: First Name and Last Name.
+* **Company Name**: The prospective organization name.
+* **Email & Phone**: Primary communication channels.
+* **Lead Source**: Where the lead originated (e.g., *Website, Referral, Event, Cold Outreach*).
+* **Estimated Value**: Anticipated initial deal size.
+* **Owner**: The sales representative assigned to nurture the lead (defaults to you).
+* **Notes**: Any initial context or background details.
+
+{% endstep %}
+{% step %}
+
+#### Create the lead
+
+Click **Create Lead**.
+
+{% endstep %}
+{% endstepper %}
 
 ---
 
@@ -59,9 +88,30 @@ flowchart TD
 
 ### Handling Disqualification
 When marking a lead as **Disqualified**:
-1. You must select a structured **Disqualification Reason** (e.g., *No Budget, Out of Scope, Competitor Chosen, Unresponsive*).
-2. Enter explanatory notes to help your team analyze lost lead patterns.
-3. **Restoring a Disqualified Lead**: If a disqualified prospect contacts you again months later, you can click **Restore to Contacted** on the lead detail view to re-enter the active qualification cycle.
+
+{% stepper %}
+{% step %}
+
+#### Choose a disqualification reason
+
+You must select a structured **Disqualification Reason** (e.g., *No Budget, Out of Scope, Competitor Chosen, Unresponsive*).
+
+{% endstep %}
+{% step %}
+
+#### Record context
+
+Enter explanatory notes to help your team analyze lost lead patterns.
+
+{% endstep %}
+{% step %}
+
+#### Restore when appropriate
+
+**Restoring a Disqualified Lead**: If a disqualified prospect contacts you again months later, you can click **Restore to Contacted** on the lead detail view to re-enter the active qualification cycle.
+
+{% endstep %}
+{% endstepper %}
 
 ---
 
@@ -88,19 +138,47 @@ flowchart TD
 </details>
 
 ### Step-by-step conversion
-1. Open the Lead detail page.
-2. Click the **Convert Lead** button in the top action bar.
-3. You will be redirected to the full-page conversion wizard:
-   * **Account Section**:
-     * **Link Existing Account**: The wizard scans your database for matching company names. If a match is found, you can link to the existing Account.
-     * **Create New Account**: If no match exists, select `Create New Account`. Specify the Account Type (*Client* or *Reseller*), Account Code, and Address.
-   * **Contact Section**:
-     * Automatically creates a new Contact record pre-filled with the lead's name, email, and phone number, associated with the Account.
-   * **Opportunity & Funnel Section**:
-     * **Opportunity Name**: Defaults to `[Company Name] opportunity` (customizable).
-     * **Expected Close Date**: Set the estimated closing target date.
-     * The deal is automatically seeded into the sales funnel at the initial stage **`0e` (Identified)**.
-4. Click **Convert lead**.
+
+{% stepper %}
+{% step %}
+
+#### Open the lead
+
+Open the Lead detail page.
+
+{% endstep %}
+{% step %}
+
+#### Start conversion
+
+Click the **Convert Lead** button in the top action bar.
+
+{% endstep %}
+{% step %}
+
+#### Review the linked records
+
+You will be redirected to the full-page conversion wizard:
+
+* **Account Section**:
+  * **Link Existing Account**: The wizard scans your database for matching company names. If a match is found, you can link to the existing Account.
+  * **Create New Account**: If no match exists, select `Create New Account`. Specify the Account Type (*Client* or *Reseller*), Account Code, and Address.
+* **Contact Section**:
+  * Automatically creates a new Contact record pre-filled with the lead's name, email, and phone number, associated with the Account.
+* **Opportunity & Funnel Section**:
+  * **Opportunity Name**: Defaults to `[Company Name] opportunity` (customizable).
+  * **Expected Close Date**: Set the estimated closing target date.
+  * The deal is automatically seeded into the sales funnel at the initial stage **`0e` (Identified)**.
+
+{% endstep %}
+{% step %}
+
+#### Convert the lead
+
+Click **Convert lead**.
+
+{% endstep %}
+{% endstepper %}
 
 {% hint style="warning" %}
 **Review before converting.** Conversion creates linked records and marks the lead Converted. You cannot convert the same lead again.
