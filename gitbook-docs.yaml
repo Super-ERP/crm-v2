@@ -1,10 +1,10 @@
 $schema: https://api.gitbook.com/gitbook-docs.yaml
 site:
-  title: Super-ERP
+  title: Q-App
   structure:
     - type: space
       key: user-guide
-      title: Super-ERP User Guide
+      title: Q-App User Guide
       path: user-guide
       default: true
       content:
