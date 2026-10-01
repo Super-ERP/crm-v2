@@ -81,12 +81,12 @@ function collectionFrequency(value: unknown): CollectionFrequency {
   return value
 }
 
-function selectedModules(value: unknown): ModuleId[] {
+export function selectedModules(value: unknown): ModuleId[] {
   const values = Array.isArray(value) ? value : value === undefined ? [] : [value]
   if (values.length > Object.keys(MODULE_CATALOG).length) throw badRequest()
   const selected = new Set<ModuleId>()
   for (const item of values) {
-    if (typeof item !== "string" || !(item in MODULE_CATALOG)) throw badRequest()
+    if (typeof item !== "string" || !Object.hasOwn(MODULE_CATALOG, item)) throw badRequest()
     selected.add(item as ModuleId)
   }
   if (selected.size !== values.length) throw badRequest()

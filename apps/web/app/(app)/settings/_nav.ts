@@ -89,16 +89,6 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
     ],
   },
   {
-    label: "People",
-    items: [
-      {
-        label: "People",
-        href: "/settings/people",
-        permission: PERMISSIONS.TENANT_MANAGE_USERS,
-      },
-    ],
-  },
-  {
     label: "Developers",
     items: [
       {

@@ -1429,7 +1429,7 @@ export async function updateAutoJoin(input: {
         role: updated.autoJoinRole ?? null,
       }
     })
-    revalidatePath("/settings")
+    revalidatePath("/settings/security")
     return saved
   })
 }

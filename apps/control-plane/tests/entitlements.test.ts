@@ -1060,6 +1060,30 @@ describe("simple service controls", () => {
     await env.CONTROL_DB.prepare("UPDATE heartbeat_rollups SET entitlement_version = ? WHERE deployment_id = ?").bind(String(reference!.version), fixture.deploymentId).run()
     expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ syncStatus: "applied" })
   })
+  it("updates every supported module in signed service controls and preserves the selection on renewal", async () => {
+    const fixture = await ready()
+    const { saveServiceControls, getServiceControls } = await import("../src/repos/service-controls")
+    const { MODULE_CATALOG } = await import("../src/repos/contracts")
+    const moduleIds = Object.keys(MODULE_CATALOG)
+    await saveServiceControls(bindings(), { deploymentId: fixture.deploymentId, enabled: true, seatLimit: 4, expectedRevision: 0, moduleIds, actor: { operatorId: ownerId, requestId: crypto.randomUUID() }, now })
+    const reference = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    const issued = await getEntitlement(env.CONTROL_DB, fixture.deploymentId, reference!.version)
+    expect(issued!.envelope.payload.moduleIds).toEqual([...moduleIds].sort())
+    expect(await verifyEnvelope(issued!.envelope, { "vendor-key-a": publicJwk })).not.toBeNull()
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ moduleIds: [...moduleIds].sort(), syncStatus: "pending", revision: 1 })
+    await save(fixture, true, 5, 1)
+    const renewed = await getCurrentEntitlementReference(env.CONTROL_DB, fixture.deploymentId)
+    expect((await getEntitlement(env.CONTROL_DB, fixture.deploymentId, renewed!.version))!.envelope.payload.moduleIds).toEqual([...moduleIds].sort())
+    await saveServiceControls(bindings(), { deploymentId: fixture.deploymentId, enabled: true, seatLimit: 5, expectedRevision: 2, moduleIds: [], actor: { operatorId: ownerId, requestId: crypto.randomUUID() }, now })
+    expect(await getServiceControls(env.CONTROL_DB, fixture.deploymentId, now)).toMatchObject({ moduleIds: [], revision: 3 })
+  })
+  it("rejects unknown modules and incomplete dependency selections", async () => {
+    const fixture = await ready()
+    const { saveServiceControls } = await import("../src/repos/service-controls")
+    for (const moduleIds of [["unknown"], ["finance"], ["advancedRoles", "advancedRoles"], ["toString"]]) {
+      await expect(saveServiceControls(bindings(), { deploymentId: fixture.deploymentId, enabled: true, seatLimit: 4, expectedRevision: 0, moduleIds, actor: { operatorId: ownerId, requestId: crypto.randomUUID() }, now })).rejects.toMatchObject({ status: 400 })
+    }
+  })
   it("requires server compatibility and rejects stale edits and occupied seat reductions", async () => {
     const fixture = await ready()
     await expect(save(fixture, true, 2, 0)).rejects.toMatchObject({ code: "service_seat_limit_in_use" })
