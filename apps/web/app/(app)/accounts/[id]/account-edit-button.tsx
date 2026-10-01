@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { Pencil } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -25,7 +24,6 @@ export function AccountEditButton({
   countries: CountryOption[]
   currencies: string[]
 }) {
-  const router = useRouter()
   const perms = usePermissions()
   if (!perms.has(PERMISSIONS.ACCOUNT_UPDATE)) return null
   return (
@@ -42,7 +40,6 @@ export function AccountEditButton({
           Edit
         </Button>
       }
-      onSaved={() => router.refresh()}
     />
   )
 }

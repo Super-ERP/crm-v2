@@ -443,7 +443,6 @@ export function QuotationForm({
       return
     }
     toast.success("Quotation saved")
-    router.refresh()
     setBusy(false)
   }
 
@@ -456,7 +455,6 @@ export function QuotationForm({
       return
     }
     toast.success("Quotation accepted")
-    router.refresh()
     setBusy(false)
   }
 
@@ -484,13 +482,11 @@ export function QuotationForm({
                   return
                 }
                 toast.success("Primary quotation restored")
-                router.refresh()
               },
             },
           }
         : {}),
     })
-    router.refresh()
     setBusy(false)
   }
 
@@ -520,7 +516,6 @@ export function QuotationForm({
     }
     toast.success(successMsg)
     if (options?.redirect) router.push(options.redirect)
-    else router.refresh()
     setBusy(false)
   }
 

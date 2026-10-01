@@ -22,11 +22,12 @@ import { withEntitledModule } from "@/lib/modules.server"
  */
 export async function withTenant<T>(
   permission: PermissionKey,
-  fn: (tx: Tx, ctx: ServerContext) => Promise<T>
+  fn: (tx: Tx, ctx: ServerContext) => Promise<T>,
+  options?: { deadlockRetries?: number }
 ): Promise<T> {
   const ctx = await requireContext()
   assertCan(ctx, permission)
-  return runInTenant(ctx.tenantId, (tx) => fn(tx, ctx))
+  return runInTenant(ctx.tenantId, (tx) => fn(tx, ctx), options)
 }
 
 /**

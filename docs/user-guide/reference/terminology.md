@@ -143,7 +143,7 @@ The active organization whose records and settings you are working with. **Tenan
 
 ### Owner, salesperson, and reporting manager
 
-A record owner or salesperson is responsible for that record. A reporting manager is configured in the team hierarchy and is used for visibility and approval routing. The **Owner role** is an access role; it is not the same as owning a particular record.
+The **Account owner** is the organization member responsible for an account and its related sales records. A **salesperson** does sales work and may be the Account owner, but the two terms are not interchangeable. A **reporting manager** is configured in the team hierarchy and is used for visibility and approval routing. The **Owner role** is an access role; it does not make its holder the owner of every account. An **Opportunity Owner Contact** is a customer-side contact, distinct from the Account owner.
 
 ### Role, permission, and enabled module
 

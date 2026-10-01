@@ -58,6 +58,7 @@ import {
 
 type Chain = {
   from: ReturnType<typeof vi.fn>
+  innerJoin: ReturnType<typeof vi.fn>
   where: ReturnType<typeof vi.fn>
   limit: ReturnType<typeof vi.fn>
   for: ReturnType<typeof vi.fn>
@@ -72,6 +73,7 @@ function chain(value: unknown, updates: unknown[]): Chain {
   const promise = Promise.resolve(value)
   const q = {} as Chain
   q.from = vi.fn(() => q)
+  q.innerJoin = vi.fn(() => q)
   q.where = vi.fn(() => q)
   q.limit = vi.fn(() => q)
   q.for = vi.fn(() => q)
@@ -134,6 +136,7 @@ describe("quotation approval actions", () => {
   it("refuses submission instead of routing to unrelated people when no manager is eligible", async () => {
     mocks.requireManagerApprover.mockRejectedValueOnce(new Error("No eligible manager"))
     const fixture = txWithSelects([
+      [{ id: "account-1" }],
       [{ id: "quote-1", funnelId: "funnel-1", status: "draft" }],
       [{ ownerMemberId: "rep" }],
     ])
@@ -144,6 +147,7 @@ describe("quotation approval actions", () => {
 
   it("submits Draft for approval with row locking and audit", async () => {
     const fixture = txWithSelects([
+      [{ id: "account-1" }],
       [{ id: "quote-1", funnelId: "funnel-1", status: "draft" }],
       [{ ownerMemberId: "rep" }],
       [{ id: "quote-1", status: "pending_approval" }],
@@ -153,7 +157,8 @@ describe("quotation approval actions", () => {
     const result = await submitQuotationForApproval("quote-1")
 
     expect(result).toMatchObject({ ok: true })
-    expect(fixture.tx.select.mock.results[0]?.value.for).toHaveBeenCalledWith("update")
+    expect(fixture.tx.select.mock.results[0]?.value.for).toHaveBeenCalledWith("share", { of: expect.anything() })
+    expect(fixture.tx.select.mock.results[1]?.value.for).toHaveBeenCalledWith("update")
     expect(fixture.updates[0]).toMatchObject({
       status: "pending_approval",
       approverMemberId: "manager-1",

@@ -149,7 +149,7 @@ export default async function AccountDetailPage({
       : []),
     { label: "Industry", value: account.industry ?? "—", editKey: "industry" },
     { label: "Phone", value: account.phone ?? "—", editKey: "phone" },
-    { label: "Account manager", value: ownerName ?? "—", editKey: "owner" },
+    { label: "Account owner", value: ownerName ?? "—", editKey: "owner" },
     {
       label: "Company registration number",
       value: account.registrationNumber ?? "—",

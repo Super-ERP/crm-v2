@@ -33,7 +33,6 @@ export type OpportunityContainerRow = {
   accountCode: string | null
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
-  ownerName: string | null
   totalEstimatedFunnelAmount: string | null
   funnelCount: number
   currency: string

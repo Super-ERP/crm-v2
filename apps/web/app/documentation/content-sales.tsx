@@ -455,7 +455,7 @@ stateDiagram-v2
         </Li>
         <Li>
           Approval requires <Code>quotation.approve</Code> and the first eligible
-          active manager in the account salesperson&apos;s reporting line. Permissions
+          active manager in the account owner&apos;s reporting line. Permissions
           from secondary roles count. Review on the quotation page; the Approvals
           inbox contains stage requests only. Quotation-create permission is still
           required to create revisions.

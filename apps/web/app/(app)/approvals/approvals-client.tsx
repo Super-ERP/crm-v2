@@ -59,17 +59,19 @@ function Attachments({ requestId }: { requestId: string }) {
   const [open, setOpen] = React.useState(false)
   const [items, setItems] = React.useState<AttachmentRow[] | null>(null)
   const [loading, setLoading] = React.useState(false)
+  const [error, setError] = React.useState(false)
 
   async function toggle() {
     const next = !open
     setOpen(next)
-    if (next && items === null) {
+    if (next && items === null && !loading) {
+      setError(false)
       setLoading(true)
       try {
         const data = await listEntityAttachments("stage_approval_request", requestId)
         setItems(data)
       } catch {
-        setItems([])
+        setError(true)
       } finally {
         setLoading(false)
       }
@@ -81,6 +83,7 @@ function Attachments({ requestId }: { requestId: string }) {
       <button
         type="button"
         onClick={toggle}
+        disabled={loading}
         className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         <ChevronRight
@@ -94,6 +97,8 @@ function Attachments({ requestId }: { requestId: string }) {
             <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
               <Loader2 className="size-3.5 animate-spin" /> Loading…
             </span>
+          ) : error ? (
+            <span className="text-xs text-destructive">Attachments could not be loaded. Close and reopen to retry.</span>
           ) : (
             <AttachmentList items={items ?? []} />
           )}
@@ -116,12 +121,11 @@ function StagePath({ row }: { row: ApprovalRow }) {
 function DecisionDialog({
   row,
   decision,
-  onDone,
 }: {
   row: ApprovalRow
   decision: "approved" | "rejected"
-  onDone: () => void
 }) {
+  const [open, setOpen] = React.useState(false)
   const [note, setNote] = React.useState("")
   const [pending, startTransition] = React.useTransition()
   const approve = decision === "approved"
@@ -144,12 +148,12 @@ function DecisionDialog({
       } else {
         toast.success(res.data.message)
       }
-      onDone()
+      setOpen(false)
     })
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={
           <Button size="sm" variant={approve ? "default" : "outline"}>
@@ -196,7 +200,8 @@ function DecisionDialog({
   )
 }
 
-function CancelDialog({ row, onDone }: { row: ApprovalRow; onDone: () => void }) {
+function CancelDialog({ row }: { row: ApprovalRow }) {
+  const [open, setOpen] = React.useState(false)
   const [pending, startTransition] = React.useTransition()
 
   function submit() {
@@ -210,12 +215,12 @@ function CancelDialog({ row, onDone }: { row: ApprovalRow; onDone: () => void })
         return
       }
       toast.success(res.data.message)
-      onDone()
+      setOpen(false)
     })
   }
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={
           <Button size="sm" variant="outline">
@@ -251,7 +256,7 @@ function CancelDialog({ row, onDone }: { row: ApprovalRow; onDone: () => void })
   )
 }
 
-function IncomingCard({ row, onDone }: { row: ApprovalRow; onDone: () => void }) {
+function IncomingCard({ row }: { row: ApprovalRow }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 py-4">
@@ -281,8 +286,8 @@ function IncomingCard({ row, onDone }: { row: ApprovalRow; onDone: () => void })
             advance to {row.targetStageName}, or decline to keep it in place.
           </span>
           <div className="flex items-center gap-2">
-            <DecisionDialog row={row} decision="rejected" onDone={onDone} />
-            <DecisionDialog row={row} decision="approved" onDone={onDone} />
+            <DecisionDialog row={row} decision="rejected" />
+            <DecisionDialog row={row} decision="approved" />
           </div>
         </div>
       </CardContent>
@@ -290,7 +295,7 @@ function IncomingCard({ row, onDone }: { row: ApprovalRow; onDone: () => void })
   )
 }
 
-function MineCard({ row, onDone }: { row: ApprovalRow; onDone: () => void }) {
+function MineCard({ row }: { row: ApprovalRow }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 py-4">
@@ -324,7 +329,7 @@ function MineCard({ row, onDone }: { row: ApprovalRow; onDone: () => void }) {
           <>
             <Separator />
             <div className="flex items-center justify-end">
-              <CancelDialog row={row} onDone={onDone} />
+              <CancelDialog row={row} />
             </div>
           </>
         ) : null}
@@ -350,7 +355,6 @@ function GateHelp() {
 export function ApprovalsClient({ tab, page }: { tab: "incoming" | "mine"; page: ApprovalPage }) {
   const router = useRouter()
   const [navigating, startTransition] = React.useTransition()
-  const refresh = React.useCallback(() => router.refresh(), [router])
   const href = (pageIndex: number) => `/approvals?tab=${tab}&page=${pageIndex}`
 
   return (
@@ -369,7 +373,7 @@ export function ApprovalsClient({ tab, page }: { tab: "incoming" | "mine"; page:
             </p>
           ) : (
             <div className="grid gap-3">
-              {page.rows.map(row => tab === "incoming" ? <IncomingCard key={row.id} row={row} onDone={refresh} /> : <MineCard key={row.id} row={row} onDone={refresh} />)}
+              {page.rows.map(row => tab === "incoming" ? <IncomingCard key={row.id} row={row} /> : <MineCard key={row.id} row={row} />)}
             </div>
           )}
           <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Approval pages">

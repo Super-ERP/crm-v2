@@ -111,7 +111,7 @@ export default async function ProjectDetailPage({
         "—"
       ),
     },
-    { label: "Owner", value: ownerName ?? "—" },
+    { label: "Account owner", value: ownerName ?? "—" },
   ]
 
   return (

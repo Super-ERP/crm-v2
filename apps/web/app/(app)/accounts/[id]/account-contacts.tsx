@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { MoreHorizontal, Plus, Star } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
@@ -43,7 +42,6 @@ function fullName(p: { firstName: string; lastName: string | null }) {
 }
 
 function ContactActions({ person }: { person: PersonRow }) {
-  const router = useRouter()
   const perms = usePermissions()
   const canUpdate = perms.has(PERMISSIONS.PERSON_UPDATE)
   const canDelete = perms.has(PERMISSIONS.PERSON_DELETE)
@@ -58,7 +56,6 @@ function ContactActions({ person }: { person: PersonRow }) {
       return
     }
     toast.success("Contact deleted")
-    router.refresh()
     setConfirmOpen(false)
   }
 
@@ -69,7 +66,6 @@ function ContactActions({ person }: { person: PersonRow }) {
       return
     }
     toast.success("Marked as primary contact")
-    router.refresh()
   }
 
   return (
@@ -80,10 +76,7 @@ function ContactActions({ person }: { person: PersonRow }) {
           presetAccountId={person.accountId}
           open={editOpen}
           onOpenChange={setEditOpen}
-          onSaved={() => {
-            setEditOpen(false)
-            router.refresh()
-          }}
+          onSaved={() => setEditOpen(false)}
         />
       ) : null}
 
@@ -151,7 +144,6 @@ export function AccountContacts({
   accountId: string
   contacts: PersonRow[]
 }) {
-  const router = useRouter()
   const perms = usePermissions()
   const canCreate = perms.has(PERMISSIONS.PERSON_CREATE)
 
@@ -237,7 +229,6 @@ export function AccountContacts({
                 Add contact
               </Button>
             }
-            onSaved={() => router.refresh()}
           />
         ) : undefined
       }

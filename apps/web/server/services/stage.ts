@@ -565,7 +565,7 @@ export async function requestStageAdvance(
       input.reason
     )
     return { moved: false, approvalRequestId }
-  })
+  }, { deadlockRetries: 2 })
 }
 
 /**
@@ -660,18 +660,25 @@ export async function decideApproval(
       return { status: "cancelled", message: "Request cancelled" }
     }
 
-    const assertCurrentApprover = async () => {
-      const allowed = ctx.isSuperadmin || (
-        !!ctx.memberId &&
-        req.approverMemberId === ctx.memberId &&
-        ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) &&
-        await findManagerApprover(tx, req.requesterMemberId, PERMISSIONS.STAGE_ADVANCE_APPROVE) === ctx.memberId
-      )
-      if (!allowed) throw new Error("Not authorized to decide this request")
-      if (req.requesterMemberId === ctx.memberId && !ctx.isSuperadmin)
+    const assertAssignedApprover = () => {
+      if (ctx.isSuperadmin) return
+      if (!ctx.memberId || req.approverMemberId !== ctx.memberId ||
+          !ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE))
+        throw new Error("Not authorized to decide this request")
+      if (req.requesterMemberId === ctx.memberId)
         throw new Error("Cannot approve your own request")
     }
-    await assertCurrentApprover()
+    const assertCurrentApprover = async () => {
+      assertAssignedApprover()
+      if (!ctx.isSuperadmin &&
+          await findManagerApprover(tx, req.requesterMemberId, PERMISSIONS.STAGE_ADVANCE_APPROVE) !== ctx.memberId)
+        throw new Error("Not authorized to decide this request")
+    }
+    // Reject already holds the request row; approval locks funnel then request.
+    // Delay the recursive route read until after those locks so it is current
+    // and successful approvals need only one route query.
+    if (input.decision === "rejected") await assertCurrentApprover()
+    else assertAssignedApprover()
 
     if (input.decision === "rejected") {
       const rejected = await tx
@@ -837,5 +844,5 @@ export async function decideApproval(
       status: "approved",
       message: `Request approved — moved to ${target.name}`,
     }
-  })
+  }, { deadlockRetries: 2 })
 }
