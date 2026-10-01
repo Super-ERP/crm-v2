@@ -128,7 +128,7 @@ export default async function DashboardPage() {
   const data = await getDashboardData()
   const now = new Date()
 
-  const approvalsCount = data.pendingApprovals.length
+  const approvalsCount = data.pendingApprovalsCount
   const followUpsCount = data.followUpsDue.length
   const hasOverdue = data.followUpsDue.some((f) => isBefore(f.dueAt, now))
   const approvalsTitle = data.canApproveAll

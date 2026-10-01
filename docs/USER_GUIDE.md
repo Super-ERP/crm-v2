@@ -142,7 +142,7 @@ A **Quotation** (`/quotations`) defines itemized pricing and terms.
 
 ### Approval & Revision Lifecycle
 * **`Draft`**: Being drafted by sales rep.
-* **Submit for Approval**: If discounts or terms exceed thresholds, submit to the **Approvals Inbox**. Status moves to **`Pending Approval`**.
+* **Submit for Approval**: Submit every quotation to the first active reporting manager with quotation approval permission. Review happens on the quotation detail page. Status moves to **`Pending Approval`**.
 * **`Approved`**: Manager approves the quote.
 * **`Sent`**: Rep marks quote as delivered to the customer.
 * **Revisions**: If the customer requests changes, click **Revise**. The system keeps the original quote locked in history and creates a new linked Draft revision (e.g., `-Rev1`).
@@ -182,12 +182,12 @@ stateDiagram-v2
 
 ## 8. Approvals Hub
 
-Located at **Sales → Approvals** (`/approvals`), this is the central governance dashboard for **Managers** and **Owners**:
-* **Pending Approvals Queue**: Displays quote discount requests and stage advancement gates.
-* **Reviewing**: Inspect the customer context, discount %, price impact, and rep notes.
+Located at **Sales → Approvals** (`/approvals`), this shows stage requests assigned to eligible reporting managers:
+* **Pending Approvals Queue**: Displays stage advancement requests, 25 per page. Quotation approvals are reviewed on quotation detail pages.
+* **Reviewing**: Inspect the funnel, requested stage, attachments, and requester notes.
 * **Decision**:
-  * **Approve**: Immediately advances the quote or opportunity.
-  * **Reject**: Requires a mandatory review note. Returns the quote to Draft for adjustments.
+  * **Approve**: Advances the funnel if its current transition and required fields remain valid.
+  * **Reject**: Closes the stage request; a review note is optional. Manager rejection requires a reason and returns the quotation to Draft for corrections. Customer rejection sets it to Rejected.
 
 ---
 

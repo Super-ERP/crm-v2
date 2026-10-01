@@ -271,6 +271,13 @@ export const funnelForecastPage: DocPage = {
         <Code>Closed Won</Code> and <Code>Closed Lost</Code> are permanent.
       </P>
       <P>
+        Stage requests route to the first active eligible manager in the requester&apos;s
+        reporting line, using permissions from every assigned role. Only the assigned
+        manager may decide the request; the requester cannot approve it. Stage-approval
+        permission allows direct entry without a request. Legacy tiers do not bypass gates.
+        The Approvals inbox loads one tab at a time with 25 requests per page.
+      </P>
+      <P>
         Opportunity code and name are the same generated value,
         <Code>ORGCODEOPP-YYYY-NNNN</Code>. A project code stays empty until a
         child Funnel first enters <Code>4A</Code>; rollback and re-entry reuse
@@ -373,7 +380,7 @@ export const quotationsPage: DocPage = {
   slug: "quotations",
   title: "Quotations",
   description:
-    "Line-item quoting: lifecycle, money math, acceptance guards, and what acceptance automates.",
+    "Line-item quoting: lifecycle, money math, acceptance guards, and manager-only approval.",
   body: (
     <>
       <H2>Lifecycle</H2>
@@ -437,7 +444,8 @@ stateDiagram-v2
       <H2>Quotation content and permissions</H2>
       <Ul>
         <Li>
-          Settings provides default Notes, Delivery and Payment Term. New
+          Documents Settings edits default Delivery and Payment Term. A stored
+          Notes default, if configured, is also copied to new quotations. New
           quotations copy editable snapshots; Delivery and Payment Term are
           available to built-in and external templates.
         </Li>
@@ -446,8 +454,10 @@ stateDiagram-v2
           primary contact; cross-account contacts are rejected.
         </Li>
         <Li>
-          Approval uses <Code>quotation.approve</Code>. Assign it in Team &amp;
-          roles to the approval role; quotation-create permission is still
+          Approval requires <Code>quotation.approve</Code> and the first eligible
+          active manager in the account salesperson&apos;s reporting line. Permissions
+          from secondary roles count. Review on the quotation page; the Approvals
+          inbox contains stage requests only. Quotation-create permission is still
           required to create revisions.
         </Li>
       </Ul>

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { useForm, useWatch } from "react-hook-form"
+import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
@@ -39,7 +39,6 @@ import {
   removeCompanyLogo,
   type CompanyProfile,
   type TenantSettingsView,
-  type TenantMemberView,
 } from "@/app/(app)/settings/actions"
 import { DEFAULT_CURRENCIES } from "@/lib/tenant-defaults"
 import { Textarea } from "@/components/ui/textarea"
@@ -55,7 +54,6 @@ const generalSchema = z.object({
     .length(3, "Use a 3-letter ISO code")
     .transform((v) => v.toUpperCase()),
   fiscalYearStartMonth: z.coerce.number().int().min(1, "1–12").max(12, "1–12"),
-  approvalBypassTier: z.coerce.number().int().min(0, "Must be ≥ 0"),
   followUpDueDays: z.coerce.number().int().min(1, "1–90").max(90, "1–90"),
   autoCompleteProjectOnPaid: z.boolean(),
   intercoAutoMirror: z.boolean(),
@@ -84,7 +82,6 @@ const generalSchema = z.object({
   phonePrefix: z.string().trim().max(8, "Keep it short").optional().default(""),
   entityCode: z.string().trim().max(16, "Keep it short").optional().default(""),
   taxInclusive: z.boolean(),
-  autoWinOnQuoteAccept: z.boolean(),
   allowPasswordLogin: z.boolean(),
 })
 
@@ -96,7 +93,6 @@ const FINANCE_SWITCHES = new Set(["autoCompleteProjectOnPaid"])
 const SWITCHES: {
   name:
     | "taxInclusive"
-    | "autoWinOnQuoteAccept"
     | "autoCompleteProjectOnPaid"
   label: string
   description: string
@@ -105,12 +101,6 @@ const SWITCHES: {
     name: "taxInclusive",
     label: "Tax-inclusive pricing",
     description: "Quotation unit prices already include tax.",
-  },
-  {
-    name: "autoWinOnQuoteAccept",
-    label: "Auto-win on quote accept",
-    description:
-      "Move a funnel to Won automatically when its primary quote is accepted. Note: this bypasses the Won stage's \"requires approval to enter\" gate — accepting the quote wins the funnel directly, no sign-off requested.",
   },
   {
     name: "autoCompleteProjectOnPaid",
@@ -122,10 +112,8 @@ const SWITCHES: {
 
 function GeneralForm({
   settings,
-  members,
 }: {
   settings: TenantSettingsView
-  members: TenantMemberView[]
 }) {
   const [isPending, startTransition] = React.useTransition()
 
@@ -135,7 +123,6 @@ function GeneralForm({
       entityName: settings.entityName,
       defaultCurrency: settings.defaultCurrency,
       fiscalYearStartMonth: settings.fiscalYearStartMonth,
-      approvalBypassTier: settings.approvalBypassTier,
       followUpDueDays: settings.followUpDueDays,
       autoCompleteProjectOnPaid: settings.autoCompleteProjectOnPaid,
       intercoAutoMirror: settings.intercoAutoMirror,
@@ -150,21 +137,9 @@ function GeneralForm({
       phonePrefix: settings.phonePrefix,
       entityCode: settings.entityCode,
       taxInclusive: settings.taxInclusive,
-      autoWinOnQuoteAccept: settings.autoWinOnQuoteAccept,
       allowPasswordLogin: true,
     },
   })
-
-  // Highest tier held by an active member — used to flag a deadlocked bypass tier.
-  const maxActiveTier = React.useMemo(
-    () =>
-      members
-        .filter((m) => m.status === "active")
-        .reduce((max, m) => Math.max(max, m.tierLevel), -1),
-    [members]
-  )
-  const bypassTier = Number(useWatch({ control: form.control, name: "approvalBypassTier" })) || 0
-  const noBypassMember = maxActiveTier < bypassTier
 
   function performSave(parsed: GeneralParsed) {
     startTransition(async () => {
@@ -172,7 +147,6 @@ function GeneralForm({
         entityName: parsed.entityName,
         defaultCurrency: parsed.defaultCurrency,
         fiscalYearStartMonth: parsed.fiscalYearStartMonth,
-        approvalBypassTier: parsed.approvalBypassTier,
         followUpDueDays: parsed.followUpDueDays,
         autoCompleteProjectOnPaid: parsed.autoCompleteProjectOnPaid,
         intercoAutoMirror: false,
@@ -187,7 +161,6 @@ function GeneralForm({
         phonePrefix: parsed.phonePrefix,
         entityCode: parsed.entityCode,
         taxInclusive: parsed.taxInclusive,
-        autoWinOnQuoteAccept: parsed.autoWinOnQuoteAccept,
         allowPasswordLogin: true,
       })
       if (!res.ok) {
@@ -199,7 +172,6 @@ function GeneralForm({
         entityName: updated.entityName,
         defaultCurrency: updated.defaultCurrency,
         fiscalYearStartMonth: updated.fiscalYearStartMonth,
-        approvalBypassTier: updated.approvalBypassTier,
         followUpDueDays: updated.followUpDueDays,
         autoCompleteProjectOnPaid: updated.autoCompleteProjectOnPaid,
         intercoAutoMirror: updated.intercoAutoMirror,
@@ -214,7 +186,6 @@ function GeneralForm({
         phonePrefix: updated.phonePrefix,
         entityCode: updated.entityCode,
         taxInclusive: updated.taxInclusive,
-        autoWinOnQuoteAccept: updated.autoWinOnQuoteAccept,
         allowPasswordLogin: true,
       })
       toast.success("Settings saved")
@@ -358,44 +329,6 @@ function GeneralForm({
                   <FormDescription>
                     Prefilled on new account addresses.
                   </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="approvalBypassTier"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Approval bypass tier</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      name={field.name}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
-                      value={String(field.value ?? "")}
-                      onChange={(e) => field.onChange(e.target.value)}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Members whose tier (set per-member, defaulting from their
-                    role&apos;s tier on the Team screen) is at or above this number
-                    advance stages without approval. Highest active member tier:{" "}
-                    <span className="tabular-nums font-medium">
-                      {maxActiveTier < 0 ? "none" : maxActiveTier}
-                    </span>
-                    .
-                  </FormDescription>
-                  {noBypassMember ? (
-                    <p className="text-sm text-destructive">
-                      No active member meets this tier — every gated stage will
-                      need approval and there is no one who can approve, so the
-                      funnel can deadlock. Lower this tier or raise a
-                      member&apos;s tier on the Team screen.
-                    </p>
-                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
@@ -679,14 +612,12 @@ function CompanyProfileCard({
 
 export function GeneralClient({
   settings,
-  members,
 }: {
   settings: TenantSettingsView
-  members: TenantMemberView[]
 }) {
   return (
     <div className="grid gap-6">
-      <GeneralForm settings={settings} members={members} />
+      <GeneralForm settings={settings} />
 
       <CompanyProfileCard
         profile={settings.companyProfile}

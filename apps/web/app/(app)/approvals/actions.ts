@@ -10,12 +10,12 @@ import {
   pipelineStages,
   member,
   user,
-  tenantSettings,
 } from "@/db/schema"
 import { requireContext, assertCan } from "@/lib/server-context"
 import { PERMISSIONS } from "@/lib/permissions"
 import { canAccessAttachable } from "@/lib/access-scope"
 import { runAction, type ActionResult } from "@/lib/action-result"
+import { APPROVAL_PAGE_SIZE, normalizeApprovalPage } from "@/lib/approval-pagination"
 import { decideApproval, type DecisionOutcome } from "@/server/services/stage"
 
 export type ApprovalRow = {
@@ -32,6 +32,8 @@ export type ApprovalRow = {
   requestedAt: string
   decidedAt: string | null
 }
+
+export type ApprovalPage = { rows: ApprovalRow[]; pageIndex: number; hasNextPage: boolean }
 
 const fromStage = alias(pipelineStages, "from_stage")
 const targetStage = alias(pipelineStages, "target_stage")
@@ -64,7 +66,7 @@ function buildApprovalQuery(tx: Parameters<Parameters<typeof runInTenant>[1]>[0]
       eq(stageApprovalRequests.targetStageId, targetStage.id)
     )
     .where(where)
-    .orderBy(desc(stageApprovalRequests.requestedAt))
+    .orderBy(desc(stageApprovalRequests.requestedAt), desc(stageApprovalRequests.id))
 }
 
 /** Resolve member ids -> display names in one round trip. */
@@ -84,62 +86,37 @@ async function nameMap(
   return map
 }
 
-/** Pending requests routed to me (or any pending if I can approve broadly). */
-export async function listIncomingApprovals(): Promise<ApprovalRow[]> {
+/** Pending stage requests assigned to this manager; platform superadmins retain an operational override. */
+export async function listIncomingApprovals(page: unknown = 0): Promise<ApprovalPage> {
+  const pageIndex = normalizeApprovalPage(page)
   const ctx = await requireContext()
   return runInTenant(ctx.tenantId, async (tx) => {
-    const canApprove = ctx.isSuperadmin || ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)
     const conditions: SQL[] = [eq(stageApprovalRequests.status, "pending")]
-    // A broad approver (or superadmin) can decide ANY pending request — see
-    // decideApproval() — including one routed to a now-disabled approver, which
-    // would otherwise sit pending and invisible. So they see every pending
-    // request in the tenant (runInTenant already scopes to the tenant). Everyone
-    // else only sees requests explicitly routed to them.
-    if (!canApprove) {
-      if (!ctx.memberId) return []
+    if (!ctx.isSuperadmin) {
+      if (!ctx.memberId || !ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)) return { rows: [], pageIndex, hasNextPage: false }
       conditions.push(eq(stageApprovalRequests.approverMemberId, ctx.memberId))
     }
-
-    const rows = await buildApprovalQuery(tx, and(...conditions))
-    const names = await nameMap(tx, [
-      ...rows.map((r) => r.requesterUserId),
-      ...rows.map((r) => r.approverMemberId),
-    ])
-    return rows.map((r) => shape(r, names))
-  })
-}
-
-/**
- * The tenant's approval-gate tier: members at this tier (or above), plus anyone
- * holding the stage-approval permission, can both bypass the gate and approve
- * gated advances. Surfaced as inline help so the UI can name the approving tier.
- */
-export async function getApprovalGateInfo(): Promise<{ bypassTier: number }> {
-  const ctx = await requireContext()
-  return runInTenant(ctx.tenantId, async (tx) => {
-    const [settings] = await tx
-      .select({ bypassTier: tenantSettings.approvalBypassTier })
-      .from(tenantSettings)
-      .where(eq(tenantSettings.organizationId, ctx.tenantId))
-      .limit(1)
-    return { bypassTier: settings?.bypassTier ?? 40 }
+    const rows = await buildApprovalQuery(tx, and(...conditions)).limit(APPROVAL_PAGE_SIZE + 1).offset(pageIndex * APPROVAL_PAGE_SIZE)
+    const names = await nameMap(tx, [...rows.map(r => r.requesterUserId), ...rows.map(r => r.approverMemberId)])
+    return { rows: rows.slice(0, APPROVAL_PAGE_SIZE).map(r => shape(r, names)), pageIndex, hasNextPage: rows.length > APPROVAL_PAGE_SIZE }
   })
 }
 
 /** Requests I raised. */
-export async function listMyApprovals(): Promise<ApprovalRow[]> {
+export async function listMyApprovals(page: unknown = 0): Promise<ApprovalPage> {
+  const pageIndex = normalizeApprovalPage(page)
   const ctx = await requireContext()
   return runInTenant(ctx.tenantId, async (tx) => {
-    if (!ctx.memberId) return []
+    if (!ctx.memberId) return { rows: [], pageIndex, hasNextPage: false }
     const rows = await buildApprovalQuery(
       tx,
       eq(stageApprovalRequests.requesterMemberId, ctx.memberId)
-    )
+    ).limit(APPROVAL_PAGE_SIZE + 1).offset(pageIndex * APPROVAL_PAGE_SIZE)
     const names = await nameMap(tx, [
       ...rows.map((r) => r.requesterUserId),
       ...rows.map((r) => r.approverMemberId),
     ])
-    return rows.map((r) => shape(r, names))
+    return { rows: rows.slice(0, APPROVAL_PAGE_SIZE).map(r => shape(r, names)), pageIndex, hasNextPage: rows.length > APPROVAL_PAGE_SIZE }
   })
 }
 

@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_NAMESPACE: ghcr.io/q-app
+  IMAGE_NAMESPACE: ghcr.io/super-erp
   TARGET_REF: ${{ github.event.inputs.ref }}
 
 jobs:

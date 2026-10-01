@@ -16,7 +16,7 @@ A **Quotation** is the formal commercial and legal proposal presented to the cus
 2. The system automatically links the quote to the Opportunity, Account, and Account Currency.
 
 ### Automatic Snapshotting
-When a quotation is initialized, the system automatically captures an **immutable snapshot** of:
+When a quotation is initialized, the system automatically captures editable initial snapshots of:
 * **Payment Terms**: Copied from Organization Settings (e.g., *30 Days Net, 50% Upfront*).
 * **Delivery Notes**: Default delivery and SLA terms.
 * **Attention**: Default primary contact from the Account.
@@ -37,7 +37,7 @@ When a quotation is initialized, the system automatically captures an **immutabl
 4. **Configure Pricing**:
    * **Quantity**: Number of units/days/hours.
    * **Unit Price**: Base price per unit in the account currency.
-   * **Discount (%)**: Optional percentage discount.
+   * **Discount amount**: Optional absolute discount amount.
    * **Tax Rate**: Applies tenant tax setting (e.g., 0% Exempt, 6%, 8% SST).
 5. The system computes subtotal, total discount, tax amount, and final total in real time.
 
@@ -61,7 +61,7 @@ stateDiagram-v2
     PendingApproval --> Draft: Manager Requests Changes
     Approved --> Sent: Mark Sent to Client
     Sent --> Accepted: Client Signs / Confirms
-    Sent --> Declined: Client Declines
+    Sent --> Rejected: Client Declines
     Sent --> Draft: Create Revision
     Accepted --> Draft: Create Revision
 ```
@@ -70,19 +70,17 @@ stateDiagram-v2
 The sales rep drafts and edits line items, notes, and pricing.
 
 ### 2. `Pending Approval`
-If total discount exceeds standard thresholds or the deal requires executive sign-off:
-* Click **Submit for Approval**.
-* The quote is locked against further edits and routed to the **Approvals Inbox** for manager review.
+Every quotation must be approved before sending. Click **Submit for Approval**. The quotation becomes read-only, and the first active manager in the account salesperson’s reporting line with **Approve quotations** permission reviews it on the quotation page. Quotations are not listed in the funnel-stage Approvals inbox.
 
 ### 3. `Approved`
-A manager approves the quote. The rep is notified and can now proceed with client presentation.
+Only that eligible reporting manager may approve or reject the quotation. Rejection requires an explanation and returns it to Draft. Approval allows a member with send permission to mark it Sent. To edit an Approved quotation, return it to Draft and obtain approval again. These actions do not send an email notification.
 
 ### 4. `Sent`
 Once delivered to the customer via email or formal meeting, click **Mark as Sent**.
 
-### 5. `Accepted` or `Declined`
+### 5. `Accepted` or `Rejected`
 * **Accepted**: The customer accepts the proposal. *(Note: Customer acceptance records commercial agreement; it does not automatically move the Funnel stage).*
-* **Declined**: The proposal was rejected.
+* **Rejected**: The proposal was rejected.
 
 ---
 

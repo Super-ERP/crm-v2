@@ -57,9 +57,7 @@ export type TenantSettingsView = {
   defaultCurrency: string
   status: string
   fiscalYearStartMonth: number
-  approvalBypassTier: number
   taxInclusive: boolean
-  autoWinOnQuoteAccept: boolean
   allowPasswordLogin: boolean
   entityCode: string
   quoteNextNumber: number
@@ -159,11 +157,9 @@ export type UpdateSettingsInput = {
   entityName: string
   defaultCurrency: string
   fiscalYearStartMonth: number
-  approvalBypassTier: number
   /** Dashboard "due soon" follow-up window, 1–90 days. */
   followUpDueDays: number
   taxInclusive: boolean
-  autoWinOnQuoteAccept: boolean
   allowPasswordLogin: boolean
   entityCode: string
   defaultCountry: string
@@ -213,9 +209,7 @@ const DEFAULTS = {
   defaultCurrency: "MYR",
   status: "active" as const,
   fiscalYearStartMonth: 1,
-  approvalBypassTier: 40,
   taxInclusive: false,
-  autoWinOnQuoteAccept: true,
   subscriptionPlan: "Starter",
   subscriptionStatus: "active" as const,
   subscriptionSeatLimit: null,
@@ -285,9 +279,7 @@ function toView(
     defaultCurrency: row.defaultCurrency,
     status: row.status,
     fiscalYearStartMonth: row.fiscalYearStartMonth,
-    approvalBypassTier: row.approvalBypassTier,
     taxInclusive: row.taxInclusive,
-    autoWinOnQuoteAccept: row.autoWinOnQuoteAccept,
     allowPasswordLogin: true,
     entityCode: row.entityCode ?? "",
     quoteNextNumber: row.quoteNextNumber,
@@ -846,9 +838,6 @@ export async function updateSettings(
   ) {
     throw new Error("Fiscal year start month must be between 1 and 12.")
   }
-  if (!Number.isInteger(input.approvalBypassTier) || input.approvalBypassTier < 0) {
-    throw new Error("Approval bypass tier must be a non-negative integer.")
-  }
   if (
     !Number.isInteger(input.followUpDueDays) ||
     input.followUpDueDays < 1 ||
@@ -874,10 +863,8 @@ export async function updateSettings(
   const values = {
     defaultCurrency: currency,
     fiscalYearStartMonth: input.fiscalYearStartMonth,
-    approvalBypassTier: input.approvalBypassTier,
     followUpDueDays: input.followUpDueDays,
     taxInclusive: input.taxInclusive,
-    autoWinOnQuoteAccept: input.autoWinOnQuoteAccept,
     staleDealDays: input.staleDealDays,
     leadFollowUpDays: input.leadFollowUpDays,
     ...(financeEnabled

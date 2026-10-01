@@ -1,6 +1,7 @@
 import "server-only"
+import { findManagerApprover, requireManagerApprover } from "./approval-routing"
 import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
-import { and, eq, inArray, isNull, ne, or } from "drizzle-orm"
+import { and, eq, inArray, isNull, or } from "drizzle-orm"
 import { runInTenant, type Tx } from "@/db"
 import {
   funnels,
@@ -9,10 +10,6 @@ import {
   pipelineStages,
   funnelStageHistory,
   stageApprovalRequests,
-  membershipProfiles,
-  roles,
-  rolePermissions,
-  permissions,
   tenantSettings,
   paymentMilestones,
   projects,
@@ -74,76 +71,6 @@ export function shouldAllocateOpportunityProjectCode(stageCode: string): boolean
   return stageCode.trim().toLowerCase() === "4a"
 }
 
-async function memberHasPermission(
-  tx: Tx,
-  memberId: string,
-  key: string
-): Promise<boolean> {
-  const rows = await tx
-    .select({ k: permissions.key })
-    .from(membershipProfiles)
-    .innerJoin(roles, eq(membershipProfiles.roleId, roles.id))
-    .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
-    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(and(eq(membershipProfiles.memberId, memberId), eq(permissions.key, key)))
-    .limit(1)
-  return rows.length > 0
-}
-
-/** Walk the upline chain for the first ancestor that can approve; else any approver. */
-async function resolveApprover(
-  tx: Tx,
-  requesterMemberId: string
-): Promise<string> {
-  let cursor = requesterMemberId
-  const seen = new Set<string>([requesterMemberId])
-  for (let i = 0; i < 25; i++) {
-    const [prof] = await tx
-      .select()
-      .from(membershipProfiles)
-      .where(eq(membershipProfiles.memberId, cursor))
-      .limit(1)
-    const mgr = prof?.managerMemberId
-    if (!mgr || seen.has(mgr)) break
-    seen.add(mgr)
-    const [mgrProf] = await tx
-      .select()
-      .from(membershipProfiles)
-      .where(eq(membershipProfiles.memberId, mgr))
-      .limit(1)
-    if (
-      mgrProf &&
-      // Only an active member can actually act on the request — a disabled or
-      // still-invited approver would leave it stuck pending and invisible.
-      mgrProf.status === "active" &&
-      // Tiers retired: the first upline who can approve is the approver.
-      (await memberHasPermission(tx, mgr, PERMISSIONS.STAGE_ADVANCE_APPROVE))
-    ) {
-      return mgr
-    }
-    cursor = mgr
-  }
-  const [fallback] = await tx
-    .select({ m: membershipProfiles.memberId })
-    .from(membershipProfiles)
-    .innerJoin(roles, eq(membershipProfiles.roleId, roles.id))
-    .innerJoin(rolePermissions, eq(rolePermissions.roleId, roles.id))
-    .innerJoin(permissions, eq(rolePermissions.permissionId, permissions.id))
-    .where(
-      and(
-        eq(permissions.key, PERMISSIONS.STAGE_ADVANCE_APPROVE),
-        eq(membershipProfiles.status, "active"),
-        ne(membershipProfiles.memberId, requesterMemberId)
-      )
-    )
-    .limit(1)
-  if (!fallback?.m)
-    throw new Error(
-      "No approver is available to route this request. Ask an administrator to grant the stage-approval permission."
-    )
-  return fallback.m
-}
-
 function normalizeAdvanceCustomFields(
   customFields: Record<string, string> | null | undefined,
   defs: CustomFunnelField[]
@@ -168,9 +95,7 @@ function normalizeAdvanceCustomFields(
 }
 
 /**
- * Create (or reuse) a pending approval request routed to the upline. Shared by
- * manual gated advances and the quote-accept auto-win when the Won stage is
- * approval-gated, so neither path can silently bypass the gate.
+ * Create (or reuse) a pending stage approval request routed to the reporting manager.
  */
 async function createApprovalRequest(
   tx: Tx,
@@ -194,7 +119,7 @@ async function createApprovalRequest(
     .limit(1)
   if (existing) return { approvalRequestId: existing.id }
 
-  const approver = await resolveApprover(tx, ctx.memberId)
+  const approver = await requireManagerApprover(tx, ctx.memberId, PERMISSIONS.STAGE_ADVANCE_APPROVE)
   const [req] = await tx
     .insert(stageApprovalRequests)
     .values({
@@ -500,8 +425,7 @@ export type AdvanceOutcome = { moved: boolean; approvalRequestId?: string }
 
 /**
  * Two gates: (1) the caller must already hold `stage.advance`. (2) if the target
- * stage requires approval AND the actor is below the tenant bypass tier (and is
- * not an approver), the stage does NOT move — a pending approval request is
+ * stage requires approval AND the actor does not hold stage-approval permission, the stage does NOT move — a pending approval request is
  * created and routed to the upline. Otherwise the stage moves immediately.
  */
 export async function requestStageAdvance(
@@ -645,65 +569,6 @@ export async function requestStageAdvance(
 }
 
 /**
- * Move an opportunity to its funnel's WON stage. Called when a quotation is
- * accepted and the tenant has auto-win enabled. No-op if already won, and a
- * no-op (never an override) when the deal is already closed/parked — accepting
- * a quote must not silently reopen a Lost/KIV deal into Won. If the Won stage
- * is approval-gated and the actor can't bypass, a pending approval request is
- * raised instead of moving directly. Signature is intentionally additive;
- * `acceptQuotation` (quotations folder) calls this.
- *
- * Returns `{ moved, pendingApproval }`:
- *  - `moved` is true only when the funnel actually advanced into Won,
- *  - `pendingApproval` is true when the Won stage is gated and only a pending
- *    approval request was filed (the funnel did NOT move yet),
- *  - both false on a no-op (no funnel, already closed/won, or no Won stage).
- * The caller's toast can then say "win is pending approval" rather than "won".
- */
-export type WinOutcome = { moved: boolean; pendingApproval: boolean }
-
-export async function winOpportunity(
-  ctx: ServerContext,
-  funnelId: string
-): Promise<WinOutcome> {
-  return runInTenant(ctx.tenantId, async (tx) => {
-    const [opp] = await tx
-      .select()
-      .from(funnels)
-      .where(eq(funnels.id, funnelId))
-      .limit(1)
-      .for("update")
-    if (!opp) return { moved: false, pendingApproval: false }
-    // Status guard: only an OPEN funnel may auto-win. Won (already), Lost, and
-    // KIV/on-hold pipelines are left untouched.
-    if (opp.status !== "open") return { moved: false, pendingApproval: false }
-
-    const [won] = await tx
-      .select()
-      .from(pipelineStages)
-      .where(and(eq(pipelineStages.pipelineId, opp.pipelineId), eq(pipelineStages.kind, "WON")))
-      .limit(1)
-    if (!won || opp.currentStageId === won.id)
-      return { moved: false, pendingApproval: false }
-
-    // Respect the Won stage's approval gate instead of bypassing it.
-    if (won.requiresApprovalToEnter && !canBypassApproval(ctx)) {
-      await createApprovalRequest(
-        tx,
-        ctx,
-        opp,
-        won,
-        "Auto-win on quotation acceptance"
-      )
-      return { moved: false, pendingApproval: true }
-    }
-
-    await applyStageMove(tx, ctx, opp, won, "quote_accept")
-    return { moved: true, pendingApproval: false }
-  })
-}
-
-/**
  * Outcome of a decision. `status` is the request's resolved status — note the
  * extra `"obsolete"` value: an approve that could no longer be applied because
  * the funnel had already moved past/closed the target stage (the request is
@@ -757,13 +622,16 @@ export async function decideApproval(
   }
 ): Promise<DecisionOutcome> {
   return runInTenant(ctx.tenantId, async (tx) => {
-    // Lock the request row so concurrent decisions serialize: a second caller
-    // blocks here until this tx commits, then sees status != 'pending'.
-    const [initialReq] = await tx
+    // Rejections only need the request lock. Approvals lock funnel then request
+    // below, matching stage advancement lock order.
+    const initialQuery = tx
       .select()
       .from(stageApprovalRequests)
       .where(eq(stageApprovalRequests.id, input.requestId))
       .limit(1)
+    const [initialReq] = await (input.decision === "rejected"
+      ? initialQuery.for("update")
+      : initialQuery)
     if (!initialReq) throw new Error("Request not found")
     let req = initialReq
     if (req.status !== "pending") throw new Error("Request already decided")
@@ -792,13 +660,18 @@ export async function decideApproval(
       return { status: "cancelled", message: "Request cancelled" }
     }
 
-    const allowed =
-      ctx.isSuperadmin ||
-      ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) ||
-      req.approverMemberId === ctx.memberId
-    if (!allowed) throw new Error("Not authorized to decide this request")
-    if (req.requesterMemberId === ctx.memberId && !ctx.isSuperadmin)
-      throw new Error("Cannot approve your own request")
+    const assertCurrentApprover = async () => {
+      const allowed = ctx.isSuperadmin || (
+        !!ctx.memberId &&
+        req.approverMemberId === ctx.memberId &&
+        ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) &&
+        await findManagerApprover(tx, req.requesterMemberId, PERMISSIONS.STAGE_ADVANCE_APPROVE) === ctx.memberId
+      )
+      if (!allowed) throw new Error("Not authorized to decide this request")
+      if (req.requesterMemberId === ctx.memberId && !ctx.isSuperadmin)
+        throw new Error("Cannot approve your own request")
+    }
+    await assertCurrentApprover()
 
     if (input.decision === "rejected") {
       const rejected = await tx
@@ -844,6 +717,8 @@ export async function decideApproval(
     if (!lockedReq || lockedReq.status !== "pending")
       throw new Error("Request already decided")
     req = lockedReq
+    // A reporting-line or role change may have committed while locks waited.
+    await assertCurrentApprover()
     const [from] = await tx
       .select()
       .from(pipelineStages)

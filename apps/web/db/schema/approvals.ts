@@ -34,7 +34,7 @@ export const attachableType = pgEnum("attachable_type", [
   "opportunity_container",
 ])
 
-/** A low-tier owner's request for upline sign-off to advance a gated stage. */
+/** A request for reporting-manager sign-off to advance a gated stage. */
 export const stageApprovalRequests = pgTable("stage_approval_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: text("tenant_id")

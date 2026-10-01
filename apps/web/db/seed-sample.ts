@@ -733,7 +733,7 @@ async function main() {
   }
 
   // ── 9. PENDING stage-approval request (the key item for manager's inbox) ──
-  // sales1 (tier 20, below the bypass tier 40) advancing the gated 2c→3b move
+  // sales1 (without stage-approval permission) advancing the gated 2c→3b move
   // on a deal they own. The opportunity STAYS at 2c (not optimistically moved),
   // exactly as server/services/stage.ts#requestStageAdvance does. Routed to the
   // upline (manager) who holds STAGE_ADVANCE_APPROVE and tier ≥ requester.

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Check, X, Ban, ChevronRight, Loader2, Info } from "lucide-react"
 import { toast } from "sonner"
@@ -34,7 +35,7 @@ import {
   listEntityAttachments,
   type AttachmentRow,
 } from "@/app/(app)/_shared/attachment-actions"
-import { decideApprovalAction, type ApprovalRow } from "./actions"
+import { decideApprovalAction, type ApprovalRow, type ApprovalPage } from "./actions"
 
 const STATUS_VARIANT: Record<
   ApprovalRow["status"],
@@ -332,76 +333,51 @@ function MineCard({ row, onDone }: { row: ApprovalRow; onDone: () => void }) {
   )
 }
 
-/**
- * Inline help that explains the approval gate and names the approving tier, so
- * reviewers and requesters understand who signs off and why a stage is gated.
- */
-function GateHelp({ bypassTier }: { bypassTier: number }) {
+function GateHelp() {
   return (
     <div className="flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
       <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
       <p>
-        Some funnel stages are <span className="font-medium">approval-gated</span>
-        : a funnel can&apos;t enter them until an approver signs off. Requests
-        route up the reporting line to the first manager who can approve.{" "}
-        <span className="font-medium">
-          Members at tier {bypassTier} or above
-        </span>{" "}
-        (and anyone with the stage-approval permission) approve these requests
-        and bypass the gate themselves.
+        Gated funnel stages require approval from the first active manager in your reporting line
+        who has stage-approval permission. Permissions from all assigned roles count.
+        Only that assigned manager can decide your request; you cannot approve your own request.
+        Stage approvers can enter gated stages directly. Quotation approvals are handled on the quotation page.
       </p>
     </div>
   )
 }
 
-export function ApprovalsClient({
-  incoming,
-  mine,
-  bypassTier,
-}: {
-  incoming: ApprovalRow[]
-  mine: ApprovalRow[]
-  bypassTier: number
-}) {
+export function ApprovalsClient({ tab, page }: { tab: "incoming" | "mine"; page: ApprovalPage }) {
   const router = useRouter()
+  const [navigating, startTransition] = React.useTransition()
   const refresh = React.useCallback(() => router.refresh(), [router])
+  const href = (pageIndex: number) => `/approvals?tab=${tab}&page=${pageIndex}`
 
   return (
     <div className="flex flex-col gap-4">
-      <GateHelp bypassTier={bypassTier} />
-      <Tabs defaultValue="incoming" className="w-full">
-      <TabsList>
-        <TabsTrigger value="incoming">Incoming ({incoming.length})</TabsTrigger>
-        <TabsTrigger value="mine">My requests ({mine.length})</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="incoming" className="mt-4">
-        {incoming.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No pending approvals routed to you.
-          </p>
-        ) : (
-          <div className="grid gap-3">
-            {incoming.map((row) => (
-              <IncomingCard key={row.id} row={row} onDone={refresh} />
-            ))}
-          </div>
-        )}
-      </TabsContent>
-
-      <TabsContent value="mine" className="mt-4">
-        {mine.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            You haven&apos;t requested any approvals.
-          </p>
-        ) : (
-          <div className="grid gap-3">
-            {mine.map((row) => (
-              <MineCard key={row.id} row={row} onDone={refresh} />
-            ))}
-          </div>
-        )}
-      </TabsContent>
+      <GateHelp />
+      <div className="flex justify-end"><Button variant="outline" size="sm" render={<Link href="/quotations" />}>Review quotations</Button></div>
+      <Tabs value={tab} onValueChange={value => startTransition(() => router.push(`/approvals?tab=${value}`))} className="w-full">
+        <TabsList>
+          <TabsTrigger value="incoming" disabled={navigating}>Incoming</TabsTrigger>
+          <TabsTrigger value="mine" disabled={navigating}>My requests</TabsTrigger>
+        </TabsList>
+        <TabsContent value={tab} className="mt-4" aria-busy={navigating}>
+          {page.rows.length === 0 ? (
+            <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+              {page.pageIndex > 0 ? "No requests on this page. Use Previous to return to earlier pages." : tab === "incoming" ? "No pending approvals routed to you." : "You haven't requested any approvals."}
+            </p>
+          ) : (
+            <div className="grid gap-3">
+              {page.rows.map(row => tab === "incoming" ? <IncomingCard key={row.id} row={row} onDone={refresh} /> : <MineCard key={row.id} row={row} onDone={refresh} />)}
+            </div>
+          )}
+          <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Approval pages">
+            <Button variant="outline" disabled={page.pageIndex === 0 || navigating} render={<Link href={href(Math.max(0, page.pageIndex - 1))} />}>Previous</Button>
+            <span className="text-sm text-muted-foreground">Page {page.pageIndex + 1}</span>
+            <Button variant="outline" disabled={!page.hasNextPage || navigating} render={<Link href={href(page.pageIndex + 1)} />}>Next</Button>
+          </nav>
+        </TabsContent>
       </Tabs>
     </div>
   )
