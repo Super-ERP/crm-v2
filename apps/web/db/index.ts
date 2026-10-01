@@ -3,6 +3,7 @@ import postgres from "postgres"
 import { sql } from "drizzle-orm"
 import * as schema from "./schema"
 import { env, isProd } from "@/lib/env"
+import { retryDeadlockedTransaction } from "./retry-deadlock"
 
 // Reuse a single postgres pool across Next.js dev HMR reloads. Without this, each
 // hot reload re-evaluates this module and opens a fresh pool (max: 10) while the
@@ -30,14 +31,16 @@ export type Tx = Parameters<Parameters<AppDB["transaction"]>[0]>[0]
  */
 export async function runInTenant<T>(
   tenantId: string,
-  fn: (tx: Tx) => Promise<T>
+  fn: (tx: Tx) => Promise<T>,
+  options?: { deadlockRetries?: number }
 ): Promise<T> {
-  return db.transaction(async (tx) => {
+  // Each retry opens a fresh transaction and reapplies the tenant RLS scope.
+  return retryDeadlockedTransaction(() => db.transaction(async (tx) => {
     await tx.execute(
       sql`select set_config('app.current_tenant', ${tenantId}, true)`
     )
     return fn(tx)
-  })
+  }), options?.deadlockRetries ?? 0)
 }
 
 export { schema }

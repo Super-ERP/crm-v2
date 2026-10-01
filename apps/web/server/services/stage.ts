@@ -565,7 +565,7 @@ export async function requestStageAdvance(
       input.reason
     )
     return { moved: false, approvalRequestId }
-  })
+  }, { deadlockRetries: 2 })
 }
 
 /**
@@ -844,5 +844,5 @@ export async function decideApproval(
       status: "approved",
       message: `Request approved — moved to ${target.name}`,
     }
-  })
+  }, { deadlockRetries: 2 })
 }

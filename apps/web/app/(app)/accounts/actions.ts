@@ -667,7 +667,7 @@ export async function updateAccount(
         subject: "Account updated",
       })
       return { ...before, ...updated }
-    })
+    }, { deadlockRetries: 2 })
     revalidatePath("/accounts")
     revalidatePath(`/accounts/${id}`)
     revalidatePath("/persons")

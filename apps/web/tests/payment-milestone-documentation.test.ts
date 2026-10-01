@@ -72,7 +72,7 @@ describe("payment milestone documentation", () => {
     )
     expect(documentationSource).toContain("no live linkage")
     expect(documentationSource).toContain(
-      'FUNNELS |o--o{ PAYMENT_MILESTONES : "optional funnel owner"'
+      'FUNNELS |o--o{ PAYMENT_MILESTONES : "optional funnel link"'
     )
     expect(documentationSource).toContain(
       'PROJECTS |o--o{ PAYMENT_MILESTONES : "optional project owner"'
