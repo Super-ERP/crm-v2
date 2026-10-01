@@ -26,7 +26,7 @@ flowchart LR
 | :--- | :--- | :--- |
 | **Capture** | **Leads** (`/leads`) | Record inbound inquiries, qualify fit, and convert into durable records. |
 | **Customer Core** | **Accounts & Contacts** (`/accounts`, `/persons`) | Maintain company profiles, required ISO currencies, and stakeholder contacts. |
-| **Sales Pursuit** | **Opportunities & Funnel** (`/funnel`) | Track deal qualification using **PPVVC**, advance stages from `0E` to `4A`, and allocate project codes. |
+| **Sales Pursuit** | **Opportunities & Funnel** (`/funnel`) | Track deal qualification using **PPVVC**, advance stages from `0e` to `4a`, and allocate project codes. |
 | **Pricing & Terms** | **Quotations** (`/quotations`) | Generate itemized offers, apply tax settings, submit for approval, manage revisions, and download client PDFs. |
 | **Deal Closure** | **Payment Milestones** (`/payment-milestones`) | Track revenue billing events; milestones automatically transition to `Won` upon deal closing, then to `Invoiced` upon billing. |
 | **Delivery Handover** | **Projects & Sales Orders** (`/projects`, `/sales-orders`) | Connect sales commitments to operational delivery and track confirmed customer purchase orders. |

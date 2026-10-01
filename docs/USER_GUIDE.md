@@ -62,7 +62,7 @@ A **Lead** (`/leads`) captures unverified inbound interest (web forms, events, r
 ### Creating & Qualifying Leads
 1. Navigate to **CRM → Leads** and click **+ New Lead**.
 2. Complete contact details, company name, lead source, estimated value, and assigned owner.
-3. Advance the lead status: `New` ➔ `Contacted` ➔ `Qualified` or `Disqualified`.
+3. Advance the lead status: `New` -> `Contacted` -> `Qualified` or `Disqualified`.
 4. If **Disqualified**, select a required reason (e.g., *No Budget, Out of Scope*). Disqualified leads can be restored back to `Contacted` at any time.
 
 ### The Conversion Transaction (`/leads/[id]/convert`)
