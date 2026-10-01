@@ -56,14 +56,6 @@ See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rol
 
 </details>
 
-<details>
-<summary>Does a project code mean the sale is won?</summary>
-
-No. Project-code allocation at `4a` supports delivery planning before final closure. Check the funnel's actual status before treating the sale as won.
-
-See [Projects & sales orders](../07-projects-and-sales-orders.md).
-
-</details>
 
 ## Quotations and approvals
 
@@ -117,7 +109,7 @@ See [Milestone statuses](../06-payment-milestones.md#milestone-statuses).
 <details>
 <summary>Does marking a milestone Invoiced generate an invoice?</summary>
 
-No. The supported manual transition is **Won → Invoiced** after billing. The current repository screens do not expose a status-editing control; contact your administrator if your deployed version also has no action. Payment milestones are planning records; they do not create or update invoices or receipts, and they do not complete a project automatically.
+No. The supported manual transition is **Won → Invoiced** after billing. The current repository screens do not expose a status-editing control; contact your administrator if your deployed version also has no action. Payment milestones are planning records; they do not create or update invoices or receipts.
 
 See [Payment milestones](../06-payment-milestones.md).
 

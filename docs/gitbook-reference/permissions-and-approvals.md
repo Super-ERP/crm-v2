@@ -42,6 +42,6 @@ Use [Missing modules or records](https://jienweng.gitbook.io/q-app/docs/help/tro
 
 ## Continue
 
-* [Administration and settings](https://jienweng.gitbook.io/q-app/docs/delivery-and-administration/09-admin-and-settings)
+* [Administration and settings](https://jienweng.gitbook.io/q-app/docs/administration/09-admin-and-settings)
 * [Terminology](terminology.md)
 * [Documentation overview](https://jienweng.gitbook.io/q-app/docs)

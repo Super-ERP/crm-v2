@@ -14,9 +14,8 @@
 * [Payment milestones](06-payment-milestones.md)
 * [Stage approvals](08-approvals-inbox.md)
 
-## Delivery & Administration
+## Administration
 
-* [Delivery projects & sales orders](07-projects-and-sales-orders.md)
 * [Administration & settings](09-admin-and-settings.md)
 
 ## Help

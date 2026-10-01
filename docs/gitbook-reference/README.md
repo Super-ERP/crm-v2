@@ -7,7 +7,7 @@ icon: book-bookmark
 
 Use these pages for a definition or a rule while you work.
 
-* [Terminology](terminology.md): customer, sales, billing, delivery, and workspace terms.
+* [Terminology](terminology.md): customer, sales, billing, and workspace terms.
 * [Stages and statuses](stages-and-statuses.md): the labels on deals, quotations, and milestones.
 * [Permissions and approval routing](permissions-and-approvals.md): what controls access and who approves a request.
 
