@@ -1,6 +1,17 @@
-# 2. Leads & Conversion
+---
+description: Capture prospects, qualify them, and convert the right leads.
+icon: user-plus
+---
 
-This chapter details how to capture inbound leads, qualify prospects, handle disqualifications, and convert qualified leads into accounts, contacts, and opportunities.
+# Leads and conversion
+
+Capture prospects, qualify them, and convert the right leads.
+
+## On this page
+
+* [Create a lead](#creating-a-lead)
+* [Understand statuses](#lead-statuses)
+* [Convert a lead](#converting-a-lead)
 
 ---
 
@@ -29,15 +40,15 @@ A **Lead** represents an unverified inbound expression of interest (e.g., from a
 ## The Lead Lifecycle
 
 ```mermaid
-stateDiagram-v2
-    [*] --> New: Lead Created
-    New --> Contacted: First Outreach
-    Contacted --> Qualified: Fit Confirmed
-    New --> Disqualified: Not a Fit
-    Contacted --> Disqualified: Not a Fit
-    Qualified --> Converted: Lead Conversion
-    Disqualified --> Contacted: Restore & Re-engage
+flowchart TD
+    N["New"] --> C["Contacted"]
+    C --> Q["Qualified"]
+    Q --> V["Converted"]
+    C --> D["Disqualified"]
+    D --> C
 ```
+
+**Read the diagram:** a lead moves through outreach and qualification before conversion. A lead can also be disqualified before qualification, then restored to Contacted when it is worth pursuing again.
 
 ### Lead Statuses
 
@@ -54,27 +65,29 @@ When marking a lead as **Disqualified**:
 
 ---
 
-## Converting a Lead (`/leads/[id]/convert`)
+## Converting a lead
 
-Once a lead has been qualified and is ready for a commercial proposal, convert it using the **Conversion Wizard**.
+Once a lead has been qualified and is ready for a commercial proposal, convert it using the **Conversion Wizard**. Add a valid email to the lead before converting; the new contact requires one.
 
-```
-[ Lead: John Doe (Acme Corp) ]
-         │
-         ▼ (Convert Action)
- ┌───────┴──────────────────────────────┐
- │                                      │
- ▼                                      ▼
-[ Account: Acme Corp ]          [ Contact: John Doe ]
- │
- ▼
-[ Opportunity: Acme Corp Opportunity ]
- │
- ▼
-[ Funnel Deal: Stage 0e ]
+```mermaid
+flowchart TD
+    L["Qualified lead"] --> R["Review conversion details"]
+    R --> A["Link or create an account"]
+    A --> C["Create the linked contact"]
+    C --> O["Create an opportunity and funnel deal"]
+    O --> D["Lead is marked Converted"]
 ```
 
-### Step-by-Step Conversion Flow:
+**Result:** the converted lead links to the customer records and sales pursuit. Review account matching and currency before confirming; the same lead cannot be converted twice.
+
+<details>
+<summary>View a static copy of the conversion flow</summary>
+
+<figure><img src="assets/lead-conversion.png" alt="Review a qualified lead, link or create an account, create the contact and sales pursuit, then mark the lead Converted."><figcaption><p>Lead conversion creates linked records; it is not a status change alone.</p></figcaption></figure>
+
+</details>
+
+### Step-by-step conversion
 1. Open the Lead detail page.
 2. Click the **Convert Lead** button in the top action bar.
 3. You will be redirected to the full-page conversion wizard:
@@ -87,7 +100,14 @@ Once a lead has been qualified and is ready for a commercial proposal, convert i
      * **Opportunity Name**: Defaults to `[Company Name] opportunity` (customizable).
      * **Expected Close Date**: Set the estimated closing target date.
      * The deal is automatically seeded into the sales funnel at the initial stage **`0e` (Identified)**.
-4. Click **Confirm Conversion**.
+4. Click **Convert lead**.
 
-> [!IMPORTANT]
-> **One-Way Irreversible Action**: Conversion is an atomic, permanent database transaction. Once converted, the lead status changes to `Converted`, and the lead record permanently links to the generated Account, Contact, and Opportunity. Converted leads cannot be converted again.
+{% hint style="warning" %}
+**Review before converting.** Conversion creates linked records and marks the lead Converted. You cannot convert the same lead again.
+{% endhint %}
+
+## Continue
+
+* [Accounts & contacts](03-accounts-and-contacts.md)
+* [Troubleshooting](help-center/troubleshooting.md)
+* [Back to start](README.md)

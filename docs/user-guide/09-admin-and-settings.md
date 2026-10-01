@@ -1,12 +1,24 @@
-# 9. Administration & Settings
+---
+description: Manage team access and organization defaults, and review forecasts and audit history.
+icon: gear
+---
 
-This chapter covers user management, RBAC tiers, forecasting, audit trails, and tenant settings configuration.
+# Administration and settings
+
+Manage team access and organization defaults, and review forecasts and audit history.
+
+## On this page
+
+* [Invite team members](#inviting-team-members)
+* [Configure settings](#tenant-settings)
+* [Review forecasts](#revenue-forecast)
+* [Review audit history](#system-audit-log)
 
 ---
 
-## 1. Team & Roles (`/team`)
+## Team and roles
 
-User administration requires **Manage users**, granted to Owner and Admin by default. Configure each salesperson’s reporting manager here for approval routing.
+User administration requires **Manage users**, granted to Owner and Admin by default. Configure each salesperson’s reporting manager here for approval routing. The standard role names below are examples; your organization can customize permissions.
 
 ### Inviting Team Members
 1. Navigate to **Admin → Team & roles** in the sidebar.
@@ -23,12 +35,12 @@ User administration requires **Manage users**, granted to Owner and Admin by def
 
 ---
 
-## 2. Revenue Forecast (`/forecast`)
+## Revenue forecast
 
 The **Forecast** dashboard provides real-time visibility into your sales pipeline.
 
 * **Weighted Pipeline Calculation**:
-  $$\text{Weighted Value} = \text{Deal Value} \times \text{Stage Win Probability}$$
+  **Weighted value = deal value × stage win probability.**
 * **Breakdowns**:
   * View projected revenue by fiscal quarter or month.
   * Filter by sales team, individual rep, or product category.
@@ -36,9 +48,9 @@ The **Forecast** dashboard provides real-time visibility into your sales pipelin
 
 ---
 
-## 3. System Audit Log (`/audit`)
+## System audit log
 
-Q-App maintains an immutable, compliance-ready record of all platform activities.
+Use the audit log to review recorded changes and actions. Available events and detail depend on the action and your access.
 
 * Navigate to **Insights → Audit** to search activity history:
   * **Who**: The user who performed the operation.
@@ -49,9 +61,9 @@ Q-App maintains an immutable, compliance-ready record of all platform activities
 
 ---
 
-## 4. Tenant Settings (`/settings`)
+## Tenant settings
 
-Users with **Manage tenant settings** permission (Owner and Admin by default) configure organizational defaults under **Admin → Settings**:
+Users with **Manage tenant settings** permission (Owner and Admin by default) configure organization defaults under **Admin → Settings**:
 
 ### General Settings (`/settings/general`)
 * **Organization Name**: Official legal entity name.
@@ -67,3 +79,8 @@ Users with **Manage tenant settings** permission (Owner and Admin by default) co
 * **Default Payment Terms**: e.g., *"30 Days from invoice date"*.
 * **Delivery**: Default delivery text copied into new quotations. Existing quotations retain their snapshots.
 * Tax-inclusive pricing is configured in General; tax rates are maintained in the quotation tax configuration.
+
+## Continue
+
+* [Troubleshooting](help-center/troubleshooting.md)
+* [Back to start](README.md)

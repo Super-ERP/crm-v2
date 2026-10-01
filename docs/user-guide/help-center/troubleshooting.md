@@ -1,118 +1,97 @@
 ---
-description: Step-by-step diagnostic guide for resolving common errors and workflow blockers.
+description: Find the next step when a record is missing, a stage is blocked, or a quote cannot be edited.
 icon: wrench
 ---
 
-# Troubleshooting & Common Errors
+# Troubleshooting
 
-If you encounter an error message or workflow restriction in Q-App, refer to the diagnostic steps below.
+Start with the problem that matches what you see. Keep the exact error message; it can identify the missing field or permission.
 
----
+## Find your problem
 
-## 1. Stage Advancement Denied
+* [A module, button, or record is missing](#a-module-button-or-record-is-missing)
+* [A funnel stage change is blocked](#a-funnel-stage-change-is-blocked)
+* [A quotation cannot be edited](#a-quotation-cannot-be-edited)
+* [Account creation needs a currency](#account-creation-needs-a-currency)
+* [A milestone cannot become Invoiced](#a-milestone-cannot-become-invoiced)
+* [The quotation PDF looks wrong](#the-quotation-pdf-looks-wrong)
 
-### Symptom
-When attempting to advance an opportunity stage (e.g., from `2c` to `3b`), the system displays an error:
-> *"Stage advance denied: requirements not met"*
+## A module, button, or record is missing
 
-### Root Cause
-Forward stage movement enforces strict stage-gate validation checks. Common blockers include:
-* **Missing Quotation**: Stage `3b` requires at least one active quotation attached to the opportunity.
-* **Incomplete PPVVC**: Key qualification criteria (such as *Power Sponsor* or *Value*) are blank.
-* **Manager Sign-off Required**: High-deal-value thresholds may require an approved stage-gate request in **Sales → Approvals**.
+1. Check the active organization in the sidebar.
+2. Clear search and filters, or switch back to an unfiltered list view.
+3. Ask your administrator to check your role permissions, reporting relationships, and enabled modules.
+4. For a particular record, provide its name or identifier so your administrator can check ownership and access scope.
 
-### Resolution Steps
-{% stepper %}
-{% step %}
-**Check PPVVC Fields**
-Open the opportunity and verify that all five PPVVC pillars have meaningful entries.
-{% endstep %}
+**Expected result:** the record appears if you have access. If it still does not, your administrator can explain or correct the access configuration.
 
-{% step %}
-**Verify Quotation Status**
-Ensure a valid draft or approved quotation is linked to the deal before advancing to proposal stages.
-{% endstep %}
+See [Workspace & personal views](../01-workspace-and-views.md) and [Administration & settings](../09-admin-and-settings.md).
 
-{% step %}
-**Check Approvals Hub**
-If the deal requires management sign-off, verify whether an approval request is pending under **Sales → Approvals**.
-{% endstep %}
-{% endstepper %}
+## A funnel stage change is blocked
 
----
+1. Read the requirements shown in the stage-change dialog. Requirements are configured by your organization; do not assume every stage needs the same fields.
+2. Complete the listed fields on the opportunity or funnel, save, and retry.
+3. If approval is required, check **Sales → Approvals → My requests**. The approver uses **Incoming**.
+4. If the deal is Closed Won or Closed Lost, it cannot change stages. For a new sales pursuit, create a new opportunity rather than trying to reopen it.
 
-## 2. Quotation is Locked and Cannot be Edited
+**Expected result:** an eligible change succeeds, or a pending request clearly identifies the next approver.
 
-### Symptom
-Form inputs and line item price fields on a quotation are disabled (grayed out), preventing edits.
+See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules) and [Stage approvals](../08-approvals-inbox.md).
 
-### Root Cause
-Quotations are locked against direct edits in the following states:
-* **`Pending Approval`**: Currently in review with management.
-* **`Approved`**: Manager has signed off on pricing; changes would invalidate the approval.
-* **`Sent`**: Already delivered to the customer.
+## A quotation cannot be edited
 
-### How to Resolve
-{% hint style="info" %}
-**Use the Revisions Workflow**: Do not attempt to bypass locked quotes. Click **Revise** in the header. The system creates a new draft revision (`-Rev1`) where you can adjust items and resubmit, keeping the original intact for legal audit.
+Only a **Draft** quotation is editable. Choose the action that matches its current status:
+
+| Status | Next step |
+| --- | --- |
+| Pending Approval | Wait for the review. A rejection returns it to Draft with a reason. |
+| Approved | Use **Return to Draft**, edit, and submit for approval again. |
+| Sent, Accepted, Rejected, Expired, or Void | Use the revision action to create a separate Draft where permitted. |
+| Draft, but actions are missing | Ask your administrator to check quotation update permissions and record access. |
+
+**Expected result:** edits happen on an editable draft, with the original historical quotation preserved when a revision is created.
+
+See [Managing revisions](../05-quotations-and-revisions.md#managing-revisions).
+
+## Account creation needs a currency
+
+1. In the account form or lead conversion wizard, find **Currency**.
+2. Select the customer's billing currency before saving.
+3. If the currency you need is unavailable, ask your administrator to review the configured options.
+
+**Expected result:** the account has a valid currency before you prepare related pricing.
+
+See [Accounts & contacts](../03-accounts-and-contacts.md).
+
+## A milestone cannot become Invoiced
+
+1. Check the milestone's current status. Only **Won → Invoiced** is an allowed manual status change.
+2. If it is **Planned**, check the linked funnel. Planned milestones become Won when that funnel reaches Closed Won.
+3. If it is already **Invoiced**, the status cannot be reverted.
+4. The current repository screens show status badges without a status-editing control. If your deployed version also has no action, contact your administrator or support team; this is not necessarily a permission issue.
+
+{% hint style="warning" %}
+Record the customer's actual commercial outcome. Do not close a deal as Won just to enable a milestone action.
 {% endhint %}
 
----
+**Expected result:** an authorized user records billing on an eligible Won milestone. The milestone status does not issue an invoice or receipt.
 
-## 3. Account Creation Blocked: Missing Currency
+See [Payment milestones](../06-payment-milestones.md).
 
-### Symptom
-When saving a new Account or converting a lead, the form rejects submission with:
-> *"Account currency is required"*
+## The quotation PDF looks wrong
 
-### Root Cause
-Every Account must have an assigned ISO currency (e.g., `MYR`, `USD`, `SGD`) to guarantee that all future deals and quotes calculate financial values correctly.
+1. Open the quotation's **Preview** and review the template, recipient, items, totals, and terms.
+2. Open the print/PDF action and check the browser's print preview before saving.
+3. Choose **Save as PDF**. Check page breaks, clipped text, and all totals in the saved file.
+4. If the issue remains, note the quotation number, selected template, browser, and the affected page when reporting it.
 
-### How to Resolve
-1. In the Account creation dialog or conversion wizard, scroll to the **Currency** dropdown.
-2. Select your client's designated billing currency.
-3. If the desired currency is missing from the dropdown, contact your **Owner** administrator to add the currency under **Admin → Settings → General**.
+**Expected result:** the saved PDF reflects the quotation preview and includes all pages you intend to share.
 
----
+See [Printing a quotation](../05-quotations-and-revisions.md#exporting-client-pdfs).
 
-## 4. Cannot See Teammates' Deals or Records
+## Still need help?
 
-### Symptom
-You can only see your own leads or deals, while your colleagues' records do not appear in list views.
+Send your administrator or support contact the module name, record identifier, exact error, and steps you took. If you include a screenshot, show the relevant area and remove unrelated customer or personal information.
 
-### Root Cause
-This is intentional system behavior based on your **Role Tier**:
-* **Sales Reps (Tier 20)**: Access is scoped to records you own or are directly assigned to.
-* **Managers (Tier 60)**: Can view records owned by themselves and their direct reporting team members.
-* **Owners (Tier 100)**: Can view all organizational records across all departments.
-
-### How to Resolve
-* If you need access to a specific account or deal, ask the record owner or your manager to add you as a collaborator or reassign ownership.
-* If your role was configured incorrectly, an administrator can adjust your tier under **Admin → Team & roles**.
-
----
-
-## 5. Milestone Cannot be Marked "Invoiced"
-
-### Symptom
-The action button to update a payment milestone status to `Invoiced` is disabled.
-
-### Root Cause
-A milestone can only transition to **`Invoiced`** if its current status is **`Won`**. If the parent opportunity is still in an open pipeline stage (`0e` through `4a`), the milestone remains in `Planned` status and cannot be marked invoiced.
-
-### How to Resolve
-1. Check the parent Opportunity status.
-2. Complete commercial negotiations and mark the deal as **Closed Won**.
-3. All milestones will automatically shift to **`Won`**, enabling the **Mark as Invoiced** action.
-
----
-
-## 6. PDF Proposal Not Rendering Correctly
-
-### Symptom
-Clicking **Preview / PDF** on a quotation fails to load or displays broken layout blocks.
-
-### Diagnostic Steps
-1. Verify that all line items have valid numeric values for **Quantity** and **Unit Price**.
-2. Ensure the customer's billing address and primary contact are populated on the parent Account.
-3. Check your browser's popup blocker if the PDF download window does not open automatically.
+* [Frequently asked questions](faqs.md)
+* [Back to start](../README.md)
