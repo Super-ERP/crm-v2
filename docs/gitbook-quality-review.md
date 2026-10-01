@@ -111,3 +111,19 @@ cross-section links, 27 steppers/103 titled steps, eight unchanged Mermaid
 diagrams, and two local images checked. Scanning all four mapped directories found
 no GitHub links. Native site sections require GitBook's Ultimate site plan; preview
 sync must confirm availability before claiming the tabs are live.
+
+## Active rollout scope correction
+
+The user confirmed that only Base modules and Advanced Roles are enabled.
+Removed the Projects/Sales Orders guide, delivery role checklist, inactive
+Forecast/Audit viewer instructions, finance cost-panel claims, delivery glossary
+entries, and cross-links. The landing Mermaid now ends at payment milestones;
+removed its outdated static image. Kept the core lead-conversion image. Added
+source-verified Advanced Roles permission steps and scoped release notes to
+customer-facing changes in the active rollout. Administration now has its own
+sidebar group and updated canonical links.
+
+Validation: 20 pages/navigation entries; 95 local and 63 cross-section links;
+25 steppers with 95 steps; seven Mermaid diagrams; one captioned image. All
+links, anchors, Liquid blocks, and navigation entries pass. No inactive-module
+instructions or GitHub links remain in the published content.

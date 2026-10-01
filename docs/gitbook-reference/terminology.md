@@ -75,10 +75,6 @@ A parked deal that needs follow-up later. KIV is not Closed Lost. Reopening a pa
 
 A planning value calculated as **deal value × stage win probability**. For example, 100,000 at a 50% probability contributes 50,000 to weighted pipeline. It is a forecast measure, not invoiced revenue or cash received.
 
-### ARR / annual recurring revenue
-
-The recurring revenue attributed to a year of a contract. Multi-year contract figures support planning; check the currency and contract period when comparing them.
-
 ### ROI / return on investment
 
 The benefit of an investment compared with its cost. In qualification, record the customer's expected benefit and the assumptions behind it.
@@ -117,19 +113,7 @@ The currency used for an amount. **MYR**, **USD**, and **SGD** are examples of t
 
 A planned billing event, such as a deposit or delivery payment. Its status can be **Planned**, **Won**, or **Invoiced**. It is a planning record and does not issue an invoice or receipt. See [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
 
-## Delivery
-
-### Project and project code
-
-A project tracks delivery work. A project code identifies that work; allocation at stage `4a` supports planning before final closure and does not by itself mean the deal is won.
-
-### PO and purchase order
-
-The customer's purchasing document, with an order reference and commercial details. Compare it with the quotation before proceeding with the handover.
-
-### Sales order
-
-The Q-App record used to track the customer PO or signed commercial order. A sales order and a quotation are separate records. See [Projects and sales orders](https://jienweng.gitbook.io/q-app/docs/delivery-and-administration/07-projects-and-sales-orders).
+## Commercial terms
 
 ### UAT and user acceptance testing
 
@@ -152,10 +136,6 @@ A **role** groups access capabilities. A **permission** allows a particular acti
 ### Saved view
 
 Your personal set of list filters, sorting, and visible columns. It changes how you view a list, not the underlying records or colleagues' views.
-
-### Audit log
-
-Recorded events describing actions and changes, including who acted and when. It is different from a product changelog, which explains changes to the app itself.
 
 ## Continue
 

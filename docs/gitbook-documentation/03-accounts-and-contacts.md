@@ -18,7 +18,7 @@ Maintain the companies and people involved in your deals.
 
 ## Accounts
 
-An **Account** represents an enterprise customer, client, partner, or reseller. It serves as the parent container for all commercial interactions, including contacts, active opportunities, quotations, and projects.
+An **Account** represents an enterprise customer, client, partner, or reseller. It serves as the parent container for all commercial interactions, including contacts, active opportunities, and quotations.
 
 ### Creating an Account
 Accounts are usually created automatically during **Lead Conversion**, but can also be created manually:
@@ -76,7 +76,7 @@ Opening any Account presents a comprehensive 360-degree customer view:
 
 ### Changing the account owner
 
-Edit **Account owner** on the account detail page to transfer responsibility. Active contacts, Opportunities, Funnels, Projects, and Contracts under the account receive the new owner in the same transaction. Quotations, payment milestones, and sales orders inherit access through their Funnel or Project.
+Edit **Account owner** on the account detail page to transfer responsibility. Active contacts, Opportunities, and Funnels under the account receive the new owner in the same transaction. Quotations and payment milestones inherit access through their Funnel.
 
 Pending stage requests are cancelled, and pending quotations return to Draft with a resubmission explanation. The new account owner can submit them again so approval reaches their eligible reporting manager. Completed approval decisions remain historical records.
 

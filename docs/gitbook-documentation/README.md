@@ -1,11 +1,11 @@
 ---
-description: Detailed task guides for customer records, sales, billing planning, delivery, and administration.
+description: Detailed task guides for customer records, sales, billing planning, and administration.
 icon: book-open
 ---
 
 # Documentation overview
 
-Use these guides while you work in Q-App. Each module page explains the records you are working with, the actions to take, and the rules that affect the result.
+These guides cover the Base modules and Advanced Roles enabled for the current rollout. Use them while you work in Q-App. Each module page explains the records you are working with, the actions to take, and the rules that affect the result.
 
 New to Q-App? Start with [Quick start by role](https://jienweng.gitbook.io/q-app/getting-started/quick-start). Need a definition rather than a procedure? Open [Terminology](https://jienweng.gitbook.io/q-app/reference/terminology).
 
@@ -25,12 +25,11 @@ New to Q-App? Start with [Quick start by role](https://jienweng.gitbook.io/q-app
 | [Payment milestones](06-payment-milestones.md) | Review planned billing events and understand Won/Invoiced status. |
 | [Stage approvals](08-approvals-inbox.md) | Review assigned requests and follow up on your own requests. |
 
-## Delivery and administration
+## Administration
 
 | Guide | What you can do |
 | --- | --- |
-| [Delivery projects and sales orders](07-projects-and-sales-orders.md) | Review the handover and customer purchase order. |
-| [Administration and settings](09-admin-and-settings.md) | Manage team access, reporting lines, defaults, forecasts, and audit history. |
+| [Administration and settings](09-admin-and-settings.md) | Manage team access, reporting lines, defaults, and custom roles. |
 
 ## Reference and help
 

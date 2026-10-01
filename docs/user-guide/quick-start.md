@@ -1,5 +1,5 @@
 ---
-description: A short daily checklist for sales, approvers, delivery teams, and administrators.
+description: A short daily checklist for sales, approvers, and administrators.
 icon: bolt
 ---
 
@@ -113,7 +113,7 @@ Review quotation approval separately on the quotation itself. Check the proposed
 
 #### Review the pipeline
 
-Review **Sales → Funnel** for deals that need follow-up. If enabled for your role, use **Insights → Forecast** for pipeline planning.
+Review **Sales → Funnel** for deals that need follow-up.
 
 {% endstep %}
 {% endstepper %}
@@ -121,46 +121,6 @@ Review **Sales → Funnel** for deals that need follow-up. If enabled for your r
 **You are done when:** requests have a clear decision and the requester knows what to change or do next.
 
 Continue with [Stage approvals](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox) or [Quotation approvals](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#the-quotation-lifecycle).
-
-{% endtab %}
-{% tab title="Delivery" %}
-
-### Check a commercial handover
-
-{% stepper %}
-{% step %}
-
-#### Review the agreed scope
-
-Review the funnel and its quotation to understand the agreed scope. Project-code allocation at `4a` supports planning; it is not proof that the deal is won.
-
-{% endstep %}
-{% step %}
-
-#### Check delivery records
-
-If enabled, open **Sales → Projects** to review delivery records and **Sales → Sales Orders** to check customer order details.
-
-{% endstep %}
-{% step %}
-
-#### Compare the customer order
-
-Compare the customer PO or contract with the quotation. Resolve discrepancies before proceeding with delivery.
-
-{% endstep %}
-{% step %}
-
-#### Coordinate billing
-
-Coordinate billing with the responsible team. After billing has occurred, coordinate recording **Won → Invoiced** with an authorized user. See the current status-control limitation in the payment milestone guide.
-
-{% endstep %}
-{% endstepper %}
-
-**You are done when:** scope, customer order details, and delivery ownership are clear.
-
-Continue with [Projects & sales orders](https://jienweng.gitbook.io/q-app/docs/delivery-and-administration/07-projects-and-sales-orders) and [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
 
 {% endtab %}
 {% tab title="Administrators" %}
@@ -191,16 +151,16 @@ Review a user's permissions and active organization when they report a missing m
 {% endstep %}
 {% step %}
 
-#### Review recorded changes
+#### Review custom roles
 
-If enabled, use **Insights → Audit** to investigate changes to records.
+Use **Team & roles → Roles** to check the permissions assigned to each role. Keep access aligned with the work each team member needs to do.
 
 {% endstep %}
 {% endstepper %}
 
 **You are done when:** team members have the access they need and organization defaults match your working process.
 
-Continue with [Administration & settings](https://jienweng.gitbook.io/q-app/docs/delivery-and-administration/09-admin-and-settings).
+Continue with [Administration & settings](https://jienweng.gitbook.io/q-app/docs/administration/09-admin-and-settings).
 
 {% endtab %}
 {% endtabs %}

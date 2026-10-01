@@ -39,8 +39,7 @@ When you log in to the CRM, you are presented with the main application workspac
 * **Left Sidebar**:
    The sidebar groups all business modules logically:
    * **CRM**: Leads, Accounts, Contacts.
-   * **Sales**: Opportunities, Funnel, Quotations, Products, Payment Milestones, Projects, Sales Orders, Approvals.
-   * **Insights**: Forecast, Audit.
+   * **Sales**: Opportunities, Funnel, Quotations, Products, Payment Milestones, Approvals.
    * **Admin**: Team & Roles, Settings.
 
 ---
@@ -60,7 +59,7 @@ The standard roles are shown below. Permissions can be customized; your role nam
 
 | Role | Tier Level | Capabilities |
 | :--- | :--- | :--- |
-| **Owner** | Tier 100 | Full access to all data, financial records, tenant configuration, system settings, user management, and billing. |
+| **Owner** | Tier 100 | Administrative access to enabled features, organization settings, and user management. |
 | **Manager** | Tier 60 | Department-level oversight, pipeline reviews across direct reports, approval authority on quotes and stage gates. |
 | **Sales Rep** | Tier 20 | Daily commercial operations: create and edit assigned leads, accounts, contacts, opportunities, and quotations. |
 | **Viewer** | Tier 10 | Read-only access across assigned records. Cannot create, edit, or delete data. |

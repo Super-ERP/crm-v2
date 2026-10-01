@@ -17,7 +17,7 @@ These are the standard stage labels. Your organization can customize labels and 
 | `1d` — Qualified | The pursuit is being qualified. | Complete the information required for your next stage. |
 | `2c` — Proposal | Work is progressing toward a proposal. | Keep scope and commercial assumptions current. |
 | `3b` — Negotiation | The proposal is being negotiated. | Review the quote and buyer's decision process. |
-| `4a` — Commit | The pursuit is near commitment. | Project-code allocation supports planning; the deal is still open. |
+| `4a` — Commit | The pursuit is near commitment. | The deal is still open until its outcome is recorded. |
 | Closed Won | The deal is won. | Terminal: stage changes are no longer allowed. Live Planned milestones become Won. |
 | Closed Lost | The deal is lost. | Terminal: stage changes are no longer allowed. Record close remarks. |
 | KIV — Keep In View | The pursuit is parked for later follow-up. | Record the reason. Reopening requires approval. |
@@ -56,7 +56,7 @@ A milestone created for an already won funnel starts as Won. Invoiced milestones
 * **Quotation approval** authorizes sending the proposal.
 * **Customer acceptance** records the customer's response to the quotation.
 * **Closed Won** records the outcome of the funnel deal.
-* **Invoiced** records milestone billing status after billing; it does not issue an invoice, record payment received, or complete a project.
+* **Invoiced** records milestone billing status after billing; it does not issue an invoice, record payment received.
 
 ## Continue
 

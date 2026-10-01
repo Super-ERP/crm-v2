@@ -29,7 +29,7 @@ Every Opportunity is assigned a system-generated, immutable identifier:
 `ORGCODEOPP-YYYY-NNNN`
 *(Example: `QDTOPP-2026-0015`)*
 
-This code remains constant throughout the deal lifecycle and links all quotations, contracts, and delivery projects together.
+This code remains constant throughout the deal lifecycle and links the related quotations and commercial records together.
 
 ---
 
@@ -73,8 +73,7 @@ flowchart TD
 * **`1d` Qualified**: Active stakeholder discussions and requirement gathering.
 * **`2c` Proposal**: Technical and commercial feasibility assessment; drafting architecture.
 * **`3b` Negotiation**: Formal proposal and quotation submitted to the client.
-* **`4a` Commit**:
-   * **Project Code Allocation**: The moment a deal enters stage `4a` for the first time, the system **automatically allocates the official Delivery Project Code**. This allows delivery managers to begin resource planning before final contract signature.
+* **`4a` Commit**: The pursuit is near commitment. Confirm the customer decision and quotation details before recording the outcome.
 * **Closed Won** *(Terminal)*:
    * Contract executed and deal won.
    * **Automatic Action**: Sets live Planned payment milestones to `Won`; Invoiced milestones retain their status.
@@ -92,13 +91,6 @@ flowchart TD
 * **Terminal Stages**: Once an opportunity is marked **Closed Won** or **Closed Lost**, it cannot be moved to any other stage.
 
 ---
-
-## Multi-Year Contracts and Deal Costs
-
-Inside the Funnel detail page:
-
-* **Contract Panel**: For multi-year service contracts, specify annual breakdown figures (Year 1, Year 2, Year 3 ARR) to support financial forecasting.
-* **Costs Panel**: Record estimated third-party vendor costs, hardware procurement, or subcontractor fees to track gross margin before issuing quotes.
 
 ## Continue
 

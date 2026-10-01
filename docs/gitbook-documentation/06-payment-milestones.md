@@ -131,6 +131,5 @@ After billing, the supported manual status transition is **Won → Invoiced**. T
 
 ## Continue
 
-* [Projects & sales orders](07-projects-and-sales-orders.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)

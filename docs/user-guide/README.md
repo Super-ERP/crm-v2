@@ -5,11 +5,11 @@ icon: house
 
 # Welcome to Q-App
 
-Q-App brings customer records, sales pursuits, quotations, and delivery handovers into one workspace. This is your starting point for learning the app and finding answers while you work.
+Q-App brings customer records, sales pursuits, quotations, and payment milestones into one workspace. This guide covers the Base modules and Advanced Roles enabled for the current rollout. This is your starting point for learning the app and finding answers while you work.
 
 ## Choose your next step
 
-<table data-view="cards"><thead><tr><th>Guide</th><th>Description</th><th data-hidden data-card-target data-type="content-ref">Link</th></tr></thead><tbody><tr><td><strong>Get started</strong></td><td>Follow a short checklist for sales, approvers, delivery, or administration.</td><td><a href="quick-start.md">Quick start by role</a></td></tr><tr><td><strong>Read the documentation</strong></td><td>Find a task guide for each module, with steps and workflow explanations.</td><td><a href="https://jienweng.gitbook.io/q-app/docs">Documentation overview</a></td></tr><tr><td><strong>Look up a term</strong></td><td>Understand accounts, opportunities, PPVVC, quotations, and billing terms.</td><td><a href="https://jienweng.gitbook.io/q-app/reference/terminology">Terminology</a></td></tr><tr><td><strong>See what changed</strong></td><td>Read product changes and documentation updates.</td><td><a href="https://jienweng.gitbook.io/q-app/changelog">Product changelog</a></td></tr></tbody></table>
+<table data-view="cards"><thead><tr><th>Guide</th><th>Description</th><th data-hidden data-card-target data-type="content-ref">Link</th></tr></thead><tbody><tr><td><strong>Get started</strong></td><td>Follow a short checklist for sales, approvers, or administration.</td><td><a href="quick-start.md">Quick start by role</a></td></tr><tr><td><strong>Read the documentation</strong></td><td>Find a task guide for each module, with steps and workflow explanations.</td><td><a href="https://jienweng.gitbook.io/q-app/docs">Documentation overview</a></td></tr><tr><td><strong>Look up a term</strong></td><td>Understand accounts, opportunities, PPVVC, quotations, and billing terms.</td><td><a href="https://jienweng.gitbook.io/q-app/reference/terminology">Terminology</a></td></tr><tr><td><strong>See what changed</strong></td><td>Read product changes and documentation updates.</td><td><a href="https://jienweng.gitbook.io/q-app/changelog">Product changelog</a></td></tr></tbody></table>
 
 ## First time here?
 
@@ -52,17 +52,9 @@ flowchart TD
     F --> Q["Prepare and approve a quotation"]
     Q --> W["Close the funnel deal as Won"]
     W --> M["Track payment milestones"]
-    W --> P["Coordinate delivery and sales orders"]
 ```
 
 **In words:** qualify the prospect, confirm the customer records, work the deal, prepare an approved quote, and record the outcome. On Closed Won, live planned payment milestones become **Won**. Billing is recorded separately by updating eligible milestones to **Invoiced**.
-
-<details>
-<summary>View a static copy of the workflow</summary>
-
-<figure><img src="assets/sales-workflow.png" alt="A lead becomes an account and contact, then a funnel deal and approved quotation. Closing Won leads to payment milestone tracking and delivery coordination."><figcaption><p>The same workflow as the diagram above, available as an image.</p></figcaption></figure>
-
-</details>
 
 ## Need help?
 
