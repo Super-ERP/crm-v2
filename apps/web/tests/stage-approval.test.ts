@@ -165,19 +165,21 @@ describe("stage approval lifecycle hardening", () => {
   it("blocks a former manager after the reporting route changes", async () => {
     const request = { id: "request-1", status: "pending", requesterMemberId: "rep", approverMemberId: "old-manager" }
     routing.findManagerApprover.mockResolvedValue("new-manager")
-    const { tx } = makeTx([[request]])
-    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
-    await expect(decideApproval({ ...ctx, memberId: "old-manager", isSuperadmin: false, can: () => true }, { requestId: request.id, decision: "approved" })).rejects.toThrow("Not authorized")
-  })
-
-  it("rechecks manager routing after waiting for approval locks", async () => {
-    const request = { id: "request-1", funnelId: "funnel-1", status: "pending", requesterMemberId: "rep", approverMemberId: "old-manager" }
-    routing.findManagerApprover.mockResolvedValueOnce("old-manager").mockResolvedValueOnce("new-manager")
     const { tx } = makeTx([[request], [baseFunnel], [request]])
     runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
     await expect(decideApproval({ ...ctx, memberId: "old-manager", isSuperadmin: false, can: () => true }, { requestId: request.id, decision: "approved" })).rejects.toThrow("Not authorized")
     expect(tx.update).not.toHaveBeenCalled()
-    expect(routing.findManagerApprover).toHaveBeenCalledTimes(2)
+  })
+
+  it("checks current routing after locks with one manager query", async () => {
+    const request = { id: "request-1", funnelId: "funnel-1", status: "pending", requesterMemberId: "rep", approverMemberId: "old-manager" }
+    routing.findManagerApprover.mockResolvedValueOnce("new-manager")
+    const { tx } = makeTx([[request], [baseFunnel], [request]])
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    await expect(decideApproval({ ...ctx, memberId: "old-manager", isSuperadmin: false, can: () => true }, { requestId: request.id, decision: "approved" })).rejects.toThrow("Not authorized")
+    expect(tx.update).not.toHaveBeenCalled()
+    expect(routing.findManagerApprover).toHaveBeenCalledTimes(1)
+    expect(tx.select).toHaveBeenCalledTimes(3)
   })
 
   it("cancels pending approvals in same transaction as rollback", async () => {
