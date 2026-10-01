@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
-import { listRolesWithPermissions, listPermissionAdmins } from "../actions"
+import { listRolesWithPermissions } from "../actions"
 import { RolesManager } from "./roles-manager"
 import { requireEntitledRoute } from "@/lib/module-guard"
 import { getEntitledModuleMap } from "@/lib/modules.server"
@@ -12,10 +12,9 @@ export default async function RolesPage({
   searchParams: Promise<{ role?: string }>
 }) {
   await requireEntitledRoute("advancedRoles")
-  const [{ role: initialRoleId }, roles, admins, modules] = await Promise.all([
+  const [{ role: initialRoleId }, roles, modules] = await Promise.all([
     searchParams,
     listRolesWithPermissions(),
-    listPermissionAdmins(),
     getEntitledModuleMap(),
   ])
   return (
@@ -27,7 +26,6 @@ export default async function RolesPage({
       <PageBody>
         <RolesManager
           roles={roles}
-          admins={admins}
           initialRoleId={initialRoleId}
           permissionGroups={getPermissionGroups(modules)}
         />
