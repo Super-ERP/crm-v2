@@ -1,9 +1,11 @@
 $schema: https://api.gitbook.com/gitbook-docs.yaml
 site:
+  title: Super-ERP
   structure:
     - type: space
       key: user-guide
       title: Super-ERP User Guide
-      path: /
+      path: user-guide
+      default: true
       content:
         directory: ./docs/user-guide
