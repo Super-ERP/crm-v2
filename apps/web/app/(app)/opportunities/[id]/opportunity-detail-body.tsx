@@ -232,7 +232,7 @@ export function OpportunityDetailBody({
                 {detail.accountName}
               </Link>
             </FieldRow>
-            <FieldRow inline label="Owner">{detail.ownerName ?? "—"}</FieldRow>
+            <FieldRow inline label="Account owner">{detail.ownerName ?? "—"}</FieldRow>
             <FieldRow inline label="Opportunity Nature">
               {canEdit ? (
                 projectNatures.length === 0 ? (

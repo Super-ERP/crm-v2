@@ -51,11 +51,12 @@ flowchart TD
 * **Rejected:** review the decision note, resolve the issue, and submit a new request if needed.
 * **No longer needed:** requesters can cancel their pending request where the action is available.
 * **Reporting manager changed:** cancel and resubmit a stale pending request so it routes to the current eligible manager.
+* **Account owner changed:** the pending request is cancelled automatically; the new owner can submit a new request.
 * **No eligible manager:** ask your administrator to configure the reporting line and approval permissions. Submission does not route to an unrelated approver.
 
 ## Quotation approvals
 
-Every quotation requires approval before sending. The eligible approver is the first active manager in the account salesperson’s reporting line with **Approve quotations** permission. Only that manager can approve or reject; a rejection requires a reason. These actions record audit events but do not send email notifications.
+Every quotation requires approval before sending. The eligible approver is the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that manager can approve or reject; a rejection requires a reason. These actions record audit events but do not send email notifications.
 
 See [Quotation lifecycle](05-quotations-and-revisions.md#the-quotation-lifecycle).
 

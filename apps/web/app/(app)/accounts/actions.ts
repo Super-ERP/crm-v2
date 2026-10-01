@@ -82,7 +82,7 @@ export type AccountInput = {
   /** Required for resellers: the end-user client account. */
   endUserAccountId?: string | null
   /**
-   * Account owner / account manager (Salesforce "Account Owner"). When changed
+   * Account owner (Salesforce "Account Owner"). When changed
    * on update, the new owner cascades to its contacts, opportunities, funnels,
    * projects and contracts. Omit to leave the current owner unchanged.
    */
@@ -675,6 +675,10 @@ export async function updateAccount(
     revalidatePath("/funnel")
     revalidatePath("/quotations")
     revalidatePath("/projects")
+    revalidatePath("/approvals")
+    revalidatePath("/payment-milestones")
+    revalidatePath("/sales-orders")
+    revalidatePath("/dashboard")
     return row
   })
 }

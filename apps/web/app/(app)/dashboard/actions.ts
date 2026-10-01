@@ -66,7 +66,7 @@ export type OpenPipeline = {
 
 /**
  * One stacked-bar segment for the "QM Sales Report by Salesperson" chart:
- * a single (Funnel Owner × Sales Stage) cell, measured by the summed
+ * a single (Account Owner × Sales Stage) cell, measured by the summed
  * estimated funnel amount. Amounts are summed regardless of currency — the
  * Salesforce source is single-currency (MYR), matching this tenant's default.
  */
@@ -365,7 +365,7 @@ export async function getDashboardData(): Promise<DashboardData> {
 
     // ── SF home charts (right column, "Salesperson's Funnels") ──────────────
     // Chart 1 — "QM Sales Report by Salesperson": Σ estimated funnel amount by
-    // Funnel Owner × Sales Stage. Tenant-wide (RLS scopes to the tenant); the
+    // Account Owner × Sales Stage. Tenant-wide (RLS scopes to the tenant); the
     // owner name comes from the auth schema (member → user), joined the same
     // way listOpportunities() does. Excludes soft-deleted funnels.
     const salesByOwnerStage: SalesByOwnerStage[] = (

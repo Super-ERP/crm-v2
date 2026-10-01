@@ -82,7 +82,8 @@ The sales rep drafts and edits line items, notes, and pricing.
 ### 2. `Pending Approval`
 A draft must be approved before it can be sent:
 * Click **Submit for Approval**.
-* The quote is locked against further edits and reviewed on the quotation by the first active manager in the account salesperson’s reporting line with **Approve quotations** permission. Only that eligible manager may approve or reject it. The **Approvals** module handles stage requests separately.
+* The quote is locked against further edits and reviewed on the quotation by the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that eligible manager may approve or reject it. The **Approvals** module handles stage requests separately.
+* If the account owner changes while approval is pending, the quotation returns to Draft with an explanation. The new owner must resubmit it.
 
 ### 3. `Approved`
 The eligible reporting manager approves the quote. A member with send permission can then record sending it. Rejection requires an explanation and returns it to Draft. These actions record audit events but do not send an email notification.

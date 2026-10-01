@@ -1203,6 +1203,17 @@ export async function submitQuotationForApproval(
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
     await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
+      // Lock the account before the quotation. Owner reassignment locks the
+      // account first, then updates its funnels and pending quotations.
+      const [account] = await tx
+        .select({ id: accounts.id })
+        .from(quotations)
+        .innerJoin(funnels, eq(quotations.funnelId, funnels.id))
+        .innerJoin(accounts, eq(funnels.accountId, accounts.id))
+        .where(and(eq(quotations.id, id), isNull(quotations.deletedAt), isNull(accounts.deletedAt)))
+        .limit(1)
+        .for("share", { of: accounts })
+      if (!account) throw new Error("Quotation account not found")
       const quotation = await getLockedQuotation(tx, id)
       const ownerId = await assertQuotationAccess(tx, ctx, quotation)
       if (!ownerId) throw new Error("Assign an account owner before requesting quotation approval.")

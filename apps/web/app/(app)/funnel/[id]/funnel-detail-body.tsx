@@ -873,7 +873,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 "—"
               )}
             </FieldRow>
-            <FieldRow label="Owner">
+            <FieldRow label="Account owner">
               {ownerName ?? "—"}
             </FieldRow>
             <FieldRow label="Contact">

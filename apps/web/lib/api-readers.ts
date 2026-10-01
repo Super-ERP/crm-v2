@@ -336,7 +336,7 @@ export async function accountsGet(
     )
     .orderBy(asc(pipelineStages.sortOrder), asc(funnels.name))
 
-  // Resolve the account owner / account manager (member -> user name).
+  // Resolve the account owner (member -> user name).
   const ownerName = account.ownerMemberId
     ? ((
         await tx
@@ -508,7 +508,6 @@ export type OpportunityContainerRow = {
   accountCode: string | null
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
-  ownerName: string | null
   totalEstimatedFunnelAmount: string | null
   funnelCount: number
   currency: string
@@ -556,7 +555,6 @@ export async function opportunitiesList(
         accountCode: accounts.code,
         accountOwnerMemberId: accounts.ownerMemberId,
         accountOwnerName: accountOwnerUser.name,
-        ownerName: user.name,
         totalEstimatedFunnelAmount: opportunities.totalEstimatedFunnelAmount,
         currency: opportunities.currency,
         createdAt: opportunities.createdAt,
@@ -565,8 +563,6 @@ export async function opportunitiesList(
       .innerJoin(accounts, eq(opportunities.accountId, accounts.id))
       .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
-      .leftJoin(member, eq(opportunities.ownerMemberId, member.id))
-      .leftJoin(user, eq(member.userId, user.id))
       .where(where)
       .orderBy(ordering, desc(opportunities.id))
       .limit(limit)
@@ -575,8 +571,6 @@ export async function opportunitiesList(
       .select({ count: sql<number>`count(*)::int` })
       .from(opportunities)
       .innerJoin(accounts, eq(opportunities.accountId, accounts.id))
-      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
-      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(where),
   ])
 

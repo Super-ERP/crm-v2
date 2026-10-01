@@ -27,8 +27,8 @@ import {
   FieldRow,
   FieldSection,
   RelatedCard,
-  useSaveField,
 } from "@/components/detail-page"
+import { useInlineSave } from "@/components/use-inline-save"
 import { InlinePhoneValue, PhoneNumberDisplay } from "@/components/phone-input"
 import { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
@@ -87,7 +87,7 @@ export type AccountDetailData = {
   currencies: string[]
   /** Country picklist for the inline billing-address country combobox. */
   countries: string[]
-  /** Tenant members, for the inline account-owner (account manager) picker. */
+  /** Tenant members, for the inline account-owner picker. */
   members: MemberOption[]
   contacts: PersonRow[]
   opportunities: AccountOpportunityItem[]
@@ -141,9 +141,12 @@ export function AccountDetailBody(props: AccountDetailData) {
   const revalidate = `/accounts/${accountId}`
 
 
-  const saveField = useSaveField((patch: Partial<AccountInput>) =>
+  const { save } = useInlineSave((patch: Partial<AccountInput>) =>
     updateAccount(accountId, { ...record, ...patch })
   )
+  const saveField = async (patch: Partial<AccountInput>): Promise<void> => {
+    await save(patch)
+  }
 
   const industryOptions = React.useMemo(
     () => industries.map((i) => ({ value: i, label: i })),

@@ -42,6 +42,12 @@ Opening any Account presents a comprehensive 360-degree customer view:
 * **Quotations**: All generated commercial proposals and revision histories.
 * **Activity Stream**: An audit log showing recent updates, stage advances, and notes.
 
+### Changing the account owner
+
+Edit **Account owner** on the account detail page to transfer responsibility. Active contacts, Opportunities, Funnels, Projects, and Contracts under the account receive the new owner in the same transaction. Quotations, payment milestones, and sales orders inherit access through their Funnel or Project.
+
+Pending stage requests are cancelled, and pending quotations return to Draft with a resubmission explanation. The new account owner can submit them again so approval reaches their eligible reporting manager. Completed approval decisions remain historical records.
+
 ---
 
 ## Contacts

@@ -88,7 +88,7 @@ See [Managing revisions](../05-quotations-and-revisions.md#managing-revisions).
 <details>
 <summary>Where do I approve a quotation?</summary>
 
-The eligible reporting manager reviews quotation approval on the quotation itself. This is the first active manager in the account salesperson’s reporting line with quotation approval permission. **Sales → Approvals** handles funnel stage requests, with **Incoming** and **My requests** tabs.
+The eligible reporting manager reviews quotation approval on the quotation itself. This is the first active manager in the account owner’s reporting line with quotation approval permission. **Sales → Approvals** handles funnel stage requests, with **Incoming** and **My requests** tabs.
 
 See [Quotations](../05-quotations-and-revisions.md) and [Stage approvals](../08-approvals-inbox.md).
 

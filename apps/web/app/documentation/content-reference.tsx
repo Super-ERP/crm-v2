@@ -273,7 +273,7 @@ erDiagram
   QUOTATIONS ||--o{ QUOTATION_LINE_ITEMS : lines
   OPPORTUNITIES ||--o{ PROJECTS : delivers
   QUOTATIONS |o--o{ PROJECTS : "value source"
-  FUNNELS |o--o{ PAYMENT_MILESTONES : "optional funnel owner"
+  FUNNELS |o--o{ PAYMENT_MILESTONES : "optional funnel link"
   PROJECTS |o--o{ PAYMENT_MILESTONES : "optional project owner"
   PROJECTS ||--o{ SALES_ORDERS : approval
   SALES_ORDERS ||--o{ FINANCE_DOCS : "chain root"
