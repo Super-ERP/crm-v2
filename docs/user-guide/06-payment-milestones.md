@@ -7,6 +7,8 @@ icon: calendar
 
 Plan billing events and record when confirmed milestones have been invoiced.
 
+**New to these terms?** Read the [terminology reference](reference/terminology.md#payment-milestone).
+
 ## On this page
 
 * [Set up milestones](#setting-up-milestones)
@@ -29,14 +31,41 @@ Plan billing events and record when confirmed milestones have been invoiced.
 
 Milestones are configured during quotation preparation or directly within the Funnel deal:
 
-1. Open the target Funnel or Quotation.
-2. In the **Payment Milestones** section, click **+ Add Milestone**.
-3. Specify:
-   * **Milestone Title**: e.g., *"1st Payment: 30% Advance Deposit upon PO"*.
-   * **Amount / Percentage**: Fixed currency amount or percentage of total deal value.
-   * **Expected Date**: Target billing date.
-   * **Trigger Condition**: e.g., *Contract Execution, UAT Sign-off, Go-Live*.
-4. Save the milestone.
+{% stepper %}
+{% step %}
+
+#### Open the deal or quotation
+
+Open the target Funnel or Quotation.
+
+{% endstep %}
+{% step %}
+
+#### Add a milestone
+
+In the **Payment Milestones** section, click **+ Add Milestone**.
+
+{% endstep %}
+{% step %}
+
+#### Enter billing-plan details
+
+Specify:
+
+* **Milestone Title**: e.g., *"1st Payment: 30% Advance Deposit upon PO"*.
+* **Amount / Percentage**: Fixed currency amount or percentage of total deal value.
+* **Expected Date**: Target billing date.
+* **Trigger Condition**: e.g., *Contract Execution, UAT Sign-off, Go-Live*.
+
+{% endstep %}
+{% step %}
+
+#### Save the milestone
+
+Save the milestone.
+
+{% endstep %}
+{% endstepper %}
 
 ---
 
@@ -63,10 +92,36 @@ stateDiagram-v2
 
 ## Managing milestones
 
-1. Open **Sales → Payment Milestones** to find the billing event and check its current status, amount, due date, and linked funnel.
-2. Open the linked funnel's **Payment Milestones** tab to review its payment schedule.
-3. Users with milestone-management permission can edit supported planning fields. Amounts on an Invoiced milestone are locked.
-4. After billing, the supported manual status transition is **Won → Invoiced**. There is no reverse transition.
+{% stepper %}
+{% step %}
+
+#### Find the milestone
+
+Open **Sales → Payment Milestones** to find the billing event and check its current status, amount, due date, and linked funnel.
+
+{% endstep %}
+{% step %}
+
+#### Review the payment schedule
+
+Open the linked funnel's **Payment Milestones** tab to review its payment schedule.
+
+{% endstep %}
+{% step %}
+
+#### Edit supported planning fields
+
+Users with milestone-management permission can edit supported planning fields. Amounts on an Invoiced milestone are locked.
+
+{% endstep %}
+{% step %}
+
+#### Understand the billing transition
+
+After billing, the supported manual status transition is **Won → Invoiced**. There is no reverse transition.
+
+{% endstep %}
+{% endstepper %}
 
 {% hint style="info" %}
 **Current interface limitation:** the milestone list, detail page, and shared payment schedule display status badges rather than a status-editing control in this repository version. If you need to record Invoiced and no action is available in your deployed version, contact your administrator or support team. Do not assume clicking the badge changes the status.

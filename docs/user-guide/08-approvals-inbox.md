@@ -7,6 +7,8 @@ icon: stamp
 
 Use **Sales → Approvals** to review requests to change a funnel stage. Quotation approval is handled on the quotation itself; see [Quotation approvals](05-quotations-and-revisions.md#the-quotation-lifecycle).
 
+**New to these terms?** Read the [terminology reference](reference/terminology.md#stage-gate).
+
 ## On this page
 
 * [Find your requests](#find-your-requests)
@@ -19,20 +21,78 @@ Use **Sales → Approvals** to review requests to change a funnel stage. Quotati
 
 ## Find your requests
 
-1. Open **Sales → Approvals**.
-2. Choose **Incoming** for pending requests routed to you.
-3. Choose **My requests** to track requests you submitted.
-4. Use **Previous** and **Next** to navigate the selected tab’s 25-request pages. Use **Review quotations** to open the separate quotation list.
+{% stepper %}
+{% step %}
+
+#### Open Approvals
+
+Open **Sales → Approvals**.
+
+{% endstep %}
+{% step %}
+
+#### Review Incoming
+
+Choose **Incoming** for pending requests routed to you.
+
+{% endstep %}
+{% step %}
+
+#### Track My requests
+
+Choose **My requests** to track requests you submitted.
+
+{% endstep %}
+{% step %}
+
+#### Navigate requests
+
+Use **Previous** and **Next** to navigate the selected tab’s 25-request pages. Use **Review quotations** to open the separate quotation list.
+
+{% endstep %}
+{% endstepper %}
 
 An empty Incoming tab means no pending requests are currently routed to you; it does not show every request in the organization.
 
 ## Review and decide
 
-1. Find the request and check the funnel name, current stage, and requested target stage.
-2. Review the supporting context. Expand **Attachments** when supporting files are available.
-3. Choose **Approve** or **Reject**.
-4. Add a decision note. The stage-approval dialog makes this optional, but a clear reason helps the requester follow up.
-5. Confirm the decision and read the result message.
+{% stepper %}
+{% step %}
+
+#### Check the stage request
+
+Find the request and check the funnel name, current stage, and requested target stage.
+
+{% endstep %}
+{% step %}
+
+#### Review supporting context
+
+Review the supporting context. Expand **Attachments** when supporting files are available.
+
+{% endstep %}
+{% step %}
+
+#### Choose a decision
+
+Choose **Approve** or **Reject**.
+
+{% endstep %}
+{% step %}
+
+#### Add a decision note
+
+Add a decision note. The stage-approval dialog makes this optional, but a clear reason helps the requester follow up.
+
+{% endstep %}
+{% step %}
+
+#### Confirm and read the result
+
+Confirm the decision and read the result message.
+
+{% endstep %}
+{% endstepper %}
 
 ```mermaid
 flowchart TD
