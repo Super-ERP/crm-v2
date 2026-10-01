@@ -4,6 +4,8 @@ import { badRequest, notFound, SafeHttpError } from "../http/errors"
 import type { MutationActor } from "./clients"
 import { getCurrentEntitlementReference, getEntitlement, issueEntitlement } from "./entitlements"
 
+import { selectedModules, type ModuleId } from "./contracts"
+
 const FRESHNESS_MS = 30 * 60 * 1000
 
 export interface ServiceControlsView {
@@ -15,6 +17,7 @@ export interface ServiceControlsView {
   enabled: boolean | null
   seatLimit: number | null
   revision: number
+  moduleIds: ModuleId[]
   adopted: boolean
   canSave: boolean
   blockedReason: string | null
@@ -67,8 +70,10 @@ export async function getServiceControls(database: D1Database, deploymentId: str
     (policy !== null || heartbeat?.entitlement_version === String(latest?.version))
   const capable = heartbeat?.supported_entitlement_schema_version === 3 && recent
   const blockedReason = !setupReady ? "service_setup_required" : !policy && !capable ? "service_upgrade_required" : null
+  const desiredModules = policy ? selectedModules(JSON.parse(policy.base_payload_json).moduleIds) : selectedModules(payload?.moduleIds)
   const matches = policy && payload?.schemaVersion === 3 && payload.serviceRevision === policy.revision &&
-    payload.serviceEnabled === Boolean(policy.enabled) && payload.maxActiveUsers === policy.seat_limit
+    payload.serviceEnabled === Boolean(policy.enabled) && payload.maxActiveUsers === policy.seat_limit &&
+    canonicalJson([...payload.moduleIds].sort()) === canonicalJson([...desiredModules].sort())
   const applied = matches && heartbeat?.entitlement_version === String(latest?.version)
   const accessExpired = policy?.enabled === 1 && payload !== undefined && !evaluateLease(payload, now).writeAllowed
   return {
@@ -76,7 +81,7 @@ export async function getServiceControls(database: D1Database, deploymentId: str
     deploymentName: deployment.deployment_key, environment: deployment.environment,
     enabled: policy ? Boolean(policy.enabled) : payload ? evaluateLease(payload, now).writeAllowed : null,
     seatLimit: policy?.seat_limit ?? payload?.maxActiveUsers ?? null,
-    revision: policy?.revision ?? 0, adopted: policy !== null,
+    moduleIds: desiredModules, revision: policy?.revision ?? 0, adopted: policy !== null,
     canSave: blockedReason === null, blockedReason,
     syncStatus: blockedReason ? "attention" : !applied ? "pending" : !recent || heartbeat?.health_status !== "healthy" || accessExpired ? "attention" : "applied",
     activeUsers: heartbeat?.active_user_count ?? null,
@@ -93,7 +98,7 @@ export async function getClientServiceControls(database: D1Database, clientId: s
 }
 
 export async function saveServiceControls(environment: CloudflareBindings, input: {
-  deploymentId: string; enabled: boolean; seatLimit: number; expectedRevision: number; actor: MutationActor; now?: Date
+  deploymentId: string; enabled: boolean; seatLimit: number; expectedRevision: number; moduleIds?: unknown; actor: MutationActor; now?: Date
 }): Promise<void> {
   if (typeof input.enabled !== "boolean" || !Number.isSafeInteger(input.seatLimit) || input.seatLimit < 1 || input.seatLimit > 100000 ||
     !Number.isSafeInteger(input.expectedRevision) || input.expectedRevision < 0) throw badRequest()
@@ -117,20 +122,23 @@ export async function saveServiceControls(environment: CloudflareBindings, input
       throw new SafeHttpError(409, "service_seat_limit_in_use")
     }
   }
-  const changed = !policy || Boolean(policy.enabled) !== input.enabled || policy.seat_limit !== input.seatLimit
+  const storedBase = policy ? JSON.parse(policy.base_payload_json) as EntitlementLease : base
+  const moduleIds = selectedModules(input.moduleIds === undefined ? storedBase.moduleIds : input.moduleIds).sort()
+  const modulesChanged = canonicalJson([...storedBase.moduleIds].sort()) !== canonicalJson(moduleIds)
+  const changed = modulesChanged || !policy || Boolean(policy.enabled) !== input.enabled || policy.seat_limit !== input.seatLimit
   const revision = (policy?.revision ?? 0) + (changed ? 1 : 0)
   if (changed) {
     const at = now.toISOString()
     const audit = await prepareOperatorAuditStatement(database, {
       operatorId: input.actor.operatorId, requestId: input.actor.requestId,
       action: "service.controls.update", targetType: "deployment", targetId: input.deploymentId,
-      outcome: "success", metadata: { enabled: input.enabled, seatLimit: input.seatLimit, revision }, createdAt: at,
+      outcome: "success", metadata: { enabled: input.enabled, seatLimit: input.seatLimit, moduleIds, revision }, createdAt: at,
     })
     try {
       await database.batch([
         database.prepare("INSERT INTO service_control_operations (id, deployment_id, expected_revision, expected_entitlement_version, expected_heartbeat_id, requested_seat_limit, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(crypto.randomUUID(), input.deploymentId, input.expectedRevision, latest!.version, heartbeat?.id ?? null, input.seatLimit, at),
-        database.prepare("INSERT INTO service_controls (deployment_id, enabled, seat_limit, revision, base_payload_json, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(deployment_id) DO UPDATE SET enabled = excluded.enabled, seat_limit = excluded.seat_limit, revision = excluded.revision, updated_at = excluded.updated_at")
-          .bind(input.deploymentId, input.enabled ? 1 : 0, input.seatLimit, revision, policy?.base_payload_json ?? canonicalJson(base as EntitlementLease), at),
+        database.prepare("INSERT INTO service_controls (deployment_id, enabled, seat_limit, revision, base_payload_json, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(deployment_id) DO UPDATE SET enabled = excluded.enabled, seat_limit = excluded.seat_limit, revision = excluded.revision, base_payload_json = excluded.base_payload_json, updated_at = excluded.updated_at")
+          .bind(input.deploymentId, input.enabled ? 1 : 0, input.seatLimit, revision, canonicalJson({ ...storedBase, moduleIds }), at),
         audit.statement,
       ])
     } catch (error) {

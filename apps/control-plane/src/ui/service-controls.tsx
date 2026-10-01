@@ -2,6 +2,7 @@
 import { Button, NoticePanel, StatusBadge, type NoticeTone, type StatusTone } from "./components"
 import { OperatorLayout } from "./layout"
 import { titleCase } from "./presenters"
+import { MODULE_CATALOG } from "../repos/contracts"
 import type { ServiceControlsView } from "../repos/service-controls"
 
 export interface ServiceControlsNotice {
@@ -52,6 +53,13 @@ function ServiceControlCard(props: { controls: ServiceControlsView }) {
           <div><label class="service-field-label" for={fieldId}>Seats allowed</label><p>The maximum number of client users.</p></div>
           {controls.canSave ? <input class="service-seat-input" id={fieldId} name="seatLimit" type="number" min={1} max={100000} step={1} value={controls.seatLimit ?? ""} required /> : <strong>{controls.seatLimit ?? "Not set"}</strong>}
         </div>
+        <fieldset class="module-fieldset" disabled={!controls.canSave}>
+          <legend>Modules</legend>
+          <p class="field-hint">Choose the features available to this client. Sales Orders requires Projects; Billing &amp; Purchasing requires both.</p>
+          <input type="hidden" name="modulesSubmitted" value="1" />
+          {Object.entries(MODULE_CATALOG).map(([moduleId, module]) => <label><input type="checkbox" name="moduleIds" value={moduleId} checked={controls.moduleIds.includes(moduleId as keyof typeof MODULE_CATALOG)} /> {module.displayName}</label>)}
+          <p class="field-hint">Advanced roles enables role creation and the permission checkbox editor in Team → Roles.</p>
+        </fieldset>
         {controls.blockedReason ? <p class="service-help">{blockedReasonMessage[controls.blockedReason] ?? "Service settings need attention before they can be changed."}</p> : null}
         <footer class="service-panel-footer">
           <p>{controls.syncStatus === "pending" ? "Saved changes are waiting for the server." : "Changes take effect after the server confirms them."}</p>
@@ -74,7 +82,7 @@ export function ServiceControlsPage(props: { controls: ServiceControlsView; oper
     { label: controls.deploymentName },
   ]}>
     <div class="service-workspace">
-      <header class="service-page-header"><p>Client service</p><h1>{controls.clientName}</h1><span>Access and seats. All in one place.</span></header>
+      <header class="service-page-header"><p>Client service</p><h1>{controls.clientName}</h1><span>Access, seats and modules. All in one place.</span></header>
       <NoticePanel notice={props.notice} />
       <ServiceControlCard controls={controls} />
     </div>
@@ -85,7 +93,7 @@ export function ClientServicePage(props: { controls: ServiceControlsView[]; oper
   const clientName = props.clientName ?? props.controls[0]?.clientName ?? "Client services"
   return <OperatorLayout title={clientName} operatorEmail={props.operatorEmail}>
     <div class="service-workspace">
-      <header class="service-page-header"><p>Client service</p><h1>{clientName}</h1><span>Access and seats. All in one place.</span></header>
+      <header class="service-page-header"><p>Client service</p><h1>{clientName}</h1><span>Access, seats and modules. All in one place.</span></header>
       <NoticePanel notice={props.notice} />
       {props.controls.length === 0 ? <p>No service environments are set up yet.</p> : props.controls.map((controls) => <ServiceControlCard controls={controls} />)}
     </div>

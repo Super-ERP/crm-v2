@@ -582,6 +582,7 @@ export function createOperatorRoutes() {
         await saveServiceControls(context.env, {
           deploymentId,
           enabled: data.enabled === "on",
+          moduleIds: data.modulesSubmitted === "1" ? (data.moduleIds ?? []) : data.moduleIds,
           seatLimit: serviceSeatLimit(data.seatLimit),
           expectedRevision: nonNegativeRevision(data.expectedRevision),
           actor: actor(context),
