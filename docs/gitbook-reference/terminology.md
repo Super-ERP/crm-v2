@@ -43,7 +43,7 @@ The record describing a customer need, qualification context, and target budget.
 
 ### Funnel deal
 
-The particular sales pursuit you track through stages, with quotations, costs, and an expected close date. Keep the distinction clear: the opportunity provides context, while the funnel deal carries the stage and commercial progress. See [Opportunities and sales funnel](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel).
+The particular sales pursuit you track through stages, with quotations and an expected close date. Keep the distinction clear: the opportunity provides context, while the funnel deal carries the stage and commercial progress. See [Opportunities and sales funnel](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel).
 
 ### Pipeline and funnel
 

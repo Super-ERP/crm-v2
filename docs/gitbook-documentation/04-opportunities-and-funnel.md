@@ -22,7 +22,7 @@ Qualify a customer need and keep each sales pursuit at the right stage.
 In Q-App, sales pursuits are managed through a structured two-tier structure:
 
 * **Opportunity Container**: The top-level commercial record holding overall customer relationship context, PPVVC qualification, and target budget.
-* **Funnel Deal**: The active sales pursuit tracking the exact deal stage, line items, quotations, costs, and closing timeline.
+* **Funnel Deal**: The active sales pursuit tracking the exact deal stage, line items, quotations, and closing timeline.
 
 ### Opportunity Codes
 Every Opportunity is assigned a system-generated, immutable identifier:
