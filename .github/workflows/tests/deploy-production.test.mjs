@@ -40,3 +40,11 @@ test('rollback rejects migration downgrades before installing any bundle files',
   assert.ok(guard > 0 && guard < workflow.indexOf('install -d -m 0700'))
   assert.match(workflow, /operation != 'Roll back'/)
 })
+
+// Product branding must not rename the GitHub organization that owns packages.
+test("image publication and staging use the authorized registry namespace", () => {
+  const images = readFileSync(new URL("../release-images.yml", import.meta.url), "utf8")
+  const staging = readFileSync(new URL("../deploy-staging.yml", import.meta.url), "utf8")
+  assert.match(images, /IMAGE_NAMESPACE: ghcr\.io\/super-erp/)
+  assert.match(staging, /ghcr\.io\/super-erp\/crm-/)
+})
