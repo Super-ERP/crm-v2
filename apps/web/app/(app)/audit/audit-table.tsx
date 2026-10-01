@@ -7,7 +7,7 @@ import { DataTable, SortableHeader } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
 import { formatDate } from "@/lib/format"
 
-import type { AuditRow } from "./actions"
+import { listAuditPage, type AuditRow } from "./actions"
 
 const RECORD_LABEL: Record<string, string> = {
   opportunity: "Funnel",
@@ -28,7 +28,10 @@ function recordLabel(entityType: string): string {
   )
 }
 
-export function AuditTable({ data }: { data: AuditRow[] }) {
+export function AuditTable({ initialPage, filterOptions }: {
+  initialPage: { rows: AuditRow[]; total: number }
+  filterOptions: { actions: string[]; records: string[] }
+}) {
   const columns = React.useMemo<ColumnDef<AuditRow>[]>(
     () => [
       {
@@ -40,11 +43,11 @@ export function AuditTable({ data }: { data: AuditRow[] }) {
       },
       {
         id: "record",
-        accessorFn: (row) => recordLabel(row.entityType),
+        accessorFn: (row) => row.entityType,
         header: ({ column }) => <SortableHeader column={column} title="Record" />,
-        cell: ({ getValue }) => (
+        cell: ({ row }) => (
           <Badge variant="outline" className="font-normal">
-            {getValue<string>()}
+            {recordLabel(row.original.entityType)}
           </Badge>
         ),
       },
@@ -82,13 +85,14 @@ export function AuditTable({ data }: { data: AuditRow[] }) {
   return (
     <DataTable
       columns={columns}
-      data={data}
+      data={initialPage.rows}
+      server={{ total: initialPage.total, loadPage: listAuditPage }}
       searchColumn="action"
       searchPlaceholder="Search by action…"
       emptyMessage="No audit events yet."
-      facets={[
-        { columnId: "action", title: "Action" },
-        { columnId: "record", title: "Record" },
+      filters={[
+        { type: "enum", columnId: "action", title: "Action", options: filterOptions.actions.map((value) => ({ value, label: value })) },
+        { type: "enum", columnId: "record", title: "Record", options: filterOptions.records.map((value) => ({ value, label: recordLabel(value) })) },
       ]}
       tableId="audit"
     />

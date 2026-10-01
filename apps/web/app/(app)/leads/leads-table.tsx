@@ -47,6 +47,7 @@ import type { FunnelWithStages, MemberOption, Option } from "@/lib/lookups"
 
 import { Combobox } from "@/components/ui/combobox"
 import { StatusBadge } from "@/components/status-badge"
+import { LEAD_STATUS_OPTIONS } from "@/lib/status-meta"
 import { LeadForm } from "./lead-form"
 import {
   createLead,
@@ -54,6 +55,7 @@ import {
   deleteLead,
   restoreLead,
   disqualifyLead,
+  listLeadPage,
   type Lead,
   type LeadInput,
 } from "./actions"
@@ -62,7 +64,8 @@ import {
 // meaning reads in the same color on every surface (see components/status-badge).
 
 export function LeadsTable({
-  data,
+  initialPage,
+  filterSources,
   pipelines,
   members,
   accountOptions = [],
@@ -70,7 +73,8 @@ export function LeadsTable({
   lossReasons = [],
   defaultCountry,
 }: {
-  data: Lead[]
+  initialPage: { rows: Lead[]; total: number }
+  filterSources: string[]
   pipelines: FunnelWithStages[]
   members: MemberOption[]
   accountOptions?: Option[]
@@ -79,6 +83,7 @@ export function LeadsTable({
   lossReasons?: string[]
   defaultCountry?: string
 }) {
+  const data = initialPage.rows
   const router = useRouter()
   const perms = usePermissions()
   const canCreate = perms.has(PERMISSIONS.LEAD_CREATE)
@@ -371,12 +376,12 @@ export function LeadsTable({
       <DataTable
         columns={columns}
         data={data}
+        server={{ total: initialPage.total, loadPage: listLeadPage }}
         tableId="leads"
-        cap={1000}
         filters={[
-          { type: "enum", columnId: "status", title: "Status", options: Array.from(new Set(data.map((row) => row.status))).map((value) => ({ value, label: value })) },
-          { type: "enum", columnId: "source", title: "Source", options: Array.from(new Set(data.map((row) => row.source).filter((value): value is string => Boolean(value)))).map((value) => ({ value, label: value })) },
-          { type: "relation", columnId: "ownerName", title: "Owner", options: Array.from(new Set(data.map((row) => ownerNameById.get(row.ownerMemberId ?? "")).filter((value): value is string => Boolean(value)))).map((value) => ({ value, label: value })) },
+          { type: "enum", columnId: "status", title: "Status", options: LEAD_STATUS_OPTIONS },
+          { type: "enum", columnId: "source", title: "Source", options: filterSources.map((value) => ({ value, label: value })) },
+          { type: "relation", columnId: "ownerName", title: "Owner", options: members.map((member) => ({ value: member.name, label: member.name })) },
         ]}
         searchColumn="name"
         searchPlaceholder="Search leads…"

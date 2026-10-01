@@ -2,13 +2,14 @@ import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
 import { listAccountOptions } from "@/lib/lookups"
 import { requireEntitledRoute } from "@/lib/module-guard"
-import { listInboundIntercompanyDeals } from "./actions"
+import { listInboundIntercompanyDealPage, listInboundIntercompanyFilterOptions } from "./actions"
 import { IntercompanyTable } from "./intercompany-table"
 
 export default async function IntercompanyPage() {
   await requireEntitledRoute("finance")
-  const [rows, accountOptions] = await Promise.all([
-    listInboundIntercompanyDeals(),
+  const [rows, filterOptions, accountOptions] = await Promise.all([
+    listInboundIntercompanyDealPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
+    listInboundIntercompanyFilterOptions(),
     listAccountOptions(),
   ])
 
@@ -26,7 +27,7 @@ export default async function IntercompanyPage() {
             record; your share is the remainder after its recognized cut.
           </p>
         </div>
-        <IntercompanyTable data={rows} accountOptions={accountOptions} />
+        <IntercompanyTable initialPage={rows} filterOptions={filterOptions} accountOptions={accountOptions} />
       </PageBody>
     </>
   )

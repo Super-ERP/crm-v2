@@ -6,7 +6,8 @@ import { DataTable, SortableHeader, linkCell } from "@/components/data-table"
 import { StatusBadge } from "@/components/status-badge"
 import { formatDate, formatMoney } from "@/lib/format"
 import { StageBadge } from "./stage-badge"
-import type { OpportunityListRow } from "./actions"
+import { listFunnelPage, type OpportunityListRow } from "./actions"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 
 const columns: ColumnDef<OpportunityListRow>[] = [
   {
@@ -95,35 +96,39 @@ const columns: ColumnDef<OpportunityListRow>[] = [
 ]
 
 export function OpportunitiesTable({
-  data,
+  initialPage,
+  filterOptions,
   toolbar,
   renderBoard,
 }: {
-  data: OpportunityListRow[]
+  initialPage: { rows: OpportunityListRow[]; total: number }
+  filterOptions: {
+    accounts: Array<{ value: string; label: string }>; opportunities: Array<{ value: string; label: string }>;
+    funnels: Array<{ value: string; label: string }>; accountOwners: Array<{ value: string; label: string }>;
+    owners: Array<{ value: string; label: string }>; stages: Array<{ value: string; label: string }>;
+  }
   toolbar?: React.ReactNode
-  renderBoard?: (rows: OpportunityListRow[]) => React.ReactNode
+  renderBoard?: (rows: OpportunityListRow[], query: ServerTableQuery) => React.ReactNode
 }) {
-  const options = (id: (row: OpportunityListRow) => string | null, label: (row: OpportunityListRow) => string | null) =>
-    Array.from(new Map(data.map((row) => [id(row), label(row)]).filter((entry): entry is [string, string] => Boolean(entry[0] && entry[1]))), ([value, label]) => ({ value, label }))
   return (
     <DataTable
       columns={columns}
-      data={data}
+      data={initialPage.rows}
+      server={{ total: initialPage.total, loadPage: listFunnelPage }}
       emptyMessage="No pipelines yet."
       toolbar={toolbar}
       renderFilteredView={renderBoard}
       tableId="funnel"
-      cap={1000}
       searchColumn="name"
       searchPlaceholder="Search funnels…"
       filters={[
-        { type: "relation", columnId: "accountId", title: "Account", options: options((row) => row.accountId, (row) => row.accountName) },
-        { type: "relation", columnId: "opportunityId", title: "Opportunity", options: options((row) => row.opportunityId, (row) => [row.opportunityCode, row.opportunityName].filter(Boolean).join(" — ")) },
-        { type: "relation", columnId: "id", title: "Funnel", options: options((row) => row.id, (row) => row.name) },
-        { type: "relation", columnId: "accountOwnerMemberId", title: "Account owner", options: options((row) => row.accountOwnerMemberId, (row) => row.accountOwnerName) },
-        { type: "relation", columnId: "ownerMemberId", title: "Funnel owner", options: options((row) => row.ownerMemberId, (row) => row.ownerName) },
-        { type: "relation", columnId: "stageId", title: "Stage", options: options((row) => row.stageId, (row) => row.stageName) },
-        { type: "enum", columnId: "status", title: "Status", options: [...new Set(data.map((row) => row.status))].map((value) => ({ value, label: value })) },
+        { type: "relation", columnId: "accountId", title: "Account", options: filterOptions.accounts },
+        { type: "relation", columnId: "opportunityId", title: "Opportunity", options: filterOptions.opportunities },
+        { type: "relation", columnId: "id", title: "Funnel", options: filterOptions.funnels },
+        { type: "relation", columnId: "accountOwnerMemberId", title: "Account owner", options: filterOptions.accountOwners },
+        { type: "relation", columnId: "ownerMemberId", title: "Funnel owner", options: filterOptions.owners },
+        { type: "relation", columnId: "stageId", title: "Stage", options: filterOptions.stages },
+        { type: "enum", columnId: "status", title: "Status", options: ["open", "won", "lost", "on_hold"].map((value) => ({ value, label: value })) },
       ]}
     />
   )

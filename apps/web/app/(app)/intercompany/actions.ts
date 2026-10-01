@@ -1,6 +1,8 @@
 "use server"
 
-import { and, desc, eq, isNull } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
 import { withModule } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -57,11 +59,22 @@ export type InboundIntercompanyDeal = {
  * partner predicate keeps the intent readable (and excludes this entity's own
  * OUTBOUND mirrors, which the same policy would also let it read).
  */
-export async function listInboundIntercompanyDeals(): Promise<
-  InboundIntercompanyDeal[]
-> {
+export async function listInboundIntercompanyDealPage(input: ServerTableQuery): Promise<{ rows: InboundIntercompanyDeal[]; total: number }> {
   return withModule("finance", PERMISSIONS.INTERCOMPANY_VIEW, async (tx, ctx) => {
-    const rows = await tx
+    const { limit, offset, query } = normalizeRecordListQuery(input,
+      ["name", "originEntityName", "status", "dealValue", "yourShare", "expectedCloseDate", "updatedAt"], ["status", "response"])
+    const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+    const responses = query.selections.response?.filter((value): value is IntercompanyResponseValue => value === "accepted" || value === "declined")
+    const where = and(eq(intercompanyDeals.partnerTenantId, ctx.tenantId),
+      search ? or(ilike(intercompanyDeals.name, search), ilike(intercompanyDeals.accountName, search), ilike(organization.name, search)) : undefined,
+      query.selections.status?.length ? inArray(intercompanyDeals.status, query.selections.status) : undefined,
+      responses?.length ? inArray(intercompanyDealResponses.response, responses) : undefined)
+    const dealValue = sql`coalesce(${intercompanyDeals.quotedAmount}, ${intercompanyDeals.estimatedAmount}, 0)`
+    const yourShare = sql`greatest(0, case when ${intercompanyDeals.shareType} = 'amount' then ${intercompanyDeals.shareValue} else ${dealValue} * ${intercompanyDeals.shareValue} / 100 end)`
+    const sortColumns = { name: intercompanyDeals.name, originEntityName: organization.name, status: intercompanyDeals.status, dealValue, yourShare, expectedCloseDate: intercompanyDeals.expectedCloseDate, updatedAt: intercompanyDeals.updatedAt }
+    const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+    const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(intercompanyDeals.updatedAt)
+    const [rows, totalRows] = await Promise.all([tx
       .select({
         id: intercompanyDeals.id,
         originEntityName: organization.name,
@@ -97,9 +110,28 @@ export async function listInboundIntercompanyDeals(): Promise<
         projects,
         eq(projects.intercompanyDealId, intercompanyDeals.id)
       )
+      .where(where)
+      .orderBy(ordering, desc(intercompanyDeals.id))
+      .limit(limit).offset(offset),
+      tx.select({ count: sql<number>`count(*)::int` }).from(intercompanyDeals)
+        .leftJoin(organization, eq(intercompanyDeals.tenantId, organization.id))
+        .leftJoin(intercompanyDealResponses, eq(intercompanyDealResponses.dealId, intercompanyDeals.id))
+        .leftJoin(projects, eq(projects.intercompanyDealId, intercompanyDeals.id))
+        .where(where),
+    ])
+    return { rows, total: totalRows[0]?.count ?? 0 }
+  })
+}
+
+export async function listInboundIntercompanyFilterOptions() {
+  return withModule("finance", PERMISSIONS.INTERCOMPANY_VIEW, async (tx, ctx) => {
+    const [row] = await tx.select({
+      statuses: sql<string[]>`coalesce(jsonb_agg(distinct ${intercompanyDeals.status}), '[]'::jsonb)`,
+      responses: sql<string[]>`coalesce(jsonb_agg(distinct ${intercompanyDealResponses.response}) filter (where ${intercompanyDealResponses.response} is not null), '[]'::jsonb)`,
+    }).from(intercompanyDeals)
+      .leftJoin(intercompanyDealResponses, eq(intercompanyDealResponses.dealId, intercompanyDeals.id))
       .where(eq(intercompanyDeals.partnerTenantId, ctx.tenantId))
-      .orderBy(desc(intercompanyDeals.updatedAt))
-    return rows
+    return { statuses: (row?.statuses ?? []).sort(), responses: (row?.responses ?? []).sort() }
   })
 }
 

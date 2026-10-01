@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache"
 import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm"
 import { withTenant } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
-import { accountsList, accountsGet } from "@/lib/api-readers"
+import { accountsList, accountsGet, accountsFilterOptions } from "@/lib/api-readers"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import {
   visibleMemberIds,
   ownerScope,
@@ -151,11 +153,13 @@ function normalizeAccountInput(input: AccountInput): AccountInput {
  * All non-deleted accounts with their parent account name and owner (account
  * manager) name resolved — the owner name backs the Owner facet on the list.
  */
-export async function listAccounts(): Promise<AccountListItem[]> {
-  return withTenant(PERMISSIONS.ACCOUNT_VIEW, async (tx, ctx) => {
-    const { rows } = await accountsList(tx, ctx, { limit: LIST_LIMIT, offset: 0 })
-    return rows
-  })
+export async function listAccountPage(input: ServerTableQuery): Promise<{ rows: AccountListItem[]; total: number }> {
+  return withTenant(PERMISSIONS.ACCOUNT_VIEW, (tx, ctx) => accountsList(tx, ctx,
+    normalizeRecordListQuery(input, ["name", "code", "accountType", "industry", "ownerName", "createdAt"], ["accountType", "industry", "ownerName"])))
+}
+
+export async function listAccountFilterOptions() {
+  return withTenant(PERMISSIONS.ACCOUNT_VIEW, (tx, ctx) => accountsFilterOptions(tx, ctx))
 }
 
 /**

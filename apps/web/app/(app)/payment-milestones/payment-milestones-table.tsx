@@ -8,12 +8,13 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable, SortableHeader } from "@/components/data-table"
 import { StatusBadge } from "@/components/status-badge"
 import { formatMoney } from "@/lib/format"
-import type { PaymentMilestoneListItem } from "./actions"
+import { listPaymentMilestonePage, type PaymentMilestoneListItem } from "./actions"
+import { MILESTONE_STATUS_OPTIONS } from "@/lib/status-meta"
 
 export function PaymentMilestonesTable({
-  data,
+  initialPage,
 }: {
-  data: PaymentMilestoneListItem[]
+  initialPage: { rows: PaymentMilestoneListItem[]; total: number }
 }) {
   const columns = React.useMemo<ColumnDef<PaymentMilestoneListItem>[]>(
     () => [
@@ -78,14 +79,14 @@ export function PaymentMilestonesTable({
   return (
     <DataTable
       columns={columns}
-      data={data}
+      data={initialPage.rows}
+      server={{ total: initialPage.total, loadPage: listPaymentMilestonePage }}
       tableId="payment-milestones"
-      cap={1000}
       filters={[{
         type: "enum",
         columnId: "status",
         title: "Status",
-        options: Array.from(new Set(data.map((row) => row.status).filter(Boolean))).map((value) => ({ value, label: value })),
+        options: MILESTONE_STATUS_OPTIONS,
       }]}
       searchColumn="title"
       searchPlaceholder="Search payment milestones…"

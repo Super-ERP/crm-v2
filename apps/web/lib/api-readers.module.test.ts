@@ -8,6 +8,7 @@ import {
   funnelStageHistory,
   intercompanyDealParties,
   intercompanyDeals,
+  leads,
   member,
   opportunities,
   persons,
@@ -17,7 +18,7 @@ import {
   stageApprovalRequests,
 } from "@/db/schema"
 import { createDisabledModuleMap } from "@/lib/module-registry"
-import { funnelsGet, funnelsList, personsGet, quotationsList } from "@/lib/api-readers"
+import { accountsList, funnelsGet, funnelsList, leadsList, opportunitiesList, personsGet, personsList, quotationsList } from "@/lib/api-readers"
 import type { QuotationStatus } from "@/lib/quotation-transitions"
 import type { Tx } from "@/db"
 import type { ServerContext } from "@/lib/server-context"
@@ -247,6 +248,48 @@ describe("module-owned nested API readers", () => {
       expect(compiled.params).toContain("account-1")
       expect(compiled.params).toContain("draft")
       expect(compiled.params).toContain("%Acme%")
+    }
+  })
+
+  it("uses the same bounded funnel stage, owner, and search conditions for rows and totals", async () => {
+    const tx = tableTx([[funnels, [[], [{ count: 31, valueTotal: "130000" }]]]])
+    const result = await funnelsList(tx, ctx, {
+      limit: 25, offset: 25, stageId: "stage-1",
+      query: { search: "Acme", selections: { accountOwnerMemberId: ["member-2"], status: ["open"] } },
+    })
+    expect(result).toMatchObject({ total: 31, valueTotal: "130000" })
+    expect(tx.limits).toEqual([25])
+    expect(tx.offsets).toEqual([25])
+    const where = tx.whereCalls.filter(({ table }) => table === funnels)
+    expect(where).toHaveLength(2)
+    for (const call of where) {
+      const params = new PgDialect().sqlToQuery(call.condition as SQL<unknown>).params
+      expect(params).toContain("stage-1")
+      expect(params).toContain("member-2")
+      expect(params).toContain("open")
+      expect(params).toContain("%Acme%")
+    }
+  })
+
+  it("filters accounts, contacts, leads, and opportunities before their page limits", async () => {
+    const cases = [
+      { table: accounts, run: (tx: Tx) => accountsList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { industry: ["Technology"] } } }), selected: "Technology" },
+      { table: persons, run: (tx: Tx) => personsList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { accountName: ["Acme"] } } }), selected: "Acme" },
+      { table: leads, run: (tx: Tx) => leadsList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { status: ["new"] } } }), selected: "new" },
+      { table: opportunities, run: (tx: Tx) => opportunitiesList(tx, ctx, { limit: 25, offset: 50, query: { search: "Acme", selections: { accountId: ["account-1"] } } }), selected: "account-1" },
+    ]
+    for (const item of cases) {
+      const tx = tableTx([[item.table, [[], [{ count: 0 }]]]])
+      await item.run(tx)
+      expect(tx.limits).toEqual([25])
+      expect(tx.offsets).toEqual([50])
+      const where = tx.whereCalls.filter(({ table }) => table === item.table)
+      expect(where).toHaveLength(2)
+      for (const call of where) {
+        const params = new PgDialect().sqlToQuery(call.condition as SQL<unknown>).params
+        expect(params).toContain("%Acme%")
+        expect(params).toContain(item.selected)
+      }
     }
   })
 

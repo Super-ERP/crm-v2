@@ -8,7 +8,7 @@ import { PERMISSIONS } from "@/lib/permissions"
 import {
   listOpportunityOptions,
   listProjectCreateMeta,
-  listProjects,
+  listProjectPage,
   prefillFromOpportunity,
 } from "./actions"
 import { ProjectCreateForm } from "./project-create-form"
@@ -26,7 +26,7 @@ export default async function ProjectsPage({
 }) {
   await requireEntitledRoute("projects")
   const [rows, ctx, sp] = await Promise.all([
-    listProjects(),
+    listProjectPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
     requireContext(),
     searchParams,
   ])
@@ -106,7 +106,7 @@ export default async function ProjectsPage({
     <>
       <SiteHeader title="Projects" />
       <PageBody>
-        <ProjectsTable data={rows} toolbar={newButton} />
+        <ProjectsTable initialPage={rows} toolbar={newButton} />
       </PageBody>
     </>
   )

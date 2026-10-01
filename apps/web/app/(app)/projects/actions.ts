@@ -1,6 +1,8 @@
 "use server"
 
-import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
 import { withModule, type Tx } from "@/lib/actions"
 import { requireEntitledModule } from "@/lib/modules.server"
@@ -106,10 +108,20 @@ export type ProjectUpdateInput = {
 }
 
 /** All non-deleted projects with denormalized account + funnel names, newest first. */
-export async function listProjects(): Promise<ProjectListItem[]> {
+export async function listProjectPage(input: ServerTableQuery): Promise<{ rows: ProjectListItem[]; total: number }> {
   return withModule("projects", PERMISSIONS.PROJECT_VIEW, async (tx, ctx) => {
     const visible = await visibleMemberIds(tx, ctx)
-    const rows = await tx
+    const { limit, offset, query } = normalizeRecordListQuery(input,
+      ["projectCode", "name", "accountName", "status", "value", "opportunityName"], ["status"])
+    const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+    const statuses = query.selections.status?.filter((value): value is (typeof projectStatus.enumValues)[number] => projectStatus.enumValues.includes(value as (typeof projectStatus.enumValues)[number]))
+    const where = and(isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
+      search ? or(ilike(projects.projectCode, search), ilike(projects.name, search), ilike(accounts.name, search), ilike(funnels.name, search)) : undefined,
+      statuses?.length ? inArray(projects.status, statuses) : undefined)
+    const sortColumns = { projectCode: projects.projectCode, name: projects.name, accountName: accounts.name, status: projects.status, value: projects.value, opportunityName: funnels.name }
+    const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+    const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(projects.createdAt)
+    const [rows, totalRows] = await Promise.all([tx
       .select({
         id: projects.id,
         projectCode: projects.projectCode,
@@ -126,17 +138,14 @@ export async function listProjects(): Promise<ProjectListItem[]> {
       .from(projects)
       .leftJoin(accounts, eq(projects.accountId, accounts.id))
       .leftJoin(funnels, eq(projects.funnelId, funnels.id))
-      .where(
-        and(
-          isNull(projects.deletedAt),
-          ownerScope(projects.ownerMemberId, visible)
-        )
-      )
-      .orderBy(desc(projects.createdAt))
-      // Capped server-side; the list table surfaces a "refine your search"
-      // notice at this count (cap={1000}) so rows never silently vanish.
-      .limit(1000)
-    return rows
+      .where(where)
+      .orderBy(ordering, desc(projects.id))
+      .limit(limit).offset(offset),
+      tx.select({ count: sql<number>`count(*)::int` }).from(projects)
+        .leftJoin(accounts, eq(projects.accountId, accounts.id))
+        .leftJoin(funnels, eq(projects.funnelId, funnels.id)).where(where),
+    ])
+    return { rows, total: totalRows[0]?.count ?? 0 }
   })
 }
 

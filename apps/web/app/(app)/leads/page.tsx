@@ -8,13 +8,14 @@ import {
   listAccountOptions,
   getFormPresets,
 } from "@/lib/lookups"
-import { listLeads } from "./actions"
+import { listLeadPage, listLeadFilterSources } from "./actions"
 import { LeadsTable } from "./leads-table"
 
 export default async function LeadsPage() {
-  const [rows, pipelines, members, accountOptions, leadSources, lossReasons, presets] =
+  const [initialPage, filterSources, pipelines, members, accountOptions, leadSources, lossReasons, presets] =
     await Promise.all([
-      listLeads(),
+      listLeadPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
+      listLeadFilterSources(),
       listFunnelsWithStages(),
       listMembers(),
       listAccountOptions(),
@@ -28,7 +29,8 @@ export default async function LeadsPage() {
       <SiteHeader title="Leads" />
       <PageBody>
         <LeadsTable
-          data={rows}
+          initialPage={initialPage}
+          filterSources={filterSources}
           pipelines={pipelines}
           members={members}
           accountOptions={accountOptions}

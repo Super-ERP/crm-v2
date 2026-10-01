@@ -1,22 +1,26 @@
 # CRM list and board audit
 
-The shared `DataTable` now has responsive controls, a searchable relation filter that avoids rendering thousands of menu items, and consistent 25/50/100 choices for full-page lists. Detail tables retain their smaller configured size. The shared combobox truncates selected labels and exposes the full label on hover. The funnel board has horizontal navigation and progressively displays cards within each stage.
+The CRM uses the shadcn `base-maia` component configuration, with custom `DataTable`, form, and funnel-board behavior built on top. Shared controls now wrap on narrow screens; full-page lists offer 25/50/100 rows; small detail tables retain their configured size. The combobox constrains long selections, and large relation menus render only the first 100 matching choices while the user searches.
 
-The data-fetching behavior still needs a separate migration for every list reader. Changing the browser's page size alone does not reduce the initial query. The quotation list is the first completed example: it filters, sorts, counts, and returns one 25/50/100-row page on the server; filter choices cover the full visible set.
+Every top-level list below now returns an initial 25-row page and performs search, filtering, sorting, and counting on the server. The backend normalizes client-controlled page sizes and filter/sort keys. Its count query uses the same visibility and filter conditions as its row query. Filter choices come from the full visible set or a fixed workflow vocabulary, not just the current page.
 
-| List | Current initial fetch | Work still required |
+| List | Previous initial fetch | Current behavior |
 | --- | ---: | --- |
-| Accounts | 1,000 | Server search, filter, sort, page; independent parent-account options |
-| Persons | 1,000 | Server search, filter, sort, page |
-| Leads | 1,000 | Server search, filter, sort, page |
-| Opportunities | Up to 1,000,000 | Server search, filter, sort, page |
-| Funnel | Up to 1,000,000 | Server list paging; separate board-stage loading and filter counts |
-| Products | 1,000 | Server search, filter, sort, page |
-| Projects | 1,000 | Server search, filter, sort, page |
-| Sales orders | 1,000 | Server search, filter, sort, page |
-| Finance documents | 1,000 | Server search, filter, sort, page |
-| Payment milestones | 1,000 shown; 500 in one reader | Confirm source of displayed rows, then server paging |
-| Intercompany | 1,000 shown | Confirm source cap, then server paging |
-| Audit | 500 | Server search, filter, sort, page |
+| Quotations | 500 | 25-row server page |
+| Accounts | 1,000 | 25-row server page; parent name resolved by join |
+| Contacts | 1,000 | 25-row server page |
+| Leads | 1,000 | 25-row server page |
+| Opportunities | Up to 1,000,000 | 25-row server page |
+| Funnel list | Up to 1,000,000 | 25-row server page |
+| Funnel board | Up to 1,000,000 | Selectable pipeline; first 25 cards per stage; later batches loaded per stage; server counts and value totals |
+| Products | 1,000 | 25-row server page |
+| Projects | 1,000 | 25-row server page |
+| Sales orders | 1,000 | 25-row server page |
+| Billing and purchasing | 1,000 per direction | 25-row server page per direction |
+| Payment milestones | 500 | 25-row server page |
+| Inbound intercompany | Unbounded | 25-row server page |
+| Audit | 500 | 25-row server page |
 
-For each migration, the list query and its count must share the same tenant, visibility, search, and filter conditions. Filter choices must come from the full visible set, not the current page. Keep detail-page tables local because their rows are scoped to one record and deliberately use smaller page sizes. Do not present a client-side page number as if it represents the full dataset when the source query is capped.
+Form pickers and filter-choice lookups remain separate from list rows. Some still load all lightweight account/contact choices or up to 500 finance-source choices. They need a separate searchable-lookup migration if those payloads become a measured bottleneck. Detail-page tables intentionally remain local to their parent record.
+
+This audit establishes code behavior, not a claim that the entire UI is bug-free. Type checks, linting, and unit tests cover the query contract. The current workspace lacks a working local CRM database/browser session, so visual interaction testing and live SQL execution remain release checks before production deployment.

@@ -41,6 +41,7 @@ import { createProject } from "@/app/(app)/projects/actions"
 import {
   respondToIntercompanyDeal,
   ensureOriginEntityAccount,
+  listInboundIntercompanyDealPage,
   type InboundIntercompanyDeal,
 } from "./actions"
 
@@ -266,12 +267,15 @@ function CreateDeliveryProjectDialog({
 }
 
 export function IntercompanyTable({
-  data,
+  initialPage,
+  filterOptions,
   accountOptions,
 }: {
-  data: InboundIntercompanyDeal[]
+  initialPage: { rows: InboundIntercompanyDeal[]; total: number }
+  filterOptions: { statuses: string[]; responses: string[] }
   accountOptions: { id: string; name: string }[]
 }) {
+  const data = initialPage.rows
   const router = useRouter()
   const perms = usePermissions()
   const canCreateProject = perms.has(PERMISSIONS.PROJECT_CREATE)
@@ -477,11 +481,11 @@ export function IntercompanyTable({
       <DataTable
         columns={columns}
         data={data}
+        server={{ total: initialPage.total, loadPage: listInboundIntercompanyDealPage }}
         tableId="intercompany-inbound"
-        cap={1000}
         filters={[
-          { type: "enum", columnId: "status", title: "Status", options: Array.from(new Set(data.map((row) => row.status).filter((value): value is string => Boolean(value)))).map((value) => ({ value, label: value })) },
-          { type: "enum", columnId: "response", title: "Response", options: Array.from(new Set(data.map((row) => row.response).filter((value): value is NonNullable<typeof value> => Boolean(value)))).map((value) => ({ value, label: value })) },
+          { type: "enum", columnId: "status", title: "Status", options: filterOptions.statuses.map((value) => ({ value, label: value })) },
+          { type: "enum", columnId: "response", title: "Response", options: filterOptions.responses.map((value) => ({ value, label: value })) },
         ]}
         searchColumn="name"
         searchPlaceholder="Search deals…"

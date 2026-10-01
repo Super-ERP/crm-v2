@@ -4,7 +4,9 @@ import { and, eq, isNull, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, requireContext } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
-import { leadsList, leadsGet } from "@/lib/api-readers"
+import { leadsList, leadsGet, leadsFilterSources } from "@/lib/api-readers"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import {
   leads,
   pipelineStages,
@@ -21,9 +23,6 @@ import {
   canManageAllRecords,
 } from "@/lib/access-scope"
 import { clean, normalizeLeadInput, type LeadInput } from "@/lib/lead-rules"
-
-/** Largest page we ever return from a list endpoint (defense against unbounded scans). */
-const LIST_LIMIT = 1000
 
 export type Lead = typeof leads.$inferSelect
 
@@ -42,12 +41,13 @@ function requireEmail(v?: string | null): string {
   return email
 }
 
-/** All non-deleted leads, newest first. */
-export async function listLeads(): Promise<Lead[]> {
-  return withTenant(PERMISSIONS.LEAD_VIEW, async (tx, ctx) => {
-    const { rows } = await leadsList(tx, ctx, { limit: LIST_LIMIT, offset: 0 })
-    return rows
-  })
+export async function listLeadPage(input: ServerTableQuery): Promise<{ rows: Lead[]; total: number }> {
+  return withTenant(PERMISSIONS.LEAD_VIEW, (tx, ctx) => leadsList(tx, ctx,
+    normalizeRecordListQuery(input, ["name", "company", "status", "ownerName", "source", "createdAt"], ["status", "source", "ownerName"])))
+}
+
+export async function listLeadFilterSources(): Promise<string[]> {
+  return withTenant(PERMISSIONS.LEAD_VIEW, (tx, ctx) => leadsFilterSources(tx, ctx))
 }
 
 export type LeadDetail = {

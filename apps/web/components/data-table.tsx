@@ -100,7 +100,7 @@ export interface DataTableProps<TData, TValue> {
   emptyAction?: React.ReactNode
   toolbar?: React.ReactNode
   /** Render a second view using the same filtered rows and toolbar state. */
-  renderFilteredView?: (rows: TData[]) => React.ReactNode
+  renderFilteredView?: (rows: TData[], query: ServerTableQuery) => React.ReactNode
   pageSize?: number
   /** Typed, datatype-aware column filters. */
   filters?: DataTableFilterDefinition[]
@@ -304,10 +304,16 @@ export function DataTable<TData, TValue>({
     initial.pagination.pageSize !== pageSize
 
   const skipFirstServerFetch = React.useRef(!hasInitialUrlState)
+  const initialDataSynced = React.useRef(false)
   React.useEffect(() => {
     if (serverInitialTotal == null) return
+    if (!initialDataSynced.current) {
+      initialDataSynced.current = true
+      return
+    }
     setServerRows(data)
     setServerTotal(serverInitialTotal)
+    setRefreshKey((key) => key + 1)
   }, [data, serverInitialTotal])
 
   React.useEffect(() => {
@@ -637,7 +643,10 @@ export function DataTable<TData, TValue>({
         </div>
       ) : null}
 
-      {renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original)) : <div className="overflow-hidden rounded-lg border">
+      {renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original), {
+        pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, search: globalFilter,
+        sorting, filters: columnFilters as ServerTableQuery["filters"],
+      }) : <div className="overflow-hidden rounded-lg border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -1085,7 +1094,7 @@ function OptionFilter({
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-0 text-xs text-muted-foreground">{title}</DropdownMenuLabel>
         </DropdownMenuGroup>
-        {definition.type === "relation" ? (
+        {(definition.type === "relation" || (definition.options?.length ?? 0) > 20) ? (
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}

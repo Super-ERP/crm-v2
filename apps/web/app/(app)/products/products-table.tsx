@@ -33,7 +33,7 @@ import { useOpenOnNewParam } from "@/hooks/use-open-on-new-param"
 import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
 import { ProductForm } from "./product-form"
-import { deleteProduct, restoreProduct, type ProductRow } from "./actions"
+import { deleteProduct, restoreProduct, listProductPage, type ProductRow } from "./actions"
 import type { ProductCategory } from "@/app/(app)/settings/constants"
 
 type ProductCodeOption = ProductCategory
@@ -148,14 +148,15 @@ function RowActions({
 }
 
 export function ProductsTable({
-  data,
+  initialPage,
   productCodes,
   currencies,
 }: {
-  data: ProductRow[]
+  initialPage: { rows: ProductRow[]; total: number }
   productCodes: ProductCodeOption[]
   currencies: string[]
 }) {
+  const data = initialPage.rows
   const router = useRouter()
   const perms = usePermissions()
   const canCreate = perms.has(PERMISSIONS.PRODUCT_CREATE)
@@ -278,8 +279,8 @@ export function ProductsTable({
     <DataTable
       columns={columns}
       data={data}
+      server={{ total: initialPage.total, loadPage: listProductPage }}
       tableId="products"
-      cap={1000}
       filters={[
         { type: "relation", columnId: "productCode", title: "Product code", options: productCodes.map((option) => ({ value: option.code, label: option.name })) },
         { type: "boolean", columnId: "isActive", title: "Status" },

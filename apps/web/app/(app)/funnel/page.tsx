@@ -11,14 +11,15 @@ import {
 } from "@/lib/lookups"
 import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
-import { listOpportunities, listPersonsWithAccount } from "./actions"
+import { listFunnelPage, listFunnelFilterOptions, listPersonsWithAccount } from "./actions"
 import { FunnelViews } from "./funnel-views"
 import { OpportunityForm } from "./opportunity-form"
 
 export default async function OpportunitiesPage() {
   const ctx = await requireContext()
   const [
-    rows,
+    initialPage,
+    filterOptions,
     accounts,
     persons,
     members,
@@ -28,7 +29,8 @@ export default async function OpportunitiesPage() {
     currencies,
     modules,
   ] = await Promise.all([
-    listOpportunities(),
+    listFunnelPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
+    listFunnelFilterOptions(),
     listAccountOptions(),
     listPersonsWithAccount(),
     listMembers(),
@@ -60,7 +62,7 @@ export default async function OpportunitiesPage() {
     <>
       <SiteHeader title="Funnel" />
       <PageBody>
-        <FunnelViews rows={rows} pipelines={pipelines} canAdvance={canAdvance} customFieldDefs={customFunnelFields} memberId={ctx.memberId} newButton={newButton} />
+        <FunnelViews initialPage={initialPage} filterOptions={filterOptions} pipelines={pipelines} canAdvance={canAdvance} customFieldDefs={customFunnelFields} memberId={ctx.memberId} newButton={newButton} />
       </PageBody>
     </>
   )

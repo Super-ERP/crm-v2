@@ -1,12 +1,12 @@
 import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
 import { listAccountOptions, getFormPresets } from "@/lib/lookups"
-import { listPersons } from "./actions"
+import { listPersonPage } from "./actions"
 import { PersonsTable } from "./persons-table"
 
 export default async function PersonsPage() {
   const [persons, accounts, presets] = await Promise.all([
-    listPersons(),
+    listPersonPage({ pageIndex: 0, pageSize: 25, search: "", sorting: [], filters: [] }),
     listAccountOptions(),
     getFormPresets(),
   ])
@@ -16,7 +16,7 @@ export default async function PersonsPage() {
       <SiteHeader title="Contacts" />
       <PageBody>
         <PersonsTable
-          data={persons}
+          initialPage={persons}
           accounts={accounts}
                     defaultCountry={presets.defaultCountry || "MY"}
         />

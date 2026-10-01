@@ -37,12 +37,14 @@ import { toDateString } from "@/lib/dates"
 import { daysOverdue, reminderStageDue } from "@/lib/reminders"
 import {
   FINANCE_KINDS,
+  FINANCE_STATUS_NEXT,
   kindsForDirection,
   type FinanceDocKind,
 } from "@/lib/finance-kinds"
 import {
   createFinanceDoc,
   setFinanceDocStatus,
+  listFinanceDocPage,
   type FinanceDocRow,
   type FinanceSources,
 } from "./actions"
@@ -252,16 +254,18 @@ export function CreateDocDialog({
 
 export function FinanceDocsTable({
   direction,
-  data,
+  initialPage,
   sources,
   reminderSchedule = [],
 }: {
   direction: "sale" | "purchase"
-  data: FinanceDocRow[]
+  initialPage: { rows: FinanceDocRow[]; total: number }
   sources: FinanceSources
   /** Tenant reminder schedule (days after due) for the overdue chips. */
   reminderSchedule?: number[]
 }) {
+  const data = initialPage.rows
+  const loadPage = React.useCallback((query: import("@/lib/table-pagination").ServerTableQuery) => listFinanceDocPage(direction, query), [direction])
   const router = useRouter()
   const perms = usePermissions()
   const canManage = perms.has(PERMISSIONS.FINANCE_MANAGE)
@@ -297,9 +301,9 @@ export function FinanceDocsTable({
       },
       {
         id: "kind",
-        accessorFn: (r) => FINANCE_KINDS[r.kind].label,
+        accessorFn: (r) => r.kind,
         header: "Type",
-        cell: ({ getValue }) => <Badge variant="outline">{getValue<string>()}</Badge>,
+        cell: ({ row }) => <Badge variant="outline">{FINANCE_KINDS[row.original.kind].label}</Badge>,
       },
       {
         id: "from",
@@ -425,11 +429,11 @@ export function FinanceDocsTable({
       <DataTable
         columns={columns}
         data={data}
+        server={{ total: initialPage.total, loadPage }}
         tableId={`finance-${direction}`}
-        cap={1000}
         filters={[
-          { type: "enum", columnId: "kind", title: "Type", options: Array.from(new Set(data.map((row) => row.kind).filter(Boolean))).map((value) => ({ value, label: value })) },
-          { type: "enum", columnId: "status", title: "Status", options: Array.from(new Set(data.map((row) => row.status).filter(Boolean))).map((value) => ({ value, label: value })) },
+          { type: "enum", columnId: "kind", title: "Type", options: kindsForDirection(direction).map((value) => ({ value, label: FINANCE_KINDS[value].label })) },
+          { type: "enum", columnId: "status", title: "Status", options: Object.keys(FINANCE_STATUS_NEXT).map((value) => ({ value, label: value })) },
         ]}
         searchColumn="number"
         searchPlaceholder="Search by number…"

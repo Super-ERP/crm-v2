@@ -1,6 +1,8 @@
 "use server"
 
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm"
+import { normalizeRecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
 import type { ServerContext } from "@/lib/server-context"
@@ -80,11 +82,19 @@ async function resolveMilestoneProduct(
  * All tenant payment milestones (RLS-scoped), joined to their funnel name and
  * quotation number for display, newest first.
  */
-export async function listPaymentMilestones(): Promise<
-  PaymentMilestoneListItem[]
-> {
+export async function listPaymentMilestonePage(input: ServerTableQuery): Promise<{ rows: PaymentMilestoneListItem[]; total: number }> {
   return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx) => {
-    const rows = await tx
+    const { limit, offset, query } = normalizeRecordListQuery(input,
+      ["title", "amount", "quoteNumber", "status", "funnelName"], ["status"])
+    const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+    const statuses = query.selections.status?.filter((value): value is (typeof paymentMilestoneStatus.enumValues)[number] => paymentMilestoneStatus.enumValues.includes(value as (typeof paymentMilestoneStatus.enumValues)[number]))
+    const where = and(
+      search ? or(ilike(paymentMilestones.title, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
+      statuses?.length ? inArray(paymentMilestones.status, statuses) : undefined)
+    const sortColumns = { title: paymentMilestones.title, amount: paymentMilestones.amount, quoteNumber: quotations.quoteNumber, status: paymentMilestones.status, funnelName: funnels.name }
+    const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+    const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(paymentMilestones.createdAt)
+    const [rows, totalRows] = await Promise.all([tx
       .select({
         m: paymentMilestones,
         funnelName: funnels.name,
@@ -93,13 +103,18 @@ export async function listPaymentMilestones(): Promise<
       .from(paymentMilestones)
       .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
       .leftJoin(quotations, eq(paymentMilestones.quotationId, quotations.id))
-      .orderBy(desc(paymentMilestones.createdAt))
-      .limit(500)
-    return rows.map((r) => ({
+      .where(where)
+      .orderBy(ordering, desc(paymentMilestones.id))
+      .limit(limit).offset(offset),
+      tx.select({ count: sql<number>`count(*)::int` }).from(paymentMilestones)
+        .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
+        .leftJoin(quotations, eq(paymentMilestones.quotationId, quotations.id)).where(where),
+    ])
+    return { rows: rows.map((r) => ({
       ...r.m,
       funnelName: r.funnelName,
       quoteNumber: r.quoteNumber,
-    }))
+    })), total: totalRows[0]?.count ?? 0 }
   })
 }
 

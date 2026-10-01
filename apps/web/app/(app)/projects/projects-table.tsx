@@ -6,7 +6,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable, SortableHeader, linkCell } from "@/components/data-table"
 import { StatusBadge } from "@/components/status-badge"
 import { formatMoney } from "@/lib/format"
-import type { ProjectListItem } from "./actions"
+import { listProjectPage, type ProjectListItem } from "./actions"
+import { PROJECT_STATUS_OPTIONS } from "@/lib/status-meta"
 
 const columns: ColumnDef<ProjectListItem>[] = [
   {
@@ -80,16 +81,17 @@ const columns: ColumnDef<ProjectListItem>[] = [
 ]
 
 export function ProjectsTable({
-  data,
+  initialPage,
   toolbar,
 }: {
-  data: ProjectListItem[]
+  initialPage: { rows: ProjectListItem[]; total: number }
   toolbar?: React.ReactNode
 }) {
   return (
     <DataTable
       columns={columns}
-      data={data}
+      data={initialPage.rows}
+      server={{ total: initialPage.total, loadPage: listProjectPage }}
       searchColumn="name"
       searchPlaceholder="Search projects…"
       emptyMessage="No projects yet."
@@ -97,10 +99,9 @@ export function ProjectsTable({
         type: "enum",
         columnId: "status",
         title: "Status",
-        options: Array.from(new Set(data.map((row) => row.status).filter(Boolean))).map((value) => ({ value, label: value })),
+        options: PROJECT_STATUS_OPTIONS,
       }]}
       tableId="projects"
-      cap={1000}
       toolbar={toolbar}
     />
   )

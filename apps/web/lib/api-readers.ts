@@ -1,6 +1,7 @@
 import "server-only"
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import type { RecordListQuery } from "@/lib/record-list-query"
 import { type Tx, type ServerContext } from "@/lib/actions"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import { PERMISSIONS, type PermissionKey } from "@/lib/permissions"
@@ -56,21 +57,45 @@ export type LeadRow = typeof leads.$inferSelect
 export async function leadsList(
   tx: Tx,
   ctx: ServerContext,
-  { limit, offset }: PagingOpts
+  { limit, offset, query }: PagingOpts & { query?: RecordListQuery }
 ): Promise<ReadResult<LeadRow>> {
   const visible = await visibleMemberIds(tx, ctx)
-  const where = and(isNull(leads.deletedAt), ownerScope(leads.ownerMemberId, visible))
+  const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+  const validStatuses = ["new", "contacted", "qualified", "disqualified", "converted"] as const
+  const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
+  const where = and(
+    isNull(leads.deletedAt), ownerScope(leads.ownerMemberId, visible),
+    search ? or(ilike(leads.name, search), ilike(leads.companyName, search), ilike(leads.email, search), ilike(leads.phone, search), ilike(leads.mobile, search), ilike(leads.source, search), ilike(user.name, search)) : undefined,
+    statuses?.length ? inArray(leads.status, statuses) : undefined,
+    query?.selections.source?.length ? inArray(leads.source, query.selections.source) : undefined,
+    query?.selections.ownerName?.length ? inArray(user.name, query.selections.ownerName) : undefined
+  )
+  const sortColumns = { name: leads.name, company: leads.companyName, status: leads.status, ownerName: user.name, source: leads.source, createdAt: leads.createdAt }
+  const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+  const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(leads.createdAt)
   const [rows, totalRows] = await Promise.all([
     tx
       .select()
       .from(leads)
+      .leftJoin(member, eq(leads.ownerMemberId, member.id))
+      .leftJoin(user, eq(member.userId, user.id))
       .where(where)
-      .orderBy(desc(leads.createdAt))
+      .orderBy(ordering, desc(leads.id))
       .limit(limit)
       .offset(offset),
-    tx.select({ count: sql<number>`count(*)::int` }).from(leads).where(where),
+    tx.select({ count: sql<number>`count(*)::int` }).from(leads)
+      .leftJoin(member, eq(leads.ownerMemberId, member.id))
+      .leftJoin(user, eq(member.userId, user.id)).where(where),
   ])
-  return { rows, total: countOf(totalRows) }
+  return { rows: rows.map((row) => row.leads), total: countOf(totalRows) }
+}
+
+export async function leadsFilterSources(tx: Tx, ctx: ServerContext): Promise<string[]> {
+  const visible = await visibleMemberIds(tx, ctx)
+  const rows = await tx.selectDistinct({ value: leads.source }).from(leads)
+    .where(and(isNull(leads.deletedAt), ownerScope(leads.ownerMemberId, visible), sql`${leads.source} is not null`))
+    .orderBy(asc(leads.source))
+  return rows.flatMap((row) => row.value ? [row.value] : [])
 }
 
 export type LeadDetail = {
@@ -152,34 +177,59 @@ export type AccountListItem = AccountRow & {
 export async function accountsList(
   tx: Tx,
   ctx: ServerContext,
-  { limit, offset }: PagingOpts
+  { limit, offset, query }: PagingOpts & { query?: RecordListQuery }
 ): Promise<ReadResult<AccountListItem>> {
   const visible = await visibleMemberIds(tx, ctx)
-  const where = and(isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible))
+  const parent = alias(accounts, "account_list_parent")
+  const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+  const where = and(
+    isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible),
+    search ? or(ilike(accounts.name, search), ilike(accounts.code, search), ilike(accounts.registrationNumber, search), ilike(accounts.industry, search), ilike(user.name, search)) : undefined,
+    query?.selections.accountType?.length ? inArray(accounts.accountType, query.selections.accountType) : undefined,
+    query?.selections.industry?.length ? inArray(accounts.industry, query.selections.industry) : undefined,
+    query?.selections.ownerName?.length ? inArray(user.name, query.selections.ownerName) : undefined
+  )
+  const sortColumns = { name: accounts.name, code: accounts.code, accountType: accounts.accountType, industry: accounts.industry, ownerName: user.name, createdAt: accounts.createdAt }
+  const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+  const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : asc(accounts.name)
   const [rows, totalRows] = await Promise.all([
     tx
-      .select({ account: accounts, ownerName: user.name })
+      .select({ account: accounts, ownerName: user.name, parentName: parent.name })
       .from(accounts)
       .leftJoin(member, eq(accounts.ownerMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
+      .leftJoin(parent, and(eq(accounts.parentAccountId, parent.id), isNull(parent.deletedAt)))
       .where(where)
-      .orderBy(asc(accounts.name))
+      .orderBy(ordering, asc(accounts.id))
       .limit(limit)
       .offset(offset),
-    tx.select({ count: sql<number>`count(*)::int` }).from(accounts).where(where),
+    tx.select({ count: sql<number>`count(*)::int` }).from(accounts)
+      .leftJoin(member, eq(accounts.ownerMemberId, member.id))
+      .leftJoin(user, eq(member.userId, user.id)).where(where),
   ])
-
-  // Parent name is resolved from the same page of results (matches the
-  // original listAccounts behavior — not a full-table lookup).
-  const byId = new Map(rows.map((r) => [r.account.id, r.account]))
   const mapped: AccountListItem[] = rows.map((r) => ({
     ...r.account,
-    parentAccountName: r.account.parentAccountId
-      ? (byId.get(r.account.parentAccountId)?.name ?? null)
-      : null,
+    parentAccountName: r.parentName,
     ownerName: r.ownerName ?? null,
   }))
   return { rows: mapped, total: countOf(totalRows) }
+}
+
+export async function accountsFilterOptions(tx: Tx, ctx: ServerContext) {
+  const visible = await visibleMemberIds(tx, ctx)
+  const [row] = await tx.select({
+    types: sql<string[]>`coalesce(jsonb_agg(distinct ${accounts.accountType}) filter (where ${accounts.accountType} is not null), '[]'::jsonb)`,
+    industries: sql<string[]>`coalesce(jsonb_agg(distinct ${accounts.industry}) filter (where ${accounts.industry} is not null), '[]'::jsonb)`,
+    owners: sql<string[]>`coalesce(jsonb_agg(distinct ${user.name}) filter (where ${user.name} is not null), '[]'::jsonb)`,
+  }).from(accounts)
+    .leftJoin(member, eq(accounts.ownerMemberId, member.id))
+    .leftJoin(user, eq(member.userId, user.id))
+    .where(and(isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible)))
+  return {
+    types: (row?.types ?? []).sort(),
+    industries: (row?.industries ?? []).sort(),
+    owners: (row?.owners ?? []).sort(),
+  }
 }
 
 export type AccountFunnelItem = {
@@ -319,21 +369,30 @@ export type PersonListItem = PersonRow & { accountName: string | null }
 export async function personsList(
   tx: Tx,
   ctx: ServerContext,
-  { limit, offset }: PagingOpts
+  { limit, offset, query }: PagingOpts & { query?: RecordListQuery }
 ): Promise<ReadResult<PersonListItem>> {
   const visible = await visibleMemberIds(tx, ctx)
+  const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+  const primaryValues = query?.selections.primary ?? []
   const where = and(
     isNull(persons.deletedAt),
     isNull(accounts.deletedAt),
-    ownerScope(accounts.ownerMemberId, visible)
+    ownerScope(accounts.ownerMemberId, visible),
+    search ? or(ilike(persons.firstName, search), ilike(persons.lastName, search), ilike(persons.email, search), ilike(persons.phone, search), ilike(persons.title, search), ilike(persons.department, search), ilike(accounts.name, search)) : undefined,
+    query?.selections.accountName?.length ? inArray(accounts.name, query.selections.accountName) : undefined,
+    primaryValues.length === 1 && primaryValues[0] === "Primary" ? eq(persons.isPrimary, true) : undefined,
+    primaryValues.length === 1 && primaryValues[0] === "Other" ? eq(persons.isPrimary, false) : undefined
   )
+  const sortColumns = { name: persons.firstName, accountName: accounts.name, title: persons.title, email: persons.email, primary: persons.isPrimary }
+  const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+  const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : asc(persons.firstName)
   const [rows, totalRows] = await Promise.all([
     tx
       .select({ person: persons, accountName: accounts.name })
       .from(persons)
       .innerJoin(accounts, eq(persons.accountId, accounts.id))
       .where(where)
-      .orderBy(asc(persons.firstName), asc(persons.lastName))
+      .orderBy(ordering, asc(persons.lastName), asc(persons.id))
       .limit(limit)
       .offset(offset),
     tx
@@ -459,15 +518,33 @@ export type OpportunityContainerRow = {
 export async function opportunitiesList(
   tx: Tx,
   ctx: ServerContext,
-  { limit, offset }: PagingOpts
+  { limit, offset, query }: PagingOpts & { query?: RecordListQuery }
 ): Promise<ReadResult<OpportunityContainerRow>> {
   const visible = await visibleMemberIds(tx, ctx)
   const accountOwnerMember = alias(member, "opportunity_account_owner_member")
   const accountOwnerUser = alias(user, "opportunity_account_owner_user")
   const where = and(
     isNull(opportunities.deletedAt),
-    ownerScope(opportunities.ownerMemberId, visible)
+    ownerScope(opportunities.ownerMemberId, visible),
+    query?.search ? or(
+      ilike(opportunities.name, `%${query.search.replace(/[\\%_]/g, "\\$&")}%`),
+      ilike(opportunities.code, `%${query.search.replace(/[\\%_]/g, "\\$&")}%`),
+      ilike(accounts.name, `%${query.search.replace(/[\\%_]/g, "\\$&")}%`),
+      ilike(accounts.code, `%${query.search.replace(/[\\%_]/g, "\\$&")}%`)
+    ) : undefined,
+    query?.selections.accountId?.length ? inArray(opportunities.accountId, query.selections.accountId) : undefined,
+    query?.selections.accountOwnerMemberId?.length ? inArray(accounts.ownerMemberId, query.selections.accountOwnerMemberId) : undefined
   )
+  const funnelCount = sql<number>`(select count(*) from ${funnels} where ${funnels.opportunityId} = ${opportunities.id} and ${funnels.deletedAt} is null)`
+  const sortColumns = {
+    name: opportunities.name,
+    accountId: accounts.name,
+    totalEstimatedFunnelAmount: opportunities.totalEstimatedFunnelAmount,
+    funnelCount,
+    accountOwnerMemberId: accountOwnerUser.name,
+  }
+  const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+  const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(opportunities.createdAt)
   const [rows, totalRows] = await Promise.all([
     tx
       .select({
@@ -491,13 +568,15 @@ export async function opportunitiesList(
       .leftJoin(member, eq(opportunities.ownerMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
       .where(where)
-      .orderBy(desc(opportunities.createdAt))
+      .orderBy(ordering, desc(opportunities.id))
       .limit(limit)
       .offset(offset),
     tx
       .select({ count: sql<number>`count(*)::int` })
       .from(opportunities)
       .innerJoin(accounts, eq(opportunities.accountId, accounts.id))
+      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(where),
   ])
 
@@ -517,6 +596,22 @@ export async function opportunitiesList(
     rows: rows.map((r) => ({ ...r, funnelCount: countBy.get(r.id) ?? 0 })),
     total: countOf(totalRows),
   }
+}
+
+export async function opportunitiesFilterOptions(tx: Tx, ctx: ServerContext) {
+  const visible = await visibleMemberIds(tx, ctx)
+  const accountOwnerMember = alias(member, "opportunity_filter_owner_member")
+  const accountOwnerUser = alias(user, "opportunity_filter_owner_user")
+  const [row] = await tx.select({
+    accounts: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${accounts.id}, 'label', concat_ws(' — ', nullif(${accounts.code}, ''), ${accounts.name}))), '[]'::jsonb)`,
+    owners: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${accounts.ownerMemberId}, 'label', coalesce(${accountOwnerUser.name}, 'Unknown'))) filter (where ${accounts.ownerMemberId} is not null), '[]'::jsonb)`,
+  }).from(opportunities)
+    .innerJoin(accounts, eq(opportunities.accountId, accounts.id))
+    .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+    .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
+    .where(and(isNull(opportunities.deletedAt), ownerScope(opportunities.ownerMemberId, visible)))
+  const sort = (options: Array<{ value: string; label: string }>) => options.sort((a, b) => a.label.localeCompare(b.label))
+  return { accounts: sort(row?.accounts ?? []), owners: sort(row?.owners ?? []) }
 }
 
 export type OpportunityContainerDetail = {
@@ -775,13 +870,31 @@ export type OpportunityListRow = {
 export async function funnelsList(
   tx: Tx,
   ctx: ServerContext,
-  { limit, offset }: PagingOpts
-): Promise<ReadResult<OpportunityListRow>> {
+  { limit, offset, query, stageId }: PagingOpts & { query?: RecordListQuery; stageId?: string }
+): Promise<ReadResult<OpportunityListRow> & { valueTotal: string }> {
   const financeEnabled = (await getEntitledModuleMap()).finance
   const accountOwnerMember = alias(member, "funnel_account_owner_member")
   const accountOwnerUser = alias(user, "funnel_account_owner_user")
   const visible = await visibleMemberIds(tx, ctx)
-  const where = and(isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible))
+  const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+  const validStatuses = ["open", "won", "lost", "on_hold"] as const
+  const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
+  const where = and(
+    isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible),
+    isNull(opportunities.deletedAt),
+    search ? or(ilike(funnels.name, search), ilike(accounts.name, search), ilike(opportunities.name, search), ilike(opportunities.code, search), ilike(user.name, search)) : undefined,
+    query?.selections.accountId?.length ? inArray(funnels.accountId, query.selections.accountId) : undefined,
+    query?.selections.opportunityId?.length ? inArray(funnels.opportunityId, query.selections.opportunityId) : undefined,
+    query?.selections.id?.length ? inArray(funnels.id, query.selections.id) : undefined,
+    query?.selections.accountOwnerMemberId?.length ? inArray(accounts.ownerMemberId, query.selections.accountOwnerMemberId) : undefined,
+    query?.selections.ownerMemberId?.length ? inArray(funnels.ownerMemberId, query.selections.ownerMemberId) : undefined,
+    query?.selections.stageId?.length ? inArray(funnels.currentStageId, query.selections.stageId) : undefined,
+    statuses?.length ? inArray(funnels.status, statuses) : undefined,
+    stageId ? eq(funnels.currentStageId, stageId) : undefined
+  )
+  const sortColumns = { id: funnels.name, accountId: accounts.name, amount: sql`coalesce(${funnels.estimatedAmount}, ${funnels.amount}, 0)`, expectedCloseDate: funnels.expectedCloseDate, ownerMemberId: user.name, status: funnels.status }
+  const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+  const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(funnels.createdAt)
   const [rows, totalRows] = await Promise.all([
     tx
       .select({
@@ -831,18 +944,22 @@ export async function funnelsList(
       .leftJoin(user, eq(member.userId, user.id))
       .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
-      .where(and(where, isNull(opportunities.deletedAt)))
-      .orderBy(desc(funnels.createdAt))
+      .where(where)
+      .orderBy(ordering, desc(funnels.id))
       .limit(limit)
       .offset(offset),
     tx
-      .select({ count: sql<number>`count(*)::int` })
+      .select({ count: sql<number>`count(*)::int`, valueTotal: sql<string>`coalesce(sum(coalesce(${funnels.estimatedAmount}, ${funnels.amount}, 0)), 0)::text` })
       .from(funnels)
       .innerJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .innerJoin(accounts, eq(funnels.accountId, accounts.id))
       .innerJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
       .innerJoin(pipelines, eq(funnels.pipelineId, pipelines.id))
-      .where(and(where, isNull(opportunities.deletedAt))),
+      .leftJoin(member, eq(funnels.ownerMemberId, member.id))
+      .leftJoin(user, eq(member.userId, user.id))
+      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
+      .where(where),
   ])
 
   const partiesByOpp = financeEnabled
@@ -854,6 +971,35 @@ export async function funnelsList(
   return {
     rows: rows.map((r) => ({ ...r, parties: partiesByOpp.get(r.id) ?? [] })),
     total: countOf(totalRows),
+    valueTotal: totalRows[0]?.valueTotal ?? "0",
+  }
+}
+
+export async function funnelsFilterOptions(tx: Tx, ctx: ServerContext) {
+  const visible = await visibleMemberIds(tx, ctx)
+  const accountOwnerMember = alias(member, "funnel_filter_account_owner_member")
+  const accountOwnerUser = alias(user, "funnel_filter_account_owner_user")
+  const [row] = await tx.select({
+    accounts: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${accounts.id}, 'label', ${accounts.name})), '[]'::jsonb)`,
+    opportunities: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${opportunities.id}, 'label', concat_ws(' — ', nullif(${opportunities.code}, ''), ${opportunities.name}))), '[]'::jsonb)`,
+    funnels: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${funnels.id}, 'label', ${funnels.name})), '[]'::jsonb)`,
+    accountOwners: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${accounts.ownerMemberId}, 'label', coalesce(${accountOwnerUser.name}, 'Unknown'))) filter (where ${accounts.ownerMemberId} is not null), '[]'::jsonb)`,
+    owners: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${funnels.ownerMemberId}, 'label', coalesce(${user.name}, 'Unknown'))) filter (where ${funnels.ownerMemberId} is not null), '[]'::jsonb)`,
+    stages: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${pipelineStages.id}, 'label', ${pipelineStages.name})), '[]'::jsonb)`,
+  }).from(funnels)
+    .innerJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
+    .innerJoin(accounts, eq(funnels.accountId, accounts.id))
+    .innerJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
+    .leftJoin(member, eq(funnels.ownerMemberId, member.id))
+    .leftJoin(user, eq(member.userId, user.id))
+    .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+    .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
+    .where(and(isNull(funnels.deletedAt), isNull(opportunities.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
+  const sort = (options: Array<{ value: string; label: string }>) => options.sort((a, b) => a.label.localeCompare(b.label))
+  return {
+    accounts: sort(row?.accounts ?? []), opportunities: sort(row?.opportunities ?? []),
+    funnels: sort(row?.funnels ?? []), accountOwners: sort(row?.accountOwners ?? []),
+    owners: sort(row?.owners ?? []), stages: sort(row?.stages ?? []),
   }
 }
 

@@ -1,6 +1,8 @@
 "use server"
 
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
+import { normalizeRecordListQuery, type RecordListQuery } from "@/lib/record-list-query"
+import type { ServerTableQuery } from "@/lib/table-pagination"
 import { alias } from "drizzle-orm/pg-core"
 import { revalidatePath } from "next/cache"
 import { withModule, requireContext, type Tx } from "@/lib/actions"
@@ -75,13 +77,21 @@ export async function isFinanceEnabled(): Promise<boolean> {
   return (await getEntitledModuleMap()).finance
 }
 
-/** All documents in one direction (sale = O2C, purchase = P2P), newest first. */
-export async function listFinanceDocs(
-  direction: "sale" | "purchase"
-): Promise<FinanceDocRow[]> {
-  return withModule("finance", PERMISSIONS.FINANCE_VIEW, async (tx, _ctx) => {
+async function readFinanceDocPage(tx: Tx, direction: "sale" | "purchase", limit: number, offset: number, query?: RecordListQuery) {
     const parent = alias(financeDocs, "parent_doc")
-    const rows = await tx
+    const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
+    const validKinds = kindsForDirection(direction)
+    const kinds = query?.selections.kind?.filter((value): value is FinanceDocKind => validKinds.includes(value as FinanceDocKind))
+    const statuses = query?.selections.status?.filter((value): value is (typeof financeDocStatus.enumValues)[number] => financeDocStatus.enumValues.includes(value as (typeof financeDocStatus.enumValues)[number]))
+    const where = and(
+      inArray(financeDocs.kind, kinds?.length ? kinds : validKinds),
+      statuses?.length ? inArray(financeDocs.status, statuses) : undefined,
+      search ? or(ilike(financeDocs.number, search), ilike(financeDocs.partyName, search), ilike(salesOrders.soNumber, search), ilike(projects.projectCode, search)) : undefined,
+    )
+    const sortColumns = { number: financeDocs.number, kind: financeDocs.kind, status: financeDocs.status, partyName: financeDocs.partyName, amount: financeDocs.amount, docDate: financeDocs.docDate, dueDate: financeDocs.dueDate, createdAt: financeDocs.createdAt }
+    const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
+    const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(financeDocs.createdAt)
+    const [rows, totalRows] = await Promise.all([tx
       .select({
         id: financeDocs.id,
         kind: financeDocs.kind,
@@ -111,10 +121,21 @@ export async function listFinanceDocs(
       .leftJoin(parent, eq(financeDocs.parentId, parent.id))
       .leftJoin(salesOrders, eq(financeDocs.salesOrderId, salesOrders.id))
       .leftJoin(projects, eq(financeDocs.projectId, projects.id))
-      .where(inArray(financeDocs.kind, kindsForDirection(direction)))
-      .orderBy(desc(financeDocs.createdAt))
-      .limit(1000)
-    return rows as FinanceDocRow[]
+      .where(where)
+      .orderBy(ordering, desc(financeDocs.id))
+      .limit(limit).offset(offset),
+      tx.select({ count: sql<number>`count(*)::int` }).from(financeDocs)
+        .leftJoin(salesOrders, eq(financeDocs.salesOrderId, salesOrders.id))
+        .leftJoin(projects, eq(financeDocs.projectId, projects.id)).where(where),
+    ])
+    return { rows: rows as FinanceDocRow[], total: totalRows[0]?.count ?? 0 }
+}
+
+export async function listFinanceDocPage(direction: "sale" | "purchase", input: ServerTableQuery): Promise<{ rows: FinanceDocRow[]; total: number }> {
+  return withModule("finance", PERMISSIONS.FINANCE_VIEW, (tx) => {
+    const { limit, offset, query } = normalizeRecordListQuery(input,
+      ["number", "kind", "status", "partyName", "amount", "docDate", "dueDate", "createdAt"], ["kind", "status"])
+    return readFinanceDocPage(tx, direction, limit, offset, query)
   })
 }
 
