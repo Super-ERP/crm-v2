@@ -20,7 +20,7 @@ The **Owner** role is different from ownership of an account or funnel. See [Ter
 
 ## Who approves a quotation?
 
-The app starts from the **account salesperson's reporting line** and finds the first active manager with **Approve quotations** permission. Only that eligible manager can approve or reject the quotation, subject to the platform superadmin's operational override. A salesperson cannot approve their own quotation.
+The app starts from the **Account owner's reporting line** and finds the first active manager with **Approve quotations** permission. Only that eligible manager can approve or reject the quotation, subject to the platform superadmin's operational override. An Account owner cannot approve their own quotation.
 
 Every quote needs approval before sending. Review happens on the quotation page, not in the stage-request inbox. Rejection requires a reason and returns the quote to Draft. See [Quotation lifecycle](../05-quotations-and-revisions.md#the-quotation-lifecycle).
 
@@ -32,7 +32,7 @@ Stage approvers can enter gated stages directly using their stage-approval capab
 
 ## What if the manager changes?
 
-A stale pending stage request should be cancelled and resubmitted so it reaches the current eligible manager. If no eligible manager exists, submission asks for the reporting line and approval permission to be configured instead of routing to an unrelated approver.
+Changing the Account owner cancels pending stage requests and returns pending quotations to Draft. The new owner resubmits them to route each request to the current eligible manager. If no eligible manager exists, submission asks for the reporting line and approval permission to be configured instead of routing to an unrelated approver.
 
 Ask your administrator to check **Team and roles**. Managing team membership requires **Manage users**; changing organization defaults requires **Manage tenant settings**. Owner and Admin receive these permissions by default, but the organization can customize role grants.
 
