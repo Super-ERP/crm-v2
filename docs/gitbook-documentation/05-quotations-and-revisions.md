@@ -7,7 +7,7 @@ icon: file-lines
 
 Prepare an offer, get approval, and manage customer changes.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#quotation).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#quotation).
 
 ## On this page
 
@@ -203,4 +203,4 @@ Open **Preview** on the quotation:
 
 * [Payment milestones](06-payment-milestones.md)
 * [Troubleshooting](help-center/troubleshooting.md)
-* [Back to start](README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)

@@ -126,5 +126,5 @@ See [Payment milestones](../06-payment-milestones.md).
 ## Continue
 
 * [Troubleshooting](troubleshooting.md)
-* [Quick start by role](../quick-start.md)
-* [Back to start](../README.md)
+* [Quick start by role](https://jienweng.gitbook.io/q-app/getting-started/quick-start)
+* [Back to start](https://jienweng.gitbook.io/q-app)

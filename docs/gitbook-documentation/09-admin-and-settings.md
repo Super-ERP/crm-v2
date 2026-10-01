@@ -7,7 +7,7 @@ icon: gear
 
 Manage team access and organization defaults, and review forecasts and audit history.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#role-permission-and-enabled-module).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#role-permission-and-enabled-module).
 
 ## On this page
 
@@ -116,4 +116,4 @@ Users with **Manage tenant settings** permission (Owner and Admin by default) co
 ## Continue
 
 * [Troubleshooting](help-center/troubleshooting.md)
-* [Back to start](README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)

@@ -87,3 +87,27 @@ links/anchors plus four landing-card targets; 27 balanced steppers containing 10
 titled steps; 11 existing redirect targets in each GitBook configuration. No
 plain numbered procedures remain. Existing Mermaid source and PNG assets are
 unchanged. `git diff --check` passed.
+
+## Separate site tabs and yearly changelog
+
+Replaced the single-space site with four native site sections: Getting Started,
+Documentation, Reference, and Changelog. Each section maps to a self-contained
+content directory and its own sidebar. The existing `user-guide` space key is
+preserved. Cross-section links use published Q-App URLs; each referenced image
+remains inside its owning space. Old per-space redirects whose target pages moved
+to another space were removed, because GitBook space redirects cannot resolve
+sibling content directories. Site-level redirects for old bookmarks would need
+to be configured in GitBook; they were not added in this session.
+
+The changelog now has a yearly archive, with 31 verified releases for 2026,
+version/date headings, and concise bullet entries. Dates come from published
+release metadata, replacing the earlier merge-date notes and inaccurate dates in
+the original draft. There are no source, pull-request, author, or repository links
+in the published content. Guide updates have their own compact dated list.
+
+Validation: official GitBook configuration schema passes; four section defaults
+and unique keys are valid; 21 pages/navigation entries, 103 local links and 68
+cross-section links, 27 steppers/103 titled steps, eight unchanged Mermaid
+diagrams, and two local images checked. Scanning all four mapped directories found
+no GitHub links. Native site sections require GitBook's Ultimate site plan; preview
+sync must confirm availability before claiming the tabs are live.

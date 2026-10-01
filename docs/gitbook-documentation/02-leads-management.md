@@ -7,7 +7,7 @@ icon: user-plus
 
 Capture prospects, qualify them, and convert the right leads.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#lead).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#lead).
 
 ## On this page
 
@@ -188,4 +188,4 @@ Click **Convert lead**.
 
 * [Accounts & contacts](03-accounts-and-contacts.md)
 * [Troubleshooting](help-center/troubleshooting.md)
-* [Back to start](README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)

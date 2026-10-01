@@ -7,7 +7,7 @@ icon: compass
 
 Find modules, switch organizations, and save a useful list view.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#organization-workspace-and-tenant).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#organization-workspace-and-tenant).
 
 ## On this page
 
@@ -123,6 +123,6 @@ Once you have configured your ideal filters, sorting, and column preferences, yo
 
 ## Continue
 
-* [Leads & conversion](02-leads-management.md)
-* [Troubleshooting](help-center/troubleshooting.md)
+* [Leads & conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management)
+* [Troubleshooting](https://jienweng.gitbook.io/q-app/docs/help/troubleshooting)
 * [Back to start](README.md)
