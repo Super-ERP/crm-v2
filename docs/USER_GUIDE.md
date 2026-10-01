@@ -207,3 +207,70 @@ Located at **Sales → Approvals** (`/approvals`), this is the central governanc
 * **General**: Entity name, base ISO currency, fiscal calendar.
 * **Taxonomy**: Custom lead sources, lost reasons, and product categories.
 * **Documents**: Default quote terms, warranty clauses, and tax percentages.
+
+---
+
+## 10. Quick Start by Role
+
+### Sales Representative
+1. **Review Leads**: Check **CRM → Leads** for new inquiries and update status to `Contacted`.
+2. **Convert Qualified Prospects**: Click **Convert Lead** to automatically generate the Account, Contact, and initial Opportunity.
+3. **Fill PPVVC**: Complete the 5 pillars on the Opportunity and advance through stages `0E` ➔ `3E`.
+4. **Issue Quotes**: Create a quote, apply products and tax, and submit for manager approval if needed.
+5. **Handle Revisions**: Click **Revise** to make changes on sent quotes without overwriting history.
+
+### Sales Manager
+1. **Approvals Inbox**: Review and approve quotation discounts and stage advancement gates.
+2. **Pipeline Governance**: Monitor team stage distribution and check PPVVC completion on deals.
+3. **Revenue Forecasting**: Track weighted pipeline against quarterly targets in **Insights → Forecast**.
+
+### Delivery Project Manager
+1. **Monitor Stage 4A**: Identify deals entering stage `4A` where Delivery Project Codes are allocated.
+2. **Review Sales Orders**: Verify confirmed customer Purchase Orders against approved quotations.
+3. **Track Milestones**: Ensure payment milestones are marked `Invoiced` as deliverables are met.
+
+### System Administrator
+1. **User Management**: Invite team members and configure RBAC tiers (Owner, Manager, Sales Rep, Viewer).
+2. **System Defaults**: Configure base ISO currencies, document notes, and tax percentages.
+3. **Compliance**: Review user actions and data changes in the immutable **Audit Log**.
+
+---
+
+## 11. Frequently Asked Questions (FAQ)
+
+* **Can I undo a lead conversion?**
+  No. Lead conversion is a permanent, one-way transaction creating Account, Contact, and Opportunity in one step to prevent duplicate records.
+* **How do I restore a disqualified lead?**
+  Open the lead and click **Restore to Contacted** to resume active qualification.
+* **Why must every Account have an assigned currency?**
+  All child opportunities and quotes inherit the account currency to prevent multi-currency calculation discrepancies.
+* **Can I roll back an opportunity stage?**
+  Yes, you can roll backward to any earlier non-terminal stage without restriction. Moving forward enforces stage-gate checks.
+* **When is a project code allocated?**
+  The official Delivery Project Code is automatically allocated when an opportunity first reaches stage **`4A` (Commitment)**.
+* **How do I revise an approved quote?**
+  Open the quote and click **Revise**. This locks the original for audit and creates a new linked Draft revision (`-Rev1`).
+* **When do Payment Milestones turn "Won"?**
+  All active milestones automatically update to **`Won`** when the parent opportunity moves to **Closed Won**.
+
+---
+
+## 12. Troubleshooting & Common Errors
+
+* **Stage Advance Denied**: Ensure all PPVVC pillars are filled, a valid quotation is linked, and any required manager approvals are signed off.
+* **Quotation Locked**: Quotations in `Pending Approval`, `Approved`, or `Sent` status cannot be directly edited. Click **Revise** to create an editable new revision.
+* **Account Currency Missing**: An ISO currency must be selected before saving an Account or converting a lead.
+* **Cannot See Others' Deals**: Access is restricted based on your role tier (Rep = own deals, Manager = team deals, Owner = all deals).
+* **Cannot Mark Milestone Invoiced**: Milestones must be in `Won` status (achieved upon deal Closed Won) before they can be marked `Invoiced`.
+
+---
+
+## 13. Changelog & Release Highlights
+
+* **v1.2.155**: Added Quandatics Academy quotation template for training, workshops, and certification services.
+* **v1.2.154**: Settings-driven SST tax percentage and label rendering on quotations.
+* **v1.2.153**: Automated alignment of imported pipeline ownership with account owners.
+* **v1.2.150**: Shared list controls with server-side pagination (25/50/100 rows) and private saved views.
+* **v1.2.140**: Payment milestone decoupling for operational cashflow planning (`Won` ➔ `Invoiced`).
+* **v1.2.120**: Standardized PPVVC qualification framework and automated Stage 4A project code allocation.
+

@@ -1,43 +1,88 @@
 ---
-description: Comprehensive operational walkthrough for Super-ERP across the full lead-to-cash lifecycle.
-icon: book-open
+description: The official user experience and operations portal for Super-ERP (Quandatics CRM v2).
+icon: house
+cover: .gitbook/assets/logo.png
+coverY: 0
 ---
 
-# Super-ERP (Quandatics CRM) User Guide
+# Super-ERP Documentation Portal
 
-Welcome to the end-to-end user guide for **Super-ERP (Quandatics CRM v2)**. This guide provides a complete, step-by-step walkthrough of how to use each module directly within the user interface.
+Welcome to the central user guide and operational hub for **Super-ERP (Quandatics CRM v2)**. This portal provides end-to-end instructions for sales representatives, managers, delivery leads, and administrators to manage the complete lead-to-cash lifecycle.
 
-## The Lead-to-Cash Lifecycle
+---
 
-The system is organized around the business lifecycle—from capturing raw inbound interest to delivering projects and tracking commercial milestones.
+### Explore by Area
+
+<table data-view="cards">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th data-hidden data-card-target data-type="content-ref"></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><h4>⚡</h4></td>
+      <td><h4>Quick Start by Role</h4></td>
+      <td>Role-based "Day in the Life" workflows for Reps, Managers, PMs, and Admins.</td>
+      <td><a href="quick-start.md">Quick Start by Role</a></td>
+    </tr>
+    <tr>
+      <td><h4>📖</h4></td>
+      <td><h4>Product Documentation</h4></td>
+      <td>Comprehensive field-by-field guides across all 9 core operational modules.</td>
+      <td><a href="01-workspace-and-views.md">Product Guide</a></td>
+    </tr>
+    <tr>
+      <td><h4>❓</h4></td>
+      <td><h4>Help Center & FAQ</h4></td>
+      <td>Instant answers to everyday questions and troubleshooting common blockers.</td>
+      <td><a href="help-center/faqs.md">Help Center</a></td>
+    </tr>
+    <tr>
+      <td><h4>📣</h4></td>
+      <td><h4>What's New (Changelog)</h4></td>
+      <td>Latest feature releases, quotation templates, and system enhancements.</td>
+      <td><a href="changelog.md">Changelog</a></td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## The End-to-End Business Lifecycle
+
+Super-ERP connects sales, delivery, and commercial planning through an automated, stage-gated lifecycle:
 
 ```mermaid
 flowchart LR
-    L["1. Leads"] -->|"Qualify & Convert"| AC["2. Accounts & Contacts"]
-    AC --> OP["3. Opportunity & Funnel (0E - 4A)"]
-    OP --> Q["4. Quotation & Approvals"]
+    L["1. Inbound Leads"] -->|"Qualify & Convert"| AC["2. Accounts & Contacts"]
+    AC --> OP["3. Opportunities & Funnel (0E - 4A)"]
+    OP --> Q["4. Quotations & Approvals"]
     Q -->|"Deal Won"| W["5. Closed-Won & Milestones"]
-    W --> P["6. Delivery Projects & Sales Orders"]
+    W --> P["6. Projects & Sales Orders"]
 ```
 
-### Module Flow Summary
-
-| Stage | Module | Primary Objective |
-| :--- | :--- | :--- |
-| **Capture** | **Leads** (`/leads`) | Record inbound inquiries, qualify fit, and convert into durable records. |
-| **Customer Core** | **Accounts & Contacts** (`/accounts`, `/persons`) | Maintain company profiles, required ISO currencies, and stakeholder contacts. |
-| **Sales Pursuit** | **Opportunities & Funnel** (`/funnel`) | Track deal qualification using **PPVVC**, advance stages from `0E` to `4A`, and allocate project codes. |
-| **Pricing & Terms** | **Quotations** (`/quotations`) | Generate itemized offers, apply tax settings, submit for approval, manage revisions, and download client PDFs. |
-| **Deal Closure** | **Payment Milestones** (`/payment-milestones`) | Track revenue billing events; milestones automatically transition to `Won` upon deal closing, then to `Invoiced` upon billing. |
-| **Delivery Handover** | **Projects & Sales Orders** (`/projects`, `/sales-orders`) | Connect sales commitments to operational delivery and track confirmed customer purchase orders. |
-| **Governance** | **Approvals** (`/approvals`) | Review pending discount requests and stage advancement gates. |
+{% hint style="info" %}
+**Stage 4A Automation**: The moment a deal enters stage **4A (Commitment)** for the first time, the system automatically allocates the official **Delivery Project Code**, allowing technical teams to begin scoping before final contract signature.
+{% endhint %}
 
 ---
 
-## How to Use This Guide
+## Core Operational Domains
 
-* Follow the chapters in sequence from **Chapter 1** to **Chapter 9** for a complete walkthrough of the end-to-end workflow.
-* Each chapter details:
-  1. **What the module is** and why it exists.
-  2. **Step-by-step UI actions** (where to click, what form fields to complete, and how to navigate).
-  3. **Key business rules & automations** that run behind the scenes.
+| Domain | Modules | Primary Capabilities |
+| :--- | :--- | :--- |
+| **CRM** | **Leads**, **Accounts**, **Contacts** | Capture inbound interest, maintain customer records with required ISO currencies, and convert leads in one click. |
+| **Sales** | **Opportunities**, **Funnel**, **Quotations** | Qualify deals with **PPVVC**, advance pipeline stages (`0E` to `4A`), manage line items, SST taxes, and proposal revisions. |
+| **Delivery & Cash** | **Payment Milestones**, **Projects**, **Sales Orders** | Track commercial billing milestones (`Won` ➔ `Invoiced`), manage delivery projects, and verify customer Purchase Orders. |
+| **Governance** | **Approvals**, **Team & Roles**, **Settings** | Centralized manager approval inbox, 4-tier RBAC access, custom taxonomies, and immutable audit trails. |
+
+---
+
+## Need Assistance?
+
+* If you are stuck on an error or unexpected validation check, visit the [Troubleshooting Guide](help-center/troubleshooting.md).
+* For quick answers to common operational questions, browse the [Frequently Asked Questions](help-center/faqs.md).
