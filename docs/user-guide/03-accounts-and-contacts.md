@@ -1,10 +1,20 @@
-# 3. Accounts & Contacts
+---
+description: Maintain the companies and people involved in your deals.
+icon: address-book
+---
 
-This chapter covers managing customer organizations (Accounts) and their associated personnel (Contacts).
+# Accounts and contacts
+
+Maintain the companies and people involved in your deals.
+
+## On this page
+
+* [Create an account](#creating-an-account)
+* [Create a contact](#creating-a-contact)
 
 ---
 
-## 1. Accounts (`/accounts`)
+## Accounts
 
 An **Account** represents an enterprise customer, client, partner, or reseller. It serves as the parent container for all commercial interactions, including contacts, active opportunities, quotations, and projects.
 
@@ -21,9 +31,9 @@ Accounts are usually created automatically during **Lead Conversion**, but can a
    * **Billing Address**: Street address, city, state/province, postal code, and country.
 4. Click **Save Account**.
 
-> [!IMPORTANT]
-> **Currency Configuration**: Every Account must have an assigned ISO currency. All downstream Opportunities, Funnel deals, and Quotations created under this Account will inherit this currency to prevent multi-currency calculation errors.
-
+{% hint style="warning" %}
+**Currency Configuration**: Every Account must have an assigned ISO currency. All downstream Opportunities, Funnel deals, and Quotations created under this Account will inherit this currency to prevent multi-currency calculation errors.
+{% endhint %}
 ### The Account Overview
 Opening any Account presents a comprehensive 360-degree customer view:
 * **Summary Cards**: Displays key metrics including total lifetime value, open deal count, and active quotations.
@@ -34,7 +44,7 @@ Opening any Account presents a comprehensive 360-degree customer view:
 
 ---
 
-## 2. Contacts / Persons (`/persons`)
+## Contacts
 
 A **Contact** represents an individual stakeholder employed by an Account (e.g., procurement officer, project manager, technical lead, or executive sponsor).
 
@@ -53,3 +63,9 @@ A **Contact** represents an individual stakeholder employed by an Account (e.g.,
 When generating quotations or advancing sales stages:
 * The primary contact's details are automatically copied into the quotation's **Attention** field.
 * Contacts can be assigned as the **Power Sponsor** during opportunity qualification.
+
+## Continue
+
+* [Opportunities & sales funnel](04-opportunities-and-funnel.md)
+* [Troubleshooting](help-center/troubleshooting.md)
+* [Back to start](README.md)

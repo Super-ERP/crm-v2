@@ -1,144 +1,130 @@
 ---
-description: Answers to the most common operational and interface questions in Q-App.
+description: Short answers about conversion, permissions, stages, quotation revisions, and billing milestones.
 icon: circle-question
 ---
 
-# Frequently Asked Questions (FAQ)
+# Frequently asked questions
 
-Find quick answers to common questions about using Q-App across leads, sales funnels, quotations, and system settings.
+For step-by-step help with a blocked action, open [Troubleshooting](troubleshooting.md).
 
----
-
-## Leads & Lead Conversion
+## Leads and customer records
 
 <details>
-<summary>Can I undo a lead conversion?</summary>
+<summary>What does converting a lead create?</summary>
 
-**No.** Lead conversion is an atomic, permanent database transaction. When you convert a lead, the system creates or links an Account, a Contact, and an Opportunity seeded at stage `0e`. To preserve audit history and prevent duplicated records, converted leads cannot be converted again or un-converted.
+The conversion flow links or creates the account, creates the contact, and creates the sales pursuit. Review the information before confirming. The converted lead links to the resulting records and cannot be converted again.
+
+See [Lead conversion](../02-leads-management.md#converting-a-lead).
 
 </details>
 
 <details>
-<summary>How do I restore a disqualified lead?</summary>
+<summary>Why does an account need a currency?</summary>
 
-If a previously disqualified prospect re-engages with your team:
-1. Open **CRM → Leads** and filter your view to show `Disqualified` leads.
-2. Click on the lead to open their detail view.
-3. In the top action bar, click **Restore to Contacted**.
-4. The lead status reverts to `Contacted`, and you can resume the qualification process.
+The account currency establishes the currency used for related commercial records. Check it before preparing quotations; changing an account is not a substitute for reviewing existing quote amounts.
+
+See [Accounts & contacts](../03-accounts-and-contacts.md).
 
 </details>
 
 <details>
-<summary>Why is the "Convert Lead" button not clickable?</summary>
+<summary>Why can I see a record that a colleague cannot see?</summary>
 
-The **Convert Lead** action requires:
-1. Your user account must hold the `lead.convert` permission (held by Sales Rep, Manager, and Owner tiers).
-2. The lead must not already be in `Converted` status.
-3. If the button is disabled, check with your administrator to ensure your role tier has conversion permissions enabled.
+Visibility depends on permissions, record ownership, reporting relationships, and the active organization. Module availability can also depend on enabled modules. Role names alone do not describe every access rule.
 
-</details>
-
----
-
-## Accounts & Currencies
-
-<details>
-<summary>Why must every Account have an assigned currency?</summary>
-
-All downstream commercial records (Opportunities, Funnel deals, and Quotations) inherit their financial currency directly from the parent Account. Setting an explicit ISO currency (e.g., `MYR`, `USD`, `SGD`) ensures that line items, taxes, and revenue forecasts are calculated consistently without multi-currency rounding errors.
+See [Missing records](troubleshooting.md#a-module-button-or-record-is-missing).
 
 </details>
 
-<details>
-<summary>Can I change an Account's currency after creating opportunities?</summary>
-
-{% hint style="warning" %}
-**Caution**: Changing an Account's currency after active deals or quotations have been created will not automatically recalculate existing quotation figures. Ensure the correct currency is established before generating formal quotations.
-{% endhint %}
-
-</details>
-
----
-
-## Sales Pipeline & PPVVC
+## Sales stages
 
 <details>
-<summary>What does the opportunity code "QDTOPP-2026-0042" stand for?</summary>
+<summary>What does PPVVC mean?</summary>
 
-Every opportunity receives a standardized system identifier:
-$$\text{ORGCODEOPP-YYYY-NNNN}$$
-* `ORGCODE`: Your organization's code prefix (configured in Settings).
-* `OPP`: Denotes an Opportunity record.
-* `YYYY`: Year of creation (e.g., 2026).
-* `NNNN`: Unique sequential sequence number.
+**Power Sponsor, Pain, Vision, Value, and Control.** These fields capture the buyer, business problem, agreed solution, value, and buying process.
+
+See [PPVVC qualification](../04-opportunities-and-funnel.md#the-ppvvc-qualification-framework).
 
 </details>
 
 <details>
-<summary>Can I move an opportunity backward in the sales funnel?</summary>
+<summary>Can I move a deal backward or reopen it?</summary>
 
-**Yes.** You can roll back an opportunity to any prior non-terminal stage (e.g., from `3b` back to `2c`) without restrictions if project requirements change. However, moving **forward** re-evaluates required stage gates and data validations.
+An open deal can move to an earlier open stage. A parked/KIV deal can reopen through the approval process. Closed Won and Closed Lost are terminal and cannot change stage.
 
-</details>
-
-<details>
-<summary>When is a Delivery Project Code allocated?</summary>
-
-The system automatically reserves and allocates the official **Delivery Project Code** the first time an opportunity enters stage **`4a` (Commit)**. This allows delivery teams to prepare project plans before the final contract signature.
+See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules).
 
 </details>
 
 <details>
-<summary>Can I reopen a deal that was marked Closed Won or Closed Lost?</summary>
+<summary>Does a project code mean the sale is won?</summary>
 
-`Closed Won` and `Closed Lost` are **terminal stages**. Once a deal enters a terminal stage, its stage cannot be moved forward or backward, and associated payment milestones are locked. If a customer wishes to purchase additional services, create a new Opportunity under that Account.
+No. Project-code allocation at `4a` supports delivery planning before final closure. Check the funnel's actual status before treating the sale as won.
+
+See [Projects & sales orders](../07-projects-and-sales-orders.md).
 
 </details>
 
----
-
-## Quotations, Tax & Approvals
+## Quotations and approvals
 
 <details>
-<summary>How do I create a new revision of a quotation?</summary>
+<summary>Can I send a draft quotation?</summary>
 
-When a client requests modifications to an approved or sent quote:
-1. Open the existing quotation.
-2. Click the **Revise** button in the top action bar.
-3. The original quote is preserved in history as an immutable record.
-4. A new draft quotation is created with an incremented revision identifier (e.g., `-Rev1`), which you can edit and submit for approval.
+A quotation must be approved before it can be sent. Submit the draft for approval and use **Send** after approval, with the required permissions.
+
+See [Quotation lifecycle](../05-quotations-and-revisions.md#the-quotation-lifecycle).
 
 </details>
 
 <details>
-<summary>How do tax calculations work on line items?</summary>
+<summary>How do I change a quote that is already approved or sent?</summary>
 
-Tax rates (e.g., *8% SST*) are governed by your organization's **Tax Settings**. Depending on your configuration, pricing can be set as **Tax Inclusive** (tax is calculated within the stated unit price) or **Tax Exclusive** (tax is added on top of the subtotal).
+An Approved quote can be returned to Draft and must be approved again before sending. A Sent quote can create a separate draft revision; the original is preserved. Live Pending Approval and Approved quotes are not eligible for the historical revision action.
 
-</details>
-
-<details>
-<summary>What happens if a quotation approval is rejected by my manager?</summary>
-
-If a manager rejects an approval request, they must provide an explanatory rejection note. The quotation returns to **`Draft`** status, allowing the sales representative to adjust discounts or terms and resubmit.
-
-</details>
-
----
-
-## Payment Milestones
-
-<details>
-<summary>When do Payment Milestones automatically become "Won"?</summary>
-
-The moment an Opportunity is moved to **Closed Won**, all active payment milestones associated with that deal automatically update their status from `Planned` to **`Won`**.
+See [Managing revisions](../05-quotations-and-revisions.md#managing-revisions).
 
 </details>
 
 <details>
-<summary>How do I mark a milestone as billed?</summary>
+<summary>Where do I approve a quotation?</summary>
 
-Navigate to **Sales → Payment Milestones**, open the milestone, and update its status from **`Won`** to **`Invoiced`**. Milestones serve as commercial planning records and are intentionally decoupled from automated ERP invoice generation.
+The eligible reporting manager reviews quotation approval on the quotation itself. This is the first active manager in the account salesperson’s reporting line with quotation approval permission. **Sales → Approvals** handles funnel stage requests, with **Incoming** and **My requests** tabs.
+
+See [Quotations](../05-quotations-and-revisions.md) and [Stage approvals](../08-approvals-inbox.md).
 
 </details>
+
+<details>
+<summary>Does accepting a quotation close the funnel as Won?</summary>
+
+Accepting the quotation records customer acceptance. It does not automatically change the funnel stage. Record the funnel's outcome separately, following its stage requirements.
+
+See [Opportunities & sales funnel](../04-opportunities-and-funnel.md).
+
+</details>
+
+## Payment milestones
+
+<details>
+<summary>When does a payment milestone become Won?</summary>
+
+Live Planned milestones become Won when their linked funnel closes Won. A milestone created for an already won funnel starts as Won. Invoiced milestones retain their status.
+
+See [Milestone statuses](../06-payment-milestones.md#milestone-statuses).
+
+</details>
+
+<details>
+<summary>Does marking a milestone Invoiced generate an invoice?</summary>
+
+No. The supported manual transition is **Won → Invoiced** after billing. The current repository screens do not expose a status-editing control; contact your administrator if your deployed version also has no action. Payment milestones are planning records; they do not create or update invoices or receipts, and they do not complete a project automatically.
+
+See [Payment milestones](../06-payment-milestones.md).
+
+</details>
+
+## Continue
+
+* [Troubleshooting](troubleshooting.md)
+* [Quick start by role](../quick-start.md)
+* [Back to start](../README.md)

@@ -1,44 +1,66 @@
-# 8. Approvals
+---
+description: Review stage requests routed to you and track the requests you have submitted.
+icon: stamp
+---
 
-## Two different decisions
+# Stage approvals
 
-Quotation approval authorizes a proposal before it is sent. Funnel-stage approval authorizes entry into an approval-gated sales stage. Customer acceptance is a separate commercial decision and never closes the funnel automatically.
+Use **Sales → Approvals** to review requests to change a funnel stage. Quotation approval is handled on the quotation itself; see [Quotation approvals](05-quotations-and-revisions.md#the-quotation-lifecycle).
 
-## Who approves?
+## On this page
 
-Configure each salesperson’s reporting manager in **Team**. The app walks that reporting line and selects the first active manager with the required permission:
+* [Find your requests](#find-your-requests)
+* [Review and decide](#review-and-decide)
+* [Follow up after a decision](#follow-up-after-a-decision)
 
-- Quotations: **Approve quotations** (`quotation.approve`). The reporting line starts from the account salesperson who owns the quotation’s funnel.
-- Funnel-stage requests: **Approve stage advances** (`stage.advance.approve`). The reporting line starts from the person requesting the advance.
+{% hint style="info" %}
+**Who can use this page?** People with stage-change or stage-approval permissions can participate. Requests route to the first active manager in the requester’s reporting line with stage-approval permission. Only the assigned manager who remains eligible can decide the request; requesters cannot approve their own request. Permissions from all assigned roles count. Platform superadmins retain an operational override.
+{% endhint %}
 
-Permissions from all assigned roles count. Legacy primary-role grants are used only when no multi-role assignments exist. Role names and seniority tiers do not determine approval eligibility.
+## Find your requests
 
-Only the eligible reporting manager can approve or reject a quotation. Only the assigned manager who is still eligible can decide a stage request. Other Owner, Admin or Manager members do not gain permission to decide somebody else’s request just by holding the approval capability. Platform superadmins retain an operational override.
+1. Open **Sales → Approvals**.
+2. Choose **Incoming** for pending requests routed to you.
+3. Choose **My requests** to track requests you submitted.
+4. Use **Previous** and **Next** to navigate the selected tab’s 25-request pages. Use **Review quotations** to open the separate quotation list.
 
-If no eligible manager exists, submission explains what must be configured instead of routing to an unrelated approver. Stage approvers can still advance stages directly using their stage-approval capability. An ordinary requester cannot approve their own stage request; a salesperson is never their own quotation approver.
+An empty Incoming tab means no pending requests are currently routed to you; it does not show every request in the organization.
 
-## Funnel-stage inbox (`/approvals`)
+## Review and decide
 
-- **Incoming** shows pending stage requests assigned to you.
-- **My requests** shows the stage requests you submitted, including their decisions.
-- The selected tab loads 25 requests per page. Use **Previous** and **Next** for more.
-- Review the funnel, requested stage, reason, requester and date. Attachments load only when opened. Approve or Reject opens a confirmation dialog with an optional decision note.
-- Approval moves the funnel only if its current stage and entry requirements still allow it. Obsolete requests are closed with an explanation rather than silently forcing a move.
-- The requester can cancel a pending request. After a reporting-manager change, cancel and resubmit a stale assigned request so it reaches the current manager.
+1. Find the request and check the funnel name, current stage, and requested target stage.
+2. Review the supporting context. Expand **Attachments** when supporting files are available.
+3. Choose **Approve** or **Reject**.
+4. Add a decision note. The stage-approval dialog makes this optional, but a clear reason helps the requester follow up.
+5. Confirm the decision and read the result message.
 
-## Quotation approval
+```mermaid
+flowchart TD
+    R["Stage request submitted"] --> P["Pending with routed approver"]
+    P --> A["Approve"]
+    P --> J["Reject"]
+    A --> V["Check the result and current funnel stage"]
+    J --> F["Requester reviews feedback"]
+```
 
-Open the quotation itself; quotations do not appear in the stage inbox.
+**Read the diagram:** approval processes the requested stage change. Rejection leaves the requester to review the feedback and correct or reconsider the request. If the deal has already moved, the app may report the request as obsolete.
 
-1. Complete and save the **Draft** quotation.
-2. Choose **Submit for approval**. Every quotation needs approval before sending; there is no discount-threshold exemption.
-3. The eligible reporting manager opens the quotation and approves it or rejects it with a mandatory explanation.
-4. Approval changes the status to **Approved**. Rejection returns it to **Draft** for corrections.
-5. A member with send permission marks the approved quotation **Sent** after delivering it to the customer.
-6. A member with acceptance permission records **Accepted** or customer **Rejected**.
+## Follow up after a decision
 
-Sent quotations remain historical documents; create a revision for new terms. Acceptance does not move the funnel, create a project or mark planned milestones Won. Move the funnel to **Closed Won** separately when the deal is won.
+* **Approved:** open the funnel and verify the resulting stage. Read any message about an obsolete request before assuming the stage changed.
+* **Rejected:** review the decision note, resolve the issue, and submit a new request if needed.
+* **No longer needed:** requesters can cancel their pending request where the action is available.
+* **Reporting manager changed:** cancel and resubmit a stale pending request so it routes to the current eligible manager.
+* **No eligible manager:** ask your administrator to configure the reporting line and approval permissions. Submission does not route to an unrelated approver.
 
-## Audit records
+## Quotation approvals
 
-Submission, approval, rejection and cancellation record audit events. Quotations store the approver and approval time; stage requests store the requester, assigned approver, decision and time. Do not assume email notifications are sent by these actions.
+Every quotation requires approval before sending. The eligible approver is the first active manager in the account salesperson’s reporting line with **Approve quotations** permission. Only that manager can approve or reject; a rejection requires a reason. These actions record audit events but do not send email notifications.
+
+See [Quotation lifecycle](05-quotations-and-revisions.md#the-quotation-lifecycle).
+
+## Continue
+
+* [Opportunities & sales funnel](04-opportunities-and-funnel.md)
+* [Quotations & revisions](05-quotations-and-revisions.md)
+* [Troubleshooting](help-center/troubleshooting.md)
