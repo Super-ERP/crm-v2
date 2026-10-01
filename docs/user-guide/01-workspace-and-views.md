@@ -1,10 +1,21 @@
-# 1. Workspace & Personal Views
+---
+description: Find modules, switch organizations, and save a useful list view.
+icon: compass
+---
 
-This chapter covers logging in, navigating the interface, switching organization workspaces, and personalizing data lists with saved views.
+# Workspace and personal views
+
+Find modules, switch organizations, and save a useful list view.
+
+## On this page
+
+* [Navigation](#navigation-and-workspace-layout)
+* [Switch organizations](#multi-tenancy-and-organization-switching)
+* [Save a view](#managing-list-views-and-personal-saved-views)
 
 ---
 
-## Navigation & Workspace Layout
+## Navigation and Workspace Layout
 
 When you log in to the CRM, you are presented with the main application workspace:
 
@@ -21,18 +32,18 @@ When you log in to the CRM, you are presented with the main application workspac
 
 ---
 
-## Multi-Tenancy & Organization Switching
+## Multi-Tenancy and Organization Switching
 
 The system is strictly multi-tenant. Every tenant's data (leads, opportunities, quotes, and settings) is completely isolated.
 
 * **To switch organizations**: Click the organization dropdown at the top of the sidebar. Select the target organization from the list.
-* **To create or manage organizations**: Users with the **Owner** role can open **Manage Organizations** from the switcher dropdown.
+* **Organization administration**: The organization-management actions in the switcher are available to platform superadmins. Ask your administrator if you need a new organization.
 
 ---
 
-## User Roles & Access Hierarchy
+## User Roles and Access Hierarchy
 
-Access is governed by a 4-tier role hierarchy:
+The standard roles are shown below. Permissions can be customized; your role name or tier alone does not guarantee access to a module.
 
 | Role | Tier Level | Capabilities |
 | :--- | :--- | :--- |
@@ -43,13 +54,17 @@ Access is governed by a 4-tier role hierarchy:
 
 ---
 
-## Managing List Views & Personal Saved Views
+## Managing List Views and Personal Saved Views
 
-Every major data table (Leads, Accounts, Contacts, Opportunities, Funnel, Quotations, Milestones) features a unified controls toolbar designed for high-density productivity.
+Major record lists provide controls for finding records and adjusting your view. Available controls vary by module.
 
-```
-[ Search records... ]  [ Filter (3) ]  [ Columns ]  [ Sort: Updated ↓ ]  [ Views: Active Deals ▾ ]
-```
+| Control | Use it to |
+| --- | --- |
+| Search | Find records by name, code, or another searchable field. |
+| Filters | Narrow the list to the records you need. |
+| Columns | Choose which fields are visible. |
+| Sort | Change the order of results. |
+| Views | Save or restore your personal list setup. |
 
 ### 1. Searching Records
 Type keywords into the search box. The search instantly filters records across primary identifiers (e.g., names, company names, codes, emails).
@@ -74,5 +89,12 @@ Once you have configured your ideal filters, sorting, and column preferences, yo
 * **Set as Default**: Check the default option if you want this view to load every time you open the module.
 * **Manage Views**: You can rename, duplicate, or delete your custom views at any time.
 
-> [!NOTE]
-> **Privacy of Saved Views**: Saved views are strictly personal to your account. Creating, modifying, or deleting a saved view will never impact your team members' lists.
+{% hint style="info" %}
+**Privacy of Saved Views**: Saved views are strictly personal to your account. Creating, modifying, or deleting a saved view will never impact your team members' lists.
+{% endhint %}
+
+## Continue
+
+* [Leads & conversion](02-leads-management.md)
+* [Troubleshooting](help-center/troubleshooting.md)
+* [Back to start](README.md)

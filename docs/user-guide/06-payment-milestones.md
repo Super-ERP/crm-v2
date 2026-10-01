@@ -1,6 +1,17 @@
-# 6. Payment Milestones
+---
+description: Plan billing events and record when confirmed milestones have been invoiced.
+icon: calendar
+---
 
-This chapter covers commercial payment milestones, cashflow planning, automated status triggers upon deal closure, and tracking billing completion.
+# Payment milestones
+
+Plan billing events and record when confirmed milestones have been invoiced.
+
+## On this page
+
+* [Set up milestones](#setting-up-milestones)
+* [Understand statuses](#milestone-statuses)
+* [Record billing](#managing-milestones)
 
 ---
 
@@ -8,8 +19,9 @@ This chapter covers commercial payment milestones, cashflow planning, automated 
 
 **Payment Milestones** are commercial planning records that break down deal value into distinct billing events (e.g., *Deposit, Delivery, UAT Acceptance, Final Retainer*).
 
-> [!NOTE]
-> **Planning & Operational Role**: Payment milestones in Q-App serve as commercial billing indicators and cashflow planners. They are intentionally decoupled from automated ERP invoice generation, allowing finance teams to coordinate billing according to contractual milestones.
+{% hint style="info" %}
+**Planning & Operational Role**: Payment milestones in Q-App serve as commercial billing indicators and cashflow planners. They are intentionally decoupled from automated ERP invoice generation, allowing finance teams to coordinate billing according to contractual milestones.
+{% endhint %}
 
 ---
 
@@ -37,26 +49,33 @@ stateDiagram-v2
     Won --> Invoiced: User Confirms Milestone Billed
 ```
 
+**Read the diagram:** Planned becomes Won automatically when the linked funnel closes Won. Won becomes Invoiced only when an authorized user records billing. Milestones created for an already won funnel start as Won.
+
 ### Milestone Statuses
 
 | Status | Meaning | How it is Set |
 | :--- | :--- | :--- |
 | **`Planned`** | Draft or tentative milestone during proposal negotiations. | Set during initial creation. |
-| **`Won`** | Legally binding milestone on a committed deal. | **Automated**: The system automatically marks all live milestones as **`Won`** the moment the parent Opportunity moves to **Closed Won**. |
+| **`Won`** | Confirmed planning milestone on a won deal. | **Automated**: The system marks live Planned milestones as **`Won`** when the linked funnel moves to **Closed Won**. Invoiced milestones retain their status. |
 | **`Invoiced`** | The finance/operations team has issued the invoice to the customer for this phase. | **Manual**: The user updates the milestone status once billing is executed. |
 
 ---
 
-## Managing Milestones in the Interface (`/payment-milestones`)
+## Managing milestones
 
-1. Navigate to **Sales → Payment Milestones** in the sidebar.
-2. Review the consolidated list across all accounts:
-   * View Milestone Title, Linked Funnel Deal, Quote Number, Amount, Expected Date, and Status.
-3. **Marking a Milestone as Invoiced**:
-   * When a deliverable is met and an invoice is issued to the client:
-   * Open the milestone detail or use the row action menu.
-   * Transition the status from **`Won`** to **`Invoiced`**.
-   * Enter the invoice date and reference number for internal records.
+1. Open **Sales → Payment Milestones** to find the billing event and check its current status, amount, due date, and linked funnel.
+2. Open the linked funnel's **Payment Milestones** tab to review its payment schedule.
+3. Users with milestone-management permission can edit supported planning fields. Amounts on an Invoiced milestone are locked.
+4. After billing, the supported manual status transition is **Won → Invoiced**. There is no reverse transition.
 
-> [!IMPORTANT]
-> **Status Transition Rules**: A milestone can only move from **`Won`** to **`Invoiced`**. It cannot be reverted once marked invoiced, ensuring clean financial and audit consistency.
+{% hint style="info" %}
+**Current interface limitation:** the milestone list, detail page, and shared payment schedule display status badges rather than a status-editing control in this repository version. If you need to record Invoiced and no action is available in your deployed version, contact your administrator or support team. Do not assume clicking the badge changes the status.
+{% endhint %}
+
+**Check the result:** confirm the status saved as Invoiced after an authorized update. Keep the invoice and billing reference in your billing system; a milestone status change does not issue an invoice or receipt.
+
+## Continue
+
+* [Projects & sales orders](07-projects-and-sales-orders.md)
+* [Troubleshooting](help-center/troubleshooting.md)
+* [Back to start](README.md)

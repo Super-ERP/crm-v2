@@ -1,6 +1,17 @@
-# 4. Opportunities & Sales Funnel
+---
+description: Qualify a customer need and keep each sales pursuit at the right stage.
+icon: filter
+---
 
-This chapter covers opportunity management, the PPVVC qualification framework, funnel stages, stage-gate automation, and project code allocation.
+# Opportunities and sales funnel
+
+Qualify a customer need and keep each sales pursuit at the right stage.
+
+## On this page
+
+* [Record PPVVC](#the-ppvvc-qualification-framework)
+* [Understand stages](#funnel-stages-and-lifecycle)
+* [Change a stage](#stage-advancement-and-rollback-rules)
 
 ---
 
@@ -12,7 +23,7 @@ In Q-App, sales pursuits are managed through a structured two-tier structure:
 
 ### Opportunity Codes
 Every Opportunity is assigned a system-generated, immutable identifier:
-$$\text{ORGCODEOPP-YYYY-NNNN}$$
+`ORGCODEOPP-YYYY-NNNN`
 *(Example: `QDTOPP-2026-0015`)*
 
 This code remains constant throughout the deal lifecycle and links all quotations, contracts, and delivery projects together.
@@ -31,17 +42,18 @@ To ensure consistent sales rigor, every Opportunity includes a dedicated **PPVVC
 | **Value** | Quantifiable ROI | What is the measurable financial return, cost savings, or operational efficiency for the client? |
 | **Control** | Process Governance | What influence do you have over their RFP timeline, decision criteria, and procurement approval milestones? |
 
-> [!TIP]
-> Filling out the PPVVC panel regularly increases forecast accuracy and helps managers identify risk factors during pipeline reviews.
+{% hint style="info" %}
+Filling out the PPVVC panel regularly increases forecast accuracy and helps managers identify risk factors during pipeline reviews.
+{% endhint %}
 
 ---
 
-## Funnel Stages & Lifecycle
+## Funnel Stages and Lifecycle
 
 Deals progress through standard stages:
 
 ```mermaid
-flowchart LR
+flowchart TD
     S0["0e: Identified"] --> S1["1d: Qualified"]
     S1 --> S2["2c: Proposal"]
     S2 --> S3["3b: Negotiation"]
@@ -49,6 +61,8 @@ flowchart LR
     S4 --> CW["Closed Won (Terminal)"]
     S4 --> CL["Closed Lost (Terminal)"]
 ```
+
+**Read the diagram:** the arrows show a typical progression. Available targets and required fields are shown in the stage-change dialog; the workflow does not require every deal to move one stage at a time.
 
 ### Stage Definitions
 
@@ -60,24 +74,30 @@ flowchart LR
    * **Project Code Allocation**: The moment a deal enters stage `4a` for the first time, the system **automatically allocates the official Delivery Project Code**. This allows delivery managers to begin resource planning before final contract signature.
 6. **Closed Won** *(Terminal)*:
    * Contract executed and deal won.
-   * **Automatic Action**: Sets all live payment milestones to `Won`.
+   * **Automatic Action**: Sets live Planned payment milestones to `Won`; Invoiced milestones retain their status.
    * Locks the stage from further changes.
 7. **Closed Lost** *(Terminal)*:
    * Prospect decided against the purchase or chose a competitor.
-   * Requires selecting the **Lost Reason** and the **Winning Competitor**.
+   * Requires written **Lost reason (close remarks)**. Complete any other fields requested by your organization.
 
 ---
 
-## Stage Advancement & Rollback Rules
+## Stage Advancement and Rollback Rules
 
 * **Advancing Forward**: Advancing to a higher stage runs stage-gate verification (e.g., verifying PPVVC completeness, valid quotation presence, or required manager sign-off).
-* **Rolling Backward**: You can roll back to any prior non-terminal stage (e.g., from `3b` back to `2c`) without restrictions if negotiations require re-scoping.
+* **Rolling Backward**: Moving between open stages to an earlier stage skips forward-entry gates. Reopening a parked/KIV deal requires approval. You still need permission to change stages.
 * **Terminal Stages**: Once an opportunity is marked **Closed Won** or **Closed Lost**, it cannot be moved to any other stage.
 
 ---
 
-## Multi-Year Contracts & Deal Costs
+## Multi-Year Contracts and Deal Costs
 
 Inside the Funnel detail page:
 * **Contract Panel**: For multi-year service contracts, specify annual breakdown figures (Year 1, Year 2, Year 3 ARR) to support financial forecasting.
 * **Costs Panel**: Record estimated third-party vendor costs, hardware procurement, or subcontractor fees to track gross margin before issuing quotes.
+
+## Continue
+
+* [Quotations & revisions](05-quotations-and-revisions.md)
+* [Troubleshooting](help-center/troubleshooting.md)
+* [Back to start](README.md)

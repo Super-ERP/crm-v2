@@ -1,133 +1,80 @@
 ---
-description: Get up and running quickly with role-specific "Day in the Life" workflows.
+description: A short daily checklist for sales, approvers, delivery teams, and administrators.
 icon: bolt
 ---
 
-# Quick Start by Role
+# Quick start by role
 
-Select your role below to view your daily workflow, essential actions, and recommended best practices in Q-App.
+Choose the checklist closest to your work. Role names can be customized, so use the actions available in your workspace as your guide.
+
+## Before you start
+
+1. Sign in and check the active organization in the sidebar.
+2. Open the relevant module. If it is missing, ask your administrator to check your permissions and enabled modules.
+3. Clear old filters if you cannot find a record you expect to see.
 
 {% tabs %}
-{% tab title="Sales Representative" icon="briefcase" %}
-### Daily Workflow for Sales Reps (Tier 20)
+{% tab title="Sales" %}
 
-As a sales representative, your primary objective is capturing interest, qualifying deals with PPVVC rigor, and issuing accurate, approved quotations.
+### Work a prospect through to a proposal
 
-{% stepper %}
-{% step %}
-#### Review Assigned Leads
-* Open **CRM → Leads** and set your view to *"My Open Leads"*.
-* Reach out to new prospects and update their status from `New` -> `Contacted`.
-* If a prospect is disqualified, select a structured reason (*No Budget, Out of Scope*).
-{% endstep %}
+1. Open **CRM → Leads** and review your assigned prospects. Update their details after outreach.
+2. For a qualified prospect, review the account and contact information before converting. Follow [Lead conversion](02-leads-management.md#converting-a-lead).
+3. Open **Sales → Opportunities** to maintain the customer need and PPVVC qualification: Power Sponsor, Pain, Vision, Value, and Control.
+4. Open **Sales → Funnel** to update the deal's stage. Complete the requirements shown by the stage-change dialog. See [Stage movement](04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules).
+5. Create a quotation, check items, currency, tax, and terms, then submit it for approval. After approval, use **Send** to record sending it. See [Quotations](05-quotations-and-revisions.md).
 
-{% step %}
-#### Convert Qualified Prospects
-* When a prospect confirms need and budget, click **Convert Lead** on the lead detail view.
-* The wizard automatically links or creates the **Account**, primary **Contact**, and an **Opportunity** seeded at stage **`0e` (Identified)**.
-{% endstep %}
+**You are done when:** the customer records are linked correctly, the funnel stage reflects the work completed, and the quote has the appropriate status.
 
-{% step %}
-#### Complete PPVVC & Advance Pipeline
-* Open **Sales → Funnel** and select your deal.
-* Fill out the **PPVVC** panel (*Power Sponsor, Pain, Vision, Value, Control*).
-* Advance the deal stage as discovery progresses (`0e` -> `1d` -> `2c` -> `3b`).
-{% endstep %}
-
-{% step %}
-#### Generate & Submit Quotation
-* Click **+ New Quotation** from the deal.
-* Add line items from the product catalog, check the SST tax rate, and review payment terms.
-* For every quotation, click **Submit for Approval** to route it to your manager.
-* Once approved, mark the quote as **Sent** and download the PDF for your client.
-{% endstep %}
-{% endstepper %}
-
-{% hint style="tip" %}
-**Customer requested changes?** Don't overwrite an existing quote! Click **Revise** on the quote header. The system locks the original for compliance and creates a new linked Draft revision.
+{% hint style="info" %}
+**Customer needs a change?** A sent quote can be revised into a separate draft. An approved quote must be returned to Draft before editing and approved again before sending. A pending quote needs a review decision first.
 {% endhint %}
+
 {% endtab %}
+{% tab title="Approvers" %}
 
-{% tab title="Sales Manager" icon="user-tie" %}
-### Daily Workflow for Sales Managers (Tier 60)
+### Review requests and pipeline progress
 
-As a sales manager, your role focuses on pipeline governance, quota forecasting, and unblocking commercial proposals.
+1. Open **Sales → Approvals → Incoming** for stage requests routed to you.
+2. Check the requested stage, supporting context, and attachments. Approve or reject using the review dialog.
+3. Review quotation approval separately on the quotation itself. Check the proposed pricing and terms before deciding.
+4. Review **Sales → Funnel** for deals that need follow-up. If enabled for your role, use **Insights → Forecast** for pipeline planning.
 
-{% stepper %}
-{% step %}
-#### Clear the Approvals Hub
-* Start your day at **Sales → Approvals**.
-* Inspect stage advancement requests assigned to you. Review pending quotations on their quotation detail pages.
-* Review deal margin impact and sales rep justification notes.
-* Click **Approve** or **Reject**. Stage decision notes are optional; quotation rejection requires a reason.
-{% endstep %}
+**You are done when:** requests have a clear decision and the requester knows what to change or do next.
 
-{% step %}
-#### Review Pipeline & Stage Gates
-* Open **Sales → Funnel** and switch views between the list table and the interactive stage board.
-* Identify stalled deals and check PPVVC completion on opportunities in stages `2c` and `3b`.
-* Note that entering stage **`4a`** reserves the official Delivery Project Code.
-{% endstep %}
+Continue with [Stage approvals](08-approvals-inbox.md) or [Quotation approvals](05-quotations-and-revisions.md#the-quotation-lifecycle).
 
-{% step %}
-#### Track Revenue Forecasts
-* Navigate to **Insights → Forecast**.
-* Analyze the weighted pipeline calculation ($\text{Value} \times \text{Stage Probability}$) across your team against quarterly targets.
-{% endstep %}
-{% endstepper %}
 {% endtab %}
+{% tab title="Delivery" %}
 
-{% tab title="Delivery Project Manager" icon="list-check" %}
-### Daily Workflow for Delivery Leads & PMs
+### Check a commercial handover
 
-Delivery managers connect won sales commitments into operational implementation.
+1. Review the funnel and its quotation to understand the agreed scope. Project-code allocation at `4a` supports planning; it is not proof that the deal is won.
+2. If enabled, open **Sales → Projects** to review delivery records and **Sales → Sales Orders** to check customer order details.
+3. Compare the customer PO or contract with the quotation. Resolve discrepancies before proceeding with delivery.
+4. Coordinate billing with the responsible team. After billing has occurred, coordinate recording **Won → Invoiced** with an authorized user. See the current status-control limitation in the payment milestone guide.
 
-{% stepper %}
-{% step %}
-#### Monitor Stage 4a Commitments
-* When an Opportunity reaches stage **`4a`**, the system automatically generates an allocated **Project Code** (e.g., `PRJ-2026-0042`).
-* Navigate to **Sales → Projects** to review incoming project handovers and review the commercial quotation scope.
-{% endstep %}
+**You are done when:** scope, customer order details, and delivery ownership are clear.
 
-{% step %}
-#### Verify Customer Sales Orders
-* Open **Sales → Sales Orders**.
-* Verify that the customer's signed Purchase Order (PO) amount, deliverables, and PO date match the approved quotation.
-* Confirm and approve the Sales Order to authorize internal resource allocation.
-{% endstep %}
+Continue with [Projects & sales orders](07-projects-and-sales-orders.md) and [Payment milestones](06-payment-milestones.md).
 
-{% step %}
-#### Track Delivery Payment Milestones
-* As project milestones are reached (e.g., *Phase 1 UAT Complete*), coordinate with the commercial team to mark milestones in **Sales → Payment Milestones** as **`Invoiced`**.
-{% endstep %}
-{% endstepper %}
 {% endtab %}
+{% tab title="Administrators" %}
 
-{% tab title="System Administrator" icon="gear" %}
-### Daily Workflow for Administrators (Tier 100)
+### Keep the workspace ready for the team
 
-System owners manage user access, organizational settings, and compliance audit logs.
+1. Open **Admin → Team & roles** to review membership, role permissions, and reporting relationships.
+2. Open **Admin → Settings** to check organization, taxonomy, and document defaults.
+3. Review a user's permissions and active organization when they report a missing module or record.
+4. If enabled, use **Insights → Audit** to investigate changes to records.
 
-{% stepper %}
-{% step %}
-#### Onboard Team Members
-* Open **Admin → Team & roles**.
-* Click **+ Invite Member** to grant access and assign roles (**Owner**, **Manager**, **Sales Rep**, **Viewer**).
-* Assign direct reporting managers to establish approval routing hierarchies.
-{% endstep %}
+**You are done when:** team members have the access they need and organization defaults match your working process.
 
-{% step %}
-#### Maintain Organizational Settings
-* Under **Admin → Settings**:
-  * **General**: Ensure the correct base ISO currency is configured.
-  * **Taxonomy**: Update product categories, lead sources, and lost deal reasons.
-  * **Documents**: Update standard quotation payment terms and default SST tax percentages.
-{% endstep %}
+Continue with [Administration & settings](09-admin-and-settings.md).
 
-{% step %}
-#### Monitor System Audit Trails
-* Navigate to **Insights → Audit** to inspect user login history, permission adjustments, and critical record diffs for data integrity.
-{% endstep %}
-{% endstepper %}
 {% endtab %}
 {% endtabs %}
+
+## Stuck on an action?
+
+Open [Troubleshooting](help-center/troubleshooting.md). For an access issue, include the module name, the record identifier, and the error message when contacting your administrator.

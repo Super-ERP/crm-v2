@@ -1,6 +1,17 @@
-# 7. Delivery Projects & Sales Orders
+---
+description: Check the sales handover and manage customer order records.
+icon: folder-open
+---
 
-This chapter covers post-sales execution: managing delivery projects and logging confirmed customer sales orders.
+# Delivery projects and sales orders
+
+Check the sales handover and manage customer order records.
+
+## On this page
+
+* [Manage projects](#creating-and-managing-projects)
+* [Submit an order](#submitting-a-sales-order)
+* [Review an order](#order-review-and-approval)
 
 ---
 
@@ -33,14 +44,14 @@ A **Sales Order** records the formal customer Purchase Order (PO) or signed cont
 ### The Sales Order Workflow
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Draft: Create Sales Order
-    Draft --> Submitted: Submit for Verification
-    Submitted --> Approved: Order Confirmed
-    Submitted --> Rejected: PO Discrepancy Found
-    Submitted --> NeedsRevision: Request Adjustment
-    NeedsRevision --> Submitted: Resubmit
+flowchart TD
+    D["Draft order"] --> S["Submitted for review"]
+    S --> A["Approved"]
+    S --> C["Needs revision"]
+    C --> S
 ```
+
+**Read the diagram:** a submitted order is reviewed before approval. If changes are requested, correct the order and resubmit it. A reviewer may also reject an order when it should not proceed. Check the actual status in your workspace before taking the next action.
 
 ### Submitting a Sales Order
 1. Navigate to **Sales → Sales Orders** and click **+ Submit Sales Order** (or create directly from the Project or Quotation page).
@@ -53,7 +64,13 @@ stateDiagram-v2
    * **Delivery Notes**: Any specific customer delivery prerequisites or billing requirements.
 3. Click **Submit Order**.
 
-### Order Review & Approval
+### Order Review and Approval
 * Orders with status **`Submitted`** appear in the sales order review queue.
 * Managers or operations administrators verify that the customer PO details match the approved quotation.
 * Upon confirmation, the status updates to **`Approved`**, authorizing procurement and resource deployment.
+
+## Continue
+
+* [Stage approvals](08-approvals-inbox.md)
+* [Troubleshooting](help-center/troubleshooting.md)
+* [Back to start](README.md)
