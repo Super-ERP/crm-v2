@@ -7,7 +7,7 @@ icon: stamp
 
 Use **Sales → Approvals** to review requests to change a funnel stage. Quotation approval is handled on the quotation itself; see [Quotation approvals](05-quotations-and-revisions.md#the-quotation-lifecycle).
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#stage-gate).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#stage-gate).
 
 ## On this page
 

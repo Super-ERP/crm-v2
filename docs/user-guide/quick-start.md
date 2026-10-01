@@ -50,7 +50,7 @@ Open **CRM → Leads** and review your assigned prospects. Update their details 
 
 #### Convert qualified prospects
 
-For a qualified prospect, review the account and contact information before converting. Follow [Lead conversion](02-leads-management.md#converting-a-lead).
+For a qualified prospect, review the account and contact information before converting. Follow [Lead conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management#converting-a-lead).
 
 {% endstep %}
 {% step %}
@@ -64,14 +64,14 @@ Open **Sales → Opportunities** to maintain the customer need and PPVVC qualifi
 
 #### Update the funnel stage
 
-Open **Sales → Funnel** to update the deal's stage. Complete the requirements shown by the stage-change dialog. See [Stage movement](04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules).
+Open **Sales → Funnel** to update the deal's stage. Complete the requirements shown by the stage-change dialog. See [Stage movement](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#stage-advancement-and-rollback-rules).
 
 {% endstep %}
 {% step %}
 
 #### Prepare and approve the quote
 
-Create a quotation, check items, currency, tax, and terms, then submit it for approval. After approval, use **Send** to record sending it. See [Quotations](05-quotations-and-revisions.md).
+Create a quotation, check items, currency, tax, and terms, then submit it for approval. After approval, use **Send** to record sending it. See [Quotations](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions).
 
 {% endstep %}
 {% endstepper %}
@@ -120,7 +120,7 @@ Review **Sales → Funnel** for deals that need follow-up. If enabled for your r
 
 **You are done when:** requests have a clear decision and the requester knows what to change or do next.
 
-Continue with [Stage approvals](08-approvals-inbox.md) or [Quotation approvals](05-quotations-and-revisions.md#the-quotation-lifecycle).
+Continue with [Stage approvals](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox) or [Quotation approvals](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#the-quotation-lifecycle).
 
 {% endtab %}
 {% tab title="Delivery" %}
@@ -160,7 +160,7 @@ Coordinate billing with the responsible team. After billing has occurred, coordi
 
 **You are done when:** scope, customer order details, and delivery ownership are clear.
 
-Continue with [Projects & sales orders](07-projects-and-sales-orders.md) and [Payment milestones](06-payment-milestones.md).
+Continue with [Projects & sales orders](https://jienweng.gitbook.io/q-app/docs/delivery-and-administration/07-projects-and-sales-orders) and [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
 
 {% endtab %}
 {% tab title="Administrators" %}
@@ -200,11 +200,11 @@ If enabled, use **Insights → Audit** to investigate changes to records.
 
 **You are done when:** team members have the access they need and organization defaults match your working process.
 
-Continue with [Administration & settings](09-admin-and-settings.md).
+Continue with [Administration & settings](https://jienweng.gitbook.io/q-app/docs/delivery-and-administration/09-admin-and-settings).
 
 {% endtab %}
 {% endtabs %}
 
 ## Stuck on an action?
 
-Open [Troubleshooting](help-center/troubleshooting.md). For an access issue, include the module name, the record identifier, and the error message when contacting your administrator.
+Open [Troubleshooting](https://jienweng.gitbook.io/q-app/docs/help/troubleshooting). For an access issue, include the module name, the record identifier, and the error message when contacting your administrator.

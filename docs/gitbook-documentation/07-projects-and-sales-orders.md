@@ -7,7 +7,7 @@ icon: folder-open
 
 Check the sales handover and manage customer order records.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#sales-order).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#sales-order).
 
 ## On this page
 
@@ -127,4 +127,4 @@ Click **Submit Order**.
 
 * [Stage approvals](08-approvals-inbox.md)
 * [Troubleshooting](help-center/troubleshooting.md)
-* [Back to start](README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)

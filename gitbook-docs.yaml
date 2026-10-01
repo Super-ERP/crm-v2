@@ -2,10 +2,52 @@ $schema: https://api.gitbook.com/gitbook-docs.yaml
 site:
   title: Q-App
   structure:
-    - type: space
-      key: user-guide
-      title: Q-App User Guide
-      path: user-guide
+    - type: section
+      key: getting-started-section
+      title: Getting Started
+      path: getting-started
       default: true
-      content:
-        directory: ./docs/user-guide
+      children:
+        - type: space
+          key: user-guide
+          title: Getting Started
+          path: user-guide
+          default: true
+          content:
+            directory: ./docs/user-guide
+    - type: section
+      key: documentation-section
+      title: Documentation
+      path: docs
+      children:
+        - type: space
+          key: qapp-documentation
+          title: Documentation
+          path: documentation
+          default: true
+          content:
+            directory: ./docs/gitbook-documentation
+    - type: section
+      key: reference-section
+      title: Reference
+      path: reference
+      children:
+        - type: space
+          key: qapp-reference
+          title: Reference
+          path: reference
+          default: true
+          content:
+            directory: ./docs/gitbook-reference
+    - type: section
+      key: changelog-section
+      title: Changelog
+      path: changelog
+      children:
+        - type: space
+          key: qapp-changelog
+          title: Changelog
+          path: changelog
+          default: true
+          content:
+            directory: ./docs/gitbook-changelog

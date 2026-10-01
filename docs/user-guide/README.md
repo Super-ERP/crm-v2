@@ -9,7 +9,7 @@ Q-App brings customer records, sales pursuits, quotations, and delivery handover
 
 ## Choose your next step
 
-<table data-view="cards"><thead><tr><th>Guide</th><th>Description</th><th data-hidden data-card-target data-type="content-ref">Link</th></tr></thead><tbody><tr><td><strong>Get started</strong></td><td>Follow a short checklist for sales, approvers, delivery, or administration.</td><td><a href="quick-start.md">Quick start by role</a></td></tr><tr><td><strong>Read the documentation</strong></td><td>Find a task guide for each module, with steps and workflow explanations.</td><td><a href="documentation.md">Documentation overview</a></td></tr><tr><td><strong>Look up a term</strong></td><td>Understand accounts, opportunities, PPVVC, quotations, and billing terms.</td><td><a href="reference/terminology.md">Terminology</a></td></tr><tr><td><strong>See what changed</strong></td><td>Read product changes and documentation updates.</td><td><a href="product-changelog.md">Product changelog</a></td></tr></tbody></table>
+<table data-view="cards"><thead><tr><th>Guide</th><th>Description</th><th data-hidden data-card-target data-type="content-ref">Link</th></tr></thead><tbody><tr><td><strong>Get started</strong></td><td>Follow a short checklist for sales, approvers, delivery, or administration.</td><td><a href="quick-start.md">Quick start by role</a></td></tr><tr><td><strong>Read the documentation</strong></td><td>Find a task guide for each module, with steps and workflow explanations.</td><td><a href="https://jienweng.gitbook.io/q-app/docs">Documentation overview</a></td></tr><tr><td><strong>Look up a term</strong></td><td>Understand accounts, opportunities, PPVVC, quotations, and billing terms.</td><td><a href="https://jienweng.gitbook.io/q-app/reference/terminology">Terminology</a></td></tr><tr><td><strong>See what changed</strong></td><td>Read product changes and documentation updates.</td><td><a href="https://jienweng.gitbook.io/q-app/changelog">Product changelog</a></td></tr></tbody></table>
 
 ## First time here?
 
@@ -32,13 +32,13 @@ Open [Quick start by role](quick-start.md) and follow the checklist closest to y
 
 #### Learn as you work
 
-Use the [Documentation overview](documentation.md) for detailed tasks and [Terminology](reference/terminology.md) for unfamiliar words. The [Stages and statuses](reference/stages-and-statuses.md) reference explains what each label means.
+Use the [Documentation overview](https://jienweng.gitbook.io/q-app/docs) for detailed tasks and [Terminology](https://jienweng.gitbook.io/q-app/reference/terminology) for unfamiliar words. The [Stages and statuses](https://jienweng.gitbook.io/q-app/reference/stages-and-statuses) reference explains what each label means.
 
 {% endstep %}
 {% endstepper %}
 
 {% hint style="info" %}
-**Cannot find a button or module?** Check your active organization. Your permissions and enabled modules determine what appears. See [Permissions and approval routing](reference/permissions-and-approvals.md) or ask your administrator.
+**Cannot find a button or module?** Check your active organization. Your permissions and enabled modules determine what appears. See [Permissions and approval routing](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals) or ask your administrator.
 {% endhint %}
 
 ## How the workflow fits together
@@ -66,4 +66,4 @@ flowchart TD
 
 ## Need help?
 
-Open [Troubleshooting](help-center/troubleshooting.md) for a blocked action or [Frequently asked questions](help-center/faqs.md) for a short answer. Check [Product changelog](product-changelog.md) for application changes and [Guide updates](changelog.md) for documentation changes.
+Open [Troubleshooting](https://jienweng.gitbook.io/q-app/docs/help/troubleshooting) for a blocked action or [Frequently asked questions](https://jienweng.gitbook.io/q-app/docs/help/faqs) for a short answer. Check [Product changelog](https://jienweng.gitbook.io/q-app/changelog) for application changes and [Guide updates](https://jienweng.gitbook.io/q-app/changelog/documentation/guide-updates) for documentation changes.

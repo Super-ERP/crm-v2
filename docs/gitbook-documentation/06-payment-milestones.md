@@ -7,7 +7,7 @@ icon: calendar
 
 Plan billing events and record when confirmed milestones have been invoiced.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#payment-milestone).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#payment-milestone).
 
 ## On this page
 
@@ -133,4 +133,4 @@ After billing, the supported manual status transition is **Won → Invoiced**. T
 
 * [Projects & sales orders](07-projects-and-sales-orders.md)
 * [Troubleshooting](help-center/troubleshooting.md)
-* [Back to start](README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)

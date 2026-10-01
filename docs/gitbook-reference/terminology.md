@@ -25,7 +25,7 @@ An inquiry or prospect that you are still qualifying. For example, someone from 
 
 ### Lead conversion
 
-The action that links or creates an account, creates a contact, and creates the opportunity and funnel deal. The converted lead retains links to those records and cannot be converted again. See [Lead conversion](../02-leads-management.md#converting-a-lead).
+The action that links or creates an account, creates a contact, and creates the opportunity and funnel deal. The converted lead retains links to those records and cannot be converted again. See [Lead conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management#converting-a-lead).
 
 ### Account
 
@@ -33,7 +33,7 @@ The company or organization you work with, such as Acme. It holds customer conte
 
 ### Contact and person
 
-An individual stakeholder associated with an account, such as Acme's procurement manager. The sidebar calls these records **Contacts**; some identifiers and routes use **person**. See [Accounts and contacts](../03-accounts-and-contacts.md).
+An individual stakeholder associated with an account, such as Acme's procurement manager. The sidebar calls these records **Contacts**; some identifiers and routes use **person**. See [Accounts and contacts](https://jienweng.gitbook.io/q-app/docs/customer-records/03-accounts-and-contacts).
 
 ## Sales pursuits
 
@@ -43,7 +43,7 @@ The record describing a customer need, qualification context, and target budget.
 
 ### Funnel deal
 
-The particular sales pursuit you track through stages, with quotations, costs, and an expected close date. Keep the distinction clear: the opportunity provides context, while the funnel deal carries the stage and commercial progress. See [Opportunities and sales funnel](../04-opportunities-and-funnel.md).
+The particular sales pursuit you track through stages, with quotations, costs, and an expected close date. Keep the distinction clear: the opportunity provides context, while the funnel deal carries the stage and commercial progress. See [Opportunities and sales funnel](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel).
 
 ### Pipeline and funnel
 
@@ -65,7 +65,7 @@ A qualification framework used to describe the buyer and buying process:
 | **Value** | The measurable benefit of the solution. | How much time or cost will it save? |
 | **Control** | Your understanding of the decision and procurement process. | Who decides, and what happens next? |
 
-See [PPVVC qualification](../04-opportunities-and-funnel.md#the-ppvvc-qualification-framework).
+See [PPVVC qualification](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#the-ppvvc-qualification-framework).
 
 ### KIV and Keep In View
 
@@ -87,7 +87,7 @@ The benefit of an investment compared with its cost. In qualification, record th
 
 ### Quotation
 
-The proposal containing the customer-facing scope, items, prices, tax, and terms. Approval authorizes sending the proposal; customer acceptance records the customer's decision. See [Quotations and revisions](../05-quotations-and-revisions.md).
+The proposal containing the customer-facing scope, items, prices, tax, and terms. Approval authorizes sending the proposal; customer acceptance records the customer's decision. See [Quotations and revisions](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions).
 
 ### Line item
 
@@ -111,11 +111,11 @@ The currency used for an amount. **MYR**, **USD**, and **SGD** are examples of t
 
 ### Tax inclusive and tax exclusive
 
-**Tax inclusive** pricing includes tax within the stated price. **Tax exclusive** pricing adds tax to the price. **SST** means Sales and Service Tax; the applicable label and rate come from your organization's configuration. See [Quotation pricing](../05-quotations-and-revisions.md#adding-line-items-and-product-pricing).
+**Tax inclusive** pricing includes tax within the stated price. **Tax exclusive** pricing adds tax to the price. **SST** means Sales and Service Tax; the applicable label and rate come from your organization's configuration. See [Quotation pricing](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#adding-line-items-and-product-pricing).
 
 ### Payment milestone
 
-A planned billing event, such as a deposit or delivery payment. Its status can be **Planned**, **Won**, or **Invoiced**. It is a planning record and does not issue an invoice or receipt. See [Payment milestones](../06-payment-milestones.md).
+A planned billing event, such as a deposit or delivery payment. Its status can be **Planned**, **Won**, or **Invoiced**. It is a planning record and does not issue an invoice or receipt. See [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
 
 ## Delivery
 
@@ -129,7 +129,7 @@ The customer's purchasing document, with an order reference and commercial detai
 
 ### Sales order
 
-The Q-App record used to track the customer PO or signed commercial order. A sales order and a quotation are separate records. See [Projects and sales orders](../07-projects-and-sales-orders.md).
+The Q-App record used to track the customer PO or signed commercial order. A sales order and a quotation are separate records. See [Projects and sales orders](https://jienweng.gitbook.io/q-app/docs/delivery-and-administration/07-projects-and-sales-orders).
 
 ### UAT and user acceptance testing
 
@@ -161,4 +161,4 @@ Recorded events describing actions and changes, including who acted and when. It
 
 * [Stages and statuses](stages-and-statuses.md)
 * [Permissions and approval routing](permissions-and-approvals.md)
-* [Documentation overview](../documentation.md)
+* [Documentation overview](https://jienweng.gitbook.io/q-app/docs)

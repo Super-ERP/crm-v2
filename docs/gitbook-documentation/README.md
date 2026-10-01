@@ -7,7 +7,7 @@ icon: book-open
 
 Use these guides while you work in Q-App. Each module page explains the records you are working with, the actions to take, and the rules that affect the result.
 
-New to Q-App? Start with [Quick start by role](quick-start.md). Need a definition rather than a procedure? Open [Terminology](reference/terminology.md).
+New to Q-App? Start with [Quick start by role](https://jienweng.gitbook.io/q-app/getting-started/quick-start). Need a definition rather than a procedure? Open [Terminology](https://jienweng.gitbook.io/q-app/reference/terminology).
 
 ## Customer records
 
@@ -34,8 +34,8 @@ New to Q-App? Start with [Quick start by role](quick-start.md). Need a definitio
 
 ## Reference and help
 
-* [Terminology](reference/terminology.md): definitions and examples.
-* [Stages and statuses](reference/stages-and-statuses.md): what the labels mean and which decisions are separate.
-* [Permissions and approval routing](reference/permissions-and-approvals.md): why an action appears and who approves it.
+* [Terminology](https://jienweng.gitbook.io/q-app/reference/terminology): definitions and examples.
+* [Stages and statuses](https://jienweng.gitbook.io/q-app/reference/stages-and-statuses): what the labels mean and which decisions are separate.
+* [Permissions and approval routing](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals): why an action appears and who approves it.
 * [Troubleshooting](help-center/troubleshooting.md): what to check when an action is blocked.
-* [Product changelog](product-changelog.md): recent application changes.
+* [Product changelog](https://jienweng.gitbook.io/q-app/changelog): recent application changes.
