@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { showActionError } from "@/lib/show-action-error"
 import {
   DndContext,
@@ -18,6 +19,7 @@ import {
 } from "@dnd-kit/core"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { formatMoney, formatPercent } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { FunnelWithStages } from "@/lib/lookups"
@@ -55,13 +57,13 @@ function CardBody({ c }: { c: OpportunityListRow }) {
     <>
       <p className="truncate text-sm font-medium">{c.name}</p>
       <p className="truncate text-xs text-muted-foreground">{c.accountName}</p>
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-sm font-semibold tabular-nums">
+      <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm font-semibold tabular-nums">
           {(c.estimatedAmount ?? c.amount)
             ? formatMoney((c.estimatedAmount ?? c.amount)!, c.currency)
             : "—"}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="max-w-[45%] min-w-0 truncate text-right text-xs text-muted-foreground" title={c.ownerName ?? undefined}>
           {c.ownerName ?? ""}
         </span>
       </div>
@@ -135,10 +137,10 @@ function StageColumn({
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className={cn("size-2 rounded-full", kindAccent(stage.kind))} />
-          <span className="text-sm font-medium">{stage.name}</span>
-          <span className="text-xs text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className={cn("size-2 shrink-0 rounded-full", kindAccent(stage.kind))} />
+          <span className="min-w-0 truncate text-sm font-medium" title={stage.name}>{stage.name}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">
             {formatPercent(stage.probability)}
           </span>
         </div>
@@ -192,6 +194,8 @@ export function OpportunitiesBoard({
   )
 
   const [activeId, setActiveId] = React.useState<string | null>(null)
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const [scrollEdges, setScrollEdges] = React.useState({ left: false, right: false })
   // Controlled stage-advance dialog, opened when a drop targets a gated stage.
   const [gated, setGated] = React.useState<{
     funnelId: string
@@ -224,6 +228,31 @@ export function OpportunitiesBoard({
         : [],
     [defaultFunnel]
   )
+
+  const updateScrollEdges = React.useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setScrollEdges({
+      left: el.scrollLeft > 2,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 2,
+    })
+  }, [])
+
+  React.useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    updateScrollEdges()
+    const observer = new ResizeObserver(updateScrollEdges)
+    observer.observe(el)
+    for (const child of el.children) observer.observe(child)
+    return () => observer.disconnect()
+  }, [stages, updateScrollEdges])
+
+  function scrollStages(direction: -1 | 1) {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({ left: direction * Math.max(288, el.clientWidth * 0.75), behavior: "smooth" })
+  }
 
   // Only show deals that live on this funnel, bucketed by stage.
   const byStage = React.useMemo(() => {
@@ -322,15 +351,44 @@ export function OpportunitiesBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveId(null)}
       >
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {stages.map((stage) => (
-            <StageColumn
-              key={stage.id}
-              stage={stage}
-              cards={byStage.get(stage.id) ?? []}
-              draggable={canAdvance}
-            />
-          ))}
+        <div className="relative min-w-0 max-w-full">
+          <div
+            ref={scrollRef}
+            role="region"
+            aria-label="Sales funnel stages"
+            tabIndex={0}
+            onScroll={updateScrollEdges}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                event.preventDefault()
+                scrollStages(event.key === "ArrowLeft" ? -1 : 1)
+              }
+            }}
+            className="flex w-full min-w-0 gap-4 overflow-x-auto scroll-smooth pb-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {stages.map((stage) => (
+              <StageColumn
+                key={stage.id}
+                stage={stage}
+                cards={byStage.get(stage.id) ?? []}
+                draggable={canAdvance}
+              />
+            ))}
+          </div>
+          {!activeId && scrollEdges.left ? (
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 pl-1">
+              <Button type="button" variant="outline" size="icon-sm" className="pointer-events-auto sticky top-[45vh] shadow-sm" aria-label="Scroll stages left" title="Scroll stages left" onClick={() => scrollStages(-1)}>
+                <ChevronLeft className="size-4" />
+              </Button>
+            </div>
+          ) : null}
+          {!activeId && scrollEdges.right ? (
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 pr-1 text-right">
+              <Button type="button" variant="outline" size="icon-sm" className="pointer-events-auto sticky top-[45vh] shadow-sm" aria-label="Scroll stages right" title="Scroll stages right" onClick={() => scrollStages(1)}>
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          ) : null}
         </div>
 
         <DragOverlay>

@@ -1,5 +1,5 @@
 import "server-only"
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { type Tx, type ServerContext } from "@/lib/actions"
 import { getEntitledModuleMap } from "@/lib/modules.server"
@@ -1101,18 +1101,67 @@ export type QuotationListItem = QuotationRow & {
   lineItemCount: number
 }
 
+export type QuotationListQuery = {
+  search?: string
+  accountIds?: string[]
+  accountOwnerIds?: string[]
+  opportunityIds?: string[]
+  funnelIds?: string[]
+  statuses?: QuotationStatus[]
+  sort?: { id: string; desc: boolean }
+}
+
 export async function quotationsList(
   tx: Tx,
   ctx: ServerContext,
-  { limit, offset }: PagingOpts
+  { limit, offset, query }: PagingOpts & { query?: QuotationListQuery }
 ): Promise<ReadResult<QuotationListItem>> {
   const visible = await visibleMemberIds(tx, ctx)
   const accountOwnerMember = alias(member, "quotation_account_owner_member")
   const accountOwnerUser = alias(user, "quotation_account_owner_user")
+  const term = query?.search?.trim()
+  const pattern = term ? `%${term.replace(/[\\%_]/g, "\\$&")}%` : null
   const where = and(
     isNull(quotations.deletedAt),
-    ownerScope(funnels.ownerMemberId, visible)
+    ownerScope(funnels.ownerMemberId, visible),
+    pattern ? or(
+      ilike(quotations.quoteNumber, pattern),
+      ilike(accounts.name, pattern),
+      ilike(accounts.code, pattern),
+      ilike(accountOwnerUser.name, pattern),
+      ilike(funnels.name, pattern),
+      ilike(opportunities.name, pattern),
+      ilike(opportunities.code, pattern)
+    ) : undefined,
+    query?.accountIds?.length ? inArray(funnels.accountId, query.accountIds) : undefined,
+    query?.accountOwnerIds?.length ? inArray(accounts.ownerMemberId, query.accountOwnerIds) : undefined,
+    query?.opportunityIds?.length ? inArray(opportunities.id, query.opportunityIds) : undefined,
+    query?.funnelIds?.length ? inArray(funnels.id, query.funnelIds) : undefined,
+    query?.statuses?.length ? inArray(quotations.status, query.statuses) : undefined
   )
+  const lineItemCount = sql<number>`(
+    select count(*) from ${quotationLineItems}
+    where ${quotationLineItems.quotationId} = ${quotations.id}
+  )`.mapWith(Number)
+  const sortColumns = {
+    quoteNumber: quotations.quoteNumber,
+    accountId: accounts.name,
+    accountOwnerMemberId: accountOwnerUser.name,
+    opportunityId: opportunities.name,
+    funnelId: funnels.name,
+    lineItemCount,
+    subtotal: quotations.subtotal,
+    taxTotal: quotations.taxTotal,
+    total: quotations.total,
+    status: quotations.status,
+    validUntil: quotations.validUntil,
+  }
+  const sortColumn = query?.sort?.id
+    ? sortColumns[query.sort.id as keyof typeof sortColumns]
+    : undefined
+  const order = sortColumn
+    ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn)
+    : desc(quotations.createdAt)
   const [rows, totalRows] = await Promise.all([
     tx
       .select({
@@ -1126,10 +1175,7 @@ export async function quotationsList(
         opportunityId: opportunities.id,
         opportunityCode: opportunities.code,
         opportunityName: opportunities.name,
-        lineItemCount: sql<number>`(
-          select count(*) from ${quotationLineItems}
-          where ${quotationLineItems.quotationId} = ${quotations.id}
-        )`.mapWith(Number),
+        lineItemCount,
       })
       .from(quotations)
       .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
@@ -1138,13 +1184,17 @@ export async function quotationsList(
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .where(where)
-      .orderBy(desc(quotations.createdAt))
+      .orderBy(order, desc(quotations.id))
       .limit(limit)
       .offset(offset),
     tx
       .select({ count: sql<number>`count(*)::int` })
       .from(quotations)
       .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
+      .leftJoin(accounts, eq(funnels.accountId, accounts.id))
+      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
+      .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .where(where),
   ])
   return {
@@ -1162,6 +1212,57 @@ export async function quotationsList(
       lineItemCount: r.lineItemCount,
     })),
     total: countOf(totalRows),
+  }
+}
+
+export type QuotationFilterOptions = {
+  accounts: Array<{ value: string; label: string }>
+  accountOwners: Array<{ value: string; label: string }>
+  opportunities: Array<{ value: string; label: string }>
+  funnels: Array<{ value: string; label: string }>
+}
+
+/** Compact distinct filter choices across every visible quotation. */
+export async function quotationsFilterOptions(
+  tx: Tx,
+  ctx: ServerContext
+): Promise<QuotationFilterOptions> {
+  const visible = await visibleMemberIds(tx, ctx)
+  const accountOwnerMember = alias(member, "quotation_filter_owner_member")
+  const accountOwnerUser = alias(user, "quotation_filter_owner_user")
+  const [result] = await tx
+    .select({
+      accounts: sql<QuotationFilterOptions["accounts"]>`coalesce(
+        jsonb_agg(distinct jsonb_build_object('value', ${accounts.id}, 'label',
+          concat_ws(' — ', nullif(${accounts.code}, ''), ${accounts.name})))
+        filter (where ${accounts.id} is not null), '[]'::jsonb)`,
+      accountOwners: sql<QuotationFilterOptions["accountOwners"]>`coalesce(
+        jsonb_agg(distinct jsonb_build_object('value', ${accounts.ownerMemberId}, 'label',
+          coalesce(${accountOwnerUser.name}, 'Unknown')))
+        filter (where ${accounts.ownerMemberId} is not null), '[]'::jsonb)`,
+      opportunities: sql<QuotationFilterOptions["opportunities"]>`coalesce(
+        jsonb_agg(distinct jsonb_build_object('value', ${opportunities.id}, 'label',
+          concat_ws(' — ', nullif(${opportunities.code}, ''), ${opportunities.name})))
+        filter (where ${opportunities.id} is not null), '[]'::jsonb)`,
+      funnels: sql<QuotationFilterOptions["funnels"]>`coalesce(
+        jsonb_agg(distinct jsonb_build_object('value', ${funnels.id}, 'label',
+          ${funnels.name}))
+        filter (where ${funnels.id} is not null), '[]'::jsonb)`,
+    })
+    .from(quotations)
+    .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
+    .leftJoin(accounts, eq(funnels.accountId, accounts.id))
+    .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+    .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
+    .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
+    .where(and(isNull(quotations.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
+  const sort = (options: QuotationFilterOptions["accounts"]) =>
+    options.sort((a, b) => a.label.localeCompare(b.label))
+  return {
+    accounts: sort(result?.accounts ?? []),
+    accountOwners: sort(result?.accountOwners ?? []),
+    opportunities: sort(result?.opportunities ?? []),
+    funnels: sort(result?.funnels ?? []),
   }
 }
 

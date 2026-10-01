@@ -329,7 +329,7 @@ export function OpportunityForm({
               )}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <FormField
                 control={form.control}
                 name="accountId"

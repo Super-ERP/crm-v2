@@ -94,12 +94,12 @@ export function Combobox({
             aria-invalid={ariaInvalid}
             disabled={disabled}
             className={cn(
-              "h-8 w-full justify-between gap-1.5 px-2.5 font-normal aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
+              "h-8 min-w-0 w-full justify-between gap-1.5 px-2.5 font-normal aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
               !selected && "text-muted-foreground",
               className
             )}
           >
-            <span className="line-clamp-1 text-left">
+            <span className="min-w-0 flex-1 truncate text-left" title={selected?.label}>
               {selected ? selected.label : placeholder}
             </span>
             <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -129,7 +129,7 @@ export function Combobox({
                     handleOpenChange(false)
                   }}
                 >
-                  {option.label}
+                  <span className="min-w-0 break-words">{option.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
