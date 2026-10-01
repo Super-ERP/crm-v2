@@ -9,7 +9,7 @@ This chapter covers commercial payment milestones, cashflow planning, automated 
 **Payment Milestones** are commercial planning records that break down deal value into distinct billing events (e.g., *Deposit, Delivery, UAT Acceptance, Final Retainer*).
 
 > [!NOTE]
-> **Planning & Operational Role**: Payment milestones in Super-ERP serve as commercial billing indicators and cashflow planners. They are intentionally decoupled from automated ERP invoice generation, allowing finance teams to coordinate billing according to contractual milestones.
+> **Planning & Operational Role**: Payment milestones in Q-App serve as commercial billing indicators and cashflow planners. They are intentionally decoupled from automated ERP invoice generation, allowing finance teams to coordinate billing according to contractual milestones.
 
 ---
 
