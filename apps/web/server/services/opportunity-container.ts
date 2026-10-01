@@ -168,17 +168,18 @@ export async function ensureOpportunityProjectCode(
 }
 
 /**
- * Recompute a container's Total Estimated Funnel Amount = Σ of its (non-deleted)
- * child funnels' estimatedAmount. Call after any funnel insert/update/soft-delete
- * that changes an estimatedAmount or re-parents a funnel.
+ * Recompute per-currency estimated totals after any child funnel change.
+ * The legacy scalar is null for mixed currencies, so no caller can mistake a
+ * sum of unlike units for a financial total.
  */
 export async function recomputeOpportunityTotal(
   tx: Tx,
   tenantId: string,
   opportunityId: string
 ): Promise<void> {
-  const [row] = await tx
+  const rows = await tx
     .select({
+      currency: funnels.currency,
       total: sql<string>`coalesce(sum(${funnels.estimatedAmount}), 0)::numeric(14,2)`,
     })
     .from(funnels)
@@ -189,8 +190,15 @@ export async function recomputeOpportunityTotal(
         isNull(funnels.deletedAt)
       )
     )
+    .groupBy(funnels.currency)
+    .orderBy(funnels.currency)
+  const totals = rows.map(({ currency, total }) => ({ currency, total }))
   await tx
     .update(opportunities)
-    .set({ totalEstimatedFunnelAmount: row?.total ?? "0", updatedAt: new Date() })
-    .where(eq(opportunities.id, opportunityId))
+    .set({
+      estimatedTotalsByCurrency: totals,
+      totalEstimatedFunnelAmount: totals.length > 1 ? null : totals[0]?.total ?? "0",
+      updatedAt: new Date(),
+    })
+    .where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, tenantId)))
 }

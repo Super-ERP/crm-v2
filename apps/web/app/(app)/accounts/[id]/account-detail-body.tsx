@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -203,9 +204,10 @@ export function AccountDetailBody(props: AccountDetailData) {
       {
         accessorKey: "totalEstimatedFunnelAmount",
         header: rightHeader("Value"),
-        cell: moneyCell(
-          (r) => r.totalEstimatedFunnelAmount,
-          (r) => r.currency
+        cell: ({ row }) => (
+          <span className="tabular-nums">
+            {formatOpportunityEstimatedTotals(row.original.estimatedTotalsByCurrency, row.original.currency)}
+          </span>
         ),
       },
     ],

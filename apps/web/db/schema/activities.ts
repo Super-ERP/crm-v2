@@ -1,4 +1,5 @@
 import { pgTable, pgEnum, uuid, text, timestamp, index, jsonb } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 import { organization, member } from "./auth"
 import { timestamps } from "./_helpers"
 
@@ -54,5 +55,10 @@ export const activities = pgTable(
       .defaultNow(),
     ...timestamps,
   },
-  (t) => [index("activities_entity_idx").on(t.tenantId, t.entityType, t.entityId)]
+  (t) => [
+    index("activities_entity_idx").on(t.tenantId, t.entityType, t.entityId),
+    index("activities_due_member_idx")
+      .on(t.tenantId, t.memberId, t.dueAt)
+      .where(sql`${t.dueAt} is not null`),
+  ]
 )

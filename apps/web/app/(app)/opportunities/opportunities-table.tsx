@@ -6,7 +6,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTable, SortableHeader, linkCell } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
-import { formatMoney } from "@/lib/format"
+import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
 import { listOpportunityPage, type OpportunityContainerRow } from "./actions"
 
 export function OpportunitiesTable({ initialPage, filterOptions }: {
@@ -37,12 +37,11 @@ export function OpportunitiesTable({ initialPage, filterOptions }: {
       },
       {
         accessorKey: "totalEstimatedFunnelAmount",
-        header: ({ column }) => (
-          <SortableHeader column={column} title="Total est. funnel amount" />
-        ),
+        header: "Total est. funnel amount",
+        enableSorting: false,
         cell: ({ row }) => (
           <span className="tabular-nums">
-            {formatMoney(row.original.totalEstimatedFunnelAmount, row.original.currency)}
+            {formatOpportunityEstimatedTotals(row.original.estimatedTotalsByCurrency, row.original.currency)}
           </span>
         ),
       },

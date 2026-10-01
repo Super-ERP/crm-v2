@@ -509,6 +509,7 @@ export type OpportunityContainerRow = {
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
   totalEstimatedFunnelAmount: string | null
+  estimatedTotalsByCurrency: Array<{ currency: string; total: string }>
   funnelCount: number
   currency: string
   createdAt: Date
@@ -538,7 +539,6 @@ export async function opportunitiesList(
   const sortColumns = {
     name: opportunities.name,
     accountId: accounts.name,
-    totalEstimatedFunnelAmount: opportunities.totalEstimatedFunnelAmount,
     funnelCount,
     accountOwnerMemberId: accountOwnerUser.name,
   }
@@ -556,6 +556,7 @@ export async function opportunitiesList(
         accountOwnerMemberId: accounts.ownerMemberId,
         accountOwnerName: accountOwnerUser.name,
         totalEstimatedFunnelAmount: opportunities.totalEstimatedFunnelAmount,
+        estimatedTotalsByCurrency: opportunities.estimatedTotalsByCurrency,
         currency: opportunities.currency,
         createdAt: opportunities.createdAt,
       })

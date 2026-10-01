@@ -34,6 +34,7 @@ export type OpportunityContainerRow = {
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
   totalEstimatedFunnelAmount: string | null
+  estimatedTotalsByCurrency: Array<{ currency: string; total: string }>
   funnelCount: number
   currency: string
   createdAt: Date
@@ -41,7 +42,7 @@ export type OpportunityContainerRow = {
 
 export async function listOpportunityPage(input: ServerTableQuery): Promise<{ rows: OpportunityContainerRow[]; total: number }> {
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => opportunitiesList(tx, ctx,
-    normalizeRecordListQuery(input, ["name", "accountId", "totalEstimatedFunnelAmount", "funnelCount", "accountOwnerMemberId"], ["accountId", "accountOwnerMemberId"])))
+    normalizeRecordListQuery(input, ["name", "accountId", "funnelCount", "accountOwnerMemberId"], ["accountId", "accountOwnerMemberId"])))
 }
 
 export async function listOpportunityFilterOptions() {

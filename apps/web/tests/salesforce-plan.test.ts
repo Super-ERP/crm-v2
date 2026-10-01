@@ -42,6 +42,17 @@ describe("migration planning invariants",()=>{
     expect(planMigration(fixture(),options).records.find(r=>r.sourceId==="o")?.values)
       .toMatchObject({code:"QMOPP-2026-0001",name:"QMOPP-2026-0001"})
   })
+  it("keeps imported child estimates separate by currency",()=>{
+    const d=fixture()
+    d.Opportunity.rows[0].Estimated_Amount__c="100"
+    d.Opportunity.rows.push({Id:"f2",Name:"USD Funnel",AccountId:"a",Opportunity__c:"o",StageName:"0E",CurrencyIsoCode:"USD",Estimated_Amount__c:"20"})
+    const values=planMigration(d,options).records.find(r=>r.sourceId==="o")?.values
+    expect(values?.estimated_totals_by_currency).toEqual([
+      {currency:"MYR",total:"100.00"},
+      {currency:"USD",total:"20.00"},
+    ])
+    expect(values?.total_estimated_funnel_amount).toBeNull()
+  })
   it("scopes identities by tenant",()=>{
     expect(migrationId("a","Account","sf1")).not.toBe(migrationId("b","Account","sf1"))
   })
