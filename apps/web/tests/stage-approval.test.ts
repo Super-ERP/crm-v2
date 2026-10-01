@@ -138,7 +138,7 @@ const later = {
 describe("stage approval lifecycle hardening", () => {
   beforeEach(() => {
     runInTenant.mockReset()
-    routing.findManagerApprover.mockResolvedValue("approver-1")
+    routing.findManagerApprover.mockReset().mockResolvedValue("approver-1")
   })
 
   it("does not let an unrelated permission holder reject a manager's assigned request", async () => {
@@ -168,6 +168,16 @@ describe("stage approval lifecycle hardening", () => {
     const { tx } = makeTx([[request]])
     runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
     await expect(decideApproval({ ...ctx, memberId: "old-manager", isSuperadmin: false, can: () => true }, { requestId: request.id, decision: "approved" })).rejects.toThrow("Not authorized")
+  })
+
+  it("rechecks manager routing after waiting for approval locks", async () => {
+    const request = { id: "request-1", funnelId: "funnel-1", status: "pending", requesterMemberId: "rep", approverMemberId: "old-manager" }
+    routing.findManagerApprover.mockResolvedValueOnce("old-manager").mockResolvedValueOnce("new-manager")
+    const { tx } = makeTx([[request], [baseFunnel], [request]])
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    await expect(decideApproval({ ...ctx, memberId: "old-manager", isSuperadmin: false, can: () => true }, { requestId: request.id, decision: "approved" })).rejects.toThrow("Not authorized")
+    expect(tx.update).not.toHaveBeenCalled()
+    expect(routing.findManagerApprover).toHaveBeenCalledTimes(2)
   })
 
   it("cancels pending approvals in same transaction as rollback", async () => {

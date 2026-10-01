@@ -95,9 +95,7 @@ function normalizeAdvanceCustomFields(
 }
 
 /**
- * Create (or reuse) a pending approval request routed to the upline. Shared by
- * manual gated advances and the quote-accept auto-win when the Won stage is
- * approval-gated, so neither path can silently bypass the gate.
+ * Create (or reuse) a pending stage approval request routed to the reporting manager.
  */
 async function createApprovalRequest(
   tx: Tx,
@@ -624,13 +622,16 @@ export async function decideApproval(
   }
 ): Promise<DecisionOutcome> {
   return runInTenant(ctx.tenantId, async (tx) => {
-    // Lock the request row so concurrent decisions serialize: a second caller
-    // blocks here until this tx commits, then sees status != 'pending'.
-    const [initialReq] = await tx
+    // Rejections only need the request lock. Approvals lock funnel then request
+    // below, matching stage advancement lock order.
+    const initialQuery = tx
       .select()
       .from(stageApprovalRequests)
       .where(eq(stageApprovalRequests.id, input.requestId))
       .limit(1)
+    const [initialReq] = await (input.decision === "rejected"
+      ? initialQuery.for("update")
+      : initialQuery)
     if (!initialReq) throw new Error("Request not found")
     let req = initialReq
     if (req.status !== "pending") throw new Error("Request already decided")
@@ -659,15 +660,18 @@ export async function decideApproval(
       return { status: "cancelled", message: "Request cancelled" }
     }
 
-    const allowed = ctx.isSuperadmin || (
-      !!ctx.memberId &&
-      req.approverMemberId === ctx.memberId &&
-      ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) &&
-      await findManagerApprover(tx, req.requesterMemberId, PERMISSIONS.STAGE_ADVANCE_APPROVE) === ctx.memberId
-    )
-    if (!allowed) throw new Error("Not authorized to decide this request")
-    if (req.requesterMemberId === ctx.memberId && !ctx.isSuperadmin)
-      throw new Error("Cannot approve your own request")
+    const assertCurrentApprover = async () => {
+      const allowed = ctx.isSuperadmin || (
+        !!ctx.memberId &&
+        req.approverMemberId === ctx.memberId &&
+        ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) &&
+        await findManagerApprover(tx, req.requesterMemberId, PERMISSIONS.STAGE_ADVANCE_APPROVE) === ctx.memberId
+      )
+      if (!allowed) throw new Error("Not authorized to decide this request")
+      if (req.requesterMemberId === ctx.memberId && !ctx.isSuperadmin)
+        throw new Error("Cannot approve your own request")
+    }
+    await assertCurrentApprover()
 
     if (input.decision === "rejected") {
       const rejected = await tx
@@ -713,6 +717,8 @@ export async function decideApproval(
     if (!lockedReq || lockedReq.status !== "pending")
       throw new Error("Request already decided")
     req = lockedReq
+    // A reporting-line or role change may have committed while locks waited.
+    await assertCurrentApprover()
     const [from] = await tx
       .select()
       .from(pipelineStages)

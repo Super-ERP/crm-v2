@@ -121,7 +121,7 @@ Tax rates (e.g., *8% SST*) are governed by your organization's **Tax Settings**.
 <details>
 <summary>What happens if a quotation approval is rejected by my manager?</summary>
 
-If a manager rejects an approval request, they must provide an explanatory rejection note. The quotation returns to **`Draft`** status, allowing the sales representative to adjust discounts or terms and resubmit.
+If a manager rejects an approval request, they must provide an explanatory rejection note. The quotation moves to **`Rejected`** status. The sales representative can revise it into a new draft and resubmit.
 
 </details>
 

@@ -38,7 +38,7 @@ As a sales representative, your primary objective is capturing interest, qualify
 #### Generate & Submit Quotation
 * Click **+ New Quotation** from the deal.
 * Add line items from the product catalog, check the SST tax rate, and review payment terms.
-* If a special discount is needed, click **Submit for Approval** to route it to your manager.
+* For every quotation, click **Submit for Approval** to route it to your manager.
 * Once approved, mark the quote as **Sent** and download the PDF for your client.
 {% endstep %}
 {% endstepper %}
@@ -57,9 +57,9 @@ As a sales manager, your role focuses on pipeline governance, quota forecasting,
 {% step %}
 #### Clear the Approvals Hub
 * Start your day at **Sales → Approvals**.
-* Inspect pending quotation discount requests and stage advancement gates.
+* Inspect stage advancement requests assigned to you. Review pending quotations on their quotation detail pages.
 * Review deal margin impact and sales rep justification notes.
-* Click **Approve** or **Reject** (with mandatory feedback notes).
+* Click **Approve** or **Reject**. Stage decision notes are optional; quotation rejection requires a reason.
 {% endstep %}
 
 {% step %}
