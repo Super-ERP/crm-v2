@@ -1,5 +1,6 @@
 import "server-only"
-import { and, eq, isNull, ne } from "drizzle-orm"
+import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
+import { and, eq, inArray, isNull, ne, or } from "drizzle-orm"
 import { runInTenant, type Tx } from "@/db"
 import {
   funnels,
@@ -14,6 +15,7 @@ import {
   permissions,
   tenantSettings,
   paymentMilestones,
+  projects,
 } from "@/db/schema"
 import {
   ensureOpportunityProjectCode,
@@ -347,6 +349,7 @@ async function autoCreateMilestoneOnStageEntry(
     .where(eq(opportunities.id, opp.opportunityId))
     .limit(1)
 
+  const status = await milestoneStatusForFunnel(tx, opp.id)
   const title = "Full Payment"
   const [row] = await tx
     .insert(paymentMilestones)
@@ -354,6 +357,7 @@ async function autoCreateMilestoneOnStageEntry(
       tenantId: ctx.tenantId,
       funnelId: opp.id,
       quotationId: opp.primaryQuotationId,
+      status,
       title,
       name: milestoneName(container?.projectCode ?? null, title),
       amount: netValue,
@@ -439,7 +443,17 @@ async function applyStageMove(
     await tx
       .update(paymentMilestones)
       .set({ status: "won", updatedAt: new Date() })
-      .where(eq(paymentMilestones.funnelId, opp.id))
+      .where(and(
+        or(
+          eq(paymentMilestones.funnelId, opp.id),
+          and(
+            isNull(paymentMilestones.funnelId),
+            inArray(paymentMilestones.projectId,
+              tx.select({ id: projects.id }).from(projects).where(eq(projects.funnelId, opp.id)))
+          )
+        ),
+        eq(paymentMilestones.status, "planned")
+      ))
   }
 
   // Milestone planning rows may be created before close. Preserve the

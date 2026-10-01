@@ -1,5 +1,7 @@
 "use server"
 
+import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
+
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery, type RecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
@@ -497,7 +499,7 @@ async function generateSoMilestones(
   const replaceableSeed =
     existing.length === 1 &&
     seed.title === "Full Payment" &&
-    seed.status === "won" &&
+    seed.status !== "invoiced" &&
     !seed.invoiceNumber &&
     !seed.soNumber
   if (existing.length > 0 && !replaceableSeed) return { count: 0, funnelId }
@@ -540,12 +542,14 @@ async function generateSoMilestones(
   // Strictly the proposal's shape — value · due date · status per
   // deliverable. No SO numbering or invoice prefill on generated rows
   // for now; those stay manual/import-only fields.
+  const status = await milestoneStatusForFunnel(tx, funnelId)
   await tx.insert(paymentMilestones).values(
     drafts.map((d) => ({
       tenantId: ctx.tenantId,
       projectId: project.id,
       funnelId,
       quotationId,
+      status,
       title: d.title,
       name: milestoneName(project.projectCode, d.title),
       amount: d.amount,

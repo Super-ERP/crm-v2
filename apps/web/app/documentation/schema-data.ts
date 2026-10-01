@@ -2595,9 +2595,9 @@ export const SCHEMA_TABLES: SchemaTable[] = [
       },
       {
         "name": "status",
-        "type": "payment_milestone_status (won | invoiced)",
+        "type": "payment_milestone_status (planned | won | invoiced)",
         "nullable": false,
-        "def": "'won'"
+        "def": "'planned'"
       },
       {
         "name": "sort_order",

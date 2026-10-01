@@ -368,7 +368,7 @@ docker compose up -d --build   # full stack; migrate runs automatically`}</Pre>
       <Ul>
         <Li>Run the full web tests, lint, typecheck and production build before a release.</Li>
         <Li>Run migration-journal/fixture checks; PostgreSQL-bound fixtures require <Code>TEST_DATABASE_ADMIN_URL</Code> and <Code>TEST_DATABASE_URL</Code>.</Li>
-        <Li>After deployment, verify Account currency, Lead conversion, PPVVC sync, quotation approval/revision, stage rollback and Won/Invoiced milestone behavior in a tenant-safe smoke test.</Li>
+        <Li>After deployment, verify Account currency, Lead conversion, PPVVC sync, quotation approval/revision, stage rollback and Planned/Won/Invoiced milestone behavior in a tenant-safe smoke test.</Li>
       </Ul>
 
       <H2>Environment variables</H2>
@@ -812,7 +812,7 @@ export const changelogPage: DocPage = {
           PPVVC is authoritative on Opportunities and syncs live child Funnels;
           nonterminal stage rollback skips gates while terminal stages lock;
           quotations require approval before send, revisions start Draft, and
-          customer acceptance never moves a Funnel; milestones are Won/Invoiced
+          customer acceptance never moves a Funnel; milestones are Planned/Won/Invoiced
           planning records with no invoice or Project side effect.
         </Li>
         <Li>

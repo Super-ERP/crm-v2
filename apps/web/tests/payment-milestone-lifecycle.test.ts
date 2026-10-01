@@ -5,11 +5,12 @@ import {
   PAYMENT_MILESTONE_STATUSES,
   canTransitionPaymentMilestone,
   markLiveMilestonesWon,
+  initialPaymentMilestoneStatus,
 } from "@/lib/payment-milestone-lifecycle"
 
 describe("payment milestone lifecycle", () => {
-  it("exposes only Won and Invoiced statuses", () => {
-    expect(PAYMENT_MILESTONE_STATUSES).toEqual(["won", "invoiced"])
+  it("includes Planned before Won and Invoiced", () => {
+    expect(PAYMENT_MILESTONE_STATUSES).toEqual(["planned", "won", "invoiced"])
   })
 
   it("allows only manual Won to Invoiced progression", () => {
@@ -18,16 +19,26 @@ describe("payment milestone lifecycle", () => {
     expect(canTransitionPaymentMilestone("invoiced", "invoiced")).toBe(true)
   })
 
-  it("marks every live milestone Won when an opportunity closes Won", () => {
+  it("marks planned milestones Won without resetting invoiced ones when an opportunity closes Won", () => {
     expect(
       markLiveMilestonesWon([
-        { id: "before-close", status: "won" },
+        { id: "before-close", status: "planned" },
         { id: "already-invoiced", status: "invoiced" },
       ])
     ).toEqual([
       { id: "before-close", status: "won" },
-      { id: "already-invoiced", status: "won" },
+      { id: "already-invoiced", status: "invoiced" },
     ])
+  })
+
+  it("keeps draft, submitted and approved quotation plans unconfirmed until the funnel is won", () => {
+    for (const status of ["open", "lost", "on_hold", null, undefined]) {
+      expect(initialPaymentMilestoneStatus(status)).toBe("planned")
+    }
+    expect(initialPaymentMilestoneStatus("won")).toBe("won")
+    expect(canTransitionPaymentMilestone("planned", "won")).toBe(false)
+    expect(canTransitionPaymentMilestone("planned", "invoiced")).toBe(false)
+    expect(canTransitionPaymentMilestone("planned", "planned")).toBe(true)
   })
 
   it("adds a compatibility migration that maps legacy statuses and preserves invoice columns", async () => {

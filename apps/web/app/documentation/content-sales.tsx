@@ -39,8 +39,8 @@ flowchart TD
   QA -. "explicit reset" .-> Q
   O -- "stage transition" --> OW[Funnel stage: Closed Won]
   O -- "manual create" --> P[Project<br/>value = quote net]
-  O -- "prepare any time" --> M[Payment milestones<br/>Won / Invoiced]
-  OW -- "Closed Won marks live" --> MW[Live milestones Won]
+  O -- "prepare any time" --> M[Payment milestones<br/>Planned / Won / Invoiced]
+  OW -- "Closed Won marks planned" --> MW[Live milestones Won]
   M -- "manual Won → Invoiced" --> MI[Milestone Invoiced]
   P -- "submit for approval" --> SO[Sales order<br/>submitted → approved]
   SO -- "approved unlocks" --> INV[Invoice draft]
@@ -76,7 +76,7 @@ flowchart TD
           [
             "Payment Milestone → Funnel",
             <Code key="c">payment_milestones.funnel_id</Code>,
-            "Prepared from the Funnel before close; Closed Won marks live milestones Won.",
+            "Prepared from the Funnel before close; Closed Won marks planned milestones Won.",
           ],
           [
             "Sales order → Project",
@@ -106,11 +106,11 @@ flowchart TD
           just application checks.
         </Li>
         <Li>
-          Payment Milestones are planning records with only <B>Won</B> and{" "}
-          <B>Invoiced</B> statuses and may be prepared before the Funnel closes.
+          Payment Milestones begin as <B>Planned</B> before the Funnel closes,
+          then progress through <B>Won</B> and <B>Invoiced</B>.
         </Li>
         <Li>
-          <B>Closed Won</B> marks live Payment Milestones Won.
+          <B>Closed Won</B> marks planned Payment Milestones Won.
         </Li>
         <Li>
           A user manually changes <B>Won → Invoiced</B>; there is no automatic
@@ -490,18 +490,20 @@ export const projectsPage: DocPage = {
 
       <H2>Payment milestones</H2>
       <P>
-        Payment Milestones are planning records with only two statuses:{" "}
-        <B>Won</B> and <B>Invoiced</B>. They may be prepared before a Funnel
-        closes. When the Funnel reaches <B>Closed Won</B>, its live milestones
+        Payment Milestones are planning records with three statuses:{" "}
+        <B>Planned</B>, <B>Won</B> and <B>Invoiced</B>. They are Planned before a Funnel
+        closes. When the Funnel reaches <B>Closed Won</B>, its planned milestones
         are marked Won. A user manually changes Won to Invoiced; there is no
         backward move.
       </P>
       <Mermaid
         chart={`
 stateDiagram-v2
-  [*] --> won : prepared (before or after close)
+  [*] --> planned : prepared before close
+  planned --> won : Funnel reaches Closed Won
+  [*] --> won : prepared after Closed Won
   won --> invoiced : manual status change
-  note right of won : Closed Won marks live milestones Won
+  note right of won : Closed Won marks planned milestones Won
 `}
       />
       <Ul>

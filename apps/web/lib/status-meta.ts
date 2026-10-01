@@ -30,6 +30,7 @@ export const PROJECT_STATUS_OPTIONS: StatusOption[] = [
 ]
 
 export const MILESTONE_STATUS_OPTIONS: StatusOption[] = [
+  { value: "planned", label: "Planned" },
   { value: "won", label: "Won" },
   { value: "invoiced", label: "Invoiced" },
 ]
