@@ -1,11 +1,11 @@
 ---
-description: Comprehensive operational walkthrough for Super-ERP across the full lead-to-cash lifecycle.
+description: Comprehensive operational walkthrough for Q-App across the full lead-to-cash lifecycle.
 icon: book-open
 ---
 
-# Super-ERP (Quandatics CRM) User Guide
+# Q-App User Guide
 
-Welcome to the end-to-end user guide for **Super-ERP (Quandatics CRM v2)**. This guide provides a complete, step-by-step walkthrough of how to use each module directly within the user interface.
+Welcome to the end-to-end user guide for **Q-App**. This guide provides a complete, step-by-step walkthrough of how to use each module directly within the user interface.
 
 ## The Lead-to-Cash Lifecycle
 

@@ -25,20 +25,20 @@ and resume forward; do not run destructive SQL rollback.
 - workflow_run: 31723355859
 - workflow: release-images.yml
 - production_deploy_run: 31726310905
-- web_image: ghcr.io/super-erp/crm-web@sha256:9d006e480ab8ed3ddab95866f2a5e0e747131c50853b54dde5b0ad9ed320e75a
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:ae48df0c09153d26e942d9f4659d7388e30dd1ca54a84e11c8bdb87b0c338ca8
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:21f0b6204a223a1c4e5418d991bef73531c13c71177467ec4a98b9c527b056fc
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:82da8835d5749e8c64056f03d5b6baf0b239e00107634aa7752fc7c6c36c89cc
+- web_image: ghcr.io/q-app/crm-web@sha256:9d006e480ab8ed3ddab95866f2a5e0e747131c50853b54dde5b0ad9ed320e75a
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:ae48df0c09153d26e942d9f4659d7388e30dd1ca54a84e11c8bdb87b0c338ca8
+- backup_image: ghcr.io/q-app/crm-backup@sha256:21f0b6204a223a1c4e5418d991bef73531c13c71177467ec4a98b9c527b056fc
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:82da8835d5749e8c64056f03d5b6baf0b239e00107634aa7752fc7c6c36c89cc
 
 ## v1.2.45
 - released_at_utc: 2026-08-19T05:54:03Z
 - source_sha: 0c9fd40a32c1726fc1c43f1a6f841a5b6b41369a
 - workflow_run: 32220642966
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:fe25945f39768131c17f75d7b7bc1128bf33bd482fb9385bee16516eb7a2998e
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:646c5917b5b74f8da70c5155c52cc79101a19dc6415c2e947a8fa5bd9f64bc88
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:2f5872e7a59c73f52a1ceae17f5c927638223981abf914f80d56ad7e4c822f9c
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:e3e8f7089c6ce481d67efe2ef9b02c70c950f60fe9abca51f5f362adf49f8134
+- web_image: ghcr.io/q-app/crm-web@sha256:fe25945f39768131c17f75d7b7bc1128bf33bd482fb9385bee16516eb7a2998e
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:646c5917b5b74f8da70c5155c52cc79101a19dc6415c2e947a8fa5bd9f64bc88
+- backup_image: ghcr.io/q-app/crm-backup@sha256:2f5872e7a59c73f52a1ceae17f5c927638223981abf914f80d56ad7e4c822f9c
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:e3e8f7089c6ce481d67efe2ef9b02c70c950f60fe9abca51f5f362adf49f8134
 
 
 ## v1.2.66
@@ -46,10 +46,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: f936286437fc6f4c9033a08cfeda023e7966ec9f
 - workflow_run: 32349785962
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:fffb554f3da334b4c67ad4140f1586e46f0ba12f21212752c475ed6037870a68
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:b085a9396b6dac97131597f8ddbdfffef5de010a93b4b2ef538eeb3cfef7259f
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:3a5aa0484e5f1c370b6f145184914d7792cbb07beda758b89899fe5de9691e83
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:66c6668def4784b035b81245db732bbcbdfce978bc0cf1716ef1b0b035455c78
+- web_image: ghcr.io/q-app/crm-web@sha256:fffb554f3da334b4c67ad4140f1586e46f0ba12f21212752c475ed6037870a68
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:b085a9396b6dac97131597f8ddbdfffef5de010a93b4b2ef538eeb3cfef7259f
+- backup_image: ghcr.io/q-app/crm-backup@sha256:3a5aa0484e5f1c370b6f145184914d7792cbb07beda758b89899fe5de9691e83
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:66c6668def4784b035b81245db732bbcbdfce978bc0cf1716ef1b0b035455c78
 
 
 ## v1.2.67
@@ -57,10 +57,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 0f263b43423e8b8749575e0fba4a50dbb6c7ce42
 - workflow_run: 32350639243
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:e423d111a7949f4c101cc7bf9761717becf6c535afde5e6369d4326a5e181712
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:39b63b67b1c6e2fd570e45d8cf6d9bf8d4714c81b7f4c9890e02608c198c5b55
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:a25abc3195f57bcb1d686bcd09328465965d456b69486b849ba8f5633696bdda
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:f6f26e55e5ef2b7928de14ba7f8e8252a503f0ab3477860647400eb76a7afaa6
+- web_image: ghcr.io/q-app/crm-web@sha256:e423d111a7949f4c101cc7bf9761717becf6c535afde5e6369d4326a5e181712
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:39b63b67b1c6e2fd570e45d8cf6d9bf8d4714c81b7f4c9890e02608c198c5b55
+- backup_image: ghcr.io/q-app/crm-backup@sha256:a25abc3195f57bcb1d686bcd09328465965d456b69486b849ba8f5633696bdda
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:f6f26e55e5ef2b7928de14ba7f8e8252a503f0ab3477860647400eb76a7afaa6
 
 
 ## v1.2.79
@@ -68,10 +68,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 7c1b1d9ccbdc249de4c1036c3dd4208ae1c550bf
 - workflow_run: 32379373494
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:07918787a29454e30d35e570b1ed8af9ce462e0a9e6df104379efc3939b2ff46
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:5c238887640e5165cd819c2004656b54c2168fd946c112bf9d58f365e33a1a59
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:e2f78b0e590f514974c91858d1d1fe4242506b172a932a1c5c620e4659874acb
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:b1b515f8bdd7fe9d601487182c807b518bad512587cadabd1aa2312c5afed484
+- web_image: ghcr.io/q-app/crm-web@sha256:07918787a29454e30d35e570b1ed8af9ce462e0a9e6df104379efc3939b2ff46
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:5c238887640e5165cd819c2004656b54c2168fd946c112bf9d58f365e33a1a59
+- backup_image: ghcr.io/q-app/crm-backup@sha256:e2f78b0e590f514974c91858d1d1fe4242506b172a932a1c5c620e4659874acb
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:b1b515f8bdd7fe9d601487182c807b518bad512587cadabd1aa2312c5afed484
 
 
 ## v1.2.92
@@ -79,10 +79,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: a5b96ce9ebb52017322533197fe7df92b4237ee8
 - workflow_run: 32458387331
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:37fa9ab3ed475721c02f34864c7dce39bfd31cdfe98f2bf01248b0fb249dff00
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:3fca5f9cf32cc2326adb423363eb79bbc0f7c8fea3d245e3865408f2114a3232
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:ffad3e8eed1616aa7ff2eee4cae4cd2b7118825207d2ae400ee53ca2ec1d676c
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:c6b2759d167976eb921ef02805e997f0c07b9f6bf12432f703082bcc906c30b0
+- web_image: ghcr.io/q-app/crm-web@sha256:37fa9ab3ed475721c02f34864c7dce39bfd31cdfe98f2bf01248b0fb249dff00
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:3fca5f9cf32cc2326adb423363eb79bbc0f7c8fea3d245e3865408f2114a3232
+- backup_image: ghcr.io/q-app/crm-backup@sha256:ffad3e8eed1616aa7ff2eee4cae4cd2b7118825207d2ae400ee53ca2ec1d676c
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:c6b2759d167976eb921ef02805e997f0c07b9f6bf12432f703082bcc906c30b0
 
 
 ## v1.2.93
@@ -90,10 +90,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 21785f973602cdcf36f1eeed481a94f84e345c1c
 - workflow_run: 32459239750
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:71cd6ad6a5e8e832fe5e7f0e7eea830b9f9bd6597fef7a9fffd0e2041855e691
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:f1d34a7de9d581c2bed1f811816e20a5405c956ae69e49b381b21f7726367fc5
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:d0f64b1e88702d35c59422f07ecf6f894b877a6516f1af66c42709c3bff4aced
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:7c09321f35b43dd1b86d55c63907d941a2f2a71915463fe949ebd0b2e2771ad9
+- web_image: ghcr.io/q-app/crm-web@sha256:71cd6ad6a5e8e832fe5e7f0e7eea830b9f9bd6597fef7a9fffd0e2041855e691
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:f1d34a7de9d581c2bed1f811816e20a5405c956ae69e49b381b21f7726367fc5
+- backup_image: ghcr.io/q-app/crm-backup@sha256:d0f64b1e88702d35c59422f07ecf6f894b877a6516f1af66c42709c3bff4aced
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:7c09321f35b43dd1b86d55c63907d941a2f2a71915463fe949ebd0b2e2771ad9
 
 
 ## v1.2.95
@@ -101,10 +101,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: dd003cf64a70665954d8882cbe962b3b5da7252d
 - workflow_run: 32460772035
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:3288a6a0f43922fd944469e86f611c8d7cabb37bd9414d560870c529c54c304c
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:e11e6c9a6942f534280cdb97bb4fccdf260f7eb4826265b355446c3c80fd22b8
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:c85faff0a9e8d655d8202d5c97eb90f5cd2ac3e10744320abe2ceafe145d2cce
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:c3521aca4cb5542ed57985c9ecdd6c0d29f340598a943b592c8394a6ef9e6fe0
+- web_image: ghcr.io/q-app/crm-web@sha256:3288a6a0f43922fd944469e86f611c8d7cabb37bd9414d560870c529c54c304c
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:e11e6c9a6942f534280cdb97bb4fccdf260f7eb4826265b355446c3c80fd22b8
+- backup_image: ghcr.io/q-app/crm-backup@sha256:c85faff0a9e8d655d8202d5c97eb90f5cd2ac3e10744320abe2ceafe145d2cce
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:c3521aca4cb5542ed57985c9ecdd6c0d29f340598a943b592c8394a6ef9e6fe0
 
 
 ## v1.2.96
@@ -112,10 +112,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 2fecebff808427bc2ac39c4c61c898c64afd5a9e
 - workflow_run: 32461843075
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:369c5c91c0f9cd2ef47331c9c44a659247211531b1e19b125c312d53f89214c8
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:9031baffc61f5b1466753c6b5aeeab65b90b89c245274a304e3a8751f049d9f9
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:60b59f9353695d73f429e8e530355da359140b914b29dc539cd276c43c10a6f0
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:d3115b97d4e01d0f249ab73d5e60f0535678df3e87558fb92798202eb92bfcc5
+- web_image: ghcr.io/q-app/crm-web@sha256:369c5c91c0f9cd2ef47331c9c44a659247211531b1e19b125c312d53f89214c8
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:9031baffc61f5b1466753c6b5aeeab65b90b89c245274a304e3a8751f049d9f9
+- backup_image: ghcr.io/q-app/crm-backup@sha256:60b59f9353695d73f429e8e530355da359140b914b29dc539cd276c43c10a6f0
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:d3115b97d4e01d0f249ab73d5e60f0535678df3e87558fb92798202eb92bfcc5
 
 
 ## v1.2.97
@@ -123,10 +123,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 6c1c5d80faf0e98574b5d0ae9439e26975bf60b2
 - workflow_run: 32463373293
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:2281d51e5d9e73f3420e7e752ae45272b0897722e4641e93de2d31693b34e368
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:8fd220bf589e769375976af3040cf32143a13521d87142b98fa9a3c8ba259dad
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:4edf857b979a373c9df304738cc1f3268238409e3c5fcf22aadb2e8cec898daa
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:a8491700abd0594ce5d4d227b5a48ba5b31af6cfa2fe9fbc7cc1c826f14ef4e6
+- web_image: ghcr.io/q-app/crm-web@sha256:2281d51e5d9e73f3420e7e752ae45272b0897722e4641e93de2d31693b34e368
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:8fd220bf589e769375976af3040cf32143a13521d87142b98fa9a3c8ba259dad
+- backup_image: ghcr.io/q-app/crm-backup@sha256:4edf857b979a373c9df304738cc1f3268238409e3c5fcf22aadb2e8cec898daa
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:a8491700abd0594ce5d4d227b5a48ba5b31af6cfa2fe9fbc7cc1c826f14ef4e6
 
 
 ## v1.2.99
@@ -134,10 +134,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 0ea194bc0ae8af4ea26c348fc823bda3fc63e099
 - workflow_run: 32466523913
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:5ae0de0c623cd2aaa89a37b69dc14493780c7b5e8fffc2ce9de03dc581f5698e
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:64e1ec9bbc8a968b7ee19cc53bdf7f6162314a73fd2ee139b7ee231469d28abc
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:6a30bb83b7ee9c090578b22a144c79ea684abd84c4834c8b87969bb2d95b3b6e
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:04a40d75ab6abb376f0b015374e442abb283663a356523370fa44607f1c46aee
+- web_image: ghcr.io/q-app/crm-web@sha256:5ae0de0c623cd2aaa89a37b69dc14493780c7b5e8fffc2ce9de03dc581f5698e
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:64e1ec9bbc8a968b7ee19cc53bdf7f6162314a73fd2ee139b7ee231469d28abc
+- backup_image: ghcr.io/q-app/crm-backup@sha256:6a30bb83b7ee9c090578b22a144c79ea684abd84c4834c8b87969bb2d95b3b6e
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:04a40d75ab6abb376f0b015374e442abb283663a356523370fa44607f1c46aee
 
 
 ## v1.2.100
@@ -145,10 +145,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 145f5183b839ae404833ff6d57792c147601c849
 - workflow_run: 32473946265
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:3f31eb40655d81632ed410bf46befb514fec393859167cccd5dbb23e09839af5
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:005fe7d7f2d1f8e555a056210e0eb70dbaaf9ecf3181b236a82f424aba6bbc37
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:0fb826a84f60f0f3b9b27d36f29972ce7b75ad752e1bd826c92d9667fd252f3d
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:f78656992b5ee43f6cb70f2b20bc3e538c9b4977e004faa479f406a8983bf1db
+- web_image: ghcr.io/q-app/crm-web@sha256:3f31eb40655d81632ed410bf46befb514fec393859167cccd5dbb23e09839af5
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:005fe7d7f2d1f8e555a056210e0eb70dbaaf9ecf3181b236a82f424aba6bbc37
+- backup_image: ghcr.io/q-app/crm-backup@sha256:0fb826a84f60f0f3b9b27d36f29972ce7b75ad752e1bd826c92d9667fd252f3d
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:f78656992b5ee43f6cb70f2b20bc3e538c9b4977e004faa479f406a8983bf1db
 
 
 ## v1.2.101
@@ -156,10 +156,10 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: e66d96aef0411ecb0c3da78657801a9309a4efcf
 - workflow_run: 32480761271
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:9bfe429653cffbd09706221a96f788f594b4465f786e506fb3834cf0dde9b2a8
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:df77e06b92de78a6fefbe9ae6b4df683714d6516b0f9d63597d1f4bf9ad9471f
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:5e8438e3159aa4df6c25944f6fd6d152c0ffbb48bf7dcc1f6aec557aa01ab81c
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:8e43c01a986d9a9d72e9f31e42fc5a5bb0abda0d48130313dc1008ae1be4f308
+- web_image: ghcr.io/q-app/crm-web@sha256:9bfe429653cffbd09706221a96f788f594b4465f786e506fb3834cf0dde9b2a8
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:df77e06b92de78a6fefbe9ae6b4df683714d6516b0f9d63597d1f4bf9ad9471f
+- backup_image: ghcr.io/q-app/crm-backup@sha256:5e8438e3159aa4df6c25944f6fd6d152c0ffbb48bf7dcc1f6aec557aa01ab81c
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:8e43c01a986d9a9d72e9f31e42fc5a5bb0abda0d48130313dc1008ae1be4f308
 
 
 ## v1.2.102
@@ -167,7 +167,7 @@ and resume forward; do not run destructive SQL rollback.
 - source_sha: 562734c4ed80c450d77cf37e4de516c6b74a9a36
 - workflow_run: 32644268277
 - workflow: release-images.yml
-- web_image: ghcr.io/super-erp/crm-web@sha256:d07de731bf2a0d5f9572b761c75c534ba446c47cbf4781791482ba7521a7a8fe
-- migrator_image: ghcr.io/super-erp/crm-migrator@sha256:c51818e7896d3222bc86bc83c435f2118db9ac717b86eeb6a35dbd39ee59fdd7
-- backup_image: ghcr.io/super-erp/crm-backup@sha256:78ec8a0a21c38740945ab10b18def42410feab4477b83bc810c968cf24bd82cf
-- agent_image: ghcr.io/super-erp/crm-deployment-agent@sha256:d37f1c6d08c0167509776f73970cd109c7ada4c98af177486c7359c30ae34104
+- web_image: ghcr.io/q-app/crm-web@sha256:d07de731bf2a0d5f9572b761c75c534ba446c47cbf4781791482ba7521a7a8fe
+- migrator_image: ghcr.io/q-app/crm-migrator@sha256:c51818e7896d3222bc86bc83c435f2118db9ac717b86eeb6a35dbd39ee59fdd7
+- backup_image: ghcr.io/q-app/crm-backup@sha256:78ec8a0a21c38740945ab10b18def42410feab4477b83bc810c968cf24bd82cf
+- agent_image: ghcr.io/q-app/crm-deployment-agent@sha256:d37f1c6d08c0167509776f73970cd109c7ada4c98af177486c7359c30ae34104

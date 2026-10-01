@@ -38,7 +38,7 @@ The **Forecast** dashboard provides real-time visibility into your sales pipelin
 
 ## 3. System Audit Log (`/audit`)
 
-Super-ERP maintains an immutable, compliance-ready record of all platform activities.
+Q-App maintains an immutable, compliance-ready record of all platform activities.
 
 * Navigate to **Insights → Audit** to search activity history:
   * **Who**: The user who performed the operation.

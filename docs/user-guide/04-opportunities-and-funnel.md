@@ -6,7 +6,7 @@ This chapter covers opportunity management, the PPVVC qualification framework, f
 
 ## The Opportunity Model
 
-In Super-ERP, sales pursuits are managed through a structured two-tier structure:
+In Q-App, sales pursuits are managed through a structured two-tier structure:
 1. **Opportunity Container**: The top-level commercial record holding overall customer relationship context, PPVVC qualification, and target budget.
 2. **Funnel Deal**: The active sales pursuit tracking the exact deal stage, line items, quotations, costs, and closing timeline.
 
