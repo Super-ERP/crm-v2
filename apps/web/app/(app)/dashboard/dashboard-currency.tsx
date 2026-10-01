@@ -6,6 +6,16 @@ type DashboardCurrency = { currency: string }
 
 const CurrencyContext = React.createContext<DashboardCurrency | null>(null)
 
+export function selectAvailableCurrency(
+  requested: string,
+  fallback: string,
+  available: string[]
+): string {
+  return available.includes(requested)
+    ? requested
+    : available.includes(fallback) ? fallback : available[0] ?? fallback
+}
+
 export function DashboardCurrencyProvider({
   available,
   defaultCurrency,
@@ -15,9 +25,10 @@ export function DashboardCurrencyProvider({
   defaultCurrency: string
   children?: React.ReactNode
 }) {
-  const [currency, setCurrency] = React.useState(() =>
-    available.includes(defaultCurrency) ? defaultCurrency : available[0] ?? defaultCurrency
+  const [requestedCurrency, setCurrency] = React.useState(() =>
+    selectAvailableCurrency(defaultCurrency, defaultCurrency, available)
   )
+  const currency = selectAvailableCurrency(requestedCurrency, defaultCurrency, available)
   return (
     <CurrencyContext.Provider value={{ currency }}>
       {available.length > 1 && (

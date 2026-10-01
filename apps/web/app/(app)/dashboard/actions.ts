@@ -20,7 +20,7 @@ import {
 } from "@/db/schema"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import { DEFAULT_REMINDER_DAYS } from "@/lib/tenant-defaults"
-import { canViewAllRecords } from "@/lib/access-scope"
+import { canViewAllRecords, visibleMemberIds, ownerScope } from "@/lib/access-scope"
 import { PERMISSIONS } from "@/lib/permissions"
 
 export type PendingApproval = {
@@ -140,12 +140,13 @@ export type DashboardData = {
   reminderSchedule: number[]
   /** The current member's own open funnel rollup ("My"). */
   myOpenPipeline: OpenPipeline
-  /** Tenant-wide open funnel rollup ("Team"), present only for view-all roles
-   *  (records.view_all / superadmin) so an Owner/Viewer who owns nothing still
-   *  lands on a useful page. Null otherwise. */
+  /** Open funnel rollup for records in the member's visible team; tenant-wide
+   *  for view-all roles. Null when there is no wider scope to switch to. */
   orgOpenPipeline: OpenPipeline | null
-  /** True when the user may see all records (drives the My/Team toggle). */
+  /** True when the user may see all records. */
   canViewAll: boolean
+  /** True when the user has a wider Team view (view-all or reports). */
+  canViewTeam: boolean
   /** True when the tenant has no leads/accounts/contacts/pipelines yet — render
    *  the "Get started" hero instead of the "all caught up" dashboard. */
   isFirstRun: boolean
@@ -171,6 +172,8 @@ export async function getDashboardData(): Promise<DashboardData> {
   const canApproveAll = ctx.isSuperadmin
   // Match the manager-only inbox; ordinary permission holders cannot act on unrelated requests.
   return runInTenant(ctx.tenantId, async (tx) => {
+    const visible = await visibleMemberIds(tx, ctx)
+    const canViewTeam = visible === null || visible.length > 1
     const approvalWhere: SQL | undefined = ctx.isSuperadmin
       ? eq(stageApprovalRequests.status, "pending")
       : memberId && ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)
@@ -364,10 +367,10 @@ export async function getDashboardData(): Promise<DashboardData> {
     const myOpenPipeline: OpenPipeline = memberId
       ? await pipelineFor(eq(funnels.ownerMemberId, memberId))
       : { count: 0, byCurrency: [] }
-    // Tenant-wide rollup only for view-all roles; gives an Owner/Viewer who owns
-    // nothing a useful landing page (the My/Team toggle defaults to this).
-    const orgOpenPipeline: OpenPipeline | null = canViewAll
-      ? await pipelineFor(undefined)
+    // Include reporting-line records for managers, or the whole tenant for
+    // view-all roles. The My/Team toggle is shown only when scopes differ.
+    const orgOpenPipeline: OpenPipeline | null = canViewTeam
+      ? await pipelineFor(ownerScope(funnels.ownerMemberId, visible))
       : null
 
     // Dashboard sales charts.
@@ -392,7 +395,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         .leftJoin(user, eq(member.userId, user.id))
         .where(and(
           isNull(funnels.deletedAt),
-          canViewAll ? undefined : memberId ? eq(funnels.ownerMemberId, memberId) : sql`false`
+          ownerScope(funnels.ownerMemberId, visible)
         ))
         .groupBy(
           funnels.ownerMemberId,
@@ -435,7 +438,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         .where(and(
           eq(funnels.status, "won"),
           isNull(funnels.deletedAt),
-          canViewAll ? undefined : memberId ? eq(funnels.ownerMemberId, memberId) : sql`false`
+          ownerScope(funnels.ownerMemberId, visible)
         ))
         .groupBy(
           sql`coalesce(nullif(${opportunityProducts.productCategory}, ''), 'Uncategorized')`,
@@ -459,7 +462,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         .where(and(
           sql`${activities.occurredAt} >= date_trunc('year', now())
             and ${activities.occurredAt} < date_trunc('year', now()) + interval '1 year'`,
-          canViewAll ? undefined : memberId ? eq(activities.memberId, memberId) : sql`false`
+          ownerScope(activities.memberId, visible)
         ))
         .groupBy(sql`extract(month from ${activities.occurredAt})`)
     ).map((r) => ({
@@ -513,6 +516,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       myOpenPipeline,
       orgOpenPipeline,
       canViewAll,
+      canViewTeam,
       isFirstRun,
       gettingStarted,
       salesByOwnerStage,

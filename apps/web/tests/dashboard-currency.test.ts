@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest"
 import { renderToStaticMarkup } from "react-dom/server"
 import { createElement } from "react"
-import { DashboardCurrencyProvider } from "@/app/(app)/dashboard/dashboard-currency"
+import { DashboardCurrencyProvider, selectAvailableCurrency } from "@/app/(app)/dashboard/dashboard-currency"
 import { KpiSection } from "@/app/(app)/dashboard/kpi-section"
 
 describe("dashboard currency selection", () => {
+  it("falls back when a refreshed dashboard no longer contains the selected currency", () => {
+    expect(selectAvailableCurrency("USD", "MYR", ["MYR"])).toBe("MYR")
+    expect(selectAvailableCurrency("USD", "MYR", ["EUR"])).toBe("EUR")
+  })
+
   it("shows only the selected currency's pipeline value without converting or combining amounts", () => {
     const html = renderToStaticMarkup(
       createElement(DashboardCurrencyProvider, {

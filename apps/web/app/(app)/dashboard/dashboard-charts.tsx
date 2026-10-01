@@ -277,11 +277,11 @@ const activityConfig = {
  */
 export function SalesActivityChart({
   data,
-  canViewAll,
+  canViewTeam,
   currentMonth,
 }: {
   data: SalesActivityMonth[]
-  canViewAll: boolean
+  canViewTeam: boolean
   currentMonth: number
 }) {
   const rows = React.useMemo(() => {
@@ -299,7 +299,7 @@ export function SalesActivityChart({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarDaysIcon className="size-4" />
-          {canViewAll ? "Team activity this year" : "My activity this year"}
+          {canViewTeam ? "Team activity this year" : "My activity this year"}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6">

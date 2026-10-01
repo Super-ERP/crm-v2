@@ -392,7 +392,7 @@ export default async function DashboardPage() {
                 {followUpsCard}
                 <SalesActivityChart
                   data={data.salesActivityByMonth}
-                  canViewAll={data.canViewAll}
+                  canViewTeam={data.canViewTeam}
                   currentMonth={now.getMonth() + 1}
                 />
               </div>
