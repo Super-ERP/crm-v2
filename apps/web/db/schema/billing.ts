@@ -16,6 +16,7 @@ import { quotations } from "./quotations"
 import { timestamps } from "./_helpers"
 
 export const paymentMilestoneStatus = pgEnum("payment_milestone_status", [
+  "planned",
   "won",
   "invoiced",
 ])
@@ -28,7 +29,7 @@ export const paymentMilestoneStatus = pgEnum("payment_milestone_status", [
  * against for traceability, but the project value — seeded from the accepted
  * quote's net and thereafter owned by the project — is the reconciliation
  * baseline. Invoice/payment documents are independent finance records. The
- * milestone status only records Won/Invoiced planning state; legacy invoice
+ * milestone status only records Planned/Won/Invoiced planning state; legacy invoice
  * columns are retained for historical reads and are never written by CRM
  * actions.
  */
@@ -59,7 +60,7 @@ export const paymentMilestones = pgTable(
   name: text("name"),
   amount: numeric("amount", { precision: 14, scale: 2 }).notNull().default("0"),
   dueDate: date("due_date"),
-  status: paymentMilestoneStatus("status").notNull().default("won"),
+  status: paymentMilestoneStatus("status").notNull().default("planned"),
   sortOrder: integer("sort_order").notNull().default(0),
   // Deprecated Salesforce invoice snapshot fields. Read-only compatibility
   // columns: new application flows must not write or expose them.

@@ -40,15 +40,15 @@ const renderedDocumentation = normalizeDocumentation(
 )
 
 describe("payment milestone documentation", () => {
-  it("describes the decoupled two-state lifecycle and its boundaries", () => {
+  it("describes the decoupled three-state lifecycle and its boundaries", () => {
     expect(paymentMilestoneDocumentation).toMatch(
-      /Payment Milestones are planning records with only two statuses: Won and Invoiced/
+      /Payment Milestones are planning records with three statuses: Planned\s*, Won and Invoiced/
     )
     expect(paymentMilestoneDocumentation).toContain(
-      "They may be prepared before a Funnel closes"
+      "They are Planned before a Funnel closes"
     )
     expect(paymentMilestoneDocumentation).toContain(
-      "Closed Won marks live milestones Won"
+      "Closed Won marks planned milestones Won"
     )
     expect(paymentMilestoneDocumentation).toMatch(
       /A user manually changes Won to Invoiced/
@@ -65,10 +65,10 @@ describe("payment milestone documentation", () => {
 
   it("covers Overview, Reference, schema, and every registered documentation page", () => {
     expect(renderedDocumentation).toContain(
-      "Payment Milestones are planning records with only two statuses"
+      "Payment Milestones are planning records with three statuses"
     )
     expect(documentationSource).toContain(
-      "payment_milestone_status (won | invoiced)"
+      "payment_milestone_status (planned | won | invoiced)"
     )
     expect(documentationSource).toContain("no live linkage")
     expect(documentationSource).toContain(

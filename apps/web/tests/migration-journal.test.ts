@@ -9,22 +9,13 @@ describe("migration journal", () => {
       await readFile(path.resolve(process.cwd(), "db/migrations/meta/_journal.json"), "utf8")
     ) as { entries: Array<{ idx: number; tag: string }> }
 
-    expect(journal.entries.at(-4)).toMatchObject({
-      idx: 89,
-      tag: "0089_service_controls",
-    })
-    expect(journal.entries.at(-3)).toMatchObject({
-      idx: 90,
-      tag: "0090_citrus_cloudera_quotation_description",
-    })
-    expect(journal.entries.at(-2)).toMatchObject({
-      idx: 91,
-      tag: "0091_quandatics_quotation_template",
-    })
-    expect(journal.entries.at(-1)).toMatchObject({
-      idx: 92,
-      tag: "0092_account_owner_pipeline_alignment",
-    })
+    expect(journal.entries.filter(({ idx }) => idx >= 89 && idx <= 93)).toEqual([
+      expect.objectContaining({ idx: 89, tag: "0089_service_controls" }),
+      expect.objectContaining({ idx: 90, tag: "0090_citrus_cloudera_quotation_description" }),
+      expect.objectContaining({ idx: 91, tag: "0091_quandatics_quotation_template" }),
+      expect.objectContaining({ idx: 92, tag: "0092_account_owner_pipeline_alignment" }),
+      expect.objectContaining({ idx: 93, tag: "0093_payment_milestone_planning" }),
+    ])
   })
 
   it("keeps the CRM sales lifecycle migrations contiguous and ordered", async () => {

@@ -121,9 +121,9 @@ stateDiagram-v2
 
       <H2>Payment Milestones are separate</H2>
       <P>
-        Payment Milestones are planning records with only two statuses:{" "}
-        <B>Won</B> and <B>Invoiced</B>. They may be prepared before a Funnel
-        closes; <B>Closed Won</B> marks live milestones Won, and a user
+        Payment Milestones are planning records with three statuses:{" "}
+        <B>Planned</B>, <B>Won</B> and <B>Invoiced</B>. They are Planned before a Funnel
+        closes; <B>Closed Won</B> marks planned milestones Won, and a user
         manually changes Won to Invoiced. Payment Milestones do not create or
         update invoices or receipts and never complete a Project automatically.
         Finance documents are created and managed through their own Finance

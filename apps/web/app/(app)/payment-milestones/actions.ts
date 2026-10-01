@@ -1,5 +1,7 @@
 "use server"
 
+import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
+
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
@@ -258,6 +260,7 @@ export async function seedDefaultFunnelMilestone(
     .limit(1)
   if (!funnel) return
 
+  const status = await milestoneStatusForFunnel(tx, funnelId)
   const title = funnel.quoteNumber
     ? `${funnel.quoteNumber} · Full payment`
     : "Full Payment"
@@ -267,6 +270,7 @@ export async function seedDefaultFunnelMilestone(
       tenantId: ctx.tenantId,
       funnelId,
       quotationId: funnel.primaryQuotationId,
+      status,
       title,
       name: milestoneName(funnel.projectCode, title),
       amount: netValue,
@@ -349,12 +353,14 @@ export async function createFunnelMilestone(
           .from(paymentMilestones)
           .where(eq(paymentMilestones.funnelId, input.funnelId))
 
+        const status = await milestoneStatusForFunnel(tx, input.funnelId)
         const [row] = await tx
           .insert(paymentMilestones)
           .values({
             tenantId: ctx.tenantId,
             funnelId: input.funnelId,
             quotationId: funnel.primaryQuotationId,
+            status,
             title,
             name: milestoneName(funnel.projectCode, title),
             description: input.description || null,
@@ -454,7 +460,7 @@ export async function updateFunnelMilestone(
           nextStatus !== existing.status &&
           !canTransitionPaymentMilestone(existing.status, nextStatus)
         ) {
-          throw new Error("Milestone status cannot move backward.")
+          throw new Error("Only won milestones can be marked invoiced. Planned milestones become won when the funnel reaches Closed Won.")
         }
         const nextTitle =
           input.title === undefined
@@ -662,12 +668,17 @@ export async function splitFunnelMilestones(
         )
       }
 
+      const [invoiced] = await tx.select({ id: paymentMilestones.id }).from(paymentMilestones)
+        .where(and(eq(paymentMilestones.funnelId, funnelId), eq(paymentMilestones.status, "invoiced"))).limit(1)
+      if (invoiced) throw new Error("Invoiced milestones cannot be split.")
+      const status = await milestoneStatusForFunnel(tx, funnelId)
       await tx.delete(paymentMilestones).where(eq(paymentMilestones.funnelId, funnelId))
 
       const rows = parts.map((p, i) => ({
         tenantId: ctx.tenantId,
         funnelId,
         quotationId: funnel.primaryQuotationId,
+        status,
         title: p.title.trim(),
         name: milestoneName(funnel.projectCode, p.title.trim()),
         description: p.description || null,

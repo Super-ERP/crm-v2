@@ -25,6 +25,7 @@ import {
 
 const STATUS_ORDER = paymentMilestoneStatus.enumValues
 const STATUS_LABELS: Record<(typeof STATUS_ORDER)[number], string> = {
+  planned: "Planned",
   won: "Won",
   invoiced: "Invoiced",
 }
@@ -40,7 +41,7 @@ export function PaymentMilestoneDetailBody({
   const saveField = useSaveField((patch: FunnelMilestoneUpdateInput) =>
     updateFunnelMilestone(milestone.id, patch)
   )
-  const canEditAmount = canManage && milestone.status === "won"
+  const canEditAmount = canManage && milestone.status !== "invoiced"
   const currentIndex = STATUS_ORDER.indexOf(milestone.status)
   const steps: PathStep[] = STATUS_ORDER.map((status, index) => ({
     id: status,

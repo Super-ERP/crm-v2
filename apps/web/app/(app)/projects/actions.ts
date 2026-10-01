@@ -1,5 +1,7 @@
 "use server"
 
+import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
+
 import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
@@ -358,11 +360,13 @@ export async function createProject(
           .limit(1)
         const seeded = splitMilestones(projectValue, s?.template ?? [])
         if (seeded.length > 0) {
+          const status = await milestoneStatusForFunnel(tx, input.funnelId)
           await tx.insert(paymentMilestones).values(
             seeded.map((m) => ({
               tenantId: ctx.tenantId,
               projectId: row.id,
               quotationId: input.quotationId || null,
+              status,
               ...m,
             }))
           )
@@ -830,6 +834,7 @@ export async function createMilestone(
         .select({
           id: projects.id,
           value: projects.value,
+          funnelId: projects.funnelId,
           quotationId: projects.quotationId,
           ownerMemberId: projects.ownerMemberId,
         })
@@ -877,12 +882,14 @@ export async function createMilestone(
         .from(paymentMilestones)
         .where(eq(paymentMilestones.projectId, input.projectId))
 
+      const status = await milestoneStatusForFunnel(tx, project.funnelId)
       const [row] = await tx
         .insert(paymentMilestones)
         .values({
           tenantId: ctx.tenantId,
           projectId: input.projectId,
           quotationId: project.quotationId,
+          status,
           title,
           amount,
           dueDate: input.dueDate || null,
