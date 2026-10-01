@@ -188,6 +188,7 @@ export function PhoneInput({
       placeholder={placeholder}
       disabled={disabled}
       hasError={hasError || !!error}
+      showValidation={touched || !!error}
       flag={FLAG_EMOJI[country] ?? "🌐"}
       onBlur={() => setTouched(true)}
     />
@@ -356,6 +357,7 @@ export function PhoneInputInner({
   placeholder,
   disabled,
   hasError,
+  showValidation = true,
   flag,
   onBlur,
   className,
@@ -367,6 +369,7 @@ export function PhoneInputInner({
   placeholder?: string
   disabled?: boolean
   hasError: boolean
+  showValidation?: boolean
   flag: string
   // countryLabel was removed (unused)
   onBlur?: () => void
@@ -397,7 +400,7 @@ export function PhoneInputInner({
   return (
     <div
       className={cn(
-        "flex rounded-md border bg-background text-sm ring-offset-background",
+        "flex min-w-0 rounded-md border bg-background text-sm ring-offset-background",
         "focus-within:ring-1 focus-within:ring-ring focus-within:ring-offset-1",
         hasError ? "border-destructive focus-within:ring-destructive" : "border-input",
         disabled ? "opacity-50" : "",
@@ -410,7 +413,7 @@ export function PhoneInputInner({
           render={
             <button
               type="button"
-              className="flex items-center gap-1 border-r border-input bg-muted/50 px-2.5 py-2 text-sm font-medium hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer rounded-l-md"
+              className="flex shrink-0 items-center gap-1 border-r border-input bg-muted/50 px-2.5 py-2 text-sm font-medium hover:bg-muted focus:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer rounded-l-md"
               aria-label={`Selected country: ${COUNTRY_LABELS[country] ?? country}`}
             >
               <span aria-hidden="true" className="text-base leading-none">{flag}</span>
@@ -474,7 +477,7 @@ export function PhoneInputInner({
         placeholder={placeholder}
         disabled={disabled}
         className={cn(
-          "flex-1 bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground",
+          "min-w-0 flex-1 bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground",
           "focus:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
           hasError && "aria-invalid",
@@ -483,12 +486,12 @@ export function PhoneInputInner({
       />
 
       {/* Live validation indicator */}
-      {!isEmpty && (
-        <span className="flex items-center pr-3 shrink-0">
-          {isNumberValid ? (
-            <CheckCircle2Icon className="size-4 text-green-500" />
+      {showValidation && !isEmpty && (
+        <span className="flex shrink-0 items-center pr-3" role="status" aria-label={isNumberValid && !hasError ? "Valid phone number" : "Invalid phone number"}>
+          {isNumberValid && !hasError ? (
+            <CheckCircle2Icon aria-hidden="true" className="size-4 text-green-600" />
           ) : (
-            <XCircleIcon className="size-4 text-destructive" />
+            <XCircleIcon aria-hidden="true" className="size-4 text-destructive" />
           )}
         </span>
       )}
