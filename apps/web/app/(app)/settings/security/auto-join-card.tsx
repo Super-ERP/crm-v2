@@ -1,11 +1,9 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { toast } from "sonner"
 import { showActionError } from "@/lib/show-action-error"
 import { Plus, X } from "lucide-react"
-import type { ColumnDef } from "@tanstack/react-table"
 
 import {
   Card,
@@ -24,88 +22,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { DataTable, SortableHeader } from "@/components/data-table"
 import {
   updateAutoJoin,
-  type TenantSettingsView,
-  type TenantMemberView,
 } from "@/app/(app)/settings/actions"
 import { AUTO_JOIN_ROLES } from "@/app/(app)/settings/constants"
 
-// ─── Team ────────────────────────────────────────────────────────────────────
-
-const memberColumns: ColumnDef<TenantMemberView>[] = [
-  {
-    accessorKey: "name",
-    header: ({ column }) => <SortableHeader column={column} title="Name" />,
-    cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className="font-medium">{row.original.name}</span>
-        <span className="text-xs text-muted-foreground">{row.original.email}</span>
-      </div>
-    ),
-  },
-  {
-    id: "role",
-    accessorFn: (r) => r.roleName ?? "",
-    header: "Role",
-    cell: ({ row }) =>
-      row.original.roleName ? (
-        <Badge variant="secondary">{row.original.roleName}</Badge>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      ),
-  },
-  {
-    accessorKey: "tierLevel",
-    header: ({ column }) => <SortableHeader column={column} title="Tier" />,
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.tierLevel}</span>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => (
-      <Badge variant={row.original.status === "active" ? "outline" : "secondary"}>
-        {row.original.status}
-      </Badge>
-    ),
-  },
-]
-
-function TeamTable({ members }: { members: TenantMemberView[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Members</CardTitle>
-        <CardDescription>
-          Read-only snapshot.{" "}
-          <Link
-            href="/team"
-            className="font-medium text-foreground underline underline-offset-4"
-          >
-            Manage members &amp; roles →
-          </Link>
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <DataTable
-          columns={memberColumns}
-          data={members}
-          tableId="settings-people"
-          searchColumn="name"
-          searchPlaceholder="Search members…"
-          emptyMessage="No members found."
-        />
-      </CardContent>
-    </Card>
-  )
-}
-
 // ─── Auto-join ───────────────────────────────────────────────────────────────
 
-function AutoJoinCard({
+export function AutoJoinCard({
   domains,
   role,
 }: {
@@ -235,19 +159,3 @@ function AutoJoinCard({
   )
 }
 
-// ─── Shell ───────────────────────────────────────────────────────────────────
-
-export function PeopleClient({
-  settings,
-  members,
-}: {
-  settings: TenantSettingsView
-  members: TenantMemberView[]
-}) {
-  return (
-    <div className="grid gap-4">
-      <AutoJoinCard domains={settings.autoJoinDomains} role={settings.autoJoinRole} />
-      <TeamTable members={members} />
-    </div>
-  )
-}

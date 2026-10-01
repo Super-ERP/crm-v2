@@ -1,10 +1,5 @@
-import { getSettings, listTenantMembers } from "@/app/(app)/settings/actions"
-import { PeopleClient } from "./people-client"
+import { redirect } from "next/navigation"
 
-export default async function PeopleSettingsPage() {
-  const [settings, members] = await Promise.all([
-    getSettings(),
-    listTenantMembers(),
-  ])
-  return <PeopleClient settings={settings} members={members} />
+export default function PeopleSettingsPage() {
+  redirect("/team")
 }
