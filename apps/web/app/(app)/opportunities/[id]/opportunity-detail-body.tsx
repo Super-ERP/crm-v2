@@ -32,6 +32,7 @@ import { OpportunityAnalysis } from "@/components/opportunity-analysis"
 import { ActivityTimeline } from "@/components/activity/activity-timeline"
 import type { ActivityRow } from "@/app/(app)/_shared/activity-actions"
 import { formatMoney } from "@/lib/format"
+import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
 import { cn } from "@/lib/utils"
 import {
   updateOpportunityContainer,
@@ -309,7 +310,7 @@ export function OpportunityDetailBody({
             <Separator />
             <FieldRow inline label="Total est. funnel amount">
               <span className="font-semibold tabular-nums">
-                {formatMoney(o.totalEstimatedFunnelAmount, o.currency)}
+                {formatOpportunityEstimatedTotals(o.estimatedTotalsByCurrency, o.currency)}
               </span>
             </FieldRow>
           </CardContent>

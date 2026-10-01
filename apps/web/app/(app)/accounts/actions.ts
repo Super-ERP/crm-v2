@@ -185,6 +185,7 @@ export type AccountOpportunityItem = {
   code: string
   name: string
   totalEstimatedFunnelAmount: string | null
+  estimatedTotalsByCurrency: Array<{ currency: string; total: string }>
   currency: string
   funnelCount: number
 }
@@ -201,6 +202,7 @@ export async function listAccountOpportunities(
         code: opportunities.code,
         name: opportunities.name,
         totalEstimatedFunnelAmount: opportunities.totalEstimatedFunnelAmount,
+        estimatedTotalsByCurrency: opportunities.estimatedTotalsByCurrency,
         currency: opportunities.currency,
         funnelCount: sql<number>`(select count(*)::int from ${funnels} f where f.opportunity_id = ${opportunities.id} and f.deleted_at is null)`,
       })

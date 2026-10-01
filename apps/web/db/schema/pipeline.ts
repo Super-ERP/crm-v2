@@ -122,7 +122,7 @@ export const pipelineStages = pgTable(
 /**
  * OPPORTUNITY CONTAINER — the pursuit that rolls up one or more funnels.
  * Per-year running number → `code`/`name`; PPVVC analysis block cascades to
- * child funnels; `totalEstimatedFunnelAmount` is recomputed from the children.
+ * child funnels; estimates are recomputed by currency from the children.
  */
 export const opportunities = pgTable(
   "opportunities",
@@ -162,11 +162,16 @@ export const opportunities = pgTable(
      *  nextProjectCode) generated once at container creation. Never shown in
      *  the UI — used only to prefix payment milestones' hidden `name` field. */
     projectCode: text("project_code"),
-    /** Rollup = Σ child funnels' estimatedAmount. Recomputed on funnel change. */
+    /** Single-currency rollup; null when child funnels use multiple currencies. */
     totalEstimatedFunnelAmount: numeric("total_estimated_funnel_amount", {
       precision: 14,
       scale: 2,
     }),
+    /** Authoritative estimated funnel totals, grouped without implicit FX. */
+    estimatedTotalsByCurrency: jsonb("estimated_totals_by_currency")
+      .$type<Array<{ currency: string; total: string }>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     description: text("description"),
     currency: char("currency", { length: 3 }).notNull().default("MYR"),
     /** Salesforce "Opportunity Owner Contact" — the budget-holding contact.

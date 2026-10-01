@@ -404,6 +404,7 @@ async function main() {
         code: `OPP-2026-${String(cnum).padStart(4, "0")}`,
         name: containerName[ck] ?? ck,
         totalEstimatedFunnelAmount: total,
+        estimatedTotalsByCurrency: [{ currency: DEMO_CURRENCY, total }],
         currency: DEMO_CURRENCY,
       })
       .onConflictDoNothing()

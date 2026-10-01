@@ -32,7 +32,7 @@ export const TECHNIQUES: Record<string, { fields: string[]; targets: string[]; t
   Opportunity_ID__c:[{fields:["Name","Opportunity_Year__c","Opportunity_Number__c"],targets:["code","name","opportunity_year","opportunity_number"],technique:"Allocate duplicate numbers deterministically and generate name/code with formatOpportunityCode. Original identifiers remain in the change ledger."},
     {fields:["Opportunity_Nature__c"],targets:["project_nature_code","project_natures"],technique:"Extract the source parenthesized nature code; normalize code into the tenant nature picklist."},
     {fields:["Opp_Contact__c"],targets:["owner_contact_id","primary_person_id"],technique:"Preserve both the owner-contact role and primary person reference."},
-    {fields:["Total_Estimated_Funnel_Amount__c"],targets:["total_estimated_funnel_amount"],technique:"Recompute rollup from child funnel estimates, as the application does; log differences."}],
+    {fields:["Total_Estimated_Funnel_Amount__c"],targets:["total_estimated_funnel_amount","estimated_totals_by_currency"],technique:"Recompute child funnel estimates by currency without implicit FX conversion; log differences."}],
   Opportunity:[{fields:["Pain__c","Vision__c","Value__c","AccountId","OwnerId","Opportunity__c"],targets:["pain","vision","value","account_id","owner_member_id","project_natures","product_type_code"],technique:"Opportunity container is authoritative for account, owner, PPVVC and project nature. Copy to child funnels and report differing source snapshots."},
     {fields:["SyncedQuoteId","Amount"],targets:["primary_quotation_id","amount"],technique:"Preserve a valid same-funnel synced quotation, otherwise select earliest valid quote. Set both primary flags and sync net amount/currency."},
     {fields:["Point_of_Contact__c","ContactId"],targets:["primary_person_id"],technique:"Prefer custom point-of-contact reference, otherwise standard ContactId; validate referenced person."}],
@@ -302,8 +302,14 @@ export function planMigration(data: Dataset, options: PlanOptions) {
     if(primary){primary.values.is_primary=true;f.values.primary_quotation_id=primary.values.id;change(f,"amount",money(number(primary.values.subtotal)-number(primary.values.discount_total)),"Primary quote net sync, matching application");change(f,"currency",primary.values.currency||f.values.currency||"MYR","Primary quotation currency is authoritative")}
   }
   for(const p of group("Opportunity_ID__c")) {
-    const sum=money(group("Opportunity").filter(f=>f.status==="ready"&&f.values.opportunity_id===p.values.id).reduce((n,f)=>n+number(f.values.estimated_amount),0))
-    change(p,"total_estimated_funnel_amount",sum,"Rollup from child funnel estimates")
+    const totals=new Map<string,number>()
+    for(const f of group("Opportunity").filter(f=>f.status==="ready"&&f.values.opportunity_id===p.values.id)){
+      const currency=String(f.values.currency||p.values.currency||"MYR")
+      totals.set(currency,(totals.get(currency)??0)+number(f.values.estimated_amount))
+    }
+    const breakdown=[...totals].sort(([a],[b])=>a.localeCompare(b)).map(([currency,total])=>({currency,total:money(total).toFixed(2)}))
+    change(p,"estimated_totals_by_currency",breakdown,"Rollup child funnel estimates by currency")
+    change(p,"total_estimated_funnel_amount",breakdown.length>1?null:breakdown[0]?.total??"0.00","Single-currency rollup only")
   }
   for(const f of group("Opportunity").filter(r=>r.status==="ready"&&r.values.primary_quotation_id)){
     for(const old of group("OpportunityLineItem").filter(r=>!r.generated&&r.status==="ready"&&r.values.funnel_id===f.values.id)){

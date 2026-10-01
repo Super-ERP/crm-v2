@@ -659,6 +659,13 @@
 			"when": 1790846621166,
 			"tag": "0093_payment_milestone_planning",
 			"breakpoints": true
+		},
+		{
+			"idx": 94,
+			"version": "7",
+			"when": 1790869884079,
+			"tag": "0094_opportunity_currency_totals",
+			"breakpoints": true
 		}
 	]
 }
