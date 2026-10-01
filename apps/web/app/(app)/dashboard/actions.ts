@@ -16,6 +16,7 @@ import {
   tenantSettings,
   financeDocs,
   opportunityProducts,
+  quotations,
 } from "@/db/schema"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import { DEFAULT_REMINDER_DAYS } from "@/lib/tenant-defaults"
@@ -57,22 +58,19 @@ export type OverdueInvoice = {
 
 export type OpenPipeline = {
   count: number
-  total: string
-  /** Currency of `total` when the open deals share one; null when mixed. */
-  currency: string | null
-  /** True when open deals span multiple currencies (total is not meaningful). */
-  mixed: boolean
+  byCurrency: { currency: string; count: number; total: string }[]
 }
 
 /**
- * One stacked-bar segment for the "QM Sales Report by Salesperson" chart:
+ * One stacked-bar segment for the sales-by-Account-owner chart:
  * a single (Account Owner × Sales Stage) cell, measured by the summed
- * estimated funnel amount. Amounts are summed regardless of currency — the
- * Salesforce source is single-currency (MYR), matching this tenant's default.
+ * estimated funnel amount. Each cell belongs to one currency; unlike the
+ * Salesforce source, this tenant may contain deals in several currencies.
  */
 export type SalesByOwnerStage = {
   ownerMemberId: string
   ownerName: string
+  currency: string
   stageId: string
   stageName: string
   /** Stage ladder position, so the client can order/stack segments. */
@@ -89,6 +87,7 @@ export type SalesByOwnerStage = {
  */
 export type ClosedDealsByProduct = {
   category: string
+  currency: string
   amount: number
 }
 
@@ -129,6 +128,8 @@ export type DashboardData = {
    *  so the UI titles the card "Pending Approvals" rather than "Assigned to me". */
   canApproveAll: boolean
   followUpsDue: FollowUpDue[]
+  followUpsDueCount: number
+  followUpDueDays: number
   /** My open pipelines with no activity for `staleDealDays` (empty when off). */
   staleDeals: StaleDeal[]
   /** The configured nudge threshold (null = feature off). */
@@ -149,12 +150,13 @@ export type DashboardData = {
    *  the "Get started" hero instead of the "all caught up" dashboard. */
   isFirstRun: boolean
   gettingStarted: GettingStarted
-  /** SF "QM Sales Report by Salesperson" — Σ estimated amount by owner×stage. */
+  /** Estimated amount by Account owner, stage, and currency. */
   salesByOwnerStage: SalesByOwnerStage[]
-  /** SF "Quandatics Closed Deals by Products" — Σ line amount by product category. */
+  /** Closed-won line amount by product category and currency. */
   closedDealsByProduct: ClosedDealsByProduct[]
   /** SF "Sales Activity This Year" — activity count by month. */
   salesActivityByMonth: SalesActivityMonth[]
+  defaultCurrency: string
 }
 
 /**
@@ -210,6 +212,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         followUpDueDays: tenantSettings.followUpDueDays,
         staleDealDays: tenantSettings.staleDealDays,
         invoiceReminderDays: tenantSettings.invoiceReminderDays,
+        defaultCurrency: tenantSettings.defaultCurrency,
       })
       .from(tenantSettings)
       .where(eq(tenantSettings.organizationId, ctx.tenantId))
@@ -248,7 +251,7 @@ export async function getDashboardData(): Promise<DashboardData> {
           .limit(10)
       : []
 
-    const followUpsDue: FollowUpDue[] = memberId
+    const followUpRows = memberId
       ? (
           await tx
             .select({
@@ -257,6 +260,7 @@ export async function getDashboardData(): Promise<DashboardData> {
               entityType: activities.entityType,
               entityId: activities.entityId,
               dueAt: activities.dueAt,
+              totalDue: sql<number>`count(*) over()::int`,
             })
             .from(activities)
             .where(
@@ -270,19 +274,29 @@ export async function getDashboardData(): Promise<DashboardData> {
               )
             )
             .orderBy(asc(activities.dueAt))
-        ).map((r) => ({
+            .limit(10)
+        )
+      : []
+    const followUpsDueCount = followUpRows[0]?.totalDue ?? 0
+    const followUpsDue: FollowUpDue[] = followUpRows.map((r) => ({
           id: r.id,
           subject: r.subject ?? "Follow-up",
           entityType: r.entityType,
           entityId: r.entityId,
           dueAt: r.dueAt as Date,
         }))
-      : []
 
     // Stale-funnel nudges: MY open deals whose last touch — the later of the
     // record's own update and its newest activity — is older than the
     // threshold. Oldest first, capped so a long-neglected book doesn't flood
     // the dashboard.
+    const lastTouch = sql<Date>`greatest(${funnels.updatedAt}, coalesce((
+      select max(recent_activity.occurred_at)
+      from activities recent_activity
+      where recent_activity.tenant_id = ${ctx.tenantId}
+        and recent_activity.entity_type = 'opportunity'
+        and recent_activity.entity_id = ${funnels.id}
+    ), ${funnels.updatedAt}))`
     const staleDeals: StaleDeal[] =
       staleDealDays && memberId
         ? (
@@ -290,30 +304,16 @@ export async function getDashboardData(): Promise<DashboardData> {
               .select({
                 id: funnels.id,
                 name: funnels.name,
-                lastTouchAt: sql<Date>`greatest(${funnels.updatedAt}, coalesce(max(${activities.occurredAt}), ${funnels.updatedAt}))`,
+                lastTouchAt: lastTouch,
               })
               .from(funnels)
-              .leftJoin(
-                activities,
-                and(
-                  eq(activities.entityType, "opportunity"),
-                  eq(activities.entityId, funnels.id)
-                )
-              )
-              .where(
-                and(
-                  eq(funnels.status, "open"),
-                  isNull(funnels.deletedAt),
-                  eq(funnels.ownerMemberId, memberId)
-                )
-              )
-              .groupBy(funnels.id)
-              .having(
-                sql`greatest(${funnels.updatedAt}, coalesce(max(${activities.occurredAt}), ${funnels.updatedAt})) < now() - make_interval(days => ${staleDealDays})`
-              )
-              .orderBy(
-                sql`greatest(${funnels.updatedAt}, coalesce(max(${activities.occurredAt}), ${funnels.updatedAt})) asc`
-              )
+              .where(and(
+                eq(funnels.status, "open"),
+                isNull(funnels.deletedAt),
+                eq(funnels.ownerMemberId, memberId),
+                sql`${lastTouch} < now() - make_interval(days => ${staleDealDays})`
+              ))
+              .orderBy(asc(lastTouch))
               .limit(10)
           ).map((r) => ({
             id: r.id,
@@ -322,18 +322,25 @@ export async function getDashboardData(): Promise<DashboardData> {
           }))
         : []
 
-    // Grouped by currency so we never sum across currencies (no implicit FX).
+    // Grouped by effective value currency so we never sum across currencies
+    // (no implicit FX). A primary quotation drives funnels.amount, so its
+    // currency takes precedence over the funnel's original currency.
     // `ownerFilter` undefined → tenant-wide rollup (RLS still scopes to tenant).
     const pipelineFor = async (
       ownerFilter: SQL | undefined
     ): Promise<OpenPipeline> => {
+      const valueCurrency = sql<string>`coalesce(${quotations.currency}, ${funnels.currency})`
       const rows = await tx
         .select({
-          currency: funnels.currency,
+          currency: valueCurrency,
           count: sql<number>`count(*)::int`,
           total: sql<string>`coalesce(sum(${funnels.amount}), 0)`,
         })
         .from(funnels)
+        .leftJoin(quotations, and(
+          eq(funnels.primaryQuotationId, quotations.id),
+          isNull(quotations.deletedAt)
+        ))
         .where(
           and(
             eq(funnels.status, "open"),
@@ -341,38 +348,39 @@ export async function getDashboardData(): Promise<DashboardData> {
             ownerFilter
           )
         )
-        .groupBy(funnels.currency)
+        .groupBy(valueCurrency)
 
       const count = rows.reduce((n, r) => n + Number(r.count), 0)
-      const mixed = rows.length > 1
-      const primary = rows[0]
       return {
         count,
-        total: mixed ? "0" : primary?.total ?? "0",
-        currency: mixed ? null : primary?.currency ?? null,
-        mixed,
+        byCurrency: rows.map((r) => ({
+          currency: r.currency,
+          count: Number(r.count),
+          total: r.total,
+        })),
       }
     }
 
     const myOpenPipeline: OpenPipeline = memberId
       ? await pipelineFor(eq(funnels.ownerMemberId, memberId))
-      : { count: 0, total: "0", currency: null, mixed: false }
+      : { count: 0, byCurrency: [] }
     // Tenant-wide rollup only for view-all roles; gives an Owner/Viewer who owns
     // nothing a useful landing page (the My/Team toggle defaults to this).
     const orgOpenPipeline: OpenPipeline | null = canViewAll
       ? await pipelineFor(undefined)
       : null
 
-    // ── SF home charts (right column, "Salesperson's Funnels") ──────────────
-    // Chart 1 — "QM Sales Report by Salesperson": Σ estimated funnel amount by
+    // Dashboard sales charts.
+    // Chart 1: estimated funnel amount by
     // Account Owner × Sales Stage. Tenant-wide (RLS scopes to the tenant); the
     // owner name comes from the auth schema (member → user), joined the same
-    // way listOpportunities() does. Excludes soft-deleted funnels.
+    // way listOpportunities() does. Scoped users see only their own records.
     const salesByOwnerStage: SalesByOwnerStage[] = (
       await tx
         .select({
           ownerMemberId: funnels.ownerMemberId,
           ownerName: user.name,
+          currency: funnels.currency,
           stageId: pipelineStages.id,
           stageName: pipelineStages.name,
           stageSort: pipelineStages.sortOrder,
@@ -382,10 +390,14 @@ export async function getDashboardData(): Promise<DashboardData> {
         .innerJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
         .leftJoin(member, eq(funnels.ownerMemberId, member.id))
         .leftJoin(user, eq(member.userId, user.id))
-        .where(isNull(funnels.deletedAt))
+        .where(and(
+          isNull(funnels.deletedAt),
+          canViewAll ? undefined : memberId ? eq(funnels.ownerMemberId, memberId) : sql`false`
+        ))
         .groupBy(
           funnels.ownerMemberId,
           user.name,
+          funnels.currency,
           pipelineStages.id,
           pipelineStages.name,
           pipelineStages.sortOrder
@@ -393,38 +405,50 @@ export async function getDashboardData(): Promise<DashboardData> {
     ).map((r) => ({
       ownerMemberId: r.ownerMemberId,
       ownerName: r.ownerName ?? "Unassigned",
+      currency: r.currency,
       stageId: r.stageId,
       stageName: r.stageName,
       stageSort: r.stageSort,
       amount: Number(r.amount),
     }))
 
-    // Chart 2 — "Quandatics Closed Deals by Products": Σ line amount by product
+    // Chart 2: line amount by product
     // category for CLOSED-WON funnels. Sourced from opportunity_products (the SF
     // OpportunityLineItem import), which is the only table carrying both a
-    // product category and a per-line amount. Reading it is RLS-scoped and does
-    // not require enabling any module (deferral is UI/automation only). Lines
-    // with no category fall under "Uncategorized".
+    // product category and a per-line amount. Tenant RLS and record scope both
+    // apply. Lines
+    // with no category fall under "Uncategorized". Synced lines inherit the
+    // primary quotation currency, not the funnel's original currency.
     const closedDealsByProduct: ClosedDealsByProduct[] = (
       await tx
         .select({
           category: sql<string>`coalesce(nullif(${opportunityProducts.productCategory}, ''), 'Uncategorized')`,
+          currency: sql<string>`coalesce(${quotations.currency}, ${funnels.currency})`,
           amount: sql<string>`coalesce(sum(coalesce(${opportunityProducts.totalPrice}, 0)), 0)`,
         })
         .from(opportunityProducts)
         .innerJoin(funnels, eq(opportunityProducts.funnelId, funnels.id))
-        .where(and(eq(funnels.status, "won"), isNull(funnels.deletedAt)))
+        .leftJoin(quotations, and(
+          eq(funnels.primaryQuotationId, quotations.id),
+          isNull(quotations.deletedAt)
+        ))
+        .where(and(
+          eq(funnels.status, "won"),
+          isNull(funnels.deletedAt),
+          canViewAll ? undefined : memberId ? eq(funnels.ownerMemberId, memberId) : sql`false`
+        ))
         .groupBy(
-          sql`coalesce(nullif(${opportunityProducts.productCategory}, ''), 'Uncategorized')`
+          sql`coalesce(nullif(${opportunityProducts.productCategory}, ''), 'Uncategorized')`,
+          sql`coalesce(${quotations.currency}, ${funnels.currency})`
         )
     ).map((r) => ({
       category: r.category,
+      currency: r.currency,
       amount: Number(r.amount),
     }))
 
     // Chart 3 — "Sales Activity This Year": count of activities logged per
-    // calendar month, tenant-wide (RLS scopes to the tenant). Left column
-    // ("Salesperson's Activity") counterpart to the two funnel charts above.
+    // calendar month, filtered to the member unless they have view-all access.
     const salesActivityByMonth: SalesActivityMonth[] = (
       await tx
         .select({
@@ -432,78 +456,56 @@ export async function getDashboardData(): Promise<DashboardData> {
           count: sql<string>`count(*)`,
         })
         .from(activities)
-        .where(
-          sql`extract(year from ${activities.occurredAt}) = extract(year from now())`
-        )
+        .where(and(
+          sql`${activities.occurredAt} >= date_trunc('year', now())
+            and ${activities.occurredAt} < date_trunc('year', now()) + interval '1 year'`,
+          canViewAll ? undefined : memberId ? eq(activities.memberId, memberId) : sql`false`
+        ))
         .groupBy(sql`extract(month from ${activities.occurredAt})`)
     ).map((r) => ({
       month: Number(r.month),
       count: Number(r.count),
     }))
 
-    // Tenant-wide existence checks for first-run detection + the getting-started
-    // checklist. RLS scopes each count to the active tenant. Run sequentially —
-    // they share the transaction's single connection.
-    const num = (rows: { n: number }[]) => Number(rows[0]?.n ?? 0)
-    const leadCount = num(
-      await tx
-        .select({ n: sql<number>`count(*)::int` })
-        .from(leads)
-        .where(isNull(leads.deletedAt))
-    )
-    const accountCount = num(
-      await tx
-        .select({ n: sql<number>`count(*)::int` })
-        .from(accounts)
-        .where(isNull(accounts.deletedAt))
-    )
-    const personCount = num(
-      await tx
-        .select({ n: sql<number>`count(*)::int` })
-        .from(persons)
-        .where(isNull(persons.deletedAt))
-    )
-    const oppCount = num(
-      await tx
-        .select({ n: sql<number>`count(*)::int` })
-        .from(funnels)
-        .where(isNull(funnels.deletedAt))
-    )
-    const stageCount = num(
-      await tx.select({ n: sql<number>`count(*)::int` }).from(pipelineStages)
-    )
-    const taxCount = num(
-      await tx.select({ n: sql<number>`count(*)::int` }).from(taxSettings)
-    )
+    // These are boolean checklist gates, so stop at the first matching row
+    // instead of counting entire tables in six separate round trips.
+    const [presence] = await tx.select({
+      hasLead: sql<boolean>`exists(select 1 from ${leads} where ${leads.deletedAt} is null)`,
+      hasAccount: sql<boolean>`exists(select 1 from ${accounts} where ${accounts.deletedAt} is null)`,
+      hasPerson: sql<boolean>`exists(select 1 from ${persons} where ${persons.deletedAt} is null)`,
+      hasFunnel: sql<boolean>`exists(select 1 from ${funnels} where ${funnels.deletedAt} is null)`,
+      hasStage: sql<boolean>`exists(select 1 from ${pipelineStages})`,
+      hasTax: sql<boolean>`exists(select 1 from ${taxSettings})`,
+    }).from(sql`(select 1) as dashboard_presence`)
 
     // Member count is sourced from the auth schema (not tenant-RLS scoped), so
     // query it on the base connection by organization.
-    const memberCount = num(
-      await db
-        .select({ n: sql<number>`count(*)::int` })
+    const [memberPresence] = await db
+        .select({ hasTeammate: sql<boolean>`(count(*) > 1)` })
         .from(member)
         .where(eq(member.organizationId, ctx.tenantId))
-    )
 
     const gettingStarted: GettingStarted = {
-      hasLead: leadCount > 0,
-      hasAccountOrContact: accountCount > 0 || personCount > 0,
-      hasStages: stageCount > 0,
-      hasCurrencyTax: taxCount > 0,
-      hasTeammate: memberCount > 1,
+      hasLead: presence.hasLead,
+      hasAccountOrContact: presence.hasAccount || presence.hasPerson,
+      hasStages: presence.hasStage,
+      hasCurrencyTax: presence.hasTax,
+      hasTeammate: memberPresence?.hasTeammate ?? false,
     }
 
     const isFirstRun =
-      leadCount === 0 &&
-      accountCount === 0 &&
-      personCount === 0 &&
-      oppCount === 0
+      !presence.hasLead &&
+      !presence.hasAccount &&
+      !presence.hasPerson &&
+      !presence.hasFunnel
 
     return {
       pendingApprovals,
       pendingApprovalsCount,
       canApproveAll,
       followUpsDue,
+      followUpsDueCount,
+      followUpDueDays: dueDays,
       staleDeals,
       staleDealDays,
       overdueInvoices,
@@ -516,6 +518,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       salesByOwnerStage,
       closedDealsByProduct,
       salesActivityByMonth,
+      defaultCurrency: s?.defaultCurrency ?? "MYR",
     }
   })
 }

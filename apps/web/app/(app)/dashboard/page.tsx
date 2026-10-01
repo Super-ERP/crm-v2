@@ -29,6 +29,7 @@ import { getDashboardData, type FollowUpDue } from "./actions"
 import { GettingStarted, type ChecklistItem } from "./getting-started"
 import { KpiSection } from "./kpi-section"
 import { DashboardCharts, SalesActivityChart } from "./dashboard-charts"
+import { DashboardCurrencyProvider } from "./dashboard-currency"
 
 const ENTITY_HREF: Record<string, string> = {
   account: "/accounts",
@@ -69,8 +70,7 @@ function RowLink({
   )
 }
 
-/** A Salesforce-style column banner header ("Salesperson's Activity" /
- *  "Salesperson's Funnels") that titles each half of the home page. */
+/** Section heading for the two dashboard work areas. */
 function ColumnHeading({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-md border bg-muted/40 px-4 py-2.5 text-center">
@@ -129,7 +129,7 @@ export default async function DashboardPage() {
   const now = new Date()
 
   const approvalsCount = data.pendingApprovalsCount
-  const followUpsCount = data.followUpsDue.length
+  const followUpsCount = data.followUpsDueCount
   const hasOverdue = data.followUpsDue.some((f) => isBefore(f.dueAt, now))
   const approvalsTitle = data.canApproveAll
     ? "Pending Approvals"
@@ -211,6 +211,11 @@ export default async function DashboardPage() {
                 </RowLink>
               )
             })}
+            {followUpsCount > data.followUpsDue.length && (
+              <p className="pt-3 text-xs text-muted-foreground">
+                Showing the next {data.followUpsDue.length} of {followUpsCount} follow-ups.
+              </p>
+            )}
           </div>
         )}
       </CardContent>
@@ -344,6 +349,13 @@ export default async function DashboardPage() {
       </Card>
     ) : null
 
+  const currencies = [...new Set([
+    ...data.myOpenPipeline.byCurrency.map((row) => row.currency),
+    ...(data.orgOpenPipeline?.byCurrency.map((row) => row.currency) ?? []),
+    ...data.salesByOwnerStage.map((row) => row.currency),
+    ...data.closedDealsByProduct.map((row) => row.currency),
+  ])].sort()
+
   return (
     <>
       <SiteHeader title="Dashboard" />
@@ -361,6 +373,7 @@ export default async function DashboardPage() {
 
             <GettingStarted items={checklist} />
 
+            <DashboardCurrencyProvider available={currencies} defaultCurrency={data.defaultCurrency}>
             {/* KPI row (My/Team toggle on the funnel rollup for view-all roles) */}
             <KpiSection
               myPipeline={data.myOpenPipeline}
@@ -368,32 +381,34 @@ export default async function DashboardPage() {
               approvalsCount={approvalsCount}
               canApproveAll={data.canApproveAll}
               followUpsCount={followUpsCount}
+              followUpDueDays={data.followUpDueDays}
               hasOverdue={hasOverdue}
             />
 
-            {/* Salesforce-style two-column home page:
-                left = Salesperson's Activity, right = Salesperson's Funnels. */}
+            {/* Personal work on the left; pipeline and approval context on the right. */}
             <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-              {/* LEFT — Salesperson's Activity */}
               <div className="grid gap-4">
-                <ColumnHeading>Salesperson&apos;s Activity</ColumnHeading>
+                <ColumnHeading>Activity and follow-ups</ColumnHeading>
                 {followUpsCard}
-                <SalesActivityChart data={data.salesActivityByMonth} />
+                <SalesActivityChart
+                  data={data.salesActivityByMonth}
+                  canViewAll={data.canViewAll}
+                  currentMonth={now.getMonth() + 1}
+                />
               </div>
 
-              {/* RIGHT — Salesperson's Funnels */}
               <div className="grid gap-4">
-                <ColumnHeading>Salesperson&apos;s Funnels</ColumnHeading>
+                <ColumnHeading>Pipeline and approvals</ColumnHeading>
                 {approvalsCard}
                 {overdueInvoicesCard}
                 {staleFunnelsCard}
-                {/* Salesforce home bar charts (SPEC §1, right column). */}
                 <DashboardCharts
                   salesByOwnerStage={data.salesByOwnerStage}
                   closedDealsByProduct={data.closedDealsByProduct}
                 />
               </div>
             </div>
+            </DashboardCurrencyProvider>
           </>
         )}
       </PageBody>

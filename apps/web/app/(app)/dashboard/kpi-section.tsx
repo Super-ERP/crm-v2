@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { formatMoney } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { OpenPipeline } from "./actions"
+import { useDashboardCurrency } from "./dashboard-currency"
 
 /** Tinted icon-chip palettes for the KPI cards. */
 const CHIP: Record<"sky" | "violet" | "amber" | "red" | "muted", string> = {
@@ -69,22 +70,16 @@ function KpiCard({
 
 function PipelineCards({ scope, p }: { scope: Scope; p: OpenPipeline }) {
   const team = scope === "team"
+  const { currency } = useDashboardCurrency()
+  const selected = p.byCurrency.find((row) => row.currency === currency)
   return (
     <>
       <KpiCard
         label={team ? "Open Funnel Value" : "My Open Funnel Value"}
         icon={TrendingUp}
         chip="sky"
-        value={
-          p.mixed ? (
-            <span className="text-base font-medium text-muted-foreground">
-              Multiple currencies
-            </span>
-          ) : (
-            formatMoney(p.total, p.currency ?? undefined)
-          )
-        }
-        hint={team ? "Sum of all open funnel value" : "Sum of your open funnel value"}
+        value={formatMoney(selected?.total ?? "0", currency)}
+        hint={`${selected?.count ?? 0} ${currency} ${team ? "team" : "owned"} funnels`}
       />
       <KpiCard
         label={team ? "Open Funnels" : "My Open Funnels"}
@@ -111,6 +106,7 @@ export function KpiSection({
   approvalsCount,
   canApproveAll,
   followUpsCount,
+  followUpDueDays,
   hasOverdue,
 }: {
   myPipeline: OpenPipeline
@@ -118,6 +114,7 @@ export function KpiSection({
   approvalsCount: number
   canApproveAll: boolean
   followUpsCount: number
+  followUpDueDays: number
   hasOverdue: boolean
 }) {
   // Default to the tenant-wide view when available, so view-all roles see a
@@ -168,7 +165,7 @@ export function KpiSection({
             hasOverdue ? "red" : followUpsCount > 0 ? "amber" : undefined
           }
           value={followUpsCount}
-          hint="Next 7 days assigned to you"
+          hint={`Next ${followUpDueDays} days assigned to you`}
         />
       </div>
     </div>

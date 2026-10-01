@@ -25,6 +25,7 @@ import type {
   ClosedDealsByProduct,
   SalesActivityMonth,
 } from "./actions"
+import { useDashboardCurrency } from "./dashboard-currency"
 
 const MONTH_LABELS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -44,16 +45,18 @@ const STAGE_COLORS = [
 type OwnerRow = { owner: string } & Record<string, number | string>
 
 /**
- * Chart A — "QM Sales Report by Salesperson": one horizontal bar per Funnel
- * Owner, stacked by Sales Stage; measure = Σ Estimated Funnel Amount. Stages
+ * One horizontal bar per Account owner, stacked by Sales Stage; measure =
+ * estimated Funnel amount in the selected currency. Stages
  * are ordered by their ladder position so the legend/stack read left→right in
  * pipeline order.
  */
 function SalesByOwnerStageChart({ data }: { data: SalesByOwnerStage[] }) {
+  const { currency } = useDashboardCurrency()
   const { rows, config, stageKeys, stageLabels } = React.useMemo(() => {
+    const selectedData = data.filter((row) => row.currency === currency)
     // Distinct stages, ordered by ladder position → drives stack + legend.
     const stageOrder = new Map<string, { name: string; sort: number }>()
-    for (const d of data) {
+    for (const d of selectedData) {
       if (!stageOrder.has(d.stageId)) {
         stageOrder.set(d.stageId, { name: d.stageName, sort: d.stageSort })
       }
@@ -78,7 +81,7 @@ function SalesByOwnerStageChart({ data }: { data: SalesByOwnerStage[] }) {
 
     // One row per owner, each stage summed into its own key.
     const byOwner = new Map<string, OwnerRow>()
-    for (const d of data) {
+    for (const d of selectedData) {
       const row = byOwner.get(d.ownerMemberId) ?? { owner: d.ownerName }
       const prev = Number(row[d.stageId] ?? 0)
       row[d.stageId] = prev + d.amount
@@ -91,7 +94,7 @@ function SalesByOwnerStageChart({ data }: { data: SalesByOwnerStage[] }) {
       return sum(b) - sum(a)
     })
     return { rows, config, stageKeys, stageLabels }
-  }, [data])
+  }, [data, currency])
 
   const hasData = rows.length > 0 && stageKeys.length > 0
   // Give each owner row room; grow the chart with the owner count.
@@ -102,7 +105,7 @@ function SalesByOwnerStageChart({ data }: { data: SalesByOwnerStage[] }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="size-4" />
-          QM Sales Report by Salesperson
+          Sales by Account owner ({currency})
         </CardTitle>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6">
@@ -123,7 +126,7 @@ function SalesByOwnerStageChart({ data }: { data: SalesByOwnerStage[] }) {
                 type="number"
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => formatMoneyCompact(Number(v))}
+                tickFormatter={(v) => formatMoneyCompact(Number(v), currency)}
               />
               <YAxis
                 type="category"
@@ -141,7 +144,7 @@ function SalesByOwnerStageChart({ data }: { data: SalesByOwnerStage[] }) {
                       <div className="flex flex-1 justify-between gap-3 leading-none">
                         <span className="text-muted-foreground">{name}</span>
                         <span className="font-mono font-medium tabular-nums">
-                          {formatMoney(Number(value))}
+                          {formatMoney(Number(value), currency)}
                         </span>
                       </div>
                     )}
@@ -163,8 +166,8 @@ function SalesByOwnerStageChart({ data }: { data: SalesByOwnerStage[] }) {
         ) : (
           <EmptyState
             icon={BarChart3}
-            title="No funnel amounts to chart"
-            description="Estimated funnel amounts by owner and stage will appear here."
+            title={`No ${currency} funnel estimates`}
+            description="Select another currency to view its owner and stage breakdown."
           />
         )}
       </CardContent>
@@ -180,13 +183,14 @@ const productConfig = {
 } satisfies ChartConfig
 
 /**
- * Chart B — "Quandatics Closed Deals by Products": one horizontal bar per
- * product category; measure = Σ line amount of closed-won funnels.
+ * One horizontal bar per product category; measure = closed-won line amount
+ * in the selected currency.
  */
 function ClosedDealsByProductChart({ data }: { data: ClosedDealsByProduct[] }) {
+  const { currency } = useDashboardCurrency()
   const rows = React.useMemo(
-    () => [...data].sort((a, b) => b.amount - a.amount),
-    [data]
+    () => data.filter((row) => row.currency === currency).sort((a, b) => b.amount - a.amount),
+    [data, currency]
   )
   const hasData = rows.length > 0
   const height = Math.max(220, rows.length * 44 + 60)
@@ -196,7 +200,7 @@ function ClosedDealsByProductChart({ data }: { data: ClosedDealsByProduct[] }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <PackageIcon className="size-4" />
-          Quandatics Closed Deals by Products
+          Closed deals by product ({currency})
         </CardTitle>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6">
@@ -217,7 +221,7 @@ function ClosedDealsByProductChart({ data }: { data: ClosedDealsByProduct[] }) {
                 type="number"
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(v) => formatMoneyCompact(Number(v))}
+                tickFormatter={(v) => formatMoneyCompact(Number(v), currency)}
               />
               <YAxis
                 type="category"
@@ -234,7 +238,7 @@ function ClosedDealsByProductChart({ data }: { data: ClosedDealsByProduct[] }) {
                     hideLabel
                     formatter={(value) => (
                       <span className="font-mono font-medium tabular-nums">
-                        {formatMoney(Number(value))}
+                        {formatMoney(Number(value), currency)}
                       </span>
                     )}
                   />
@@ -250,8 +254,8 @@ function ClosedDealsByProductChart({ data }: { data: ClosedDealsByProduct[] }) {
         ) : (
           <EmptyState
             icon={PackageIcon}
-            title="No closed deals to chart"
-            description="Closed-won deal amounts by product category will appear here."
+            title={`No ${currency} closed-deal products`}
+            description="Select another currency to view its product breakdown."
           />
         )}
       </CardContent>
@@ -271,17 +275,22 @@ const activityConfig = {
  * calendar month (Jan…current month), solid SF-blue bars with the value
  * printed on top of each bar (matches the Salesforce home page chart).
  */
-export function SalesActivityChart({ data }: { data: SalesActivityMonth[] }) {
+export function SalesActivityChart({
+  data,
+  canViewAll,
+  currentMonth,
+}: {
+  data: SalesActivityMonth[]
+  canViewAll: boolean
+  currentMonth: number
+}) {
   const rows = React.useMemo(() => {
-    const currentMonth = data.length
-      ? Math.max(...data.map((d) => d.month))
-      : new Date().getMonth() + 1
     const byMonth = new Map(data.map((d) => [d.month, d.count]))
     return Array.from({ length: currentMonth }, (_, i) => ({
       month: MONTH_LABELS[i],
       count: byMonth.get(i + 1) ?? 0,
     }))
-  }, [data])
+  }, [data, currentMonth])
 
   const hasData = rows.some((r) => r.count > 0)
 
@@ -290,7 +299,7 @@ export function SalesActivityChart({ data }: { data: SalesActivityMonth[] }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarDaysIcon className="size-4" />
-          Sales Activity This Year
+          {canViewAll ? "Team activity this year" : "My activity this year"}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-2 pt-2 sm:px-6">
@@ -343,7 +352,7 @@ export function SalesActivityChart({ data }: { data: SalesActivityMonth[] }) {
   )
 }
 
-/** The two Salesforce home bar charts for the "Salesperson's Funnels" column. */
+/** The two monetary pipeline charts. */
 export function DashboardCharts({
   salesByOwnerStage,
   closedDealsByProduct,
