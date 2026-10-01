@@ -1,11 +1,11 @@
 ---
-description: Answers to the most common operational and interface questions in Super-ERP.
+description: Answers to the most common operational and interface questions in Q-App.
 icon: circle-question
 ---
 
 # Frequently Asked Questions (FAQ)
 
-Find quick answers to common questions about using Super-ERP across leads, sales funnels, quotations, and system settings.
+Find quick answers to common questions about using Q-App across leads, sales funnels, quotations, and system settings.
 
 ---
 

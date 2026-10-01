@@ -5,7 +5,7 @@ icon: bolt
 
 # Quick Start by Role
 
-Select your role below to view your daily workflow, essential actions, and recommended best practices in Super-ERP.
+Select your role below to view your daily workflow, essential actions, and recommended best practices in Q-App.
 
 {% tabs %}
 {% tab title="Sales Representative" icon="briefcase" %}

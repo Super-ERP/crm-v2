@@ -1,11 +1,11 @@
 ---
-description: Release history, new feature highlights, and user experience enhancements in Super-ERP.
+description: Release history, new feature highlights, and user experience enhancements in Q-App.
 icon: clock-rotate-left
 ---
 
 # Changelog & Release Notes
 
-Stay updated with recent feature additions, quotation templates, and workflow improvements in Super-ERP (CRM v2).
+Stay updated with recent feature additions, quotation templates, and workflow improvements in Q-App.
 
 ---
 

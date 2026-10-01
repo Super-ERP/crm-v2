@@ -1,13 +1,13 @@
 ---
-description: The official user experience and operations portal for Super-ERP (Quandatics CRM v2).
+description: The official user experience and operations portal for Q-App.
 icon: house
 cover: .gitbook/assets/logo.png
 coverY: 0
 ---
 
-# Super-ERP Documentation Portal
+# Q-App Documentation Portal
 
-Welcome to the central user guide and operational hub for **Super-ERP (Quandatics CRM v2)**. This portal provides end-to-end instructions for sales representatives, managers, delivery leads, and administrators to manage the complete lead-to-cash lifecycle.
+Welcome to the central user guide and operational hub for **Q-App**. This portal provides end-to-end instructions for sales representatives, managers, delivery leads, and administrators to manage the complete lead-to-cash lifecycle.
 
 ---
 
@@ -54,7 +54,7 @@ Welcome to the central user guide and operational hub for **Super-ERP (Quandatic
 
 ## The End-to-End Business Lifecycle
 
-Super-ERP connects sales, delivery, and commercial planning through an automated, stage-gated lifecycle:
+Q-App connects sales, delivery, and commercial planning through an automated, stage-gated lifecycle:
 
 ```mermaid
 flowchart LR

@@ -1,6 +1,6 @@
-# Super-ERP (Quandatics CRM) End-to-End User Guide
+# Q-App End-to-End User Guide
 
-A complete, practical guide to operating Super-ERP (Quandatics CRM v2) through the web interface across the full customer lifecycle.
+A complete, practical guide to operating Q-App through the web interface across the full customer lifecycle.
 
 ---
 
@@ -21,7 +21,7 @@ A complete, practical guide to operating Super-ERP (Quandatics CRM v2) through t
 
 ## System Overview & Lifecycle
 
-Super-ERP connects sales, delivery, and commercial planning through a single business lifecycle:
+Q-App connects sales, delivery, and commercial planning through a single business lifecycle:
 
 ```mermaid
 flowchart LR

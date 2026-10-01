@@ -5,7 +5,7 @@ icon: wrench
 
 # Troubleshooting & Common Errors
 
-If you encounter an error message or workflow restriction in Super-ERP, refer to the diagnostic steps below.
+If you encounter an error message or workflow restriction in Q-App, refer to the diagnostic steps below.
 
 ---
 
