@@ -7,7 +7,7 @@ icon: address-book
 
 Maintain the companies and people involved in your deals.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#account).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#account).
 
 ## On this page
 
@@ -129,4 +129,4 @@ When generating quotations or advancing sales stages:
 
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Troubleshooting](help-center/troubleshooting.md)
-* [Back to start](README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)

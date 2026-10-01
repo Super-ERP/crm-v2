@@ -7,7 +7,7 @@ icon: filter
 
 Qualify a customer need and keep each sales pursuit at the right stage.
 
-**New to these terms?** Read the [terminology reference](reference/terminology.md#opportunity).
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#opportunity).
 
 ## On this page
 
@@ -104,4 +104,4 @@ Inside the Funnel detail page:
 
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](help-center/troubleshooting.md)
-* [Back to start](README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)

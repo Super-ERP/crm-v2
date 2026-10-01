@@ -22,7 +22,7 @@ These are the standard stage labels. Your organization can customize labels and 
 | Closed Lost | The deal is lost. | Terminal: stage changes are no longer allowed. Record close remarks. |
 | KIV — Keep In View | The pursuit is parked for later follow-up. | Record the reason. Reopening requires approval. |
 
-Open-stage rollback skips forward-entry gates. Forward changes can require fields and approval. Follow [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules) for the workflow.
+Open-stage rollback skips forward-entry gates. Forward changes can require fields and approval. Follow [Stage movement](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#stage-advancement-and-rollback-rules) for the workflow.
 
 ## Quotation statuses
 
@@ -39,7 +39,7 @@ Open-stage rollback skips forward-entry gates. Forward changes can require field
 
 Not every historical status has a manual action in the current interface. Read the available controls rather than assuming every row in this table is a selectable status.
 
-See [Quotations and revisions](../05-quotations-and-revisions.md).
+See [Quotations and revisions](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions).
 
 ## Payment milestone statuses
 
@@ -49,7 +49,7 @@ See [Quotations and revisions](../05-quotations-and-revisions.md).
 | Won | A billing event belongs to a won deal. | An authorized update can record Won → Invoiced after billing. |
 | Invoiced | Billing has been recorded for this milestone. | Forward-only; it cannot return to Won or Planned. |
 
-A milestone created for an already won funnel starts as Won. Invoiced milestones keep their status. The current guide documents a status-control limitation; see [Managing milestones](../06-payment-milestones.md#managing-milestones).
+A milestone created for an already won funnel starts as Won. Invoiced milestones keep their status. The current guide documents a status-control limitation; see [Managing milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones#managing-milestones).
 
 ## Decisions that are separate
 
@@ -62,4 +62,4 @@ A milestone created for an already won funnel starts as Won. Invoiced milestones
 
 * [Terminology](terminology.md)
 * [Permissions and approval routing](permissions-and-approvals.md)
-* [Troubleshooting](../help-center/troubleshooting.md)
+* [Troubleshooting](https://jienweng.gitbook.io/q-app/docs/help/troubleshooting)

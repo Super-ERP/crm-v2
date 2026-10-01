@@ -51,7 +51,7 @@ For a particular record, provide its name or identifier so your administrator ca
 
 **Expected result:** the record appears if you have access. If it still does not, your administrator can explain or correct the access configuration.
 
-See [Workspace & personal views](../01-workspace-and-views.md) and [Administration & settings](../09-admin-and-settings.md).
+See [Workspace & personal views](https://jienweng.gitbook.io/q-app/getting-started/01-workspace-and-views) and [Administration & settings](../09-admin-and-settings.md).
 
 ## A funnel stage change is blocked
 
@@ -218,4 +218,4 @@ See [Printing a quotation](../05-quotations-and-revisions.md#exporting-client-pd
 Send your administrator or support contact the module name, record identifier, exact error, and steps you took. If you include a screenshot, show the relevant area and remove unrelated customer or personal information.
 
 * [Frequently asked questions](faqs.md)
-* [Back to start](../README.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)
