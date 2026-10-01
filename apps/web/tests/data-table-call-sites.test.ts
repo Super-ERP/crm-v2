@@ -76,7 +76,7 @@ describe("shared DataTable call-site inventory", () => {
       .filter((site) => site.tableId === null && !site.optOut)
       .map((site) => `${site.file}:${site.line}`)
 
-    expect(sites).toHaveLength(39)
+    expect(sites).toHaveLength(38)
     expect(missing).toEqual([])
   })
 
