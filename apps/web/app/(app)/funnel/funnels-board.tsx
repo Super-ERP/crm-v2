@@ -450,16 +450,16 @@ export function OpportunitiesBoard({
             ))}
           </div>
           {!activeId && scrollEdges.left ? (
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 pl-1">
-              <Button type="button" variant="outline" size="icon-sm" className="pointer-events-auto sticky top-[45vh] shadow-sm" aria-label="Scroll stages left" title="Scroll stages left" onClick={() => scrollStages(-1)}>
-                <ChevronLeft className="size-4" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-background/80 to-transparent pl-1.5">
+              <Button type="button" variant="outline" size="icon-lg" className="pointer-events-auto sticky top-[45svh] rounded-full border-border/70 bg-background/95 shadow-lg shadow-black/10 backdrop-blur-sm transition-transform hover:scale-105 hover:bg-background dark:shadow-black/30" aria-label="Scroll stages left" title="Scroll stages left" onClick={() => scrollStages(-1)}>
+                <ChevronLeft className="size-5" />
               </Button>
             </div>
           ) : null}
           {!activeId && scrollEdges.right ? (
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 pr-1 text-right">
-              <Button type="button" variant="outline" size="icon-sm" className="pointer-events-auto sticky top-[45vh] shadow-sm" aria-label="Scroll stages right" title="Scroll stages right" onClick={() => scrollStages(1)}>
-                <ChevronRight className="size-4" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-background/80 to-transparent pr-1.5 text-right">
+              <Button type="button" variant="outline" size="icon-lg" className="pointer-events-auto sticky top-[45svh] rounded-full border-border/70 bg-background/95 shadow-lg shadow-black/10 backdrop-blur-sm transition-transform hover:scale-105 hover:bg-background dark:shadow-black/30" aria-label="Scroll stages right" title="Scroll stages right" onClick={() => scrollStages(1)}>
+                <ChevronRight className="size-5" />
               </Button>
             </div>
           ) : null}
