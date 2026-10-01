@@ -14,7 +14,7 @@ The system is organized around the business lifecycle—from capturing raw inbou
 ```mermaid
 flowchart LR
     L["1. Leads"] -->|"Qualify & Convert"| AC["2. Accounts & Contacts"]
-    AC --> OP["3. Opportunity & Funnel (0E - 4A)"]
+    AC --> OP["3. Opportunity & Funnel (0e – 4a)"]
     OP --> Q["4. Quotation & Approvals"]
     Q -->|"Deal Won"| W["5. Closed-Won & Milestones"]
     W --> P["6. Delivery Projects & Sales Orders"]

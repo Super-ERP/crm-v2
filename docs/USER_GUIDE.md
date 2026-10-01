@@ -26,7 +26,7 @@ Super-ERP connects sales, delivery, and commercial planning through a single bus
 ```mermaid
 flowchart LR
     L["1. Leads"] -->|"Qualify & Convert"| AC["2. Accounts & Contacts"]
-    AC --> OP["3. Opportunity & Funnel (0E - 4A)"]
+    AC --> OP["3. Opportunity & Funnel (0e – 4a)"]
     OP --> Q["4. Quotation & Approvals"]
     Q -->|"Deal Won"| W["5. Closed-Won & Milestones"]
     W --> P["6. Delivery Projects & Sales Orders"]
@@ -71,7 +71,7 @@ When a lead is ready for proposal:
 2. Complete the full-page conversion wizard:
    * **Account**: Link an existing Account or create a new one (*Client* or *Reseller*, Code, Address).
    * **Contact**: Creates or links the primary stakeholder contact.
-   * **Opportunity & Funnel**: Creates the Opportunity container and seeds the sales deal into stage **`0E` (Exploration)**.
+   * **Opportunity & Funnel**: Creates the Opportunity container and seeds the sales deal into stage **`0e` (Identified)**.
 3. Click **Confirm Conversion**. This is an atomic, permanent one-way transaction.
 
 ---
@@ -107,12 +107,12 @@ Document qualification rigor directly on the Opportunity:
 * **Control**: What governance or influence do you have over their buying timeline?
 
 ### Sales Stages & Automations
-* **`0E` Exploration**: Initial discovery after lead conversion.
-* **`1E` Engagement**: Scoping and stakeholder alignment.
-* **`2E` Evaluation**: Technical and commercial feasibility.
-* **`3E` Solution / Proposal**: Formal quote submitted to customer.
-* **`4A` Commitment / Negotiation**:
-  * **Automation**: Entering stage `4A` for the first time **automatically allocates the official Project Code** for delivery resource planning.
+* **`0e` Identified**: Initial discovery after lead conversion.
+* **`1d` Qualified**: Scoping and stakeholder alignment.
+* **`2c` Proposal**: Technical and commercial feasibility.
+* **`3b` Negotiation**: Formal quote submitted to customer.
+* **`4a` Commit**:
+  * **Automation**: Entering stage `4a` for the first time **automatically allocates the official Project Code** for delivery resource planning.
 * **Closed Won** *(Terminal)*:
   * Deal is won.
   * Automatically sets all linked payment milestones to **`Won`**.
@@ -170,7 +170,7 @@ stateDiagram-v2
 ## 7. Delivery Projects & Sales Orders
 
 ### Projects (`/projects`)
-* Project codes are reserved on stage `4A` and formalized upon deal closing.
+* Project codes are reserved on stage `4a` and formalized upon deal closing.
 * Assign Project Managers, delivery scopes, start dates, and target completion dates.
 
 ### Sales Orders (`/sales-orders`)

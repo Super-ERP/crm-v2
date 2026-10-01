@@ -9,7 +9,7 @@ This chapter covers post-sales execution: managing delivery projects and logging
 Once a deal advances toward closing, sales commitments transition into delivery execution.
 
 ### Automatic Project Code Allocation
-* When an Opportunity first advances to stage **`4A` (Commitment)**, the system automatically allocates the official **Project Code** (e.g., `PRJ-2026-0038`).
+* When an Opportunity first advances to stage **`4a` (Commit)**, the system automatically allocates the official **Project Code** (e.g., `PRJ-2026-0038`).
 * This enables technical leads, delivery managers, and resource planners to prepare project timelines prior to final contract execution.
 
 ### Creating and Managing Projects
