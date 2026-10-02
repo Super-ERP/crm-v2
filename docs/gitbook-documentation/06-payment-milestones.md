@@ -53,21 +53,27 @@ In the **Payment Milestones** section, click **+ Add Milestone**.
 Specify:
 
 * **Milestone Title**: e.g., *"1st Payment: 30% Advance Deposit upon PO"*.
-* **Amount / Percentage**: Fixed currency amount or percentage of total deal value.
-* **Expected Date**: Target billing date.
-* **Trigger Condition**: e.g., *Contract Execution, UAT Sign-off, Go-Live*.
+* **Amount**: A currency amount. Calculate a percentage into an amount before entering it; the shared schedule does not offer a percentage field.
+* **Due date**: Target billing date.
+* **Description**: Describe the billing condition, such as Contract Execution or UAT Sign-off. This is planning text, not an automated trigger.
 
 {% endstep %}
 {% step %}
 
 #### Save the milestone
 
-Save the milestone.
+The shared schedule adds a row named **New milestone**; edit its title, description, due date, and amount inline and save each change.
 
 {% endstep %}
 {% endstepper %}
 
 ---
+
+## Automatic milestones and splitting
+
+Entering **4a** or **Closed Won** creates a default **Full Payment** milestone only when the funnel has no milestone rows and its current value is positive. An existing schedule is preserved. Review the amount and due date rather than assuming the automatic row is a complete billing plan.
+
+Where **Split** is available, divide a milestone into titled currency amounts. Review the total against the original milestone before confirming. Invoiced amounts are locked; use supported planning actions on eligible rows.
 
 ## The Milestone Lifecycle
 

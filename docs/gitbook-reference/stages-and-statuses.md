@@ -20,7 +20,9 @@ These are the standard stage labels. Your organization can customize labels and 
 | `4a` — Commit | The pursuit is near commitment. | The deal is still open until its outcome is recorded. |
 | Closed Won | The deal is won. | Terminal: stage changes are no longer allowed. Live Planned milestones become Won. |
 | Closed Lost | The deal is lost. | Terminal: stage changes are no longer allowed. Record close remarks. |
-| KIV — Keep In View | The pursuit is parked for later follow-up. | Record the reason. Reopening requires approval. |
+| KIV — Keep In View | The pursuit is parked for later follow-up. | Record the reason. Reopening follows approval policy; the current request-path limitation is documented in the KIV guide. |
+
+For the field-by-stage matrix, Won exceptions, and KIV limitation, read [Fields and gates by stage](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#fields-and-gates-by-stage).
 
 Open-stage rollback skips forward-entry gates. Forward changes can require fields and approval. Follow [Stage movement](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#stage-advancement-and-rollback-rules) for the workflow.
 
@@ -56,7 +58,7 @@ A milestone created for an already won funnel starts as Won. Invoiced milestones
 * **Quotation approval** authorizes sending the proposal.
 * **Customer acceptance** records the customer's response to the quotation.
 * **Closed Won** records the outcome of the funnel deal.
-* **Invoiced** records milestone billing status after billing; it does not issue an invoice, record payment received.
+* **Invoiced** records milestone billing status after billing; it does not issue an invoice or record payment received.
 
 ## Continue
 

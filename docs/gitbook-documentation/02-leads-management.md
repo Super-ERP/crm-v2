@@ -46,13 +46,14 @@ Click the **+ New Lead** button in the top right corner.
 
 Fill in the lead information:
 
-* **Contact Name**: First Name and Last Name.
+* **Name**: The prospect’s contact name.
 * **Company Name**: The prospective organization name.
-* **Email & Phone**: Primary communication channels.
+* **Email**: Required valid address; it becomes the contact email during conversion.
+* **Phone**: Optional contact number.
 * **Lead Source**: Where the lead originated (e.g., *Website, Referral, Event, Cold Outreach*).
-* **Estimated Value**: Anticipated initial deal size.
-* **Owner**: The sales representative assigned to nurture the lead (defaults to you).
-* **Notes**: Any initial context or background details.
+* **Status**: Review the initial status. Ownership is assigned to the creating member; it is not an owner selector in this form.
+
+Add follow-up context through the lead’s activity controls after creation. The current create form does not include Estimated Value or Notes fields.
 
 {% endstep %}
 {% step %}
@@ -74,10 +75,9 @@ flowchart TD
     C --> Q["Qualified"]
     Q --> V["Converted"]
     C --> D["Disqualified"]
-    D --> C
 ```
 
-**Read the diagram:** a lead moves through outreach and qualification before conversion. A lead can also be disqualified before qualification, then restored to Contacted when it is worth pursuing again.
+**Read the diagram:** a lead moves through outreach and qualification before conversion. A lead can also be disqualified when it is not worth pursuing. The detail page does not provide a Restore to Contacted action.
 
 ### Lead Statuses
 
@@ -92,23 +92,25 @@ When marking a lead as **Disqualified**:
 {% stepper %}
 {% step %}
 
-#### Choose a disqualification reason
+#### Enter a disqualification reason
 
-You must select a structured **Disqualification Reason** (e.g., *No Budget, Out of Scope, Competitor Chosen, Unresponsive*).
+Use **Disqualify** and type a non-empty **Reason**, such as “No budget for this year.” The current dialog uses a text input, not a structured reason dropdown.
 
 {% endstep %}
 {% step %}
 
 #### Record context
 
-Enter explanatory notes to help your team analyze lost lead patterns.
+Confirm the disqualification. The typed reason is saved with the lead and recorded in its activity history.
 
 {% endstep %}
 {% step %}
 
-#### Restore when appropriate
+#### Understand the available follow-up actions
 
-**Restoring a Disqualified Lead**: If a disqualified prospect contacts you again months later, you can click **Restore to Contacted** on the lead detail view to re-enter the active qualification cycle.
+The lead detail page locks status controls for Disqualified and Converted records. There is no dedicated disqualification restore action. **Undo** in the Leads list’s deletion toast only reverses deletion, requires Delete leads permission and record access, and preserves the prior status. It does not restore a Disqualified lead to Contacted.
+
+**Current inconsistency:** the list’s **Edit** form still offers the full status selector, while detail-page status controls are locked. Do not use that selector to imitate conversion: setting Converted there does not run the linked-record conversion workflow. Ask your administrator or support contact to review a disqualified lead that needs renewed follow-up.
 
 {% endstep %}
 {% endstepper %}
@@ -117,7 +119,7 @@ Enter explanatory notes to help your team analyze lost lead patterns.
 
 ## Converting a lead
 
-Once a lead has been qualified and is ready for a commercial proposal, convert it using the **Conversion Wizard**. Add a valid email to the lead before converting; the new contact requires one.
+Qualify the lead before converting as a team practice. The current Convert action is available for non-Converted leads and does not enforce Qualified status. When ready for a commercial proposal, convert it using the **Conversion Wizard**. Add a valid email to the lead before converting; the new contact requires one.
 
 ```mermaid
 flowchart TD

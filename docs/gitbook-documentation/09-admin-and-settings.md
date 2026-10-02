@@ -86,6 +86,14 @@ Users with **Manage tenant settings** permission (Owner and Admin by default) co
 * **Delivery**: Default delivery text copied into new quotations. Existing quotations retain their snapshots.
 * Tax-inclusive pricing is configured in General; tax rates are maintained in the quotation tax configuration.
 
+### Funnel stages and custom fields
+
+With **Manage tenant settings**, open **Settings → Taxonomy → Funnel Stages**. Review each stage's required fields and approval flag. Custom funnel fields can use text, number, date, checkbox, or dropdown inputs; configure their definitions before selecting them as stage requirements.
+
+A required checkbox must be checked; budget presets require positive amounts. Required fields are evaluated on forward moves against stages earlier than the target. See [Fields and gates by stage](04-opportunities-and-funnel.md#fields-and-gates-by-stage) before changing the configuration.
+
+**New-organization check:** the organization-creation path seeds stage names and approval flags but currently leaves required-field lists empty. The standard database seed adds field lists separately. Do not assume a newly created organization has the matrix's gates enabled; inspect and save the intended requirements here. Won's own field list is currently not enforced on entry, and KIV reopening has a queued-review limitation described in the same guide.
+
 ## Continue
 
 * [Troubleshooting](help-center/troubleshooting.md)

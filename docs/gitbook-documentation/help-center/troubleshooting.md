@@ -90,6 +90,18 @@ If the deal is Closed Won or Closed Lost, it cannot change stages. For a new sal
 
 See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules) and [Stage approvals](../08-approvals-inbox.md).
 
+### PPVVC looks complete but the move is blocked
+
+Check the exact missing field, not only the completion badge. Power Sponsor notes do not select **Power Sponsor Contact** or enter a positive **Power Sponsor Budget Limit**. Opportunity and funnel close-date fields are separate. Save the fields on the correct record and refresh before retrying. See the [stage matrix](../04-opportunities-and-funnel.md#fields-and-gates-by-stage).
+
+### A KIV reopen request became obsolete
+
+The current approval handler can close KIV-to-open requests as obsolete because it treats reopening as rollback. Ask an authorized stage approver to review and reopen directly. See [KIV](../04-opportunities-and-funnel.md#kiv-keep-in-view).
+
+### A stage advances without the expected PPVVC fields
+
+Check whether the move came from the Kanban board, which skips certain qualification presets, or used the Won shortcut. Administrators should also inspect **Funnel Stages**: newly created organizations may have empty required-field lists. These are separate from approval flags.
+
 ## A quotation cannot be edited
 
 Only a **Draft** quotation is editable. Choose the action that matches its current status:
