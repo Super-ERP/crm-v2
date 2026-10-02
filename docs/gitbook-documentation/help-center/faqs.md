@@ -50,7 +50,7 @@ See [PPVVC qualification](../04-opportunities-and-funnel.md#the-ppvvc-qualificat
 <details>
 <summary>Can I move a deal backward or reopen it?</summary>
 
-An open deal can move to an earlier open stage. A parked/KIV deal can reopen through the approval process. Closed Won and Closed Lost are terminal and cannot change stage.
+An open deal can move to an earlier open stage. A parked/KIV deal uses the reopen approval policy. The current queued-review path can mark this request obsolete; an authorized stage approver can reopen directly. See [KIV](../04-opportunities-and-funnel.md#kiv-keep-in-view). Closed Won and Closed Lost are terminal and cannot change stage.
 
 See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules).
 

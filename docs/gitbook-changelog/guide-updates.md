@@ -9,6 +9,12 @@ icon: book-open
 
 ### October 2
 
+* Added the PPVVC stage matrix, saved-field locations, forward gate timing, and Won/board exceptions.
+* Added KIV to the workflow and documented the current reopen-review limitation.
+* Added administrator checks for empty stage gates in new organizations.
+* Corrected milestone input names and explained automatic Full Payment creation.
+
+
 * Added a seven-role comparison with tabbed capability tables and RBAC setup steps.
 * Corrected default-role immutability, Viewer scope, and custom-role administration requirements.
 

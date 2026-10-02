@@ -69,7 +69,7 @@ See [PPVVC qualification](https://jienweng.gitbook.io/q-app/docs/sales/04-opport
 
 ### KIV and Keep In View
 
-A parked deal that needs follow-up later. KIV is not Closed Lost. Reopening a parked deal uses the approval process. See [Funnel stages](stages-and-statuses.md#funnel-stages).
+A parked deal that needs follow-up later. KIV is not Closed Lost. Reopening follows the stage approval policy; the current request path has a limitation. See [KIV reopening](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#kiv-keep-in-view). See [Funnel stages](stages-and-statuses.md#funnel-stages).
 
 ### Weighted pipeline
 

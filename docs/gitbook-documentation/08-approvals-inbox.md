@@ -114,6 +114,10 @@ flowchart TD
 * **Account owner changed:** the pending request is cancelled automatically; the new owner can submit a new request.
 * **No eligible manager:** ask your administrator to configure the reporting line and approval permissions. Submission does not route to an unrelated approver.
 
+## KIV reopen requests
+
+KIV-to-open moves use approval policy, but the current queued decision path treats the rollback as obsolete instead of applying it. An authorized stage approver can review and reopen directly. See [KIV reopening](04-opportunities-and-funnel.md#kiv-keep-in-view). A successful request submission does not mean reopening has happened.
+
 ## Quotation approvals
 
 Every quotation requires approval before sending. The eligible approver is the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that manager can approve or reject; a rejection requires a reason. These actions record audit events but do not send email notifications.
