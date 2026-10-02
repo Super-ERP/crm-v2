@@ -19,7 +19,7 @@ Manage team access, custom roles, and organization defaults.
 
 ## Team and roles
 
-User administration requires **Manage users**, granted to Owner and Admin by default. Configure each salesperson’s reporting manager here for approval routing. The standard role names below are examples; your organization can customize permissions.
+User administration requires **Manage users**, granted to Owner and Admin by default. Configure each salesperson’s reporting manager here for approval routing. Default System roles are fixed templates. Create custom roles to change the permission mix. See [Roles and RBAC](roles-and-rbac.md) for all seven defaults and setup instructions.
 
 ### Inviting Team Members
 
@@ -33,31 +33,23 @@ Navigate to **Admin → Team & roles** in the sidebar.
 {% endstep %}
 {% step %}
 
-#### Start an invitation
+#### Add a member
 
-Click **+ Invite Member**.
-
-{% endstep %}
-{% step %}
-
-#### Set membership and reporting details
-
-Enter:
-
-* **Full Name & Email Address**.
-* **Role**:
-  * **Owner (Tier 100)**: Full administrative power.
-  * **Manager (Tier 60)**: Department manager with approval authority.
-  * **Sales Rep (Tier 20)**: Individual contributor managing deals and quotes.
-  * **Viewer (Tier 10)**: Read-only access.
-* **Reporting Manager**: Assign their direct supervisor for approval routing and pipeline visibility.
+Click **Add member**.
 
 {% endstep %}
 {% step %}
 
-#### Send the invitation
+#### Choose the initial role
 
-Click **Send Invitation**.
+Enter the member's email address and choose their initial role. Compare the available defaults in [Roles and RBAC](roles-and-rbac.md) before assigning access.
+
+{% endstep %}
+{% step %}
+
+#### Review roles and reporting details
+
+Click **Add member**. Once membership is available, use **Edit member** to review Roles and set Manager, then save. Multiple roles add permissions together.
 
 {% endstep %}
 {% endstepper %}
@@ -66,31 +58,9 @@ Click **Send Invitation**.
 
 ## Advanced Roles and permissions
 
-Advanced Roles is enabled for this rollout. Users with **Manage users** can manage custom roles and their permissions.
+Advanced Roles is enabled for this rollout. **Manage users** permits access to team and role pages; **Manage roles** is required to create custom roles and save their permissions. Owner and Admin have both by default. System roles cannot be renamed, deleted, or have their permission set changed.
 
-{% stepper %}
-{% step %}
-
-#### Open a role's permissions
-
-Open **Admin → Team & roles**, choose **Roles**, and click **Permissions** on the role you want to review.
-
-{% endstep %}
-{% step %}
-
-#### Choose the required permissions
-
-Review the permission groups and select the actions the role needs. Only permission groups for enabled modules appear. To create a custom role, use **New role**, enter its details, and click **Create** before configuring its permissions.
-
-{% endstep %}
-{% step %}
-
-#### Save and check access
-
-Click **Save changes**. Assign the appropriate role to the team member and check their reporting manager separately; role permissions and reporting relationships both affect access and approval routing.
-
-{% endstep %}
-{% endstepper %}
+Follow [Roles and RBAC](roles-and-rbac.md#set-up-rbac) to create a custom role, choose permissions, assign it to a member, configure their Manager, and verify access. This is the place to use a different permission mix instead of editing a default template.
 
 ---
 

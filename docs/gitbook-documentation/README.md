@@ -29,6 +29,7 @@ New to Q-App? Start with [Quick start by role](https://jienweng.gitbook.io/q-app
 
 | Guide | What you can do |
 | --- | --- |
+| [Roles and RBAC](roles-and-rbac.md) | Compare seven default roles and configure member roles, custom permissions, and reporting lines. |
 | [Administration and settings](09-admin-and-settings.md) | Manage team access, reporting lines, defaults, and custom roles. |
 
 ## Reference and help

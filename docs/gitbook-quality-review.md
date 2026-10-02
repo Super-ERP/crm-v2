@@ -161,3 +161,18 @@ Remaining product questions, not solved by documentation:
 Validation: all 21 mapped pages/navigation entries and local/cross-space links
 pass, Liquid steppers are balanced, diagrams remain in active scope, and no
 GitHub links appear in published content. git diff --check passes.
+
+## Default roles and RBAC comparison — October 2
+
+Added a dedicated Roles and RBAC guide with all seven ROLE_TEMPLATES and four
+native GitBook comparison tabs. Verified grants against permissions.ts,
+record scope against access-scope.ts, and configuration steps against the team
+and roles UI/actions. Corrected earlier incomplete role lists, Viewer scope,
+System-role mutability, and Manage users versus Manage roles requirements.
+Explained additive grants, reporting managers, legacy tiers, custom-role setup,
+assignment limits, and approval eligibility. Only the active Base and Advanced
+Roles capabilities are compared. No tenant permissions were changed.
+
+All seven default role names appear in every comparison tab. Navigation, links,
+anchors, balanced blocks, and git diff --check pass. Work was isolated from
+unrelated application edits in a documentation worktree.

@@ -153,7 +153,7 @@ Review a user's permissions and active organization when they report a missing m
 
 #### Review custom roles
 
-Use **Team & roles → Roles** to check the permissions assigned to each role. Keep access aligned with the work each team member needs to do.
+Use **Team & roles → Roles** to check the permissions assigned to each role. Default System roles are fixed; use a custom role when a different permission mix is needed. See [Roles and RBAC](https://jienweng.gitbook.io/q-app/docs/administration/roles-and-rbac).
 
 {% endstep %}
 {% endstepper %}

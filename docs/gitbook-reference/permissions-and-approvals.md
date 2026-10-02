@@ -59,7 +59,11 @@ Approval applies to the submitted quotation number/version. A separate revision 
 
 Changing the Account owner cancels pending stage requests and returns pending quotations to Draft. The new owner resubmits them to route each request to the current eligible manager. If no eligible manager exists, submission asks for the reporting line and approval permission to be configured instead of routing to an unrelated approver.
 
-Ask your administrator to check **Team and roles**. Managing team membership requires **Manage users**; changing organization defaults requires **Manage tenant settings**. Owner and Admin receive these permissions by default, but the organization can customize role grants.
+Ask your administrator to check **Team and roles**. Managing team membership requires **Manage users**; changing organization defaults requires **Manage tenant settings**. Owner and Admin receive these permissions by default, and custom roles can provide different grants. Default System roles remain fixed.
+
+## Configure member roles
+
+Use [Roles and RBAC](https://jienweng.gitbook.io/q-app/docs/administration/roles-and-rbac) for the default-role comparison and configuration steps. Multiple roles add permissions; a restrictive role does not subtract another role’s grants.
 
 ## A missing action
 
