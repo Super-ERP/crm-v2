@@ -55,14 +55,9 @@ The system is strictly multi-tenant. Every tenant's data (leads, opportunities, 
 
 ## User Roles and Access Hierarchy
 
-The standard roles are shown below. Permissions can be customized; your role name or tier alone does not guarantee access to a module.
+The seven default roles are **Owner, Admin, Developer, Manager, Senior Rep, Rep, and Viewer**. System roles are fixed templates; Advanced Roles lets administrators create custom roles and assign multiple roles to a member. Permissions combine across assigned roles. Role tiers do not grant approval authority.
 
-| Role | Tier Level | Capabilities |
-| :--- | :--- | :--- |
-| **Owner** | Tier 100 | Administrative access to enabled features, organization settings, and user management. |
-| **Manager** | Tier 60 | Department-level oversight, pipeline reviews across direct reports, approval authority on quotes and stage gates. |
-| **Sales Rep** | Tier 20 | Daily commercial operations: create and edit assigned leads, accounts, contacts, opportunities, and quotations. |
-| **Viewer** | Tier 10 | Read-only access across assigned records. Cannot create, edit, or delete data. |
+Use the [role comparison and RBAC setup guide](https://jienweng.gitbook.io/q-app/docs/administration/roles-and-rbac) to compare capabilities and record scope. Viewer is read-only across the organization; Manager, Senior Rep, and Rep normally use their own/reporting-subtree scope.
 
 ---
 

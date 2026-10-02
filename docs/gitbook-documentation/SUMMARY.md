@@ -16,6 +16,7 @@
 
 ## Administration
 
+* [Roles & RBAC](roles-and-rbac.md)
 * [Administration & settings](09-admin-and-settings.md)
 
 ## Help

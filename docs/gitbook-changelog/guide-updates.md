@@ -9,6 +9,9 @@ icon: book-open
 
 ### October 2
 
+* Added a seven-role comparison with tabbed capability tables and RBAC setup steps.
+* Corrected default-role immutability, Viewer scope, and custom-role administration requirements.
+
 * Added document/action rules, approver-routing examples, and quotation-version approval guidance.
 * Clarified sending, PDF export, primary quotations, and the single-Accepted-quotation limit.
 
