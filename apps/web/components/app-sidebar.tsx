@@ -26,6 +26,7 @@ import {
   CheckIcon,
   BuildingIcon,
   PlusIcon,
+  BookOpenIcon,
 } from "lucide-react"
 
 import { toast } from "sonner"
@@ -69,6 +70,7 @@ type NavItem = {
   permission?: string
   /** Optional signed runtime entitlement gate, on top of permission. */
   module?: ModuleId
+  external?: boolean
 }
 
 type NavSection = { label: string | null; items: NavItem[] }
@@ -121,8 +123,12 @@ const NAV_SECTIONS: NavSection[] = [
       { title: "Settings", url: "/settings/general", icon: Settings2Icon, tile: "bg-gray-500", permission: PERMISSIONS.TENANT_SETTINGS },
     ],
   },
-  // /documentation is deliberately NOT in the nav — internal docs, reached by
-  // URL only (docs.view holders; hidden from end users).
+  {
+    label: "Resources",
+    items: [
+      { title: "Documentation", url: "https://jienweng.gitbook.io/q-app", icon: BookOpenIcon, tile: "bg-blue-600", module: "documentation", external: true },
+    ],
+  },
 ]
 
 export type SidebarUser = { name: string; email: string }
@@ -268,18 +274,22 @@ export function AppSidebar({
             <SidebarGroupContent>
               <SidebarMenu>
                 {section.items.map((item) => {
-                  const active =
-                    pathname === item.url || pathname.startsWith(item.url + "/")
+                  const active = !item.external &&
+                    (pathname === item.url || pathname.startsWith(item.url + "/"))
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton
                         isActive={active}
                         tooltip={item.title}
                         render={
-                          <Link
-                            href={item.url}
-                            aria-current={active ? "page" : undefined}
-                          />
+                          item.external ? (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer" />
+                          ) : (
+                            <Link
+                              href={item.url}
+                              aria-current={active ? "page" : undefined}
+                            />
+                          )
                         }
                       >
                         <span

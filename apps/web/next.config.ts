@@ -2,6 +2,15 @@ import type { NextConfig } from "next";
 import path from "node:path";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/documentation/:path*",
+        destination: "https://jienweng.gitbook.io/q-app",
+        permanent: false,
+      },
+    ];
+  },
   output: "standalone",
   productionBrowserSourceMaps: false,
   experimental: {
