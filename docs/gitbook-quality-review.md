@@ -127,3 +127,37 @@ Validation: 20 pages/navigation entries; 95 local and 63 cross-section links;
 25 steppers with 95 steps; seven Mermaid diagrams; one captioned image. All
 links, anchors, Liquid blocks, and navigation entries pass. No inactive-module
 instructions or GitHub links remain in the published content.
+
+## Approval and document clarity review — October 2
+
+Checked the last locally available merged main (975ade7) against quotation
+transitions, revision policy, approval routing, action handlers, permission labels,
+and stage decision validation. Network DNS is unavailable, so newer origin
+commits and live rendering could not be verified this session.
+
+Added a document/action reference, permission and routing matrix, routing examples,
+version-specific approval rules, a review stepper, and quotation status/action
+table. Clarified Send versus email, PDF versus approval, primary selection,
+delete versus rejection, validity/open-funnel guards, and the single live
+Accepted quotation limit. Kept the active Base/Advanced Roles scope.
+
+Remaining product questions, not solved by documentation:
+- Accepted-quote replacement: a revision can be created, but accepting it is
+  blocked while another live quotation is Accepted. There is no documented
+  supersession action. Define and implement that flow before promising it.
+- Approved totals: sending recomputes tax and totals from current tax settings.
+  Decide whether changes should invalidate approval or approval should freeze
+  the reviewed financial snapshot. Current docs tell readers to inspect the
+  final PDF; this does not enforce approval of changed totals.
+- Milestone status: the supported Won-to-Invoiced action lacks a visible
+  status-editing control in the inspected UI. Keep this limitation explicit.
+- Quotation routing changes: quotation decisions recheck the current manager,
+  while stage decisions additionally require the stored assignment. UI context
+  should clearly show who can act now after reporting-line/permission changes.
+- Templates/export: examples showing quotation identity, version, status, and
+  template choice would improve confidence; no current browser is connected
+  for accurate screenshots.
+
+Validation: all 21 mapped pages/navigation entries and local/cross-space links
+pass, Liquid steppers are balanced, diagrams remain in active scope, and no
+GitHub links appear in published content. git diff --check passes.

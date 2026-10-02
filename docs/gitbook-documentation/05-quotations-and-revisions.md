@@ -13,6 +13,7 @@ Prepare an offer, get approval, and manage customer changes.
 
 * [Create a quote](#creating-a-quotation)
 * [Check approval status](#the-quotation-lifecycle)
+* [Actions by status](#actions-by-status)
 * [Create a revision](#managing-revisions)
 * [Print a PDF](#exporting-client-pdfs)
 
@@ -139,7 +140,7 @@ A draft must be approved before it can be sent:
 * If the account owner changes while approval is pending, the quotation returns to Draft with an explanation. The new owner must resubmit it.
 
 ### `Approved`
-The eligible reporting manager approves the quote. A member with send permission can then record sending it. Rejection requires an explanation and returns it to Draft. These actions record audit events but do not send an email notification.
+The eligible reporting manager approves the quote. A member with send permission can then record sending it. To change an Approved quotation, use **Return to Draft**, then edit and resubmit. Approval is required again. Sending records the action; it does not send an email notification.
 
 ### `Sent`
 Once delivered to the customer via email or formal meeting, use **Send** to record sending.
@@ -150,6 +151,29 @@ Once delivered to the customer via email or formal meeting, use **Send** to reco
 * **Rejected**: The customer rejected the proposal.
 
 ---
+
+## Actions by status
+
+Each action also requires record access and its permission. **Edit quotations** allows editing Drafts, submitting them, and returning Approved quotations to Draft. **Create quotations** allows creating eligible revisions. **Approve quotations** is limited to the current eligible reviewer. **Send quotations** and **Accept quotations** are separate permissions.
+
+| Current status | Available lifecycle actions | Editing and revision |
+| --- | --- | --- |
+| Draft | Submit for Approval. | Edit this record; no revision action. |
+| Pending Approval | Eligible reviewer approves or rejects with a reason. | Read-only; rejection returns this record to Draft. No revision action for a live record. |
+| Approved | Send, or Return to Draft. | Read-only until returned to Draft. Returning clears approval; resubmit after editing. No revision action for a live record. |
+| Sent | Record customer acceptance or rejection. | Read-only; create a separate Draft revision with Create quotations permission. |
+| Accepted or customer Rejected | No further lifecycle decision on this record. | Read-only; an eligible revision starts a separate Draft. |
+| Expired or Void | No manual lifecycle action offered by the current action menu. | Eligible historical states for a separate Draft revision. |
+
+**Send checks:** the funnel must still be open and the quotation must not be past **Valid until**. If an Approved quotation has lapsed, return it to Draft, update its validity, and obtain approval again. **Send** records sending; deliver the document to the customer through your usual channel.
+
+**Acceptance checks:** only a Sent quotation on an open funnel can be accepted, and its validity date must not have passed. Only one live quotation per funnel can be Accepted. Creating a revision of an Accepted quote does not replace that acceptance; the current workflow blocks accepting another quote while the earlier live quote remains Accepted. Ask your administrator or support contact to review the case rather than treating the revision as accepted.
+
+**Other actions:** **Set Primary** is shown for non-primary Sent or Accepted quotations with Edit quotations permission. It selects the quotation used for linked funnel values; it does not approve it. Deletion requires **Delete quotations**, is subject to record/reference checks, and is blocked for Accepted quotations. Deletion is not a customer-rejection or approval-rejection decision.
+
+**PDF checks:** Preview and exporting do not approve or send the quotation. Sending captures the tax rate and recomputes stored totals using the current tax configuration. Review the final PDF's tax and totals before sharing, especially if settings changed during review.
+
+See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/reference/documents-and-actions) for version-specific examples.
 
 ## Managing Revisions
 
@@ -178,9 +202,9 @@ Use the revision action available on the quotation. Sent, Accepted, Rejected, Ex
 
 The system executes the following:
 
-* **Preserves Source**: The original quote remains permanently locked in history for compliance.
+* **Preserves Source**: The source quotation keeps its status and history; its content remains read-only.
 * **Creates Revision**: A new linked draft copy is created. Use its displayed quotation number when referring to the revision.
-* You can freely modify line items and submit the revision through the approval flow.
+* The new revision has no approver, approval date, sending date, or customer acceptance. It starts non-primary. Review copied items, terms, dates, and tax before submitting it through its own approval flow.
 
 {% endstep %}
 {% endstepper %}

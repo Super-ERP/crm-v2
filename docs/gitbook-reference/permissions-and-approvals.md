@@ -30,6 +30,31 @@ The app starts from the **requester's reporting line** and finds the first activ
 
 Stage approvers can enter gated stages directly using their stage-approval capability. Other users follow the request process when a stage requires approval. See [Stage approvals](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox).
 
+## Routing examples
+
+Suppose Sam owns the Account, Sam reports to Maya, and Maya reports to Lee.
+
+* If Maya is active and has **Approve quotations**, Maya reviews Sam's quotation. If Maya lacks that permission, the app checks Lee next. Lee can review only if active and permitted. A different administrator outside this reporting line is not selected just because they have an administrative role.
+* If Alex submits a stage request on an accessible funnel, the request follows **Alex's** reporting line, even when Sam owns the Account. The quotation still follows Sam's line.
+* Quotation approval does not bypass its Draft → Pending Approval → Approved process merely because the person preparing it is a manager. For stage movement, users with **Approve stage advances** can make gated transitions directly, subject to stage requirements.
+
+```mermaid
+flowchart TD
+    Q["Quotation submitted"] --> O["Start at Account owner's manager"]
+    R["Stage request submitted"] --> U["Start at requester's manager"]
+    O --> E["First active manager with the matching approval permission"]
+    U --> E
+    E --> D["Review the specific Pending item"]
+    O --> N["No eligible manager: submission blocked"]
+    U --> N
+```
+
+The matching permission differs between the two routes. One person may qualify for quotation approval but not stage approval. For a stage request, the reviewer must also match the stored assignment when deciding. For a quotation, the app checks the owner's current eligible manager at decision time.
+
+## Check the version before approval
+
+Approval applies to the submitted quotation number/version. A separate revision starts Draft and must be approved separately. Returning an Approved quote to Draft clears its approval. Read [Documents, actions, and approval](documents-and-actions.md#which-version-is-approved) before deciding from a PDF or historical quotation.
+
 ## What if the manager changes?
 
 Changing the Account owner cancels pending stage requests and returns pending quotations to Draft. The new owner resubmits them to route each request to the current eligible manager. If no eligible manager exists, submission asks for the reporting line and approval permission to be configured instead of routing to an unrelated approver.

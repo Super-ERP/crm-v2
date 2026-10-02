@@ -61,7 +61,7 @@ An empty Incoming tab means no pending requests are currently routed to you; it 
 
 #### Check the stage request
 
-Find the request and check the funnel name, current stage, and requested target stage.
+Find the request and check the funnel name, requester, current stage, and requested target stage. Approval authorizes that exact transition, not a quotation or a supporting file.
 
 {% endstep %}
 {% step %}
@@ -103,7 +103,7 @@ flowchart TD
     J --> F["Requester reviews feedback"]
 ```
 
-**Read the diagram:** approval processes the requested stage change. Rejection leaves the requester to review the feedback and correct or reconsider the request. If the deal has already moved, the app may report the request as obsolete.
+**Read the diagram:** approval processes the requested stage change. Rejection leaves the requester to review the feedback and correct or reconsider the request. The app rechecks the current stage and required information before applying approval. If the original transition is no longer current, the request becomes obsolete and the stage does not move.
 
 ## Follow up after a decision
 
@@ -119,6 +119,10 @@ flowchart TD
 Every quotation requires approval before sending. The eligible approver is the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that manager can approve or reject; a rejection requires a reason. These actions record audit events but do not send email notifications.
 
 See [Quotation lifecycle](05-quotations-and-revisions.md#the-quotation-lifecycle).
+
+## Related document rules
+
+See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/reference/documents-and-actions) for the difference between stage approval, quotation approval, customer acceptance, and supporting attachments.
 
 ## Continue
 

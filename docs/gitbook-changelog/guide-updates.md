@@ -7,6 +7,11 @@ icon: book-open
 
 ## 2026
 
+### October 2
+
+* Added document/action rules, approver-routing examples, and quotation-version approval guidance.
+* Clarified sending, PDF export, primary quotations, and the single-Accepted-quotation limit.
+
 ### October 1
 
 * Scoped the guide to Base modules and Advanced Roles; removed inactive module walkthroughs and references.

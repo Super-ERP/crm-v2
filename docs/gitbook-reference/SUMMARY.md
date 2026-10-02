@@ -4,3 +4,4 @@
 * [Terminology](terminology.md)
 * [Stages & statuses](stages-and-statuses.md)
 * [Permissions & approval routing](permissions-and-approvals.md)
+* [Documents, actions & approval](documents-and-actions.md)
