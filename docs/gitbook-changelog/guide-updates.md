@@ -9,6 +9,8 @@ icon: book-open
 
 ### October 2
 
+* Removed the unimplemented lead Restore to Contacted action and corrected disqualification and create-form instructions.
+
 * Added the PPVVC stage matrix, saved-field locations, forward gate timing, and Won/board exceptions.
 * Added KIV to the workflow and documented the current reopen-review limitation.
 * Added administrator checks for empty stage gates in new organizations.

@@ -22,6 +22,14 @@ Scope: Base modules and Advanced Roles, against main 845193f. Public guide chang
 | Inline sponsor narrative may imply gate completion incorrectly | `lib/stage-gate.ts:applyPpvvcToStageGate` sets sponsor contact/budget flags from non-empty power narrative; authoritative `stageGateState` checks contact ID and positive budget. | UI can show completeness that server rejects; retain separate narrative and structured flags. |
 | Target-entry comments conflict with actual earlier-stage algorithm | stage-gate/service comments describe entering stage, but request and dialog both call stagesRequiredBefore. | Table follows current executable behavior; align language and product semantics in future code change. |
 
+## Lead implementation checks added after review
+
+- No Restore to Contacted action exists in lead-detail-actions.tsx or leads-table.tsx. restoreLead in actions.ts only clears deletedAt and requires LEAD_DELETE; the list deletion toast exposes Undo. Removed the invented disqualification restore workflow and reverse diagram arrow.
+- Disqualify uses a required free-text Reason. Removed the claim of a structured reason selector.
+- Lead detail locks Converted/Disqualified status, but the list Edit form and updateLead permit arbitrary status values, including Converted without conversion side effects. This inconsistency remains an implementation issue; public docs explain the distinction instead of promoting it as restore.
+- Conversion checks already-Converted, not Qualified status. Documented qualification as business practice, not an enforced gate.
+- Corrected lead create-form claims: Name/email/phone/company/source/status; no estimated value, owner selector, or notes input.
+
 ## Remaining documentation coverage to expand
 
 - Base product/catalog administration has no dedicated mapped walkthrough; current guide references catalog selection only.
