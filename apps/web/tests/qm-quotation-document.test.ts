@@ -128,3 +128,31 @@ describe.each(["qm", "qa"] as const)("%s quotation sign-off", (template) => {
     expect(html.match(/class="qm-page /g)).toHaveLength(1)
   })
 })
+
+
+
+describe("QA/QM print footer", () => {
+  it("puts tenant contact details in the page margin instead of an overlapping fixed footer", () => {
+    const doc = documentWithTax("8.000", null)
+    doc.company.email = "contact@quandatics.com"
+    const html = renderToStaticMarkup(createElement(QmQuotationDocument, { doc }))
+    expect(html).toContain("@page qm-quotation")
+    expect(html).toContain("@bottom-left")
+    expect(html).toContain("contact@quandatics.com")
+    expect(html).not.toContain('class="qm-footer qm-footer-print"')
+  })
+
+  it("escapes company text so it cannot terminate a CSS string or style element", () => {
+    const doc = documentWithTax("8.000", null)
+    doc.company.legalName = 'Company "</style><script>alert(1)</script>\\\nEnd'
+    const html = renderToStaticMarkup(createElement(QmQuotationDocument, { doc }))
+    const css = html.match(/<style>([\s\S]*?)<\/style>/)?.[1]
+    expect(css).toBeDefined()
+    expect(css).not.toContain("</style>")
+    expect(css).not.toContain("<script>")
+    expect(css).toContain(String.raw`\22 `)
+    expect(css).toContain(String.raw`\3c `)
+    expect(css).toContain(String.raw`\5c `)
+    expect(css).toContain(String.raw`\a `)
+  })
+})

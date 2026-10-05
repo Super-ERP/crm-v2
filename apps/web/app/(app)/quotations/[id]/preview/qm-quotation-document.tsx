@@ -83,23 +83,39 @@ function subjectAndDescription(value: string, index: number): { subject: string 
   return { subject: match[1].trim(), description: rest.join("\n").trim() }
 }
 
-function Footer({ doc, screen = false }: { doc: QuotationDocument; screen?: boolean }) {
+function footerContact(doc: QuotationDocument): string {
   const website = doc.company.website?.replace(/^https?:\/\//i, "")
   const companyName = doc.company.legalName || doc.entityName
   const footerName = /^QUANDATICS \(M\) SDN BHD$/i.test(companyName)
     ? "Quandatics (M) Sdn Bhd"
     : companyName
+  return [
+    footerName,
+    website ? `w: ${website}` : null,
+    doc.company.email ? `e: ${doc.company.email}` : null,
+    doc.company.phone ? `p: ${doc.company.phone}` : null,
+  ].filter(Boolean).join(" | ")
+}
+
+/** Escape both CSS string delimiters and HTML raw-text element terminators. */
+function cssString(value: string): string {
+  return '"' + value.replace(/[\u0000-\u001f"\\<>]/g, (character) =>
+    `\\${character.charCodeAt(0).toString(16)} `
+  ) + '"'
+}
+
+function Footer({ doc }: { doc: QuotationDocument }) {
   return (
-    <footer className={`qm-footer${screen ? " qm-footer-screen" : " qm-footer-print"}`}>
-      <span className="qm-footer-contact">
-        {footerName}
-        {website ? ` | w: ${website}` : ""}
-        {doc.company.email ? ` | e: ${doc.company.email}` : ""}
-        {doc.company.phone ? ` | p: ${doc.company.phone}` : ""}
-      </span>
+    <footer className="qm-footer qm-footer-screen">
+      <span className="qm-footer-contact">{footerContact(doc)}</span>
       <strong>CONFIDENTIAL</strong>
     </footer>
   )
+}
+
+function PrintFooter({ doc }: { doc: QuotationDocument }) {
+  // Page margin boxes repeat without covering content or creating another page.
+  return <style>{`@page qm-quotation { @bottom-left { content: ${cssString(footerContact(doc))}; } }`}</style>
 }
 
 export function QmQuotationDocument({ doc, template = "qm" }: { doc: QuotationDocument; template?: "qm" | "qa" }) {
@@ -203,9 +219,9 @@ export function QmQuotationDocument({ doc, template = "qm" }: { doc: QuotationDo
           <span>Please Quote Our Reference Number When Placing An Order</span>
           <p>This Quotation is computer generated and no signature is required.</p>
         </section>
-        <Footer doc={doc} screen />
+        <Footer doc={doc} />
       </section>
-      <Footer doc={doc} />
+      <PrintFooter doc={doc} />
     </div>
   )
 }
