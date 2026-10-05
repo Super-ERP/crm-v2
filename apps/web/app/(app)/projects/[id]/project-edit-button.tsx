@@ -187,7 +187,7 @@ export function ProjectEditButton({
                     items={STATUS_OPTIONS}
                   >
                     <FormControl>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger width="full">
                         <SelectValue placeholder="Pick a status" />
                       </SelectTrigger>
                     </FormControl>
@@ -223,7 +223,7 @@ export function ProjectEditButton({
                       ]}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="No quotation" />
                         </SelectTrigger>
                       </FormControl>

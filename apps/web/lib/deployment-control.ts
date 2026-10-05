@@ -13,7 +13,11 @@ import { z } from "zod"
 
 import { db } from "@/db"
 import { env } from "@/lib/env"
-import { isDependencyClosed } from "@/lib/module-registry"
+import {
+  COMPILED_MODULE_MAP,
+  MODULE_IDS,
+  isDependencyClosed,
+} from "@/lib/module-registry"
 
 const MAX_CANONICAL_ENVELOPE_BYTES = 131_072
 const isoTimestamp = z.iso.datetime({ offset: true })
@@ -418,6 +422,27 @@ export async function applySignedEntitlement(
 }
 
 export function getDeploymentAccess(now = new Date()): Promise<DeploymentAccess> {
+  // A local checkout must remain usable without vendor-issued production
+  // licensing. Keep this bypass explicitly limited to non-production runtimes;
+  // production continues to require a verified signed entitlement.
+  if (env.NODE_ENV !== "production") {
+    return Promise.resolve({
+      mode: "active",
+      reason: "Local development access",
+      writeAllowed: true,
+      seatLimit: Number.MAX_SAFE_INTEGER,
+      moduleIds: MODULE_IDS.filter((id) => COMPILED_MODULE_MAP[id]),
+      leaseExpiresAt: null,
+      graceUntil: null,
+      recoveryDeadline: null,
+      contractStartsAt: null,
+      contractEndsAt: null,
+      revision: null,
+      configurationVersion: "local-development",
+      subscriptionStatus: "active",
+      planId: "local-development",
+    })
+  }
   return getAccess(postgresPersistence, now)
 }
 

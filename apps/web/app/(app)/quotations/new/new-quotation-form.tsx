@@ -17,6 +17,7 @@ import type { ProductOption } from "@/lib/lookups"
 export function NewQuotationForm({
   funnels,
   defaultOpportunityId,
+  draftNamespace,
   taxOptions,
   taxInclusive,
   projectNatures,
@@ -29,6 +30,7 @@ export function NewQuotationForm({
 }: {
   funnels: OpportunityOption[]
   defaultOpportunityId?: string
+  draftNamespace: string
   taxOptions: TaxOption[]
   taxInclusive: boolean
   projectNatures: ProjectNatureOption[]
@@ -45,6 +47,7 @@ export function NewQuotationForm({
     <QuotationCreateForm
       funnels={funnels}
       defaultOpportunityId={defaultOpportunityId}
+      draftNamespace={draftNamespace}
       taxOptions={taxOptions}
       taxInclusive={taxInclusive}
       projectNatures={projectNatures}

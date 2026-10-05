@@ -9,11 +9,10 @@ import { cn } from "@/lib/utils"
 export type StatusTone = "success" | "danger" | "warning" | "info" | "neutral"
 
 const TONE_CLASSES: Record<StatusTone, string> = {
-  success:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
-  danger: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
-  warning: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  info: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
+  success: "bg-success-soft text-success dark:bg-success/15",
+  danger: "bg-destructive/10 text-destructive dark:bg-destructive/20",
+  warning: "bg-warning-soft text-warning dark:bg-warning/15",
+  info: "bg-info-soft text-info dark:bg-info/15",
   neutral: "bg-muted text-muted-foreground",
 }
 

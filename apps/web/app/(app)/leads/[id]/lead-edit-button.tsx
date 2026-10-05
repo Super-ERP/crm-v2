@@ -51,7 +51,7 @@ export function LeadEditButton({
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <DialogTitle>Edit lead</DialogTitle>
         </DialogHeader>

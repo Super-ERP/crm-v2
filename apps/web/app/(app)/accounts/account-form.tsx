@@ -15,6 +15,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DIALOG_FORM_BODY_CLASS,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -287,7 +288,7 @@ export function AccountForm({
       {trigger ? (
         <DialogTrigger render={trigger as React.ReactElement} />
       ) : null}
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit account" : "New account"}</DialogTitle>
         </DialogHeader>
@@ -295,7 +296,7 @@ export function AccountForm({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="grid max-h-[70vh] gap-4 overflow-y-auto px-1"
+            className={DIALOG_FORM_BODY_CLASS}
             id="account-form"
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -316,7 +317,7 @@ export function AccountForm({
                       />
                     </FormControl>
                     {similar.length > 0 ? (
-                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                      <p className="text-xs text-warning">
                         Similar account{similar.length > 1 ? "s" : ""} already
                         exist{similar.length > 1 ? "" : "s"}:{" "}
                         {similar.map((s, i) => (
@@ -455,7 +456,7 @@ export function AccountForm({
                       items={ACCOUNT_TYPE_ITEMS}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Select type…" />
                         </SelectTrigger>
                       </FormControl>
@@ -513,7 +514,7 @@ export function AccountForm({
                       items={industryItems}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Select industry…" />
                         </SelectTrigger>
                       </FormControl>
@@ -545,7 +546,7 @@ export function AccountForm({
                       }))}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Select currency…" />
                         </SelectTrigger>
                       </FormControl>
@@ -623,7 +624,7 @@ export function AccountForm({
                           ]}
                         >
                           <FormControl>
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger width="full">
                               <SelectValue placeholder="Select state…" />
                             </SelectTrigger>
                           </FormControl>
@@ -680,7 +681,7 @@ export function AccountForm({
                           }))}
                         >
                           <FormControl>
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger width="full">
                               <SelectValue placeholder="Select country…" />
                             </SelectTrigger>
                           </FormControl>

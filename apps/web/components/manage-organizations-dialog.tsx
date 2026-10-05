@@ -231,7 +231,7 @@ export function ManageOrganizationsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent size="wide">
           <DialogHeader>
             <DialogTitle>Organizations</DialogTitle>
             <DialogDescription>

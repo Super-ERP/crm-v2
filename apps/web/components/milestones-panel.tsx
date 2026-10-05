@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { ChevronDown, ChevronUp, Plus, SplitIcon, Trash2 } from "lucide-react"
 import { MilestoneSplitDialog } from "@/components/milestone-split-dialog"
+import { EmptyState } from "@/components/empty-state"
 
 import { Button } from "@/components/ui/button"
 import { showActionError } from "@/lib/show-action-error"
@@ -389,7 +390,7 @@ export function MilestonesPanel({
           </Table>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No milestones yet.</p>
+        <EmptyState title="No milestones yet." className="px-2 py-5" />
       )}
 
       {canManage ? (
@@ -426,8 +427,8 @@ export function MilestonesPanel({
                 remaining < 0
                   ? "text-destructive"
                   : remaining > 0
-                    ? "text-amber-600 dark:text-amber-500"
-                    : "text-emerald-600 dark:text-emerald-500"
+                    ? "text-warning"
+                    : "text-success"
               )}
             >
               Remaining {formatMoney(remaining, currency)}

@@ -5,7 +5,6 @@ import { requireEntitledRoute } from "@/lib/module-guard"
 import { PERMISSIONS } from "@/lib/permissions"
 import { listActivities } from "@/app/(app)/_shared/activity-actions"
 import { listEntityDocuments } from "@/app/(app)/_shared/attachment-actions"
-import { FINANCE_KINDS, type FinanceDocKind } from "@/lib/finance-kinds"
 import { getFinanceDoc } from "../actions"
 import { DocDetailBody } from "./doc-detail-body"
 
@@ -26,8 +25,6 @@ export default async function FinanceDocPage({
     listActivities("finance_doc", id),
     listEntityDocuments("finance_doc", id),
   ])
-
-  const meta = FINANCE_KINDS[detail.doc.kind as FinanceDocKind]
 
   return (
     <>

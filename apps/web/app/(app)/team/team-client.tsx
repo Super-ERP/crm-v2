@@ -166,7 +166,7 @@ function AddMemberDialog({ roles }: { roles: TeamRoleView[] }) {
               </span>
             </Label>
             <Select value={roleId} onValueChange={onRoleChange} items={roleItems}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger width="full">
                 <SelectValue placeholder="Pick a role" />
               </SelectTrigger>
               <SelectContent>
@@ -313,7 +313,7 @@ function EditMemberDialog({
               onValueChange={(v) => setManagerId(v ?? "none")}
               items={managerItems}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger width="full">
                 <SelectValue placeholder="No manager" />
               </SelectTrigger>
               <SelectContent>

@@ -140,7 +140,7 @@ export function CreateDocDialog({
                 onValueChange={(v) => onKindChange((v as FinanceDocKind) ?? kinds[0])}
                 items={kinds.map((k) => ({ value: k, label: FINANCE_KINDS[k].label }))}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger width="full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

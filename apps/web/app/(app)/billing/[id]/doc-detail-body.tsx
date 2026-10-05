@@ -217,7 +217,7 @@ export function DocDetailBody({
                 </>
               ) : null}
               {needsProof && doc.attachCount === 0 ? (
-                <p className="w-full text-xs text-amber-600 dark:text-amber-400">
+                <p className="w-full text-xs text-warning">
                   Attach the payment proof (Documents tab) to enable Issue.
                 </p>
               ) : null}

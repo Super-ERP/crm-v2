@@ -14,6 +14,7 @@ import {
   listCurrencies,
 } from "@/lib/lookups"
 import { PageBody } from "@/components/page-header"
+import { StatusCallout } from "@/components/status-callout"
 import { Button } from "@/components/ui/button"
 import { listActivities, type ActivityRow } from "@/app/(app)/_shared/activity-actions"
 import { listOpportunityDocuments } from "@/app/(app)/_shared/attachment-actions"
@@ -235,8 +236,8 @@ export default async function OpportunityDetailPage({
         </div>
 
         {pendingApproval ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300/60 bg-amber-50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
-            <ClockIcon className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <StatusCallout tone="warning" className="flex flex-wrap items-center gap-2 p-3">
+            <ClockIcon className="size-4 shrink-0 text-warning" />
             <span>
               Pending approval{" "}
               <span className="text-muted-foreground">→</span>{" "}
@@ -248,7 +249,7 @@ export default async function OpportunityDetailPage({
             <Link href="/approvals" className="font-medium underline">
               View in Approvals
             </Link>
-          </div>
+          </StatusCallout>
         ) : null}
 
         <FunnelDetailBody

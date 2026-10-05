@@ -20,6 +20,7 @@ import {
 } from "@/lib/stage-gate"
 
 import { Button } from "@/components/ui/button"
+import { StatusCallout } from "@/components/status-callout"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -240,7 +241,7 @@ export function StageAdvanceDialog({
       {isControlled && !trigger ? null : (
         <DialogTrigger render={trigger ?? <Button>Advance stage</Button>} />
       )}
-      <DialogContent className="w-full sm:max-w-2xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <DialogTitle>{rollback ? "Move back" : "Advance stage"}</DialogTitle>
           <DialogDescription>
@@ -289,7 +290,7 @@ export function StageAdvanceDialog({
                 onValueChange={(v) => setTargetStageId((v as string) ?? "")}
                 items={stageItems}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger width="full">
                   <SelectValue placeholder="Pick a stage…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -312,7 +313,7 @@ export function StageAdvanceDialog({
             </div>
 
             {!rollback && target && missing.length > 0 ? (
-              <div className="rounded-md border border-amber-300/60 bg-amber-50 p-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
+              <StatusCallout tone="warning" className="p-3">
                 <p className="font-medium">Complete earlier-stage fields first</p>
                 <ul className="mt-2 grid gap-1.5">
                   {missing.map((m) => {
@@ -326,7 +327,7 @@ export function StageAdvanceDialog({
                       <li key={m.key} className="flex flex-wrap items-baseline gap-x-1.5">
                         <span
                           aria-hidden
-                          className="size-1.5 shrink-0 translate-y-[-1px] rounded-full bg-amber-500"
+                          className="size-1.5 shrink-0 translate-y-[-1px] rounded-full bg-warning"
                         />
                         <span>{m.label}</span>
                         {href ? (
@@ -349,7 +350,7 @@ export function StageAdvanceDialog({
                 <p className="mt-2 text-xs text-muted-foreground">
                   Fill these in on the Funnel or Opportunity details, then come back and advance.
                 </p>
-              </div>
+              </StatusCallout>
             ) : null}
 
             {showReason ? (

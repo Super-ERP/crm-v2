@@ -169,8 +169,8 @@ function SplitForm({
         className={cn(
           "flex items-center justify-between rounded-md border px-3 py-2 text-sm tabular-nums",
           matches
-            ? "border-emerald-600/30 text-emerald-600 dark:text-emerald-500"
-            : "border-amber-600/30 text-amber-600 dark:text-amber-500"
+            ? "border-success/30 text-success"
+            : "border-warning/30 text-warning"
         )}
       >
         <span>Remaining</span>

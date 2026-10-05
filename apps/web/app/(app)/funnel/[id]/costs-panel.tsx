@@ -402,7 +402,7 @@ function Stat({
         className={cn(
           "text-sm font-semibold tabular-nums",
           tone === "bad" && "text-destructive",
-          tone === "good" && "text-emerald-600 dark:text-emerald-500"
+          tone === "good" && "text-success"
         )}
       >
         {value}

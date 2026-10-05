@@ -10,11 +10,11 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ChoiceChip } from "@/components/ui/choice-chip"
 import { Switch } from "@/components/ui/switch"
 import { StatusBadge } from "@/components/status-badge"
 import { canCreateQuotationRevision } from "@/lib/quotation-revision-policy"
 import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
 import { TabsContent, TabsList } from "@/components/ui/tabs"
 import {
   DataTable,
@@ -910,19 +910,13 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                     {projectNatureCatalog.map((p) => {
                       const on = projectNatureCodes.includes(p.code)
                       return (
-                        <button
+                        <ChoiceChip
                           key={p.code}
-                          type="button"
+                          selected={on}
                           onClick={() => toggleNature(p.code)}
-                          className={cn(
-                            "rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
-                            on
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-input bg-background text-muted-foreground hover:bg-accent"
-                          )}
                         >
                           ({p.code}) - {p.name}
-                        </button>
+                        </ChoiceChip>
                       )
                     })}
                   </div>

@@ -127,7 +127,7 @@ export function SubmitSalesOrderForm({
               onValueChange={(v) => setDocumentKind(v ?? "")}
               items={documentKinds.map((k) => ({ value: k, label: k }))}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger width="full">
                 <SelectValue placeholder="What is this document?" />
               </SelectTrigger>
               <SelectContent>
@@ -146,7 +146,7 @@ export function SubmitSalesOrderForm({
               onValueChange={(v) => setPaymentTerm(v ?? "")}
               items={paymentTerms.map((t) => ({ value: t, label: t }))}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger width="full">
                 <SelectValue placeholder="Pick a term…" />
               </SelectTrigger>
               <SelectContent>

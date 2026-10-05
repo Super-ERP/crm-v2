@@ -22,6 +22,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DIALOG_FORM_BODY_CLASS,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -233,7 +234,7 @@ export function ProjectCreateForm({
       {trigger ? (
         <DialogTrigger render={trigger as React.ReactElement} />
       ) : null}
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <DialogTitle>New project</DialogTitle>
         </DialogHeader>
@@ -241,7 +242,7 @@ export function ProjectCreateForm({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(handleSubmit)}
-            className="grid max-h-[70vh] gap-4 overflow-y-auto px-1"
+            className={DIALOG_FORM_BODY_CLASS}
             id="project-form"
           >
             <FormField
@@ -312,7 +313,7 @@ export function ProjectCreateForm({
                       items={CODE_NATURE_OPTIONS}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="How to assign the code" />
                         </SelectTrigger>
                       </FormControl>
@@ -506,7 +507,7 @@ export function ProjectCreateForm({
                     items={STATUS_OPTIONS}
                   >
                     <FormControl>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger width="full">
                         <SelectValue placeholder="Pick a status" />
                       </SelectTrigger>
                     </FormControl>

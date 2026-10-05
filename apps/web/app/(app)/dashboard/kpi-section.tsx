@@ -18,11 +18,10 @@ import { useDashboardCurrency } from "./dashboard-currency"
 
 /** Tinted icon-chip palettes for the KPI cards. */
 const CHIP: Record<"sky" | "violet" | "amber" | "red" | "muted", string> = {
-  sky: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300",
-  violet:
-    "bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300",
-  amber: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300",
-  red: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300",
+  sky: "bg-info-soft text-info dark:bg-info/15",
+  violet: "bg-chart-1/10 text-chart-1",
+  amber: "bg-warning-soft text-warning dark:bg-warning/15",
+  red: "bg-destructive/10 text-destructive dark:bg-destructive/20",
   muted: "bg-muted text-muted-foreground",
 }
 
@@ -45,8 +44,8 @@ function KpiCard({
   return (
     <Card
       className={cn(
-        attention === "amber" && "ring-1 ring-amber-500/40",
-        attention === "red" && "ring-1 ring-red-500/40"
+        attention === "amber" && "ring-1 ring-warning/40",
+        attention === "red" && "ring-1 ring-destructive/40"
       )}
     >
       <CardHeader>

@@ -240,7 +240,7 @@ export function LeadForm({
                   items={STATUS_OPTIONS}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger width="full">
                       <SelectValue placeholder="Pick a status" />
                     </SelectTrigger>
                   </FormControl>

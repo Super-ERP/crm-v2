@@ -12,8 +12,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Combobox } from "@/components/ui/combobox"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { OBJECT_TILES } from "@/components/object-tile"
 import type { Option, CountryOption } from "@/lib/lookups"
-import { convertLeadAction, type Lead } from "../../actions"
+import { convertLeadAction, updateLead, type Lead, type LeadInput } from "../../actions"
 
 const NEW_ACCOUNT = "__new__"
 
@@ -64,11 +75,19 @@ export function ConvertForm({
     country: "",
   })
   const [submitting, setSubmitting] = React.useState(false)
+  const [emailValue, setEmailValue] = React.useState(lead.email ?? "")
+  const [emailSaving, setEmailSaving] = React.useState(false)
+  const [emailError, setEmailError] = React.useState("")
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   const creatingNew = accountId === NEW_ACCOUNT
   const stateOptions = countries.find((c) => c.name === addr.country)?.states ?? []
   const codeValid = /^[A-Za-z0-9]{2,6}$/.test(newCode.trim())
-  const missingEmail = !lead.email?.trim()
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue.trim())
+  const missingEmail = !validEmail
+  const selectedAccountName = creatingNew
+    ? lead.companyName || lead.name
+    : accountOptions.find((account) => account.id === accountId)?.name ?? "Selected account"
 
   function onOpportunityNameChange(next: string) {
     setOpportunityName(next)
@@ -87,6 +106,36 @@ export function ConvertForm({
   ].filter((m): m is string => m !== null)
 
   const blocked = submitting || missing.length > 0
+
+  async function saveLeadEmail() {
+    const email = emailValue.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailError("Enter a valid email address.")
+      return
+    }
+
+    setEmailSaving(true)
+    setEmailError("")
+    try {
+      const input: LeadInput = {
+        name: lead.name,
+        companyName: lead.companyName,
+        email,
+        phone: lead.phone,
+        source: lead.source,
+        status: lead.status,
+      }
+      const result = await updateLead(lead.id, input)
+      if (!result.ok) {
+        showActionError(result)
+        return
+      }
+      setEmailValue(email)
+      toast.success("Lead email updated")
+    } finally {
+      setEmailSaving(false)
+    }
+  }
 
   async function handleConvert() {
     setSubmitting(true)
@@ -136,15 +185,44 @@ export function ConvertForm({
   return (
     <div className="mx-auto grid w-full max-w-3xl gap-4">
       {missingEmail ? (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          This lead has no email. A contact must have one — add a valid email to
-          the lead before converting.
+        <div className="grid gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm">
+          <div className="grid gap-1">
+            <p className="font-medium text-destructive">Add a contact email to continue</p>
+            <p className="text-muted-foreground">
+              The converted contact uses this email. Save it here and continue without leaving conversion.
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+            <div className="grid gap-2">
+              <Label htmlFor="convert-lead-email">Lead email</Label>
+              <Input
+                id="convert-lead-email"
+                type="email"
+                autoComplete="email"
+                value={emailValue}
+                onChange={(event) => {
+                  setEmailValue(event.target.value)
+                  setEmailError("")
+                }}
+                aria-invalid={!!emailError}
+                aria-describedby={emailError ? "convert-lead-email-error" : undefined}
+              />
+              {emailError ? (
+                <p id="convert-lead-email-error" className="text-xs text-destructive" role="alert">
+                  {emailError}
+                </p>
+              ) : null}
+            </div>
+            <Button type="button" variant="outline" onClick={saveLeadEmail} disabled={emailSaving}>
+              {emailSaving ? "Saving…" : "Save email"}
+            </Button>
+          </div>
         </div>
       ) : null}
 
       <Card>
         <CardHeader className="flex flex-row items-center gap-2.5 space-y-0">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sky-600 text-white">
+          <div className={`flex size-8 shrink-0 items-center justify-center rounded-md text-white ${OBJECT_TILES.account.color}`}>
             <Building2Icon className="size-4" />
           </div>
           <div className="grid gap-0.5">
@@ -324,7 +402,7 @@ export function ConvertForm({
 
       <Card>
         <CardHeader className="flex flex-row items-center gap-2.5 space-y-0">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-orange-500 text-white">
+          <div className={`flex size-8 shrink-0 items-center justify-center rounded-md text-white ${OBJECT_TILES.opportunity.color}`}>
             <TargetIcon className="size-4" />
           </div>
           <div className="grid gap-0.5">
@@ -391,8 +469,8 @@ export function ConvertForm({
         >
           Cancel
         </Button>
-        <Button type="button" onClick={handleConvert} disabled={blocked}>
-          {submitting ? "Converting…" : "Convert lead"}
+        <Button type="button" onClick={() => setConfirmOpen(true)} disabled={blocked}>
+          Review conversion
         </Button>
       </div>
       {missing.length > 0 && !submitting ? (
@@ -401,9 +479,47 @@ export function ConvertForm({
         </p>
       ) : null}
       <p className="text-right text-xs text-muted-foreground">
-        Converting creates the Account, Contact, Opportunity and Funnel together.
-        This can&apos;t be undone.
+        You&apos;ll review the account and sales records before conversion.
       </p>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert this lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This creates linked sales records and cannot be undone. Check the account and names before continuing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <dl className="grid gap-3 rounded-md border p-3 text-sm">
+            <div className="grid gap-0.5">
+              <dt className="text-muted-foreground">Account</dt>
+              <dd className="font-medium break-words">{selectedAccountName}</dd>
+              <dd className="text-xs text-muted-foreground">
+                {creatingNew ? "A new account will be created." : "The contact will be added to this account."}
+              </dd>
+            </div>
+            <div className="grid gap-0.5">
+              <dt className="text-muted-foreground">Contact</dt>
+              <dd className="font-medium break-words">{lead.name}</dd>
+              <dd className="break-all text-xs text-muted-foreground">{emailValue.trim()}</dd>
+            </div>
+            <div className="grid gap-0.5">
+              <dt className="text-muted-foreground">Opportunity</dt>
+              <dd className="font-medium break-words">{opportunityName}</dd>
+            </div>
+            <div className="grid gap-0.5">
+              <dt className="text-muted-foreground">First funnel</dt>
+              <dd className="font-medium break-words">{funnelName}</dd>
+            </div>
+          </dl>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={submitting}>Back to edit</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConvert} disabled={blocked}>
+              {submitting ? "Converting…" : "Convert lead"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

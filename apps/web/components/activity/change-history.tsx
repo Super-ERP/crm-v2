@@ -2,8 +2,10 @@ import type { ActivityRow } from "@/app/(app)/_shared/activity-actions"
 import { ChangeList } from "./change-list"
 import { formatDate } from "@/lib/format"
 
+import { EmptyState } from "@/components/empty-state"
+
 export function ChangeHistory({ items }: { items: ActivityRow[] }) {
-  if (!items.length) return <p className="text-sm text-muted-foreground">No changes recorded yet.</p>
+  if (!items.length) return <EmptyState title="No changes recorded yet." className="px-2 py-5" />
   return (
     <ol className="space-y-4">
       {items.map((it) => (

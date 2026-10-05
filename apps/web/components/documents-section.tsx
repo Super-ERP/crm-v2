@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Trash2Icon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import { Badge } from "@/components/ui/badge"
 import {
   AlertDialog,
@@ -115,7 +116,7 @@ export function DocumentsSection({
     <div className="grid gap-3">
       <FileDropzone files={[]} onFiles={onUpload} compact busy={busy} />
       {documents.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No documents yet.</p>
+        <EmptyState title="No documents yet." className="px-2 py-5" />
       ) : (
         <ul className="grid gap-1.5">
           {documents.map((d) => (

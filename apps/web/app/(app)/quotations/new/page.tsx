@@ -33,6 +33,7 @@ export default async function NewQuotationPage({
         <NewQuotationForm
           funnels={funnels}
           defaultOpportunityId={defaultOpportunityId}
+          draftNamespace={`${ctx.tenantId}:${ctx.userId}`}
           taxOptions={meta.taxOptions}
           taxInclusive={meta.taxInclusive}
           projectNatures={meta.projectNatures}

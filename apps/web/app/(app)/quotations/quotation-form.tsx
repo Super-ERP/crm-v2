@@ -588,7 +588,7 @@ export function QuotationForm({
                         ]}
                       >
                         <FormControl>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger width="full">
                             <SelectValue placeholder="No tax" />
                           </SelectTrigger>
                         </FormControl>
@@ -622,7 +622,7 @@ export function QuotationForm({
                           ]}
                         >
                           <FormControl>
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger width="full">
                               <SelectValue placeholder="None" />
                             </SelectTrigger>
                           </FormControl>
@@ -692,7 +692,7 @@ export function QuotationForm({
                         ]}
                       >
                         <FormControl>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger width="full">
                             <SelectValue placeholder="Select contact…" />
                           </SelectTrigger>
                         </FormControl>

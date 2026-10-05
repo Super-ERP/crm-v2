@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -247,7 +248,7 @@ export function ActivityTimeline({
       )}
 
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No activity yet.</p>
+        <EmptyState title="No activity yet." className="px-2 py-5" />
       ) : (
         <ol className="grid gap-3">
           {visible.map((a) => {

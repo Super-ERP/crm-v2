@@ -11,6 +11,7 @@ import { useDialogOpen } from "@/components/use-dialog-open"
 import {
   Dialog,
   DialogContent,
+  DIALOG_FORM_BODY_CLASS,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -174,7 +175,7 @@ export function ProductForm({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger ? <DialogTrigger render={trigger as React.ReactElement} /> : null}
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit product" : "New product"}</DialogTitle>
         </DialogHeader>
@@ -182,7 +183,7 @@ export function ProductForm({
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="grid max-h-[75vh] gap-4 overflow-y-auto px-1"
+            className={DIALOG_FORM_BODY_CLASS}
           >
             <section className="grid gap-4 rounded-lg border bg-muted/20 p-4">
               <h3 className="text-base font-medium">Basics</h3>
@@ -219,7 +220,7 @@ export function ProductForm({
                       items={codeItems}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Select a product category" />
                         </SelectTrigger>
                       </FormControl>
@@ -248,7 +249,7 @@ export function ProductForm({
                       disabled={subcategoryItems.length === 1}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Select a subcategory" />
                         </SelectTrigger>
                       </FormControl>
@@ -295,7 +296,7 @@ export function ProductForm({
                       items={currencyItems.map((c) => ({ value: c, label: c }))}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Pick a currency…" />
                         </SelectTrigger>
                       </FormControl>
