@@ -22,7 +22,7 @@ Find modules, switch organizations, and save a useful list view.
 
 The dashboard shows follow-ups, approvals, open funnels, and sales charts. Members with **View all records**, or managers with reports, can switch the funnel summary between **My work** and **Team**. Team charts include only records in the member's visible reporting line unless they have View all records. Other members see only their own records. The activity chart follows the same access scope.
 
-When records use several currencies, use **Display currency** to inspect each currency separately. The open-funnel value and monetary charts never add different currencies together or apply an assumed exchange rate. The configured default currency is selected when it has data; otherwise the first available currency is shown. A primary quotation supplies the currency for quote-derived funnel values and synced product lines. Funnel estimates use the funnel's own currency.
+Use **Currency** beside the welcome message to choose from the currencies supported by your organization. The open-funnel value and monetary charts never add different currencies together or apply an assumed exchange rate. The configured default currency is selected when supported; otherwise the first supported currency is shown. Currencies without matching records show zero totals. A primary quotation supplies the currency for quote-derived funnel values and synced product lines. Funnel estimates use the funnel's own currency.
 
 The follow-up card shows the next ten due items while its count reflects all due items. Administrators can adjust the follow-up and stale-funnel windows under **Settings → General → Behavior**.
 

@@ -10,11 +10,14 @@ describe("dashboard currency selection", () => {
     expect(selectAvailableCurrency("USD", "MYR", ["EUR"])).toBe("EUR")
   })
 
-  it("shows only the selected currency's pipeline value without converting or combining amounts", () => {
+  it.each([
+    { currency: "USD", value: "$20.00", count: 1 },
+    { currency: "EUR", value: "€0.00", count: 0 },
+  ])("shows $currency totals, including a supported currency with no data", ({ currency, value, count }) => {
     const html = renderToStaticMarkup(
       createElement(DashboardCurrencyProvider, {
-        available: ["MYR", "USD"],
-        defaultCurrency: "USD",
+        available: ["MYR", "USD", "EUR"],
+        defaultCurrency: currency,
       }, createElement(KpiSection, {
           myPipeline: {
             count: 2,
@@ -32,9 +35,8 @@ describe("dashboard currency selection", () => {
         }))
     )
 
-    expect(html).toContain("Display currency")
-    expect(html).toContain("$20.00")
+    expect(html).toContain(value)
     expect(html).not.toContain("RM1,000.00")
-    expect(html).toContain("1 USD owned funnels")
+    expect(html).toContain(`${count} ${currency} owned funnels`)
   })
 })
