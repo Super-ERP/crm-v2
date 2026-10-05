@@ -336,9 +336,8 @@
 .qm-note-text p { display: inline; margin: 0; }
 .qm-terms { margin-top: 6pt; white-space: pre-line; }
 .qm-terms strong { display: block; margin-bottom: 2pt; }
-.qm-signoff-page { break-before: page; padding-top: 45pt; }
-.qm-signoff-page p { margin-top: 8pt; font-style: italic; }
-.qm-signoff-page .qm-footer { border-top-color: transparent; }
+.qm-signoff { margin-top: 20pt; break-inside: avoid-page; page-break-inside: avoid; }
+.qm-signoff p { margin: 8pt 0 0; font-style: italic; }
 .qm-footer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 6pt; border-top: 0.5pt solid #ddd; padding-top: 17pt; font-size: 8pt; line-height: 1.2; }
 .qm-footer-contact { position: relative; top: 2.8pt; grid-column: 2; text-align: center; white-space: nowrap; }
 .qm-footer > strong { position: relative; top: 2.8pt; grid-column: 3; justify-self: end; margin-right: -6pt; white-space: nowrap; font-size: 9pt; }
@@ -569,15 +568,6 @@ html.text-scale-xl {
     box-shadow: none !important;
     break-after: auto;
   }
-  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-first-page { padding-bottom: 40pt !important; }
-  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-first-page { break-after: auto; }
-  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-signoff-page {
-    min-height: 0 !important;
-    break-before: auto;
-    break-after: auto;
-    break-inside: avoid-page;
-  }
-  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-signoff-page { padding-top: 45pt !important; }
   #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-footer-screen { display: none !important; }
   #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-footer-print {
     display: grid !important;
