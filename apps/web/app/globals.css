@@ -395,7 +395,7 @@
   color: #334155;
 }
 
-#quote-doc[data-template="cc"] [data-quotation-section-title] {
+#quote-doc[data-template="cc"] .cc-quotation-section-title {
   background-color: #fff4d6;
   color: #334155;
 }
@@ -416,7 +416,7 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  #quote-doc[data-template="cc"] [data-quotation-section-title] {
+  #quote-doc[data-template="cc"] .cc-quotation-section-title {
     background-color: #fff4d6 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
