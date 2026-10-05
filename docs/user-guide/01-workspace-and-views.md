@@ -34,7 +34,6 @@ When you log in to the CRM, you are presented with the main application workspac
 
 * **Top Header**:
    * **Active Organization**: Displays the current organization you are working within.
-   * **Breadcrumb Navigation**: Shows your location within the application (e.g., `Leads > John Doe > Convert`).
    * **User Profile**: Access your account details, switch themes, or sign out.
 * **Left Sidebar**:
    The sidebar groups all business modules logically:
