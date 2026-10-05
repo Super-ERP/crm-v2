@@ -4,6 +4,7 @@ import * as React from "react"
 import { CheckIcon, XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { EmptyState } from "@/components/empty-state"
 import { DocumentViewerButton } from "@/components/document-viewer"
 import { formatDate } from "@/lib/format"
 import { SubmitSalesOrderDialog } from "./submit-dialog"
@@ -46,7 +47,7 @@ export function ProjectSalesOrders({
       </div>
 
       {orders.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No sales orders yet.</p>
+        <EmptyState title="No sales orders yet." className="px-2 py-5" />
       ) : (
         <ul className="grid gap-3">
           {orders.map((o) => (

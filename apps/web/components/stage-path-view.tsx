@@ -4,6 +4,7 @@ import * as React from "react"
 import { CheckIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { StatusBadge } from "@/components/status-badge"
 
 // Depth of the chevron arrow (px) and the overlap between segments. Overlapping
 // slightly less than the arrow depth leaves a thin sliver of card background
@@ -73,6 +74,7 @@ export function StagePathView({
               key={s.id}
               type="button"
               disabled={!clickable}
+              aria-current={s.state === "current" ? "step" : undefined}
               onClick={() => {
                 if (!clickable) return
                 onStepSelect?.(s.id)
@@ -87,7 +89,7 @@ export function StagePathView({
               className={cn(
                 "relative flex min-w-[6.5rem] flex-1 items-center justify-center gap-1.5 py-2 pr-4 pl-4 text-xs font-medium transition-colors outline-none",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                won && "bg-emerald-600 text-white dark:bg-emerald-500",
+                won && "bg-success text-primary-foreground",
                 !won && s.state === "done" && "bg-primary text-primary-foreground",
                 !won && s.state === "current" && "bg-foreground text-background",
                 !won && s.state === "upcoming" && "bg-muted text-muted-foreground",
@@ -106,16 +108,12 @@ export function StagePathView({
       </div>
 
       {note ? (
-        <div
-          className={cn(
-            "mx-auto w-fit rounded-full px-3 py-1 text-xs font-medium",
-            note.tone === "lost"
-              ? "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300"
-              : "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300"
-          )}
-        >
-          {note.label}
-        </div>
+        <StatusBadge
+          status={note.tone}
+          tone={note.tone === "lost" ? "danger" : "warning"}
+          label={note.label}
+          className="mx-auto"
+        />
       ) : hint ? (
         <p className="text-center text-[11px] text-muted-foreground">{hint}</p>
       ) : null}

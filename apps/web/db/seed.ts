@@ -109,14 +109,13 @@ async function main() {
     })
     .onConflictDoNothing()
 
-  // Demo master switch: SEED_SAMPLE_DATA governs the whole demo. When OFF, the
-  // Demo Entity is SUSPENDED — the built-in tenant lock hides + locks it for
-  // everyone (server-context enforces `tenant_settings.status`), so a real
-  // deployment surfaces no demo. When ON it is (re)activated. Reconciled on
-  // every migrate, so flipping the env var + redeploy is the whole toggle.
+  // Local development keeps the seeded Demo Entity usable by default. In
+  // production it stays suspended unless SEED_SAMPLE_DATA explicitly enables
+  // the demo tenant. Reconciled on every seed so the production opt-in remains
+  // the single toggle for exposing demo data.
   // NB: suspending locks out anyone whose ONLY entity is the demo — only turn
   // it off once you have another entity to work in.
-  const demoActive = process.env.SEED_SAMPLE_DATA === "true"
+  const demoActive = process.env.NODE_ENV !== "production" || process.env.SEED_SAMPLE_DATA === "true"
   await db
     .update(tenantSettings)
     .set({ status: demoActive ? "active" : "suspended" })

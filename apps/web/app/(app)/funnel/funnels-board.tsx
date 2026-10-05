@@ -41,13 +41,13 @@ import { canTransition } from "./stage-transitions"
 function kindAccent(kind: string): string {
   switch (kind) {
     case "WON":
-      return "bg-emerald-500"
+      return "bg-success"
     case "LOST":
-      return "bg-red-500"
+      return "bg-destructive"
     case "PARKED":
-      return "bg-amber-500"
+      return "bg-warning"
     default:
-      return "bg-sky-500"
+      return "bg-info"
   }
 }
 

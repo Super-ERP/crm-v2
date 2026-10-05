@@ -149,8 +149,8 @@ function CcLines({ doc }: { doc: QuotationDocument }) {
         const { title, body } = splitQuotationDescriptionTitle(line.description)
         return <tbody key={line.id} data-quotation-line-group>{title ? (
           <tr data-quotation-section-row>
-            <td colSpan={2} data-quotation-section-title style={{ backgroundColor: "#fff4d6", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-            <td colSpan={6} data-quotation-section-title className="px-1 py-1 font-bold" style={{ backgroundColor: "#fff4d6", color: "#334155", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</td>
+            <td colSpan={2} data-quotation-section-title />
+            <td colSpan={6} data-quotation-section-title className="px-1 py-1 font-bold">{title}</td>
           </tr>
         ) : null}<tr className="align-top">
           <td className="px-2 py-1">{index + 1}</td><td className="px-1 py-1">{line.sku ?? ""}</td><td data-quotation-description className="px-1 py-1"><QuotationDescription value={body} className="text-[9px] leading-relaxed" /></td>

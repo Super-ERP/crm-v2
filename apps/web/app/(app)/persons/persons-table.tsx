@@ -200,7 +200,7 @@ export function PersonsTable({
               {fullName(row.original) || "Unnamed contact"}
             </Link>
             {row.original.isPrimary ? (
-              <Star className="size-3.5 fill-amber-400 text-amber-400" />
+              <Star className="size-3.5 fill-warning text-warning" />
             ) : null}
           </div>
         ),

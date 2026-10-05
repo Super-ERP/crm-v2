@@ -218,7 +218,7 @@ function CustomFunnelFieldsCard({ fields }: { fields: CustomFunnelField[] }) {
                 onValueChange={(v) => setTypeDraft(v as CustomFieldType)}
                 items={CUSTOM_FIELD_TYPES}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger width="full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -485,7 +485,7 @@ function StageDialog({
                       items={availableCodes}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Pick a code" />
                         </SelectTrigger>
                       </FormControl>
@@ -523,7 +523,7 @@ function StageDialog({
                       items={KIND_OPTIONS}
                     >
                       <FormControl>
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger width="full">
                           <SelectValue placeholder="Pick a kind" />
                         </SelectTrigger>
                       </FormControl>

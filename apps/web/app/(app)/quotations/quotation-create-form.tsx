@@ -78,6 +78,39 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+function isFormDraft(value: unknown): value is FormValues {
+  if (!value || typeof value !== "object") return false
+  const draft = value as Record<string, unknown>
+  const stringFields = [
+    "funnelId",
+    "currency",
+    "taxSettingId",
+    "projectNatureCode",
+    "validUntil",
+    "notes",
+    "delivery",
+    "paymentTerm",
+    "attentionContactId",
+    "headerDiscount",
+  ]
+  if (!stringFields.every((field) => typeof draft[field] === "string")) return false
+  if (!Array.isArray(draft.lines)) return false
+
+  return draft.lines.every((line) => {
+    if (!line || typeof line !== "object") return false
+    const item = line as Record<string, unknown>
+    return [
+      "productId",
+      "projectNatureCode",
+      "uom",
+      "description",
+      "quantity",
+      "unitPrice",
+      "discountAmount",
+    ].every((field) => typeof item[field] === "string")
+  })
+}
+
 export type OpportunityOption = { id: string; name: string; currency?: string }
 export type ProjectNatureOption = { code: string; name: string }
 
@@ -95,6 +128,7 @@ export function QuotationCreateForm({
   funnels,
   funnelId,
   defaultOpportunityId,
+  draftNamespace,
   currency,
   currencies = [],
   defaultValidUntil,
@@ -117,6 +151,8 @@ export function QuotationCreateForm({
   funnelId?: string
   /** Pre-selected funnel in the picker (picker stays visible/editable). */
   defaultOpportunityId?: string
+  /** Tenant/user scope for keeping resumable form values separate. */
+  draftNamespace: string
   currency?: string
   currencies?: string[]
   /** Prefill for "Valid until" (tenant default validity), YYYY-MM-DD. */
@@ -130,41 +166,77 @@ export function QuotationCreateForm({
 }) {
   const fixedOpportunity = !!funnelId
   const [busy, setBusy] = React.useState(false)
+  const [draftReady, setDraftReady] = React.useState(false)
+  const [draftStatus, setDraftStatus] = React.useState("")
+  const draftKey = `crm:quotation-create:draft:${draftNamespace}:${funnelId ?? defaultOpportunityId ?? "new"}`
 
   const defaultTaxId =
     taxOptions.find((t) => t.isDefault)?.id ?? NO_TAX
 
+  const defaultValues: FormValues = {
+    funnelId: funnelId ?? defaultOpportunityId ?? "",
+    currency:
+      funnels?.find((funnel) => funnel.id === (funnelId ?? defaultOpportunityId))?.currency ??
+      currency ??
+      currencies[0] ??
+      "MYR",
+    taxSettingId: defaultTaxId,
+    projectNatureCode: INHERIT_PROJECT_NATURE,
+    validUntil: defaultValidUntil ?? "",
+    notes: quoteDefaults.notes ?? "",
+    delivery: quoteDefaults.delivery ?? "",
+    paymentTerm: quoteDefaults.paymentTerm ?? "",
+    attentionContactId: defaultAttentionContactId ?? NO_CONTACT,
+    headerDiscount: "0",
+    lines: [
+      {
+        productId: "",
+        projectNatureCode: "",
+        uom: "",
+        description: "",
+        quantity: "1",
+        unitPrice: "0",
+        discountAmount: "0",
+      },
+    ],
+  }
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onBlur",
-    defaultValues: {
-      funnelId: funnelId ?? defaultOpportunityId ?? "",
-      currency:
-        funnels?.find((funnel) => funnel.id === (funnelId ?? defaultOpportunityId))?.currency ??
-        currency ??
-        currencies[0] ??
-        "MYR",
-      taxSettingId: defaultTaxId,
-      projectNatureCode: INHERIT_PROJECT_NATURE,
-      validUntil: defaultValidUntil ?? "",
-      notes: quoteDefaults.notes ?? "",
-      delivery: quoteDefaults.delivery ?? "",
-      paymentTerm: quoteDefaults.paymentTerm ?? "",
-      attentionContactId: defaultAttentionContactId ?? NO_CONTACT,
-      headerDiscount: "0",
-      lines: [
-        {
-          productId: "",
-          projectNatureCode: "",
-          uom: "",
-          description: "",
-          quantity: "1",
-          unitPrice: "0",
-          discountAmount: "0",
-        },
-      ],
-    },
+    defaultValues,
   })
+
+  React.useEffect(() => {
+    try {
+      const rawDraft = window.sessionStorage.getItem(draftKey)
+      if (rawDraft) {
+        const parsed: unknown = JSON.parse(rawDraft)
+        if (isFormDraft(parsed)) {
+          form.reset(parsed)
+          setDraftStatus("Unsaved quotation progress restored from this tab.")
+        } else {
+          window.sessionStorage.removeItem(draftKey)
+        }
+      }
+    } catch {
+      setDraftStatus("This tab could not restore saved quotation progress.")
+    }
+    setDraftReady(true)
+  }, [draftKey, form])
+
+  React.useEffect(() => {
+    if (!draftReady) return
+    const subscription = form.watch((values) => {
+      try {
+        window.sessionStorage.setItem(draftKey, JSON.stringify(values))
+        setDraftStatus("Progress is saved in this tab as you work.")
+      } catch {
+        setDraftStatus("Progress could not be saved in this tab.")
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [draftKey, draftReady, form])
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -293,6 +365,12 @@ export function QuotationCreateForm({
       setBusy(false)
       return
     }
+    try {
+      window.sessionStorage.removeItem(draftKey)
+    } catch {
+      // A saved browser draft is optional; quote creation has already succeeded.
+    }
+    setDraftStatus("")
     toast.success("Quotation created")
     onCreated?.(res.data)
   }
@@ -360,7 +438,7 @@ export function QuotationCreateForm({
                   items={currencies.map((value) => ({ value, label: value }))}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger width="full">
                       <SelectValue placeholder="Pick a currency…" />
                     </SelectTrigger>
                   </FormControl>
@@ -377,6 +455,14 @@ export function QuotationCreateForm({
             )}
           />
 
+          <details className="rounded-md border px-4 py-3 sm:col-span-2">
+            <summary className="cursor-pointer font-medium marker:text-muted-foreground">
+              Optional quote settings
+              <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                Defaults are applied. Open to change tax, validity, contact, discount, or customer terms.
+              </span>
+            </summary>
+            <div className="grid gap-4 pt-4 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="taxSettingId"
@@ -395,7 +481,7 @@ export function QuotationCreateForm({
                   ]}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger width="full">
                       <SelectValue placeholder="No tax" />
                     </SelectTrigger>
                   </FormControl>
@@ -437,7 +523,7 @@ export function QuotationCreateForm({
                     ]}
                   >
                     <FormControl>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger width="full">
                         <SelectValue placeholder="Use funnel default" />
                       </SelectTrigger>
                     </FormControl>
@@ -490,7 +576,7 @@ export function QuotationCreateForm({
                   ]}
                 >
                   <FormControl>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger width="full">
                       <SelectValue placeholder="Select contact…" />
                     </SelectTrigger>
                   </FormControl>
@@ -576,6 +662,8 @@ export function QuotationCreateForm({
               </FormItem>
             )}
           />
+            </div>
+          </details>
             </CardContent>
           </Card>
 
@@ -761,6 +849,28 @@ export function QuotationCreateForm({
                   {formatMoney(totals.total, currency)}
                 </span>
               </div>
+              <p className="text-xs text-muted-foreground" role="status">
+                {draftStatus || "Your unfinished progress is saved in this tab."}
+              </p>
+              {draftStatus ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="justify-self-start px-0"
+                  onClick={() => {
+                    form.reset(defaultValues)
+                    try {
+                      window.sessionStorage.removeItem(draftKey)
+                    } catch {
+                      // Resetting the form remains available when storage is blocked.
+                    }
+                    setDraftStatus("Saved progress cleared.")
+                  }}
+                >
+                  Clear saved progress
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
 

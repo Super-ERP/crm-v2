@@ -82,7 +82,7 @@ export function DocumentViewerButton({ file }: { file: ViewableFile }) {
         )}
       </Button>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[92vh] w-[96vw] max-w-[96vw] flex-col gap-0 overflow-hidden p-0 sm:max-w-7xl">
+      <DialogContent size="large" className="flex flex-col gap-0 p-0">
           <DialogHeader className="flex flex-row items-center gap-2 space-y-0 border-b px-4 py-2.5 pr-12">
             <FileTypeIcon
               contentType={file.contentType}

@@ -1,7 +1,6 @@
-// No-FOUC user-preference init (theme + text size). Loaded via
-// <Script src strategy="beforeInteractive"> in app/layout.tsx so it runs
-// before hydration — an INLINE next/script is not hoisted in the App Router
-// and triggers React's "script tag while rendering" error instead.
+// No-FOUC user-preference init (theme + text size). Loaded as an async
+// external script in the root <head>; React hoists it out of the component
+// tree, and the small file can run before the app finishes hydrating.
 ;(function () {
   try {
     var t = localStorage.getItem("theme")

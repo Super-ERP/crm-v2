@@ -27,23 +27,38 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { ChoiceChip } from "@/components/ui/choice-chip"
+import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyState } from "@/components/empty-state"
+import { StatusBadge, type StatusTone } from "@/components/status-badge"
 
 type Severity = "info" | "warning" | "error" | "critical"
 
-const SEVERITY_META: Record<Severity, { icon: React.ComponentType<{ className?: string }>; color: string; label: string }> = {
-  info:     { icon: InfoIcon,        color: "text-blue-500",    label: "Info" },
-  warning:  { icon: AlertTriangleIcon, color: "text-amber-500",   label: "Warning" },
-  error:    { icon: AlertCircleIcon,  color: "text-red-500",    label: "Error" },
-  critical: { icon: ShieldAlertIcon,  color: "text-red-700",    label: "Critical" },
+const SEVERITY_META: Record<
+  Severity,
+  { icon: React.ComponentType<{ className?: string }>; tone: StatusTone; label: string }
+> = {
+  info: { icon: InfoIcon, tone: "info", label: "Info" },
+  warning: { icon: AlertTriangleIcon, tone: "warning", label: "Warning" },
+  error: { icon: AlertCircleIcon, tone: "danger", label: "Error" },
+  critical: { icon: ShieldAlertIcon, tone: "danger", label: "Critical" },
 }
 
 function SeverityBadge({ severity }: { severity: Severity }) {
-  const { icon: Icon, color, label } = SEVERITY_META[severity] ?? SEVERITY_META.error
+  const { icon: Icon, tone, label } = SEVERITY_META[severity] ?? SEVERITY_META.error
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium ${color}`}>
-      <Icon className="size-3" />
-      {label}
-    </span>
+    <StatusBadge
+      status={severity}
+      tone={tone}
+      className="gap-1"
+      label={
+        <>
+          <Icon className="size-3" />
+          {label}
+        </>
+      }
+    />
   )
 }
 
@@ -77,7 +92,7 @@ function AlertRow({
             <p className="text-xs text-muted-foreground">{alert.userEmail}</p>
           ) : null}
           {resolved && alert.resolvedBy ? (
-            <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+            <p className="mt-1 text-xs text-success">
               <CheckCircle2Icon className="mr-1 inline size-3" />
               Resolved by {alert.resolvedBy}
             </p>
@@ -169,7 +184,7 @@ export function OperatorAlertsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -179,50 +194,58 @@ export function OperatorAlertsDialog({
                 {unresolvedCount > 0 ? ` ${unresolvedCount} unresolved.` : " All resolved."}
               </DialogDescription>
             </div>
-            <button
+            <Button
               type="button"
-              className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground"
               onClick={load}
               title="Refresh"
+              aria-label="Refresh alerts"
             >
               <RefreshCwIcon className={`size-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
+            </Button>
           </div>
         </DialogHeader>
 
         {/* Severity filters */}
         <div className="flex flex-wrap items-center gap-2">
           {(["all", "critical", "error", "warning", "info"] as const).map((sev) => (
-            <button
+            <ChoiceChip
               key={sev}
-              type="button"
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                filter === sev
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
+              selected={filter === sev}
               onClick={() => setFilter(sev)}
             >
               {sev === "all" ? "All" : SEVERITY_META[sev].label}
-            </button>
+            </ChoiceChip>
           ))}
           <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
+            <Switch
+              size="sm"
               checked={unresolvedOnly}
-              onChange={(e) => setUnresolvedOnly(e.target.checked)}
-              className="rounded"
+              onCheckedChange={setUnresolvedOnly}
+              aria-label="Unresolved only"
             />
             Unresolved only
           </label>
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
-        ) : displayed.length === 0 ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">
-            No alerts matching the current filter.
+          <div className="grid gap-2 py-1" role="status" aria-label="Loading alerts">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="grid gap-2 rounded-lg border p-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            ))}
           </div>
+        ) : displayed.length === 0 ? (
+          <EmptyState
+            title="No matching alerts"
+            description="Try another severity or include resolved alerts."
+            className="py-8"
+          />
         ) : (
           <div className="grid gap-2">
             {displayed.map((alert) => (

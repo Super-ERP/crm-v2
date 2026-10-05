@@ -47,12 +47,12 @@ export function BillingPanel({
           {value > 0 ? (
             <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="absolute inset-y-0 left-0 bg-sky-400/70"
+                className="absolute inset-y-0 left-0 bg-info/70"
                 style={{ width: `${pctInvoiced}%` }}
                 title={`Invoiced ${pctInvoiced.toFixed(0)}%`}
               />
               <div
-                className="absolute inset-y-0 left-0 bg-emerald-500"
+                className="absolute inset-y-0 left-0 bg-success"
                 style={{ width: `${pctPaid}%` }}
                 title={`Paid ${pctPaid.toFixed(0)}%`}
               />

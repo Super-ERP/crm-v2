@@ -211,7 +211,7 @@ function CreateDeliveryProjectDialog({
               onValueChange={(v) => setAccountId(v ?? "")}
               items={accountItems}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger width="full">
                 <SelectValue placeholder={`Leave blank to auto-create ${deal.originEntityName ?? "the origin entity"}`} />
               </SelectTrigger>
               <SelectContent>

@@ -154,7 +154,7 @@ export function PersonForm({
       {trigger ? (
         <DialogTrigger render={trigger as React.ReactElement} />
       ) : null}
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent size="wide">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit contact" : "New contact"}</DialogTitle>
         </DialogHeader>

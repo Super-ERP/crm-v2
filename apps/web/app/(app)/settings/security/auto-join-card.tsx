@@ -91,7 +91,7 @@ export function AutoJoinCard({
             onValueChange={(v) => setRoleName(v || "Rep")}
             items={roleItems}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger width="full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

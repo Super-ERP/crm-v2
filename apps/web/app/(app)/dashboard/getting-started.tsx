@@ -111,7 +111,7 @@ export function GettingStarted({ items }: { items: ChecklistItem[] }) {
             <li key={item.key}>
               {item.done ? (
                 <div className="flex items-center gap-3 rounded-md px-2 py-2 text-muted-foreground">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-success-soft text-success dark:bg-success/15">
                     <Check className="size-3" />
                   </span>
                   <span className="min-w-0 flex-1 truncate text-sm line-through">

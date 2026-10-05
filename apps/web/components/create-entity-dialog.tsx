@@ -80,7 +80,8 @@ export function CreateEntityDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+      {/* Extra width keeps invite email and role controls readable in one row. */}
+      <DialogContent size="wide" className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create customer organization</DialogTitle>
           <DialogDescription>
@@ -105,7 +106,7 @@ export function CreateEntityDialog({
             {invites.length === 0 ? <div className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">No customer users yet. You can invite them later from Team &amp; roles.</div> : invites.map((invite) => (
               <div key={invite.id} className="grid items-end gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_15rem_auto]">
                 <div className="grid gap-2"><Label htmlFor={`invite-${invite.id}`}>Email</Label><Input id={`invite-${invite.id}`} type="email" value={invite.email} onChange={(event) => updateInvite(invite.id, { email: event.target.value })} placeholder="owner@customer.com" /></div>
-                <div className="grid gap-2"><Label>Role and permissions</Label><Select value={invite.roleName} onValueChange={(value) => updateInvite(invite.id, { roleName: value ?? "Owner" })}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{INITIAL_ROLES.map(([role, description]) => <SelectItem key={role} value={role}><div><div>{role}</div><div className="text-xs text-muted-foreground">{description}</div></div></SelectItem>)}</SelectContent></Select></div>
+                <div className="grid gap-2"><Label>Role and permissions</Label><Select value={invite.roleName} onValueChange={(value) => updateInvite(invite.id, { roleName: value ?? "Owner" })}><SelectTrigger width="full"><SelectValue /></SelectTrigger><SelectContent>{INITIAL_ROLES.map(([role, description]) => <SelectItem key={role} value={role}><div><div>{role}</div><div className="text-xs text-muted-foreground">{description}</div></div></SelectItem>)}</SelectContent></Select></div>
                 <Button type="button" size="icon" variant="ghost" aria-label="Remove user" onClick={() => setInvites((rows) => rows.filter((row) => row.id !== invite.id))}><Trash2Icon className="size-4" /></Button>
               </div>
             ))}

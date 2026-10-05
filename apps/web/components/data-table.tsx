@@ -56,6 +56,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { EmptyState } from "@/components/empty-state"
+import { StatusCallout } from "@/components/status-callout"
 import { SavedViewMenu } from "@/components/saved-view-menu"
 import type { SavedViewPayload } from "@/lib/saved-views"
 import { applySavedViewPayload } from "@/lib/data-table-saved-views"
@@ -631,16 +632,16 @@ export function DataTable<TData, TValue>({
       </div>
 
       {serverError ? (
-        <div role="alert" className="flex items-center gap-2 rounded-md border border-destructive/30 px-3 py-2 text-sm">
+        <StatusCallout role="alert" tone="danger" className="flex items-center gap-2">
           Could not load this page.
           <Button variant="outline" size="sm" onClick={() => setRefreshKey((key) => key + 1)}>Retry</Button>
-        </div>
+        </StatusCallout>
       ) : null}
 
       {!server && cap != null && data.length >= cap ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+        <StatusCallout tone="warning" className="text-xs">
           Showing the most recent {cap} — refine your search to see more.
-        </div>
+        </StatusCallout>
       ) : null}
 
       {renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original), {

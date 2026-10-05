@@ -79,7 +79,7 @@ export function Mermaid({ chart }: { chart: string }) {
       </div>
 
       <Dialog open={full} onOpenChange={setFull}>
-        <DialogContent className="flex h-[92svh] w-[96vw] flex-col gap-3 sm:max-w-none">
+        <DialogContent size="large" className="flex flex-col gap-3 sm:max-w-none">
           <DialogHeader>
             <DialogTitle>Diagram</DialogTitle>
           </DialogHeader>

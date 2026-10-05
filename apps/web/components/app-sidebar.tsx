@@ -60,6 +60,7 @@ import { authClient } from "@/lib/auth-client"
 import { PERMISSIONS } from "@/lib/permissions"
 import type { ModuleId } from "@/lib/module-registry"
 import { cn } from "@/lib/utils"
+import { OBJECT_TILES } from "@/components/object-tile"
 
 type NavItem = {
   title: string
@@ -83,21 +84,21 @@ const NAV_SECTIONS: NavSection[] = [
   {
     label: "CRM",
     items: [
-      { title: "Leads", url: "/leads", icon: TargetIcon, tile: "bg-teal-500", permission: PERMISSIONS.LEAD_VIEW },
-      { title: "Accounts", url: "/accounts", icon: Building2Icon, tile: "bg-orange-500", permission: PERMISSIONS.ACCOUNT_VIEW },
-      { title: "Contacts", url: "/persons", icon: UsersIcon, tile: "bg-violet-500", permission: PERMISSIONS.PERSON_VIEW },
+      { title: "Leads", url: "/leads", icon: TargetIcon, tile: OBJECT_TILES.lead.color, permission: PERMISSIONS.LEAD_VIEW },
+      { title: "Accounts", url: "/accounts", icon: Building2Icon, tile: OBJECT_TILES.account.color, permission: PERMISSIONS.ACCOUNT_VIEW },
+      { title: "Contacts", url: "/persons", icon: UsersIcon, tile: OBJECT_TILES.contact.color, permission: PERMISSIONS.PERSON_VIEW },
     ],
   },
   {
     label: "Sales",
     items: [
-      { title: "Opportunities", url: "/opportunities", icon: BriefcaseIcon, tile: "bg-amber-600", permission: PERMISSIONS.OPPORTUNITY_VIEW },
-      { title: "Funnel", url: "/funnel", icon: FilterIcon, tile: "bg-amber-500", permission: PERMISSIONS.OPPORTUNITY_VIEW },
-      { title: "Quotations", url: "/quotations", icon: FileTextIcon, tile: "bg-green-600", permission: PERMISSIONS.QUOTATION_VIEW },
-      { title: "Products", url: "/products", icon: PackageIcon, tile: "bg-sky-500", permission: PERMISSIONS.PRODUCT_VIEW },
-      { title: "Payment Milestones", url: "/payment-milestones", icon: CreditCardIcon, tile: "bg-yellow-600", permission: PERMISSIONS.PAYMENT_MILESTONE_VIEW },
-      { title: "Projects", url: "/projects", icon: FolderKanbanIcon, tile: "bg-indigo-500", permission: PERMISSIONS.PROJECT_VIEW, module: "projects" },
-      { title: "Sales Orders", url: "/sales-orders", icon: ReceiptIcon, tile: "bg-pink-600", permission: PERMISSIONS.SALES_ORDER_VIEW, module: "salesOrders" },
+      { title: "Opportunities", url: "/opportunities", icon: BriefcaseIcon, tile: OBJECT_TILES.opportunity.color, permission: PERMISSIONS.OPPORTUNITY_VIEW },
+      { title: "Funnel", url: "/funnel", icon: FilterIcon, tile: OBJECT_TILES.funnel.color, permission: PERMISSIONS.OPPORTUNITY_VIEW },
+      { title: "Quotations", url: "/quotations", icon: FileTextIcon, tile: OBJECT_TILES.quotation.color, permission: PERMISSIONS.QUOTATION_VIEW },
+      { title: "Products", url: "/products", icon: PackageIcon, tile: OBJECT_TILES.product.color, permission: PERMISSIONS.PRODUCT_VIEW },
+      { title: "Payment Milestones", url: "/payment-milestones", icon: CreditCardIcon, tile: OBJECT_TILES.milestone.color, permission: PERMISSIONS.PAYMENT_MILESTONE_VIEW },
+      { title: "Projects", url: "/projects", icon: FolderKanbanIcon, tile: OBJECT_TILES.project.color, permission: PERMISSIONS.PROJECT_VIEW, module: "projects" },
+      { title: "Sales Orders", url: "/sales-orders", icon: ReceiptIcon, tile: OBJECT_TILES.salesOrder.color, permission: PERMISSIONS.SALES_ORDER_VIEW, module: "salesOrders" },
       { title: "Approvals", url: "/approvals", icon: StampIcon, tile: "bg-rose-500", permission: PERMISSIONS.STAGE_ADVANCE },
     ],
   },

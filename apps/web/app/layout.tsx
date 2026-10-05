@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -23,10 +22,8 @@ export const metadata: Metadata = {
   description: "Lightweight multitenant CRM",
 };
 
-// No-FOUC preference init (theme + text size) lives in public/prefs-init.js:
-// src-based beforeInteractive scripts are hoisted into the initial HTML;
-// inline ones are not (they ride the RSC payload and React then errors with
-// "Encountered a script tag while rendering").
+// React hoists async external scripts from <head>. Keep preference setup in an
+// external file so no executable inline script is rendered in the React tree.
 
 export default function RootLayout({
   children,
@@ -39,8 +36,11 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
     >
+      <head>
+        <link rel="preload" as="script" href="/prefs-init.js" />
+        <script async src="/prefs-init.js" />
+      </head>
       <body className="min-h-full flex flex-col">
-        <Script src="/prefs-init.js" strategy="beforeInteractive" />
         {children}
         <Toaster richColors position="top-right" />
       </body>

@@ -489,7 +489,7 @@ export function PhoneInputInner({
       {showValidation && !isEmpty && (
         <span className="flex shrink-0 items-center pr-3" role="status" aria-label={isNumberValid && !hasError ? "Valid phone number" : "Invalid phone number"}>
           {isNumberValid && !hasError ? (
-            <CheckCircle2Icon aria-hidden="true" className="size-4 text-green-600" />
+            <CheckCircle2Icon aria-hidden="true" className="size-4 text-success" />
           ) : (
             <XCircleIcon aria-hidden="true" className="size-4 text-destructive" />
           )}

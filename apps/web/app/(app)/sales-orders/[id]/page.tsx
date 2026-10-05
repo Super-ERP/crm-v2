@@ -35,8 +35,6 @@ export default async function SalesOrderDetailPage({
 
   const canApprove = ctx.can(PERMISSIONS.SALES_ORDER_APPROVE)
   const canSubmit = ctx.can(PERMISSIONS.SALES_ORDER_SUBMIT)
-  const title = order.soNumber ?? "Sales order"
-
   return (
     <>
       <PageBody>

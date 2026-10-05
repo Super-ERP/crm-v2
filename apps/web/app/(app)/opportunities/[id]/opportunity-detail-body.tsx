@@ -6,6 +6,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { ChoiceChip } from "@/components/ui/choice-chip"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -33,7 +34,6 @@ import { ActivityTimeline } from "@/components/activity/activity-timeline"
 import type { ActivityRow } from "@/app/(app)/_shared/activity-actions"
 import { formatMoney } from "@/lib/format"
 import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
-import { cn } from "@/lib/utils"
 import {
   updateOpportunityContainer,
   type OpportunityContainerDetail,
@@ -245,19 +245,13 @@ export function OpportunityDetailBody({
                     {projectNatures.map((p) => {
                       const on = selectedNatures.includes(p.code)
                       return (
-                        <button
+                        <ChoiceChip
                           key={p.code}
-                          type="button"
+                          selected={on}
                           onClick={() => toggleNature(p.code)}
-                          className={cn(
-                            "rounded-full border px-2 py-0.5 text-xs font-medium transition-colors",
-                            on
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-input bg-background text-muted-foreground hover:bg-accent"
-                          )}
                         >
                           ({p.code}) - {p.name}
-                        </button>
+                        </ChoiceChip>
                       )
                     })}
                   </div>
