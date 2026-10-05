@@ -1,8 +1,9 @@
 "use client"
 
 import * as React from "react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-type DashboardCurrency = { currency: string }
+type DashboardCurrency = { currency: string; available: string[]; setCurrency: (currency: string) => void }
 
 const CurrencyContext = React.createContext<DashboardCurrency | null>(null)
 
@@ -30,28 +31,37 @@ export function DashboardCurrencyProvider({
   )
   const currency = selectAvailableCurrency(requestedCurrency, defaultCurrency, available)
   return (
-    <CurrencyContext.Provider value={{ currency }}>
-      {available.length > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">
-            Monetary totals are shown separately by currency. No exchange rate is assumed.
-          </p>
-          <label className="flex items-center gap-2 text-sm font-medium">
-            Display currency
-            <select
-              className="h-9 rounded-md border border-input bg-background px-3 text-foreground"
-              value={currency}
-              onChange={(event) => setCurrency(event.target.value)}
-            >
-              {available.map((code) => (
-                <option key={code} value={code}>{code}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
+    <CurrencyContext.Provider value={{ currency, available, setCurrency }}>
       {children}
     </CurrencyContext.Provider>
+  )
+}
+
+export function DashboardCurrencyPicker() {
+  const { currency, available, setCurrency } = useDashboardCurrency()
+  const currencyLabelId = React.useId()
+  return (
+    <>
+      {available.length > 1 && (
+        <div className="flex shrink-0 items-center gap-2">
+          <span id={currencyLabelId} className="text-sm font-medium">Currency</span>
+          <Select
+            value={currency}
+            onValueChange={(value) => { if (value) setCurrency(value) }}
+            items={available.map((code) => ({ value: code, label: code }))}
+          >
+            <SelectTrigger aria-labelledby={currencyLabelId}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {available.map((code) => (
+                <SelectItem key={code} value={code}>{code}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+    </>
   )
 }
 

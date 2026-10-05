@@ -29,7 +29,7 @@ import { getDashboardData, type FollowUpDue } from "./actions"
 import { GettingStarted, type ChecklistItem } from "./getting-started"
 import { KpiSection } from "./kpi-section"
 import { DashboardCharts, SalesActivityChart } from "./dashboard-charts"
-import { DashboardCurrencyProvider } from "./dashboard-currency"
+import { DashboardCurrencyPicker, DashboardCurrencyProvider } from "./dashboard-currency"
 
 const ENTITY_HREF: Record<string, string> = {
   account: "/accounts",
@@ -349,13 +349,6 @@ export default async function DashboardPage() {
       </Card>
     ) : null
 
-  const currencies = [...new Set([
-    ...data.myOpenPipeline.byCurrency.map((row) => row.currency),
-    ...(data.orgOpenPipeline?.byCurrency.map((row) => row.currency) ?? []),
-    ...data.salesByOwnerStage.map((row) => row.currency),
-    ...data.closedDealsByProduct.map((row) => row.currency),
-  ])].sort()
-
   return (
     <>
       <SiteHeader title="Dashboard" />
@@ -366,14 +359,16 @@ export default async function DashboardPage() {
             <GettingStarted items={checklist} />
           </>
         ) : (
-          <>
-            <p className="text-sm text-muted-foreground">
-              Welcome back, {ctx.userName}. Here is what needs your attention.
-            </p>
+          <DashboardCurrencyProvider available={data.currencies} defaultCurrency={data.defaultCurrency}>
+            <div className="flex items-center justify-between gap-3">
+              <p className="min-w-0 text-sm text-muted-foreground">
+                Welcome back, {ctx.userName}.
+              </p>
+              <DashboardCurrencyPicker />
+            </div>
 
             <GettingStarted items={checklist} />
 
-            <DashboardCurrencyProvider available={currencies} defaultCurrency={data.defaultCurrency}>
             {/* KPI row (My/Team toggle on the funnel rollup for view-all roles) */}
             <KpiSection
               myPipeline={data.myOpenPipeline}
@@ -408,8 +403,7 @@ export default async function DashboardPage() {
                 />
               </div>
             </div>
-            </DashboardCurrencyProvider>
-          </>
+          </DashboardCurrencyProvider>
         )}
       </PageBody>
     </>

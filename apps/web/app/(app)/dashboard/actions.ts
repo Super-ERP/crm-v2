@@ -22,6 +22,7 @@ import { getEntitledModuleMap } from "@/lib/modules.server"
 import { DEFAULT_REMINDER_DAYS } from "@/lib/tenant-defaults"
 import { canViewAllRecords, visibleMemberIds, ownerScope } from "@/lib/access-scope"
 import { PERMISSIONS } from "@/lib/permissions"
+import { configuredCurrencies } from "@/server/services/tenant-currency"
 
 export type PendingApproval = {
   id: string
@@ -158,6 +159,7 @@ export type DashboardData = {
   /** SF "Sales Activity This Year" — activity count by month. */
   salesActivityByMonth: SalesActivityMonth[]
   defaultCurrency: string
+  currencies: string[]
 }
 
 /**
@@ -216,6 +218,7 @@ export async function getDashboardData(): Promise<DashboardData> {
         staleDealDays: tenantSettings.staleDealDays,
         invoiceReminderDays: tenantSettings.invoiceReminderDays,
         defaultCurrency: tenantSettings.defaultCurrency,
+        currencies: tenantSettings.currencies,
       })
       .from(tenantSettings)
       .where(eq(tenantSettings.organizationId, ctx.tenantId))
@@ -523,6 +526,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       closedDealsByProduct,
       salesActivityByMonth,
       defaultCurrency: s?.defaultCurrency ?? "MYR",
+      currencies: configuredCurrencies(s?.currencies),
     }
   })
 }
