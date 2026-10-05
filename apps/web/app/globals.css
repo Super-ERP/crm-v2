@@ -235,7 +235,30 @@
 
 @page qm-quotation {
   size: Letter;
-  margin: 0;
+  margin: 42pt 42pt 54pt;
+  @bottom-left {
+    width: 440pt;
+    margin-top: 12pt;
+    border-top: 0.5pt solid #ddd;
+    padding-top: 17pt;
+    padding-bottom: 13pt;
+    vertical-align: bottom;
+    text-align: center;
+    font: 8pt/1.2 "Times New Roman", Times, serif;
+    color: #111;
+  }
+  @bottom-right {
+    content: "CONFIDENTIAL";
+    width: 88pt;
+    margin-top: 12pt;
+    border-top: 0.5pt solid #ddd;
+    padding-top: 17pt;
+    padding-bottom: 13pt;
+    vertical-align: bottom;
+    text-align: right;
+    font: bold 9pt/1.2 "Times New Roman", Times, serif;
+    color: #111;
+  }
 }
 
 .qm-document {
@@ -342,7 +365,6 @@
 .qm-footer-contact { position: relative; top: 2.8pt; grid-column: 2; text-align: center; white-space: nowrap; }
 .qm-footer > strong { position: relative; top: 2.8pt; grid-column: 3; justify-self: end; margin-right: -6pt; white-space: nowrap; font-size: 9pt; }
 .qm-footer-screen { position: absolute; right: 42pt; bottom: 13pt; left: 42pt; }
-.qm-footer-print { display: none; }
 .qm-notes li::marker { color: #111; }
 
 .quotation-markdown[data-color-mode] .w-md-editor {
@@ -551,7 +573,7 @@ html.text-scale-xl {
   body:has(#quote-doc:is([data-template="qm"], [data-template="qa"])) { background: #fff !important; }
   #quote-doc:is([data-template="qm"], [data-template="qa"]) {
     page: qm-quotation;
-    width: 612pt !important;
+    width: 528pt !important;
     min-height: 0 !important;
     max-width: none !important;
     padding: 0 !important;
@@ -561,26 +583,29 @@ html.text-scale-xl {
     font-family: "Times New Roman", Times, serif !important;
   }
   #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-page {
-    width: 612pt !important;
-    min-height: 792pt !important;
-    padding: 42pt 42pt 54pt !important;
+    width: 528pt !important;
+    min-height: 0 !important;
+    padding: 0 !important;
     overflow: visible !important;
     box-shadow: none !important;
     break-after: auto;
   }
   #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-footer-screen { display: none !important; }
-  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-footer-print {
-    display: grid !important;
-    position: fixed !important;
-    right: 42pt;
-    bottom: 13pt;
-    left: 42pt;
-  }
-  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-lines tr,
+  /* Let long descriptions use the remaining page space and continue naturally.
+     Paragraphs keep short descriptions together instead of moving a whole row. */
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-lines tr { break-inside: auto; }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-line-description p,
   #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-totals,
   #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-notes li { break-inside: avoid-page; }
-  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-notes {
-    break-inside: avoid-page;
-    page-break-inside: avoid;
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-notes > strong,
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-terms > strong {
+    break-after: avoid-page;
+  }
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-line-description,
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-note-text,
+  #quote-doc:is([data-template="qm"], [data-template="qa"]) .qm-terms {
+    overflow-wrap: anywhere;
+    orphans: 3;
+    widows: 3;
   }
 }

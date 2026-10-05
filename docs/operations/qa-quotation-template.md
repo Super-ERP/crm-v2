@@ -48,3 +48,28 @@ the shared header.
 4. Verify the QA profile and logo readback after deployment. Render the existing
    QA quotation `Q10001-1` and check its company header, footer, tax label, and
    page breaks. Run the quotation template tests, TypeScript check, and ESLint.
+
+
+## Page-boundary regression checks
+
+QA/QM printing uses a US Letter page with 42pt top/side margins and a 54pt
+bottom margin on every page. The company contact line and confidentiality label
+are rendered in page margin boxes, which reserve space independently of the
+quotation content. Chromium 131 or newer is required for those margin boxes;
+the production Gotenberg renderer supports them. The screen preview retains its
+existing footer.
+
+Descriptions may continue at paragraph boundaries, and notes may continue
+between items. Terms headings stay with their first line; the order-reference
+and computer-generated notices stay together after the final content.
+
+Run the actual Chromium/Poppler pagination checks from the repository root:
+
+```bash
+pnpm test:quotation-pagination
+```
+
+Install Chrome and Poppler (`pdftotext`), or set `CHROME_BIN` to the browser.
+Set `PAGINATION_OUTPUT_DIR` to preserve the rendered HTML/PDF fixtures. The
+checks cover both templates at page boundaries, long descriptions, notes and
+terms, intact sign-off rows, footer placement, and missing/duplicated text.
