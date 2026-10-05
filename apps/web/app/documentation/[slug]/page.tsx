@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react"
+import { ArrowLeftIcon, ArrowRightIcon, ChevronRightIcon } from "lucide-react"
 import { DocsShell } from "../docs-shell"
 import { getDocPage, getDocSiblings } from "../registry"
 
@@ -17,6 +17,13 @@ export default async function DocumentationPage({
   return (
     <DocsShell>
       <article>
+        <nav className="mb-3 flex items-center gap-1 text-xs text-muted-foreground">
+          <Link href="/documentation" className="hover:underline">
+            Documentation
+          </Link>
+          <ChevronRightIcon className="size-3" />
+          <span className="text-foreground">{page.title}</span>
+        </nav>
         <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>
         <p className="mt-1 mb-6 text-muted-foreground">{page.description}</p>
         {page.body}
