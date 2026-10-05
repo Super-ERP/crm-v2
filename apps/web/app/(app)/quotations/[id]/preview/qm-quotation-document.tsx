@@ -199,12 +199,10 @@ export function QmQuotationDocument({ doc, template = "qm" }: { doc: QuotationDo
         ) : null}
         {doc.company.quoteFooter ? <div className="qm-terms"><strong>Terms</strong><div>{doc.company.quoteFooter}</div></div> : null}
         {doc.company.bankDetails ? <div className="qm-terms"><strong>Payment details</strong><div>{doc.company.bankDetails}</div></div> : null}
-        <Footer doc={doc} screen />
-      </section>
-
-      <section className="qm-page qm-signoff-page">
-        <span>Please Quote Our Reference Number When Placing An Order</span>
-        <p>This Quotation is computer generated and no signature is required.</p>
+        <section className="qm-signoff">
+          <span>Please Quote Our Reference Number When Placing An Order</span>
+          <p>This Quotation is computer generated and no signature is required.</p>
+        </section>
         <Footer doc={doc} screen />
       </section>
       <Footer doc={doc} />

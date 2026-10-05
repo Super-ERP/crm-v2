@@ -3,7 +3,10 @@
 The QA quotation uses the same document component, US Letter page size, table,
 totals, notes, footer, and print pagination as the QM quotation. Only the
 selected template code, logo, and tenant company profile differ. No quotation
-amounts or customer records are rewritten.
+amounts or customer records are rewritten. The order-reference reminder and
+computer-generated notice follow the notes, terms, and payment details in the
+same document flow. They stay together and only move to another page when there
+is insufficient space; the company footer remains separate.
 
 ## Sources
 

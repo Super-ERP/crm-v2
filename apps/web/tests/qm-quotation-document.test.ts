@@ -109,3 +109,22 @@ describe("QA quotation document", () => {
     expect(html).toContain("SST@8%")
   })
 })
+
+
+describe.each(["qm", "qa"] as const)("%s quotation sign-off", (template) => {
+  it("follows notes, terms, and payment details before the separate footer", () => {
+    const doc = documentWithTax("8.000", null)
+    doc.quotation.notes = "Final quotation note."
+    doc.company.quoteFooter = "Final terms."
+    doc.company.bankDetails = "Final payment details."
+    const html = renderToStaticMarkup(createElement(QmQuotationDocument, { doc, template }))
+    const signoff = html.indexOf('class="qm-signoff"')
+    expect(signoff).toBeGreaterThan(html.indexOf("Final quotation note."))
+    expect(signoff).toBeGreaterThan(html.indexOf("Final terms."))
+    expect(signoff).toBeGreaterThan(html.indexOf("Final payment details."))
+    expect(html.indexOf("This Quotation is computer generated")).toBeGreaterThan(signoff)
+    expect(html.indexOf('class="qm-footer qm-footer-screen"')).toBeGreaterThan(signoff)
+    expect(html).not.toContain("qm-signoff-page")
+    expect(html.match(/class="qm-page /g)).toHaveLength(1)
+  })
+})
