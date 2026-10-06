@@ -1,6 +1,7 @@
 import "server-only"
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import { expectedCloseYearFilter } from "@/server/services/funnel-filters"
 import type { RecordListQuery } from "@/lib/record-list-query"
 import { type Tx, type ServerContext } from "@/lib/actions"
 import { getEntitledModuleMap } from "@/lib/modules.server"
@@ -877,13 +878,14 @@ export async function funnelsList(
   const where = and(
     isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible),
     isNull(opportunities.deletedAt),
-    search ? or(ilike(funnels.name, search), ilike(accounts.name, search), ilike(opportunities.name, search), ilike(opportunities.code, search), ilike(user.name, search)) : undefined,
+    search ? ilike(funnels.name, search) : undefined,
     query?.selections.accountId?.length ? inArray(funnels.accountId, query.selections.accountId) : undefined,
     query?.selections.opportunityId?.length ? inArray(funnels.opportunityId, query.selections.opportunityId) : undefined,
     query?.selections.id?.length ? inArray(funnels.id, query.selections.id) : undefined,
     query?.selections.accountOwnerMemberId?.length ? inArray(accounts.ownerMemberId, query.selections.accountOwnerMemberId) : undefined,
     query?.selections.ownerMemberId?.length ? inArray(funnels.ownerMemberId, query.selections.ownerMemberId) : undefined,
     query?.selections.stageId?.length ? inArray(funnels.currentStageId, query.selections.stageId) : undefined,
+    expectedCloseYearFilter(funnels.expectedCloseDate, query?.selections.expectedCloseDate),
     statuses?.length ? inArray(funnels.status, statuses) : undefined,
     stageId ? eq(funnels.currentStageId, stageId) : undefined
   )
@@ -975,6 +977,7 @@ export async function funnelsFilterOptions(tx: Tx, ctx: ServerContext) {
   const accountOwnerMember = alias(member, "funnel_filter_account_owner_member")
   const accountOwnerUser = alias(user, "funnel_filter_account_owner_user")
   const [row] = await tx.select({
+    expectedCloseYears: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', extract(year from ${funnels.expectedCloseDate})::int::text, 'label', extract(year from ${funnels.expectedCloseDate})::int::text)) filter (where ${funnels.expectedCloseDate} is not null), '[]'::jsonb)`,
     accounts: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${accounts.id}, 'label', ${accounts.name})), '[]'::jsonb)`,
     opportunities: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${opportunities.id}, 'label', concat_ws(' — ', nullif(${opportunities.code}, ''), ${opportunities.name}))), '[]'::jsonb)`,
     funnels: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${funnels.id}, 'label', ${funnels.name})), '[]'::jsonb)`,
@@ -992,6 +995,7 @@ export async function funnelsFilterOptions(tx: Tx, ctx: ServerContext) {
     .where(and(isNull(funnels.deletedAt), isNull(opportunities.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
   const sort = (options: Array<{ value: string; label: string }>) => options.sort((a, b) => a.label.localeCompare(b.label))
   return {
+    expectedCloseYears: (row?.expectedCloseYears ?? []).sort((a, b) => Number(b.value) - Number(a.value)),
     accounts: sort(row?.accounts ?? []), opportunities: sort(row?.opportunities ?? []),
     funnels: sort(row?.funnels ?? []), accountOwners: sort(row?.accountOwners ?? []),
     owners: sort(row?.owners ?? []), stages: sort(row?.stages ?? []),
@@ -1021,6 +1025,7 @@ export type OpportunityDetail = {
     id: string
     quoteNumber: string
     status: QuotationStatus
+    netValue: string
     total: string
     currency: string
     isPrimary: boolean
@@ -1140,6 +1145,7 @@ export async function funnelsGet(
       quoteNumber: quotations.quoteNumber,
       status: quotations.status,
       total: quotations.total,
+      netValue: sql<string>`${quotations.subtotal} - ${quotations.discountTotal}`,
       currency: quotations.currency,
       isPrimary: quotations.isPrimary,
       deletedAt: quotations.deletedAt,

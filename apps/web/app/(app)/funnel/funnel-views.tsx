@@ -12,6 +12,7 @@ import { OpportunitiesTable } from "./funnels-table"
 export function FunnelViews({ initialPage, filterOptions, pipelines, canAdvance, customFieldDefs, newButton }: {
   initialPage: { rows: OpportunityListRow[]; total: number }
   filterOptions: {
+    expectedCloseYears: Array<{ value: string; label: string }>;
     accounts: Array<{ value: string; label: string }>; opportunities: Array<{ value: string; label: string }>;
     funnels: Array<{ value: string; label: string }>; accountOwners: Array<{ value: string; label: string }>;
     owners: Array<{ value: string; label: string }>; stages: Array<{ value: string; label: string }>;

@@ -1,7 +1,6 @@
 import "server-only"
 import { findManagerApprover, requireManagerApprover } from "./approval-routing"
-import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
-import { and, eq, inArray, isNull, or } from "drizzle-orm"
+import { and, eq, isNull } from "drizzle-orm"
 import { runInTenant, type Tx } from "@/db"
 import {
   funnels,
@@ -11,15 +10,11 @@ import {
   funnelStageHistory,
   stageApprovalRequests,
   tenantSettings,
-  paymentMilestones,
-  projects,
 } from "@/db/schema"
 import {
   ensureOpportunityProjectCode,
   recomputeOpportunityTotal,
 } from "@/server/services/opportunity-container"
-import { opportunityNetValue } from "@/server/services/value"
-import { milestoneName } from "@/lib/so-milestones"
 import { PERMISSIONS } from "@/lib/permissions"
 import {
   buildStageGate,
@@ -34,7 +29,6 @@ import {
   requiresApprovalForTransition,
   requiresTransitionReason,
   canBypassApproval,
-  entersMilestoneAutoCreateStage,
   type CustomFunnelField,
   type StageGateState,
 } from "@/lib/stage-gate"
@@ -239,70 +233,6 @@ function requiredKeysForTransition(
   ).filter((key) => customKeys.has(key) || isPresetFieldKey(key))
 }
 
-/**
- * Salesforce "Create New Project Item List Records in Renewal, 4A and Closed
- * Won" flow: auto-seed the funnel's default full-value payment milestone the
- * first time it enters 4A or Won — but ONLY if it doesn't already have one
- * (SF's "Has Project Item List?" checkbox is modeled here as "milestones
- * already exist", so this never fires twice and never duplicates a manually
- * split set). Mirrors `seedDefaultFunnelMilestone`
- * (app/(app)/payment-milestones/actions.ts) but runs directly against the
- * stage-move `tx` instead of going through that auth-wrapped server action.
- */
-async function autoCreateMilestoneOnStageEntry(
-  tx: Tx,
-  ctx: ServerContext,
-  opp: OppRow
-): Promise<void> {
-  const [existing] = await tx
-    .select({ id: paymentMilestones.id })
-    .from(paymentMilestones)
-    .where(eq(paymentMilestones.funnelId, opp.id))
-    .limit(1)
-  if (existing) return
-
-  // Funnel's estimated/quoted value: primary quote's net value if one is
-  // attached, else the manual estimate — same resolution order used
-  // everywhere else a funnel's "current value" is needed.
-  const { value: netValue } = await opportunityNetValue(tx, opp.id)
-  const amount = Number(netValue) || 0
-  if (amount <= 0) return
-
-  const [container] = await tx
-    .select({ projectCode: opportunities.projectCode })
-    .from(opportunities)
-    .where(eq(opportunities.id, opp.opportunityId))
-    .limit(1)
-
-  const status = await milestoneStatusForFunnel(tx, opp.id)
-  const title = "Full Payment"
-  const [row] = await tx
-    .insert(paymentMilestones)
-    .values({
-      tenantId: ctx.tenantId,
-      funnelId: opp.id,
-      quotationId: opp.primaryQuotationId,
-      status,
-      title,
-      name: milestoneName(container?.projectCode ?? null, title),
-      amount: netValue,
-      sortOrder: 0,
-    })
-    .returning({ id: paymentMilestones.id })
-
-  await logActivity(tx, ctx, {
-    entityType: "opportunity",
-    entityId: opp.id,
-    type: "system",
-    subject: `Milestone added: ${title}`,
-  })
-  await writeAudit(tx, ctx, {
-    action: "milestone.created",
-    entityType: "opportunity",
-    entityId: opp.id,
-    after: { milestoneId: row.id, title, amount: netValue },
-  })
-}
 
 async function applyStageMove(
   tx: Tx,
@@ -362,29 +292,6 @@ async function applyStageMove(
     // Estimated amount may have changed → refresh the container rollup.
     await recomputeOpportunityTotal(tx, ctx.tenantId, opp.opportunityId)
 
-    // Closed Won is the only automatic milestone status transition. It is
-    // intentionally independent of Finance and never creates or links an
-    // invoice.
-    await tx
-      .update(paymentMilestones)
-      .set({ status: "won", updatedAt: new Date() })
-      .where(and(
-        or(
-          eq(paymentMilestones.funnelId, opp.id),
-          and(
-            isNull(paymentMilestones.funnelId),
-            inArray(paymentMilestones.projectId,
-              tx.select({ id: projects.id }).from(projects).where(eq(projects.funnelId, opp.id)))
-          )
-        ),
-        eq(paymentMilestones.status, "planned")
-      ))
-  }
-
-  // Milestone planning rows may be created before close. Preserve the
-  // existing 4A/Won default-seed behavior, but keep it independent of Finance.
-  if (entersMilestoneAutoCreateStage(toStage)) {
-    await autoCreateMilestoneOnStageEntry(tx, ctx, opp)
   }
 
   await tx.insert(funnelStageHistory).values({

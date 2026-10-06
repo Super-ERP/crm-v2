@@ -40,22 +40,12 @@ const renderedDocumentation = normalizeDocumentation(
 )
 
 describe("payment milestone documentation", () => {
-  it("describes the decoupled three-state lifecycle and its boundaries", () => {
-    expect(paymentMilestoneDocumentation).toMatch(
-      /Payment Milestones are planning records with three statuses: Planned\s*, Won and Invoiced/
-    )
-    expect(paymentMilestoneDocumentation).toContain(
-      "They are Planned before a Funnel closes"
-    )
-    expect(paymentMilestoneDocumentation).toContain(
-      "Closed Won marks planned milestones Won"
-    )
-    expect(paymentMilestoneDocumentation).toMatch(
-      /A user manually changes Won to Invoiced/
-    )
-    expect(paymentMilestoneDocumentation).toContain(
-      "Payment Milestones do not create or update invoices or receipts and never complete a Project automatically."
-    )
+  it("describes explicit setup and the invoicing lifecycle", () => {
+    expect(paymentMilestoneDocumentation).toContain("Payment Milestones are billing schedule records with two statuses")
+    expect(paymentMilestoneDocumentation).toContain("Pending invoicing")
+    expect(paymentMilestoneDocumentation).toContain("4a or Closed Won")
+    expect(paymentMilestoneDocumentation).toContain("Closing Won does not change milestone statuses")
+    expect(paymentMilestoneDocumentation).toContain("Payment Milestones do not create or update invoices or receipts and never complete a Project automatically.")
   })
 
   it("does not render the legacy pending/paid or automatic-coupling claims", () => {
@@ -65,10 +55,10 @@ describe("payment milestone documentation", () => {
 
   it("covers Overview, Reference, schema, and every registered documentation page", () => {
     expect(renderedDocumentation).toContain(
-      "Payment Milestones are planning records with three statuses"
+      "Payment Milestones are billing schedule records with two statuses"
     )
     expect(documentationSource).toContain(
-      "payment_milestone_status (planned | won | invoiced)"
+      "payment_milestone_status (pending_invoicing | invoiced)"
     )
     expect(documentationSource).toContain("no live linkage")
     expect(documentationSource).toContain(

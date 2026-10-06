@@ -2,9 +2,6 @@ import { readFileSync } from "node:fs"
 import { randomUUID } from "node:crypto"
 import { describe, it, expect } from "vitest"
 import postgres from "postgres"
-import { drizzle } from "drizzle-orm/postgres-js"
-import * as databaseSchema from "@/db/schema"
-import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
 
 const databaseUrl = process.env.TEST_DATABASE_ADMIN_URL
 
@@ -35,13 +32,6 @@ describe.skipIf(!databaseUrl)("payment milestone planning migration", () => {
       `)
       const migration = readFileSync(new URL("../db/migrations/0093_payment_milestone_planning.sql", import.meta.url), "utf8")
       await sql.begin(async (tx) => { await tx.unsafe(migration) })
-      await drizzle(sql, { schema: databaseSchema }).transaction(async (tx) => {
-        for (const id of ["draft-quote", "approved-quote", "accepted-pending-win-approval", "lost-deal"]) {
-          expect(await milestoneStatusForFunnel(tx, id)).toBe("planned")
-        }
-        expect(await milestoneStatusForFunnel(tx, "won-deal")).toBe("won")
-        expect(await milestoneStatusForFunnel(tx, null)).toBe("planned")
-      })
       const rows = await sql`SELECT id, status::text FROM payment_milestones ORDER BY id`
       expect(Object.fromEntries(rows.map(r => [r.id, r.status]))).toEqual({
         draft: "planned", approved: "planned", "pending-win": "planned", confirmed: "won",

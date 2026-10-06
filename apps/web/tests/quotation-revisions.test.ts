@@ -41,7 +41,7 @@ vi.mock("@/lib/modules.server", () => ({
   getEntitledModuleMap: vi.fn(async () => ({ projects: false })),
 }))
 
-import { createQuotationRevision } from "@/app/(app)/quotations/actions"
+import { createQuotationRevision, duplicateQuotation } from "@/app/(app)/quotations/actions"
 
 type Chain = {
   from: ReturnType<typeof vi.fn>
@@ -237,6 +237,31 @@ describe("quotation revisions", () => {
     mocks.withTenant.mockImplementation(async (_permission, work) => work(currentTx, ctx))
     return fixture
   }
+
+  it.each(["draft", "pending_approval", "approved", "accepted"])(
+    "duplicates a live %s quotation in the same funnel with a clean Draft",
+    async (status) => {
+      mocks.ownsOrManages.mockReturnValue(true)
+      const fixture = configureRevision({ status })
+      const result = await duplicateQuotation(source.id)
+      expect(result).toMatchObject({ ok: true, data: { id: "quote-revision" } })
+      expect(mocks.nextQuoteNumber).toHaveBeenCalledWith(currentTx, ctx, source.funnelId)
+      expect(fixture.inserts[0]).toMatchObject({
+        funnelId: source.funnelId, revisionOfId: null, status: "draft",
+        version: 3, isPrimary: false, approvedAt: null, approverMemberId: null,
+        sentAt: null, acceptedAt: null, validUntil: null,
+        subtotal: source.subtotal, notes: source.notes,
+      })
+      expect(mocks.writeAudit).toHaveBeenCalledWith(currentTx, ctx,
+        expect.objectContaining({ action: "quotation.duplicated" }))
+    }
+  )
+
+  it("does not duplicate deleted history", async () => {
+    configureRevision({ deletedAt: new Date() })
+    expect(await duplicateQuotation(source.id)).toMatchObject({ ok: false })
+    expect(mocks.nextQuoteNumber).not.toHaveBeenCalled()
+  })
 
   it.each(["sent", "accepted", "rejected", "expired", "void"] as const)(
     "allows a live %s source",

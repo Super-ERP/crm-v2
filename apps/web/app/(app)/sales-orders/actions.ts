@@ -1,7 +1,5 @@
 "use server"
 
-import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
-
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery, type RecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
@@ -20,12 +18,8 @@ import {
   attachments,
   funnels,
   quotations,
-  quotationLineItems,
-  paymentMilestones,
   tenantSettings,
 } from "@/db/schema"
-import { quoteNet } from "@/server/services/value"
-import { deriveSoMilestones, milestoneName } from "@/lib/so-milestones"
 import {
   DEFAULT_PAYMENT_TERMS,
   DEFAULT_SO_DOCUMENT_KINDS,
@@ -132,16 +126,14 @@ async function fetchRows(
   paging?: { limit: number; offset: number; query: RecordListQuery }
 ): Promise<SalesOrderRow[]> {
   // Sales orders inherit visibility from their parent project's owner.
-  // Approvers must still see every submitted SO, so they bypass owner scoping.
   const visible = await visibleMemberIds(tx, ctx)
-  const scopeSO = ctx.can(PERMISSIONS.SALES_ORDER_APPROVE) ? null : visible
   const search = paging?.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const statuses = paging?.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
   const where = and(
     isNull(projects.deletedAt),
     projectId ? eq(salesOrders.projectId, projectId) : undefined,
     salesOrderId ? eq(salesOrders.id, salesOrderId) : undefined,
-    ownerScope(projects.ownerMemberId, scopeSO),
+    ownerScope(projects.ownerMemberId, visible),
     statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
     search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
   )
@@ -369,28 +361,19 @@ export async function resubmitSalesOrder(
     async (tx, ctx) => {
       // Lock the SO row so a concurrent resubmit/approve can't double-act on it.
       const [so] = await tx
-        .select({ status: salesOrders.status, projectId: salesOrders.projectId })
+        .select({ status: salesOrders.status, projectId: salesOrders.projectId, ownerMemberId: projects.ownerMemberId })
         .from(salesOrders)
-        .where(eq(salesOrders.id, id))
+        .innerJoin(projects, eq(salesOrders.projectId, projects.id))
+        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt)))
         .limit(1)
-        .for("update")
+        .for("update", { of: salesOrders })
       if (!so) throw new Error("Sales order not found")
+      const visible = await visibleMemberIds(tx, ctx)
+      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, so.ownerMemberId)) {
+        throw new Error("FORBIDDEN: not permitted on this sales order")
+      }
       if (so.status !== "rejected")
         throw new Error("Only rejected sales orders can be resubmitted")
-
-      // An SO inherits its owner from the parent project; only the project's
-      // owner (or a manager up the chain) may resubmit it.
-      const [proj] = await tx
-        .select({ ownerMemberId: projects.ownerMemberId })
-        .from(projects)
-        .where(eq(projects.id, so.projectId))
-        .limit(1)
-      const visible = await visibleMemberIds(tx, ctx)
-      if (
-        !canManageAllRecords(ctx) &&
-        !ownsOrManages(visible, proj?.ownerMemberId ?? null)
-      )
-        throw new Error("FORBIDDEN: not permitted on this project")
 
       // Conditional flip guards against a racing transition; assert exactly one
       // still-rejected row changed.
@@ -431,154 +414,6 @@ export async function resubmitSalesOrder(
   })
 }
 
-/**
- * Auto-generate payment milestones from the approved SO's quotation line
- * items: one milestone per product category (project-nature code), amounts
- * summing to the quote's NET value (the milestone reconciliation baseline),
- * falling back to a single "Full Payment" milestone when no line is
- * categorised. Fires at most ONCE per deal: skipped whenever the funnel or
- * project already has ANY milestone (manual, quote-seeded, or from a prior
- * approval), so a reject → resubmit → re-approve cycle never duplicates.
- * Runs inside the approval's own transaction/permission context.
- * Returns { count, funnelId } for the caller's toast + revalidation.
- */
-async function generateSoMilestones(
-  tx: Parameters<Parameters<typeof withTenant>[1]>[0],
-  ctx: Parameters<Parameters<typeof withTenant>[1]>[1],
-  input: { soId: string; projectId: string; soNumber: string }
-): Promise<{ count: number; funnelId: string | null }> {
-  const [project] = await tx
-    .select({
-      id: projects.id,
-      projectCode: projects.projectCode,
-      funnelId: projects.funnelId,
-      quotationId: projects.quotationId,
-    })
-    .from(projects)
-    .where(eq(projects.id, input.projectId))
-    .limit(1)
-  if (!project) return { count: 0, funnelId: null }
-  const funnelId = project.funnelId
-
-  // Resolve the quote to bill against: the project's accepted quote, else
-  // the source funnel's primary quote.
-  let quotationId = project.quotationId
-  if (!quotationId && funnelId) {
-    const [f] = await tx
-      .select({ primaryQuotationId: funnels.primaryQuotationId })
-      .from(funnels)
-      .where(eq(funnels.id, funnelId))
-      .limit(1)
-    quotationId = f?.primaryQuotationId ?? null
-  }
-  if (!quotationId) return { count: 0, funnelId }
-
-  // Idempotency: never generate when the deal already has milestones — with
-  // one exception: a single untouched seeded default ("Full Payment", still
-  // Won, never invoiced, not tied to an SO — see seedDefaultFunnelMilestone)
-  // is replaced by the per-category split. Anything manual/invoiced no-ops.
-  const existing = await tx
-    .select({
-      id: paymentMilestones.id,
-      title: paymentMilestones.title,
-      status: paymentMilestones.status,
-      invoiceNumber: paymentMilestones.invoiceNumber,
-      soNumber: paymentMilestones.soNumber,
-    })
-    .from(paymentMilestones)
-    .where(
-      funnelId
-        ? or(
-            eq(paymentMilestones.funnelId, funnelId),
-            eq(paymentMilestones.projectId, project.id)
-          )
-        : eq(paymentMilestones.projectId, project.id)
-    )
-    .limit(2)
-  const seed = existing[0]
-  const replaceableSeed =
-    existing.length === 1 &&
-    seed.title === "Full Payment" &&
-    seed.status !== "invoiced" &&
-    !seed.invoiceNumber &&
-    !seed.soNumber
-  if (existing.length > 0 && !replaceableSeed) return { count: 0, funnelId }
-
-  const [quote] = await tx
-    .select({
-      subtotal: quotations.subtotal,
-      discountTotal: quotations.discountTotal,
-    })
-    .from(quotations)
-    .where(and(eq(quotations.id, quotationId), isNull(quotations.deletedAt)))
-    .limit(1)
-  if (!quote) return { count: 0, funnelId }
-
-  const lines = await tx
-    .select({
-      projectNatureCode: quotationLineItems.projectNatureCode,
-      lineSubtotal: quotationLineItems.lineSubtotal,
-    })
-    .from(quotationLineItems)
-    .where(eq(quotationLineItems.quotationId, quotationId))
-    .orderBy(asc(quotationLineItems.sortOrder))
-
-  const [settings] = await tx
-    .select({ projectNatures: tenantSettings.projectNatures })
-    .from(tenantSettings)
-    .where(eq(tenantSettings.organizationId, ctx.tenantId))
-    .limit(1)
-  const natureNames = Object.fromEntries(
-    (settings?.projectNatures ?? []).map((n) => [n.code, n.name])
-  )
-
-  const drafts = deriveSoMilestones(Number(quoteNet(quote)), lines, natureNames)
-  if (drafts.length === 0) return { count: 0, funnelId }
-
-  if (replaceableSeed) {
-    await tx.delete(paymentMilestones).where(eq(paymentMilestones.id, seed.id))
-  }
-
-  // Strictly the proposal's shape — value · due date · status per
-  // deliverable. No SO numbering or invoice prefill on generated rows
-  // for now; those stay manual/import-only fields.
-  const status = await milestoneStatusForFunnel(tx, funnelId)
-  await tx.insert(paymentMilestones).values(
-    drafts.map((d) => ({
-      tenantId: ctx.tenantId,
-      projectId: project.id,
-      funnelId,
-      quotationId,
-      status,
-      title: d.title,
-      name: milestoneName(project.projectCode, d.title),
-      amount: d.amount,
-      splitPercentage: d.splitPercentage,
-      productCategory: d.productCategory,
-      sortOrder: d.sortOrder,
-    }))
-  )
-
-  await logActivity(tx, ctx, {
-    entityType: "project",
-    entityId: project.id,
-    type: "system",
-    subject: `${drafts.length} payment milestone${drafts.length === 1 ? "" : "s"} generated from ${input.soNumber}`,
-  })
-  await writeAudit(tx, ctx, {
-    action: "sales_order.milestones_generated",
-    entityType: "sales_order",
-    entityId: input.soId,
-    after: {
-      soNumber: input.soNumber,
-      quotationId,
-      replacedSeedMilestoneId: replaceableSeed ? seed.id : null,
-      milestones: drafts.map((d) => ({ title: d.title, amount: d.amount })),
-    },
-  })
-  return { count: drafts.length, funnelId }
-}
-
 export async function approveSalesOrder(
   id: string
 ): Promise<ActionResult<{ soNumber: string; milestonesGenerated: number }>> {
@@ -591,12 +426,17 @@ export async function approveSalesOrder(
       // status must be atomic so a concurrent approve can't burn a second
       // number or double the activity/audit trail.
       const [so] = await tx
-        .select({ status: salesOrders.status, projectId: salesOrders.projectId })
+        .select({ status: salesOrders.status, projectId: salesOrders.projectId, ownerMemberId: projects.ownerMemberId })
         .from(salesOrders)
-        .where(eq(salesOrders.id, id))
+        .innerJoin(projects, eq(salesOrders.projectId, projects.id))
+        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt)))
         .limit(1)
-        .for("update")
+        .for("update", { of: salesOrders })
       if (!so) throw new Error("Sales order not found")
+      const visible = await visibleMemberIds(tx, ctx)
+      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, so.ownerMemberId)) {
+        throw new Error("FORBIDDEN: not permitted on this sales order")
+      }
       if (so.status !== "submitted")
         throw new Error("Only submitted sales orders can be approved")
 
@@ -661,22 +501,12 @@ export async function approveSalesOrder(
         after: { soNumber, projectId: so.projectId },
       })
 
-      const milestones = await generateSoMilestones(tx, ctx, {
-        soId: id,
-        projectId: so.projectId,
-        soNumber,
-      })
-      return { soNumber, projectId: so.projectId, milestones }
+      return { soNumber, projectId: so.projectId }
     }
   )
   revalidatePath("/sales-orders")
   revalidatePath(`/projects/${result.projectId}`)
-  if (result.milestones.count > 0) {
-    revalidatePath("/payment-milestones")
-    if (result.milestones.funnelId)
-      revalidatePath(`/funnel/${result.milestones.funnelId}`)
-  }
-  return { soNumber: result.soNumber, milestonesGenerated: result.milestones.count }
+  return { soNumber: result.soNumber, milestonesGenerated: 0 }
   })
 }
 
@@ -693,12 +523,17 @@ export async function rejectSalesOrder(
     async (tx, ctx) => {
       // Lock the SO row so a concurrent approve/reject can't double-act on it.
       const [so] = await tx
-        .select({ status: salesOrders.status, projectId: salesOrders.projectId })
+        .select({ status: salesOrders.status, projectId: salesOrders.projectId, ownerMemberId: projects.ownerMemberId })
         .from(salesOrders)
-        .where(eq(salesOrders.id, id))
+        .innerJoin(projects, eq(salesOrders.projectId, projects.id))
+        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt)))
         .limit(1)
-        .for("update")
+        .for("update", { of: salesOrders })
       if (!so) throw new Error("Sales order not found")
+      const visible = await visibleMemberIds(tx, ctx)
+      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, so.ownerMemberId)) {
+        throw new Error("FORBIDDEN: not permitted on this sales order")
+      }
       if (so.status !== "submitted")
         throw new Error("Only submitted sales orders can be rejected")
 
@@ -802,10 +637,9 @@ export async function listSalesOrderPage(input: ServerTableQuery): Promise<{ row
   return withModule("salesOrders", PERMISSIONS.SALES_ORDER_VIEW, async (tx, ctx) => {
     const paging = normalizeRecordListQuery(input, ["projectName", "status", "submittedAt"], ["status"])
     const visible = await visibleMemberIds(tx, ctx)
-    const scopeSO = ctx.can(PERMISSIONS.SALES_ORDER_APPROVE) ? null : visible
     const statuses = paging.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
     const search = paging.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
-    const where = and(isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, scopeSO),
+    const where = and(isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
       statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
       search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined)
     const [rows, countRows] = await Promise.all([
