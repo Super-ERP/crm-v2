@@ -16,6 +16,8 @@ Access depends on your active organization, assigned permissions, record scope, 
 | Record ownership and reporting relationships | Which records you can see or manage when access is scoped. |
 | Enabled modules | Whether a feature is available for the organization. |
 
+Sales roles see only records they own. Managers also see records owned by their reporting team through **View own and reporting team records**. Approval permission alone does not grant team visibility. Explicit view-all grants still apply.
+
 The **Owner** role is different from ownership of an account or funnel. See [Terminology](terminology.md#owner-salesperson-and-reporting-manager).
 
 ## Who approves a quotation?

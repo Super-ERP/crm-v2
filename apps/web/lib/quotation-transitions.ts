@@ -17,6 +17,7 @@ export type QuotationAction =
   | "reject_approval"
   | "send"
   | "return_to_draft"
+  | "recall"
   | "accept"
   | "reject_customer"
 
@@ -68,7 +69,10 @@ export function quotationActionsFor(
     case "draft":
       return permissions.canUpdate ? ["submit_for_approval"] : []
     case "pending_approval":
-      return permissions.canApprove ? ["approve", "reject_approval"] : []
+      return [
+        ...(permissions.canApprove ? ["approve" as const, "reject_approval" as const] : []),
+        ...(permissions.canUpdate ? ["recall" as const] : []),
+      ]
     case "approved":
       return [
         ...(permissions.canSend ? ["send" as const] : []),

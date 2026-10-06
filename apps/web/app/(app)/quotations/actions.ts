@@ -41,7 +41,6 @@ import { syncFunnelProductsFromQuote } from "@/server/services/quote-sync"
 import { nextQuoteNumber } from "@/server/services/numbering"
 import { logActivity } from "@/server/services/activity"
 import { writeAudit } from "@/server/audit"
-import { seedDefaultFunnelMilestone } from "@/app/(app)/payment-milestones/actions"
 import { toDateString } from "@/lib/dates"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import {
@@ -793,9 +792,6 @@ export async function createQuotation(input: {
       // Synced quote -> opportunity products (Salesforce Quote Line Item ->
       // Opportunity Product behaviour).
       await syncFunnelProductsFromQuote(tx, ctx.tenantId, input.funnelId, created.id)
-      // Itemised into the quotation by default: a synced quote seeds exactly
-      // one "Full Payment" milestone, no-op once any milestone exists.
-      await seedDefaultFunnelMilestone(tx, ctx, input.funnelId)
     }
 
     await logActivity(tx, ctx, {
@@ -951,10 +947,6 @@ export async function updateQuotation(
     if (existing.isPrimary) {
       await syncOpportunityAmount(tx, ctx, existing.funnelId)
       await syncFunnelProductsFromQuote(tx, ctx.tenantId, existing.funnelId, id)
-      // Covers the common case of a quote auto-promoted to primary while
-      // still $0 (a brand-new draft), then given real value here — the
-      // "becomes primary" seed call already fired at net value 0 and no-op'd.
-      await seedDefaultFunnelMilestone(tx, ctx, existing.funnelId)
     }
 
     await writeAudit(tx, ctx, {
@@ -1034,8 +1026,17 @@ export async function canApproveQuotation(id: string): Promise<boolean> {
  * intentionally does not filter soft-deleted rows: a deleted quotation is
  * still tenant-owned history and may be revised by a user who can see it.
  */
-export async function createQuotationRevision(
-  sourceQuotationId: string
+export async function createQuotationRevision(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
+  return createQuotationCopy(sourceQuotationId, "revision")
+}
+
+export async function duplicateQuotation(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
+  return createQuotationCopy(sourceQuotationId, "duplicate")
+}
+
+async function createQuotationCopy(
+  sourceQuotationId: string,
+  mode: "revision" | "duplicate"
 ): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
   return runAction(async () => {
     let sourceFunnelId: string | null = null
@@ -1052,7 +1053,10 @@ export async function createQuotationRevision(
         .limit(1)
         .for("update")
       if (!source) throw new Error("Quotation not found")
-      if (!canCreateQuotationRevision(source.status, source.deletedAt)) {
+      if (mode === "duplicate" && source.deletedAt) {
+        throw new Error("Deleted quotations cannot be duplicated")
+      }
+      if (mode === "revision" && !canCreateQuotationRevision(source.status, source.deletedAt)) {
         throw new Error("Only eligible non-draft quotations can be revised")
       }
       sourceFunnelId = source.funnelId
@@ -1120,7 +1124,7 @@ export async function createQuotationRevision(
         .values({
           tenantId: ctx.tenantId,
           funnelId: source.funnelId,
-          revisionOfId: source.id,
+          revisionOfId: mode === "revision" ? source.id : null,
           quoteNumber,
           version,
           isPrimary: false,
@@ -1135,8 +1139,8 @@ export async function createQuotationRevision(
           discountTotal: source.discountTotal,
           taxTotal: source.taxTotal,
           total: source.total,
-          quoteDate: source.quoteDate,
-          validUntil: source.validUntil,
+          quoteDate: mode === "duplicate" ? toDateString() : source.quoteDate,
+          validUntil: mode === "duplicate" ? null : source.validUntil,
           notes: source.notes,
           delivery: source.delivery,
           paymentTerm: source.paymentTerm,
@@ -1173,7 +1177,7 @@ export async function createQuotationRevision(
       }
 
       await writeAudit(tx, ctx, {
-        action: "quotation.revision_created",
+        action: mode === "duplicate" ? "quotation.duplicated" : "quotation.revision_created",
         entityType: "quotation",
         entityId: created.id,
         before: {
@@ -1182,7 +1186,7 @@ export async function createQuotationRevision(
           sourceStatus: source.status,
         },
         after: {
-          revisionOfId: source.id,
+          revisionOfId: mode === "revision" ? source.id : null,
           quoteNumber: created.quoteNumber,
           version,
           status: "draft",
@@ -1311,15 +1315,26 @@ export async function rejectQuotation(
   })
 }
 
-export async function returnApprovedQuotationToDraft(
-  id: string
+export async function returnApprovedQuotationToDraft(id: string): Promise<ActionResult<void>> {
+  return returnQuotationToDraft(id, "approved")
+}
+
+export async function recallQuotation(id: string): Promise<ActionResult<void>> {
+  return returnQuotationToDraft(id, "pending_approval")
+}
+
+async function returnQuotationToDraft(
+  id: string,
+  expectedStatus: "approved" | "pending_approval"
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
     await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
       const quotation = await getLockedQuotation(tx, id)
       await assertQuotationAccess(tx, ctx, quotation)
-      if (quotation.status !== "approved") {
-        throw new Error("Only approved quotations can be returned to Draft")
+      if (quotation.status !== expectedStatus) {
+        throw new Error(expectedStatus === "pending_approval"
+          ? "Only quotations pending approval can be recalled"
+          : "Only approved quotations can be returned to Draft")
       }
       assertQuotationTransition(quotation.status, "draft")
 
@@ -1334,7 +1349,7 @@ export async function returnApprovedQuotationToDraft(
         })
         .where(eq(quotations.id, id))
       await writeAudit(tx, ctx, {
-        action: "quotation.returned_to_draft",
+        action: expectedStatus === "pending_approval" ? "quotation.recalled" : "quotation.returned_to_draft",
         entityType: "quotation",
         entityId: id,
         before: { status: quotation.status },
@@ -1681,7 +1696,6 @@ async function reassignPrimaryAfterRemoval(
     // Synced quote -> opportunity products (Salesforce Quote Line Item ->
     // Opportunity Product behaviour).
     await syncFunnelProductsFromQuote(tx, ctx.tenantId, funnelId, candidate.id)
-    await seedDefaultFunnelMilestone(tx, ctx, funnelId)
   } else {
     // No live quote remains: clear the pointer AND reset the amount. Without
     // this, syncOpportunityAmount short-circuits on the null pointer and the
@@ -1753,9 +1767,6 @@ export async function setPrimaryQuotation(
     // Synced quote -> opportunity products (Salesforce Quote Line Item ->
     // Opportunity Product behaviour).
     await syncFunnelProductsFromQuote(tx, ctx.tenantId, q.funnelId, id)
-    // Itemised into the quotation by default: a synced quote seeds exactly
-    // one "Full Payment" milestone, no-op once any milestone exists.
-    await seedDefaultFunnelMilestone(tx, ctx, q.funnelId)
     await writeAudit(tx, ctx, {
       action: "quotation.set_primary",
       entityType: "quotation",

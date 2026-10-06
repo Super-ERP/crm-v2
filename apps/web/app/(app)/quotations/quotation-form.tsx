@@ -78,10 +78,12 @@ import { resolveQuotationPdfTemplate } from "@/lib/quotation-pdf-template"
 import {
   updateQuotation,
   createQuotationRevision,
+  duplicateQuotation,
   submitQuotationForApproval,
   approveQuotation,
   rejectQuotation,
   returnApprovedQuotationToDraft,
+  recallQuotation,
   sendQuotation,
   acceptQuotation,
   rejectCustomerQuotation,
@@ -195,10 +197,12 @@ export function QuotationForm({
   const showApproval =
     isPendingApproval && hasQuotationAction("approve")
   const showSend = isApproved && hasQuotationAction("send")
+  const showRecall = isPendingApproval && hasQuotationAction("recall")
   const showReset = isApproved && hasQuotationAction("return_to_draft")
   const showAcceptReject =
     isSent && hasQuotationAction("accept")
   const showCreateProject = isAccepted && !project && perms.canCreateProject
+  const showDuplicate = perms.canCreateRevision && !quotation.deletedAt
   const showRevision =
     perms.canCreateRevision &&
     canCreateQuotationRevision(quotation.status, quotation.deletedAt)
@@ -208,7 +212,7 @@ export function QuotationForm({
     perms.canUpdate
   const showDelete = perms.canDelete
   const hasAnyAction =
-    showSubmit || showApproval || showSend || showReset || showAcceptReject || showCreateProject || showRevision || showSetPrimary || showDelete
+    showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary || showDelete
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -488,6 +492,18 @@ export function QuotationForm({
         : {}),
     })
     setBusy(false)
+  }
+
+  async function onDuplicate() {
+    setBusy(true)
+    const res = await duplicateQuotation(quotation.id)
+    if (!res.ok) {
+      showActionError(res)
+      setBusy(false)
+      return
+    }
+    toast.success("Quotation duplicated as a new Draft")
+    router.push(`/quotations/${res.data.id}`)
   }
 
   async function onCreateRevision() {
@@ -1196,18 +1212,18 @@ export function QuotationForm({
                 </AlertDialog>
               </>
             ) : null}
-            {showReset ? (
+            {showReset || showRecall ? (
               <AlertDialog>
                 <AlertDialogTrigger
                   render={
                     <Button variant="outline" disabled={busy}>
-                      Return to Draft to edit
+                      {showRecall ? "Recall to Draft" : "Return to Draft to edit"}
                     </Button>
                   }
                 />
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Return approved quotation to Draft?</AlertDialogTitle>
+                    <AlertDialogTitle>{showRecall ? "Recall quotation to Draft?" : "Return approved quotation to Draft?"}</AlertDialogTitle>
                     <AlertDialogDescription>
                       Approval metadata clears. Any later send requires approval again.
                     </AlertDialogDescription>
@@ -1217,7 +1233,7 @@ export function QuotationForm({
                     <AlertDialogAction
                       onClick={() =>
                         submitAction(
-                          () => returnApprovedQuotationToDraft(quotation.id),
+                          () => showRecall ? recallQuotation(quotation.id) : returnApprovedQuotationToDraft(quotation.id),
                           "Quotation returned to Draft"
                         )
                       }
@@ -1236,6 +1252,11 @@ export function QuotationForm({
                 render={<Link href={createProjectHref} />}
               >
                 Create project
+              </Button>
+            ) : null}
+            {showDuplicate ? (
+              <Button variant="outline" disabled={busy} onClick={onDuplicate}>
+                Duplicate quotation
               </Button>
             ) : null}
             {showRevision ? (

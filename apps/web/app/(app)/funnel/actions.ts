@@ -304,7 +304,7 @@ export type OpportunityInput = {
 // actions below (createOpportunity / updateOpportunity).
 
 const FUNNEL_SORTS = ["id", "accountId", "amount", "expectedCloseDate", "ownerMemberId", "status"]
-const FUNNEL_FILTERS = ["accountId", "opportunityId", "id", "accountOwnerMemberId", "ownerMemberId", "stageId", "status"]
+const FUNNEL_FILTERS = ["accountId", "opportunityId", "id", "accountOwnerMemberId", "ownerMemberId", "stageId", "status", "expectedCloseDate"]
 
 export async function listFunnelPage(input: ServerTableQuery): Promise<{ rows: OpportunityListRow[]; total: number }> {
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsList(tx, ctx,
@@ -353,6 +353,7 @@ export type OpportunityDetail = {
     id: string
     quoteNumber: string
     status: QuotationStatus
+    netValue: string
     total: string
     currency: string
     isPrimary: boolean

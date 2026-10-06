@@ -21,8 +21,8 @@ import { type ServerContext } from "@/lib/server-context"
 /**
  * Record-level access: owner + managed-subtree, with elevation.
  *
- * A member sees the records they own plus those owned by anyone in their
- * management subtree (transitive reports via `managerMemberId`). Holding
+ * Sales members see only their own records. Members with team-record permission
+ * also see their management subtree (transitive reports via `managerMemberId`). Holding
  * `records.view_all` (or being a superadmin) removes the owner filter entirely;
  * `records.manage_all` does the same for edit/delete. Tenant isolation still
  * comes from RLS — this layer narrows within a tenant.
@@ -37,7 +37,7 @@ export function canManageAllRecords(ctx: ServerContext): boolean {
 }
 
 /**
- * Member ids whose records `ctx` may see: self + transitive reports. Returns
+ * Member ids whose records `ctx` may see: self, plus transitive reports with team-record permission. Returns
  * `null` when the user may see everything (view-all / superadmin) — callers
  * treat null as "no owner filter". Returns `[]` when the user has no membership
  * (sees nothing of their own).
@@ -48,6 +48,7 @@ export async function visibleMemberIds(
 ): Promise<string[] | null> {
   if (canViewAllRecords(ctx)) return null
   if (!ctx.memberId) return []
+  if (!ctx.can(PERMISSIONS.RECORDS_VIEW_TEAM)) return [ctx.memberId]
 
   const rows = await tx
     .select({
@@ -220,9 +221,9 @@ export async function attachableOwner(
 }
 
 /**
- * Whether `ctx` may view/manage the record an attachment belongs to. View also
- * lets a sales-order approver see SO proof documents (mirrors the SO list
- * bypass); manage never does. Used by the attachment actions + download route.
+ * Whether `ctx` may view/manage the record an attachment belongs to.
+ * Approval permissions do not bypass ownership. Used by attachment actions
+ * and the download route.
  */
 export async function canAccessAttachable(
   tx: Tx,
@@ -245,13 +246,6 @@ export async function canAccessAttachable(
   }
   if (mode === "view" && canViewAllRecords(ctx)) return true
   if (mode === "manage" && canManageAllRecords(ctx)) return true
-  if (
-    mode === "view" &&
-    type === "sales_order" &&
-    ctx.can(PERMISSIONS.SALES_ORDER_APPROVE)
-  ) {
-    return true
-  }
   const owner = await attachableOwner(tx, type, id)
   const visible = await visibleMemberIds(tx, ctx)
   return ownsOrManages(visible, owner)

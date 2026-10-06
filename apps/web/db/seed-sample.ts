@@ -670,7 +670,7 @@ async function main() {
       title: string
       amount: string
       due: string
-      status: "won" | "invoiced"
+      status: "pending_invoicing" | "invoiced"
       sort: number
     }[]
   }[] = [
@@ -680,7 +680,7 @@ async function main() {
       quote: "stark-accepted",
       items: [
         { k: "deposit", title: "Deposit", amount: "20140.00", due: "2026-06-15", status: "invoiced", sort: 0 },
-        { k: "completion", title: "On completion", amount: "20140.00", due: "2026-12-15", status: "won", sort: 1 },
+        { k: "completion", title: "On completion", amount: "20140.00", due: "2026-12-15", status: "pending_invoicing", sort: 1 },
       ],
     },
     {

@@ -79,7 +79,8 @@ export const PERMISSIONS = {
   TENANT_MANAGE_ROLES: "tenant.manage_roles",
   TENANT_SETTINGS: "tenant.settings",
   AUDIT_VIEW: "audit.view",
-  // record-level access — elevations that bypass owner + managed-subtree scoping
+  // record-level access — own records by default, explicit team/all elevations
+  RECORDS_VIEW_TEAM: "records.view_team",
   RECORDS_VIEW_ALL: "records.view_all",
   RECORDS_MANAGE_ALL: "records.manage_all",
 } as const
@@ -125,6 +126,7 @@ const REP_BASE: PermissionKey[] = [
 
 const MANAGER: PermissionKey[] = [
   ...REP_BASE,
+  PERMISSIONS.RECORDS_VIEW_TEAM,
   PERMISSIONS.SALES_ORDER_APPROVE,
   PERMISSIONS.LEAD_DELETE,
   PERMISSIONS.ACCOUNT_DELETE,
@@ -305,6 +307,10 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
   {
     group: "Record access",
     items: [
+      {
+        key: PERMISSIONS.RECORDS_VIEW_TEAM,
+        label: "View own and reporting team records",
+      },
       {
         key: PERMISSIONS.RECORDS_VIEW_ALL,
         label: "View all records (bypass ownership)",
