@@ -192,7 +192,7 @@ export function ProductsTable({
         header: "Description",
         cell: ({ row }) =>
           row.original.description ? (
-            <span className="text-muted-foreground line-clamp-1">
+            <span className="text-muted-foreground line-clamp-2">
               {row.original.description}
             </span>
           ) : (

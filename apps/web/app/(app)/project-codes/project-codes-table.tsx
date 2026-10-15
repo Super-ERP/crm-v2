@@ -12,8 +12,8 @@ import { listProjectCodeTablePage } from "./actions"
 export function CodeRoles({ primary, crossDeal, crm }: { primary: boolean; crossDeal: boolean; crm: boolean }) {
   return <div className="flex flex-wrap gap-1.5">
     {primary ? <Badge variant="secondary">Primary</Badge> : null}
-    {crossDeal ? <Badge variant="outline">Cross-deal</Badge> : null}
-    {crm ? <Badge variant="outline">CRM</Badge> : null}
+    {crossDeal && !primary ? <Badge variant="outline">Cross-deal reference</Badge> : null}
+    {crm && !primary && !crossDeal ? <Badge variant="outline">CRM</Badge> : null}
   </div>
 }
 

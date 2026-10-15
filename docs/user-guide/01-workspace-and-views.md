@@ -136,3 +136,9 @@ Explicit URL settings take precedence over the default view and personal layout.
 * [Leads & conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management)
 * [Troubleshooting](https://jienweng.gitbook.io/q-app/docs/help/troubleshooting)
 * [Back to start](README.md)
+
+### Table readability
+
+Long cell values wrap within their own columns instead of overlapping neighbouring records. Names, descriptions, product codes and subcategories have wider defaults, while units, status and action columns stay compact. Existing explicitly saved widths take precedence; use **Columns → Reset column layout** to adopt the current defaults.
+
+The Project Code detail Funnel tab starts with the funnel, stage, amount, expected close date and owner. Account, Opportunity and Relationship remain available under **Columns** and in advanced filters; related records also have their own tabs.
