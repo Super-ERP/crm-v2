@@ -50,7 +50,7 @@ Open **CRM → Leads** and review your assigned prospects. Update their details 
 
 #### Convert qualified prospects
 
-For a qualified prospect, review the account and contact information before converting. Follow [Lead conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management#converting-a-lead).
+For a qualified prospect, review the account, contact and sales-pursuit details, then use **Submit conversion**. An eligible reporting manager approves the saved request before records are created. A member with **Approve lead conversions** and no superior can convert directly. Follow [Lead conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management#converting-a-lead).
 
 {% endstep %}
 {% step %}
@@ -92,7 +92,7 @@ Create a quotation, check items, currency, tax, and terms, then submit it for ap
 
 #### Open Incoming requests
 
-Open **Sales → Approvals → Incoming** for quotation and funnel-stage requests routed to you. Quotation cards include **View quotation**, **Approve** and **Reject**; rejection requires a reason.
+Open **Sales → Approvals → Incoming** for lead-conversion, quotation and funnel-stage requests routed to you. Quotation cards include **View quotation**, **Approve** and **Reject**; rejection requires a reason.
 
 {% endstep %}
 {% step %}
@@ -106,7 +106,7 @@ Check the requested stage, supporting context, and attachments. Approve or rejec
 
 #### Review quotation approvals
 
-Review quotation approval separately on the quotation itself. Check the proposed pricing and terms before deciding.
+Review quotation requests in **Incoming → Quotation approvals** or on the quotation itself. Use **View quotation** to check pricing and terms before approving or rejecting. Review saved lead-conversion details in the **Lead conversion approvals** section. Lead-conversion and quotation rejection require a reason.
 
 {% endstep %}
 {% step %}

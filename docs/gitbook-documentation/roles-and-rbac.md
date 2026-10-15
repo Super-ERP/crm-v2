@@ -15,8 +15,8 @@ icon: users-gear
 | **Admin** | Workspace administration; its default permission set matches Owner. | All records in the active organization. |
 | **Developer** | Exercise business features without managing members, roles, or organization settings. | All records in the active organization. |
 | **Manager** | Manage sales work, review approvals, and maintain catalog and tax settings. | Own records and records in their reporting subtree. |
-| **Senior Rep** | Prepare sales work and send approved quotations. | Own records and records in their reporting subtree. |
-| **Rep** | Capture and qualify prospects, prepare quotations, and request gated stage changes. | Own records and records in their reporting subtree. |
+| **Senior Rep** | Prepare sales work and send approved quotations. | Own records. |
+| **Rep** | Capture and qualify prospects, prepare quotations, and request gated stage changes. | Own records. |
 | **Viewer** | Read business records without changing them. | All records in the active organization. |
 
 **Owner and Admin have the same default permissions**, but the last Owner has additional removal protection. Neither is the platform superadmin. **Developer** has broad business access but no tenant-administration permissions. **Manager** does not receive Manage users or Manage roles just because of its name.
@@ -30,17 +30,17 @@ Choose a tab to compare one area at a time. **Yes** means the default role grant
 {% tabs %}
 {% tab title="Customer records" %}
 
-| Role | View records | Create, edit & convert leads | Delete customer/sales records |
-| --- | --- | --- | --- |
-| Owner | Yes | Yes | Yes |
-| Admin | Yes | Yes | Yes |
-| Developer | Yes | Yes | Yes |
-| Manager | Yes | Yes | Yes |
-| Senior Rep | Yes | Yes | No |
-| Rep | Yes | Yes | No |
-| Viewer | Yes | No | No |
+| Role | View records | Create/edit leads & submit conversion | Approve lead conversions | Delete customer/sales records |
+| --- | --- | --- | --- | --- |
+| Owner | Yes | Yes | Yes | Yes |
+| Admin | Yes | Yes | Yes | Yes |
+| Developer | Yes | Yes | Yes | Yes |
+| Manager | Yes | Yes | Yes | Yes |
+| Senior Rep | Yes | Yes | No | No |
+| Rep | Yes | Yes | No | No |
+| Viewer | Yes | No | No | No |
 
-Create/edit includes leads, accounts, contacts, opportunities, and funnel details. Deletion remains subject to each record's business rules. Viewer sees all records, while Manager, Senior Rep, and Rep use their ownership/reporting scope.
+Create/edit includes leads, accounts, contacts, opportunities, and funnel details. Deletion remains subject to each record's business rules. Viewer sees all records. Manager also sees their reporting subtree; Senior Rep and Rep see only their own records by default. Shared reseller accounts/contacts are a separate master-data visibility rule and do not expose other users' sales transactions. Conversion creates linked records only after approval, or a permitted direct action by a top manager. Custom roles need **Approve lead conversions** explicitly; default Owner, Admin, Developer and Manager include it.
 
 {% endtab %}
 {% tab title="Quotations" %}
@@ -141,7 +141,7 @@ In **Edit member**, choose the member's **Manager** and save. The manager must b
 
 #### Check the effective access
 
-Have the member open the relevant records and check the intended actions and scope. For quotation approval, verify the submitter's reporting line (or the funnel owner for legacy requests without submission audit data). For stage approval, verify the requester's reporting line. Confirm both the eligible reviewer and the document/request status before deciding.
+Have the member open the relevant records and check the intended actions and scope. For quotation approval, verify the submitter's reporting line (or the funnel owner for legacy requests without submission audit data). For stage and lead-conversion approval, verify the requester's reporting line. Confirm both the eligible reviewer and the document/request status before deciding.
 
 {% endstep %}
 {% endstepper %}
@@ -154,6 +154,7 @@ For a read-only member, assign **Viewer alone** if organization-wide reading is 
 
 ## Approval setup checklist
 
+* **Lead-conversion reviewer:** active eligible manager in the requester's reporting line with **Approve lead conversions**, lead access and destination-account access. The requester must still have **Convert leads** and record access at approval time.
 * **Quotation reviewer:** active eligible manager in the submitter's reporting line with **Approve quotations** and quotation access.
 * **Stage reviewer:** active manager in the requester's reporting line with **Approve stage advances**, assigned to the Pending request and still eligible at decision time.
 * **Sender:** **Send quotations** plus access to the Approved quotation.

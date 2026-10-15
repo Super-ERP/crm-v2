@@ -17,7 +17,7 @@ Use **Sales → Approvals** to review quotation, funnel-stage and lead-conversio
 * [Follow up after a decision](#follow-up-after-a-decision)
 
 {% hint style="info" %}
-**Who can use this page?** People with stage-change, stage-approval, quotation-update, quotation-approval, lead-conversion or lead-conversion-approval permissions can participate. Quotation cards also require quotation-view permission and record access. Requests route to the first active manager in the requester’s reporting line with the matching permission: **Approve lead conversions**, **Approve quotations**, or **Approve stage advances**. The reviewer must remain eligible and have record access. Stage requests also require the stored approver assignment to match. Requesters cannot decide their own queued request. Permissions from all assigned roles count. Platform superadmins retain an operational override.
+**Who can use this page?** People with stage-change, stage-approval, quotation-update, quotation-approval, lead-conversion or lead-conversion-approval permissions can participate. Quotation and lead-conversion cards also require their record-view permissions and ownership/team access. Requests route to the first active manager in the requester’s reporting line with the matching permission: **Approve lead conversions**, **Approve quotations**, or **Approve stage advances**. Quotation and lead-conversion reviewers must remain eligible and have record access. Stage requests are listed by stored approver assignment; decisions require that assignment and current manager eligibility to match. Requesters cannot approve or reject their own queued request; they can cancel or recall it where authorized. Permissions from all assigned roles count. Platform superadmins retain an operational override.
 {% endhint %}
 
 ## What appears in each tab
@@ -28,7 +28,7 @@ Use **Sales → Approvals** to review quotation, funnel-stage and lead-conversio
 | **Quotation approvals** | Pending quotations routed to you. Use **View quotation**, then **Approve** or **Reject**. | Your latest submission per quotation and its current status. Use **Recall to Draft** while pending when authorized. |
 | **Funnel-stage approvals** | Pending stage changes assigned to you. Review the stage change, reason and attachments, then **Approve** or **Reject**. | Your stage requests and their status. Use **Cancel request** while pending. |
 
-Managers see eligible requests within their record access, rather than every request in the organization. Each section has independent pagination. Approved, rejected and cancelled requests leave **Incoming**; follow your submissions in **My requests**. A rejected quotation returns to **Draft**, so its card shows the current quotation status and rejection reason.
+Quotation and lead-conversion sections show eligible requests within ownership/team access. The funnel-stage section shows pending requests assigned to the manager. These are not organization-wide queues for ordinary managers. Each section has independent pagination. Approved, rejected and cancelled requests leave **Incoming**; follow your submissions in **My requests**. A rejected quotation returns to **Draft**, so its card shows the current quotation status and rejection reason.
 
 A member with the matching approval permission and no reporting manager can proceed directly. **Direct actions do not create a pending request in Incoming.** Managers with a superior must request approval. See [Managers' own actions](#managers-own-actions).
 
@@ -149,7 +149,7 @@ Review lead name, company, requester and saved conversion details before decidin
 
 Across all three workflows, a member with the matching approval permission can proceed directly only when they have no reporting manager above them. Managers with a superior require approval. Ordinary sales users never gain direct approval merely because their manager is missing. Missing/inactive reporting profiles and an ineligible upline block the action until configured. Platform superadmins retain their operational override.
 
-If your own request is already pending and you become eligible for direct action, cancel the lead/stage request or recall the quotation before submitting the direct action. A direct stage move also cancels older pending stage requests.
+If your own request is already pending and you become eligible for direct action, cancel the lead-conversion request or recall the quotation before taking its direct action. A direct stage move automatically cancels older pending stage requests; a separate cancellation is not required.
 
 ## Related document rules
 

@@ -36,7 +36,7 @@ Approving a subordinate's request does not create another approval request for t
 
 Use **Sales → Approvals → Incoming** for quotation, funnel-stage and lead-conversion requests routed to you. **My requests** tracks your submissions. Each workflow has its own labelled section and pagination.
 
-Quotation routing follows the actual submitter's reporting line, with the funnel owner as the fallback for legacy requests without submission audit data. Stage and lead-conversion requests follow the requester's reporting line. Decisions recheck eligibility, permissions, status and record access. A queued request cannot be self-approved; eligible top managers use the direct action instead.
+Quotation routing follows the actual submitter's reporting line, with the funnel owner as the fallback for legacy requests without submission audit data. Stage and lead-conversion requests follow the requester's reporting line. Decisions recheck eligibility, permissions and status. Quotation and lead-conversion inboxes and actions also enforce record ownership/team scope; stage requests are listed by their assigned approver and decisions additionally verify that the stored assignment remains current. A queued request cannot be self-approved or self-rejected; eligible top managers use the direct action instead.
 
 Quotation rejection requires a reason and returns the quote to Draft. Lead-conversion rejection leaves the lead unconverted, allowing correction and a new submission. Lead conversion creates no account, contact, opportunity or funnel until the conversion is approved or an eligible top manager confirms the direct conversion.
 
@@ -54,6 +54,8 @@ Suppose Sam reports to Maya, and Maya reports to Lee. All three have active repo
 Approval applies to the submitted quotation number/version. A separate revision starts Draft and must be approved separately. Returning an Approved quote to Draft clears its approval. Read [Documents, actions, and approval](documents-and-actions.md#which-version-is-approved) before deciding from a PDF or historical quotation.
 
 ## What if the manager changes?
+
+Quotation and lead-conversion decisions follow the requester's current eligible manager, even if the reporting line or approval permissions changed after submission. Stage requests require both the stored assigned approver and current manager eligibility; cancel and resubmit a stale stage request to route it again. If a pending requester becomes an eligible top manager, recall the quotation or cancel the lead-conversion request before taking the direct action. A direct stage move cancels older pending stage requests.
 
 Changing the Account owner cancels pending stage requests and returns pending quotations to Draft. The new owner resubmits them to route each request to the current eligible manager. If no eligible manager exists, submission asks for the reporting line and approval permission to be configured instead of routing to an unrelated approver.
 

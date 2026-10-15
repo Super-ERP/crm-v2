@@ -12,7 +12,7 @@ For step-by-step help with a blocked action, open [Troubleshooting](troubleshoot
 <details>
 <summary>What does converting a lead create?</summary>
 
-The conversion flow links or creates the account, creates the contact, and creates the sales pursuit. Review the information before confirming. The converted lead links to the resulting records and cannot be converted again.
+After reporting-manager approval, the conversion form links or creates the account, creates a new contact, and creates the opportunity and first funnel. A member with **Approve lead conversions** and no superior can perform the conversion directly. Pending requests create none of these records. The server also supports conversion without a sales pursuit, but the current form requests one. Review the information before confirming. The converted lead links to the resulting records and cannot be converted again.
 
 See [Lead conversion](../02-leads-management.md#converting-a-lead).
 
@@ -57,12 +57,19 @@ See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rol
 </details>
 
 
+<details>
+<summary>How do I track or correct a lead-conversion request?</summary>
+
+Open **Sales → Approvals → My requests → Lead conversion approvals**. While pending, the lead remains unconverted. You may cancel your own request, correct the lead or conversion details, and submit again. A rejected request includes the required reason and creates no linked records. Changing the lead after submission makes approval fail until the request is cancelled and resubmitted.
+
+</details>
+
 ## Quotations and approvals
 
 <details>
 <summary>Can I send a draft quotation?</summary>
 
-A quotation must be approved before it can be sent. Submit the draft for approval and use **Send** after approval, with the required permissions.
+A quotation must be approved before it can be sent. Submit the draft for reporting-manager approval, or use **Approve quotation** if you have approval permission and no superior. Use **Send** after approval, with the required permissions.
 
 See [Quotation lifecycle](../05-quotations-and-revisions.md#the-quotation-lifecycle).
 
@@ -98,9 +105,9 @@ See [Opportunities & sales funnel](../04-opportunities-and-funnel.md).
 ## Payment milestones
 
 <details>
-<summary>When does a payment milestone become Won?</summary>
+<summary>When does a payment milestone become available?</summary>
 
-Live Planned milestones become Won when their linked funnel closes Won. A milestone created for an already won funnel starts as Won. Invoiced milestones retain their status.
+Configure milestones explicitly after the quotation is customer Accepted and the funnel is at 4a or Closed Won. New milestones start Pending invoicing; **Mark invoiced** records billing. Closing the funnel Won does not change milestone status or create a schedule.
 
 See [Milestone statuses](../06-payment-milestones.md#milestone-statuses).
 

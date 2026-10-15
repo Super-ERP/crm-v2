@@ -129,7 +129,8 @@ Select the template appropriate for your offering:
 ```mermaid
 flowchart TD
     D["Draft"] --> P["Pending approval"]
-    P -->|"Approve"| A["Approved"]
+    D -->|"Eligible top manager approves directly"| A["Approved"]
+    P -->|"Eligible reviewer approves"| A
     P -->|"Reject with reason or Recall"| D
     A -->|"Return to Draft"| D
     A -->|"Send"| S["Sent"]
@@ -151,7 +152,7 @@ A draft must be approved before it can be sent:
 * If the account owner changes while approval is pending, the quotation returns to Draft with an explanation. The new owner must resubmit it.
 
 ### `Approved`
-The eligible reporting manager approves the quote. A member with send permission can then record sending it. To change an Approved quotation, use **Return to Draft**, then edit and resubmit. Approval is required again. Sending records the action; it does not send an email notification.
+The eligible reporting manager approves the queued quotation, or an eligible top manager approves their Draft directly. A member with send permission can then record sending it. To change an Approved quotation, use **Return to Draft**, then edit and resubmit. Approval is required again. Sending records the action; it does not send an email notification.
 
 ### `Sent`
 Once delivered to the customer via email or formal meeting, use **Send** to record sending.

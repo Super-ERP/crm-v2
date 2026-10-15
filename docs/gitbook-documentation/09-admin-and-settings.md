@@ -92,7 +92,7 @@ With **Manage tenant settings**, open **Settings → Taxonomy → Funnel Stages*
 
 A required checkbox must be checked; budget presets require positive amounts. Required fields are evaluated on forward moves against stages earlier than the target. See [Fields and gates by stage](04-opportunities-and-funnel.md#fields-and-gates-by-stage) before changing the configuration.
 
-**New-organization check:** the organization-creation path seeds stage names and approval flags but currently leaves required-field lists empty. The standard database seed adds field lists separately. Do not assume a newly created organization has the matrix's gates enabled; inspect and save the intended requirements here. Won's own field list is currently not enforced on entry, and KIV reopening has a queued-review limitation described in the same guide.
+**New-organization check:** the organization-creation path seeds stage names and approval flags but currently leaves required-field lists empty. The standard database seed adds field lists separately. Do not assume a newly created organization has the matrix's gates enabled; inspect and save the intended requirements here. Won's own field list is currently not enforced on entry, and KIV reopening follows the manager approval policy described in the same guide.
 
 ## Continue
 

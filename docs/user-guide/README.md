@@ -47,14 +47,15 @@ This is an overview of the usual workflow. Approval requirements and available s
 
 ```mermaid
 flowchart TD
-    L["Capture and qualify a lead"] --> A["Link or create an account and contact"]
+    L["Capture and qualify a lead"] --> C["Request conversion approval, or confirm directly when eligible"]
+    C --> A["Link or create an account and create a contact"]
     A --> F["Track the opportunity and funnel deal"]
     F --> Q["Prepare and approve a quotation"]
     Q --> W["Close the funnel deal as Won"]
     W --> M["Track payment milestones"]
 ```
 
-**In words:** qualify the prospect, confirm the customer records, work the deal, prepare an approved quote, and record the outcome. On Closed Won, live planned payment milestones become **Won**. Billing is recorded separately by updating eligible milestones to **Invoiced**.
+**In words:** qualify the prospect, confirm the customer records, work the deal, prepare an approved quote, and record the outcome. Configure the payment schedule explicitly after customer acceptance of the quotation at stage 4a or Closed Won. Milestones start **Pending invoicing**; record billing with **Mark invoiced**. Closing Won does not create or change the schedule.
 
 ## Need help?
 

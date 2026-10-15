@@ -176,3 +176,27 @@ Roles capabilities are compared. No tenant permissions were changed.
 All seven default role names appear in every comparison tab. Navigation, links,
 anchors, balanced blocks, and git diff --check pass. Work was isolated from
 unrelated application edits in a documentation worktree.
+
+## Approval workflow audit — October 15, v1.2.177
+
+Compared the guide and reference pages with deployed source commit
+`1a43e697c1e6756413c13cd005b530e063579d16` (#261): lead conversion
+submission/decision service and form, shared manager routing, quotation actions,
+stage request/decision service, all three inbox queries/cards, permission templates,
+and the payment-milestone lifecycle.
+
+Corrected the stale claim that lead conversion has no approval, the quick-start's
+separate quotation-review instruction, default Rep/Senior Rep reporting scope,
+old Planned/Won milestone states, and KIV's former queued-reopen limitation.
+Added the lead approval permission matrix, exact Submit conversion action,
+atomic conversion/failure behavior, current-requester permission checks, and the
+three-section inbox. Clarified that stage inbox assignment and record-scoped
+quotation/lead inboxes have different read rules, and that stage reassignment
+requires cancellation/resubmission while quotation/lead routing is dynamic.
+The quotation flow diagram now includes eligible top managers' direct approval.
+Removed the old static conversion diagram, which omitted approval.
+
+This entry supersedes earlier audit statements that described the stage-only
+inbox, unconditional stage-approver bypass, or the pre-approval conversion flow.
+The audit updates repository GitBook content; publication is a separate Git sync
+step after merge. No navigation configuration or application behavior changed.

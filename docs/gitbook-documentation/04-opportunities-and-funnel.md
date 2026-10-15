@@ -88,7 +88,7 @@ flowchart TD
 * **`4a` Commit**: The pursuit is near commitment. Confirm the customer decision and quotation details before recording the outcome.
 * **Closed Won** *(Terminal)*:
    * Contract executed and deal won.
-   * **Automatic Action**: Sets live Planned payment milestones to `Won`; Invoiced milestones retain their status.
+   * **Payment milestones**: Closing Won does not create a schedule or change milestone status. Explicit setup requires a customer Accepted quotation and an eligible stage.
    * Locks the stage from further changes.
 * **Closed Lost** *(Terminal)*:
    * Prospect decided against the purchase or chose a competitor.
