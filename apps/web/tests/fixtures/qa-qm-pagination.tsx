@@ -62,6 +62,13 @@ for (const template of ["qm", "qa"] as const) {
  for (const fixture of cases) {
   const doc = documentWithTax("8.000", null)
   doc.lines = Array.from({length: fixture.count}, (_, i) => ({id: String(i), description: fixture.description ?? `Service ${i + 1}\nImplementation and support services`, quantity: "1", uom: "Unit", unitPrice: "100", discountAmount: fixture.name.startsWith("discount-") ? "10" : "0", lineSubtotal: fixture.name.startsWith("discount-") ? "90" : "100"})) as QuotationDocument["lines"]
+  if (fixture.name === "discount-short") {
+    doc.lines = [
+      {id: "1", description: "1. Subsidiary Set Up\n2. Intercompany Function Implementation\n3. SST Implementation\n4. E-Invoice Implementation", quantity: "11", uom: "Mandays", unitPrice: "1800", discountAmount: "1980", lineSubtotal: "17820"},
+      {id: "2", description: "Annual Managed Services (AMS)\n- Engineering support including SST and E-Invoice", quantity: "1", uom: "Time", unitPrice: "3465", discountAmount: "346.50", lineSubtotal: "3118.50"},
+    ] as QuotationDocument["lines"]
+    Object.assign(doc.quotation, {subtotal: "20938.50", taxTotal: "1675.08", total: "22613.58"})
+  }
   doc.quotation.notes = fixture.notes ?? "1. Prices valid for the quotation period.\n2. Work begins after acceptance."
   doc.company.quoteFooter = fixture.terms ?? "Payment due within 30 days."
   doc.company.bankDetails = "Sample payment details."
