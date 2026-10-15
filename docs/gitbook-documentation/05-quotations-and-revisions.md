@@ -266,7 +266,7 @@ Open **Preview** on the quotation:
 
 ## Project-code context
 
-Quotation lists and details show **Project code** and **Cross-deal project code** from the linked funnel. This information is available without the Projects module. Duplicating a quotation within the same funnel keeps that relationship; it does not allocate a different project identity. The code fields are CRM context, not a change to the quotation's running number or PDF template.
+Quotation lists and details show clickable **Project code** and **Cross-deal project code** values from the linked funnel when it is at Commit (4A) or Closed Won. This information is available without the Projects module. Duplicating a quotation within the same funnel keeps that relationship; it does not allocate a different project identity. The code fields are CRM context, not a change to the quotation's running number or PDF template.
 
 If Projects is enabled, the linked delivery project can be found through its explicit quotation/funnel relationship or matching funnel code, subject to matching account and project-view access. Creating a project reuses the existing funnel code; it does not silently replace it with a newly generated number.
 
@@ -275,3 +275,7 @@ If Projects is enabled, the linked delivery project can be found through its exp
 * [Payment milestones](06-payment-milestones.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+### Open a project code
+
+Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).

@@ -1,5 +1,8 @@
 "use server"
 
+import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
+import { alias } from "drizzle-orm/pg-core"
+import { funnels } from "@/db/schema"
 import { sql } from "drizzle-orm"
 import { runInTenant } from "@/db"
 import { requireContext } from "@/lib/server-context"
@@ -8,7 +11,7 @@ import { PERMISSIONS } from "@/lib/permissions"
 import { APPROVAL_PAGE_SIZE, normalizeApprovalPage } from "@/lib/approval-pagination"
 
 export type RelatedProjectCodeRow = {
-  funnelId: string; funnelName: string; opportunityId: string; opportunityName: string
+  funnelId: string; funnelName: string; opportunityId: string | null; opportunityName: string | null
   projectCode: string | null; crossDealProjectCode: string | null; crmProjectCode: string | null
 }
 export type RelatedProjectCodePage = { rows: RelatedProjectCodeRow[]; pageIndex: number; hasNextPage: boolean }
@@ -32,12 +35,13 @@ export async function listRelatedProjectCodes(kind: "account" | "person", id: st
     const relation = kind === "account" ? sql`(f.account_id = ${id} OR ${quoteRelationship})`
       : sql`(f.primary_person_id = ${id} OR o.primary_person_id = ${id} OR o.owner_contact_id = ${id}
           OR o.power_sponsor_contact_id = ${id} OR ${quoteRelationship})`
+    const parentScope = visible === null ? sql`true` : sql`o.owner_member_id IN (${sql.join(visible.map(value => sql`${value}`), sql`, `)})`
     const rows = await tx.execute<RelatedProjectCodeRow>(sql`
-      SELECT f.id AS "funnelId", f.name AS "funnelName", o.id AS "opportunityId", o.name AS "opportunityName",
-        f.project_code AS "projectCode", f.cross_deal_project_code AS "crossDealProjectCode", o.project_code AS "crmProjectCode"
+      SELECT f.id AS "funnelId", f.name AS "funnelName", CASE WHEN ${parentScope} THEN o.id END AS "opportunityId", CASE WHEN ${parentScope} THEN o.name END AS "opportunityName",
+        f.project_code AS "projectCode", f.cross_deal_project_code AS "crossDealProjectCode", CASE WHEN ${parentScope} THEN o.project_code END AS "crmProjectCode"
       FROM funnels f JOIN opportunities o ON o.id = f.opportunity_id AND o.tenant_id = f.tenant_id
-      WHERE f.tenant_id = ${ctx.tenantId} AND f.deleted_at IS NULL AND o.deleted_at IS NULL AND ${scope} AND ${relation}
-        AND (nullif(trim(f.project_code), '') IS NOT NULL OR nullif(trim(f.cross_deal_project_code), '') IS NOT NULL OR nullif(trim(o.project_code), '') IS NOT NULL)
+      WHERE f.tenant_id = ${ctx.tenantId} AND f.deleted_at IS NULL AND o.deleted_at IS NULL AND ${scope} AND ${relation} AND ${activeProjectCodeFunnel(alias(funnels, "f"))}
+        AND (nullif(trim(f.project_code), '') IS NOT NULL OR nullif(trim(f.cross_deal_project_code), '') IS NOT NULL OR (${parentScope} AND nullif(trim(o.project_code), '') IS NOT NULL))
       ORDER BY f.project_code NULLS LAST, f.name, f.id LIMIT ${APPROVAL_PAGE_SIZE + 1} OFFSET ${pageIndex * APPROVAL_PAGE_SIZE}
     `)
     return { rows: rows.slice(0, APPROVAL_PAGE_SIZE), pageIndex, hasNextPage: rows.length > APPROVAL_PAGE_SIZE }

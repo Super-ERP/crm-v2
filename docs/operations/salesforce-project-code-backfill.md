@@ -1,6 +1,6 @@
 # Salesforce deal project code recovery
 
-Salesforce `Opportunity` records are CRM funnels. `Project_Code__c` maps to `funnels.project_code`; `Project_Code_For_Cross_Deal__c` maps independently to `funnels.cross_deal_project_code`. Only surrounding whitespace is removed. These central pipeline fields remain available when the Projects module is disabled. Container `opportunities.project_code` is an internal delivery code generated at first 4A entry and is never changed by this recovery. Do not collapse codes onto containers: one container can have several distinct deal codes.
+Salesforce `Opportunity` records are CRM funnels. `Project_Code__c` maps to `funnels.project_code`; `Project_Code_For_Cross_Deal__c` maps independently to `funnels.cross_deal_project_code`. Only surrounding whitespace is removed. These central pipeline fields remain available when the Projects module is disabled. Container `opportunities.project_code` is an internal delivery code generated at first 4A/Won entry and is never changed by this recovery. Do not collapse codes onto containers: one container can have several distinct deal codes.
 
 Deploy migration `0099_funnel_project_codes` before live recovery. Use the original Salesforce export and exact tenant ID. Reports contain private source identifiers and before/after values, and must stay outside the export and repository. The CLI creates private report directories and files, records SHA-256 source hashes, and defaults to dry run.
 
@@ -16,3 +16,5 @@ For an offline dry run, add `--snapshot /private/snapshot.json`. Snapshot shape 
 After the concrete plan is reviewed and deployment is verified, rerun against the live database with `--apply`. All rows and their audits commit in one transaction. Any review row blocks application. Updates check the exact before values, timestamp, tenant, source parent, soft deletion and an active same-tenant container; a concurrent change rolls everything back. The committed marker is written only after the transaction succeeds. Preserve both the plan and marker with recovery evidence.
 
 Rerun dry run after application: expect zero ready/review rows and all source rows already captured. Confirm container internal codes and unrelated funnel fields remain unchanged. For rollback, use the private before images with equivalent tenant, timestamp and current-after-value guards in a reviewed transaction; never execute an unconditional restore.
+
+Active display is stage-gated independently of recovery: identifiers on earlier-stage, Lost or KIV funnels remain stored but are omitted from code fields, the Project Codes directory and code search. Recovery must preserve those historical values, not delete them to match the active view.

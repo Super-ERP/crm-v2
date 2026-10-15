@@ -174,11 +174,19 @@ A queued KIV-to-open approval now applies the reopen when the original transitio
 
 ## Project codes across sales records
 
-**Project code** and **Cross-deal project code** are core CRM identifiers, available even when the optional **Projects** module is disabled. The Funnel list, board and detail show the original funnel codes. Opportunity lists show the distinct child-funnel codes, and Opportunity details show each child separately. Multiple child codes are not collapsed into one parent code.
+**Project Codes** is a core CRM page in the **Sales** navigation. It works even when the optional **Projects** module is disabled. Search the directory by all or part of a code, or use global search and choose a result in **Project Codes**. The Funnel page's search continues to match funnel names only.
 
-Salesforce `Opportunity.Project_Code__c` maps to the funnel's Project code; `Project_Code_For_Cross_Deal__c` is kept separately. Historical text and punctuation are preserved rather than reformatted. The existing generated Opportunity **CRM project code** remains a separate identifier; entering 4a can allocate that internal code without creating a delivery project.
+Click a code in the directory, a Funnel, Opportunity, Quotation, Account or Contact to open its central page. The page groups accessible funnels using that exact code and labels **Primary**, **Cross-deal** and **CRM** relationships separately. It also links to accessible Opportunities, Quotations, end-user and bill-to Accounts, and explicitly linked Contacts. Delivery Projects appear when the Projects module is enabled and you can view them. Funnel results are paginated; related records correspond to the funnels on the current page.
 
-When Projects is enabled and you have its permissions, creating a delivery project from a coded funnel reuses that code. A visible existing project with the same code and account is reused; conflicting account/code links are rejected rather than overwritten. If an uncoded funnel creates a delivery project, the chosen code is saved back to the funnel. Enabling Projects alone does not automatically create projects.
+### Available from Commit (4A)
+
+Codes are active only for funnels at **Commit (4A)** or **Closed Won**, with an open or won funnel status. Earlier stages, Closed Lost and KIV do not contribute codes to the directory, global search, related-code panels or code fields on sales records. A code shared with another eligible funnel can remain active through that other funnel.
+
+Moving a funnel below 4A hides its stored identifiers; it does not delete them. Returning to an eligible stage exposes the same codes again. Historical Salesforce codes already imported against earlier-stage funnels remain stored for this purpose. Viewing a code never grants access to another user's records: sales representatives see their own records, and managers see their permitted team scope.
+
+Salesforce `Opportunity.Project_Code__c` maps to the funnel's **Project code**; `Project_Code_For_Cross_Deal__c` remains its separate **Cross-deal project code**. Historical text and punctuation are preserved. The generated Opportunity **CRM project code** is a separate identifier, allocated on the first entry to 4A or Won without creating a delivery Project. Multiple distinct child-funnel codes are not collapsed into one parent code.
+
+When Projects is enabled, creating or relinking a delivery Project to a funnel requires the source funnel to be at 4A or Won. A coded source reuses its code. An accessible existing delivery Project with that code and account is reused; conflicting links are rejected. If an eligible uncoded funnel creates a delivery Project, its chosen code is saved back to the funnel. Enabling Projects alone does not create any Project records.
 
 ## Continue
 

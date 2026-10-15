@@ -1,5 +1,7 @@
 "use server"
 
+import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
+
 import { and, asc, desc, eq, isNull, or } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, requireContext, assertCan } from "@/lib/actions"
@@ -920,7 +922,7 @@ export async function listOpportunityProjects(
     if (!ctx.can(PERMISSIONS.PROJECT_VIEW)) return []
     const visible = await visibleMemberIds(tx, ctx)
     const [source] = await tx.select({ accountId: funnels.accountId, projectCode: funnels.projectCode, ownerMemberId: funnels.ownerMemberId }).from(funnels)
-      .where(and(eq(funnels.id, funnelId), isNull(funnels.deletedAt))).limit(1)
+      .where(and(eq(funnels.id, funnelId), isNull(funnels.deletedAt), activeProjectCodeFunnel())).limit(1)
     if (!source || !ownsOrManages(visible, source.ownerMemberId)) return []
     return tx
       .select({

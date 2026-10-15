@@ -1,5 +1,6 @@
 "use client"
 
+import { ProjectCodeLinks } from "@/components/project-code-link"
 import * as React from "react"
 import { Briefcase } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -49,13 +50,13 @@ export function OpportunitiesTable({ initialPage, filterOptions }: {
         accessorKey: "projectCodes",
         header: "Project code",
         enableSorting: false,
-        cell: ({ row }) => row.original.projectCodes?.join(", ") || "—",
+        cell: ({ row }) => <ProjectCodeLinks codes={row.original.projectCodes} />,
       },
       {
         accessorKey: "crossDealProjectCodes",
         header: "Cross-deal project code",
         enableSorting: false,
-        cell: ({ row }) => row.original.crossDealProjectCodes?.join(", ") || "—",
+        cell: ({ row }) => <ProjectCodeLinks codes={row.original.crossDealProjectCodes} />,
       },
       {
         accessorKey: "funnelCount",

@@ -261,6 +261,7 @@ export default async function OpportunityDetailPage({
         ) : null}
 
         <FunnelDetailBody
+          crmProjectCode={detail.container?.projectCode}
           projectCode={opp.projectCode}
           crossDealProjectCode={opp.crossDealProjectCode}
           funnelId={opp.id}

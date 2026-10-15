@@ -1,5 +1,7 @@
 "use server"
 
+import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
+
 import { findManagerApprover, resolveApprovalRoute } from "@/server/services/approval-routing"
 
 import { canSelectBillToAccount, resolveQuotationBillingAccount, type QuotationBillingSnapshot } from "@/lib/quotation-billing"
@@ -407,7 +409,7 @@ export async function getProjectForQuotation(
       .select({ oppOwner: funnels.ownerMemberId, funnelId: funnels.id, accountId: funnels.accountId, sourceCode: funnels.projectCode })
       .from(quotations)
       .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
-      .where(and(eq(quotations.id, quotationId), isNull(quotations.deletedAt)))
+      .where(and(eq(quotations.id, quotationId), isNull(quotations.deletedAt), activeProjectCodeFunnel()))
       .limit(1)
     if (!scope || !ownsOrManages(visible, scope.oppOwner)) return null
     const [row] = await tx

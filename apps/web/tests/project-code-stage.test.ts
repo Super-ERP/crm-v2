@@ -278,9 +278,10 @@ describe("Opportunity project-code timing", () => {
     expect(nextProjectCode).not.toHaveBeenCalled()
   })
 
-  it("allocates only for 4A, and not for earlier or rollback stages", () => {
+  it("allocates for 4A or Won, and not for earlier or rollback stages", () => {
     expect(shouldAllocateOpportunityProjectCode("4a")).toBe(true)
-    for (const code of ["0e", "1d", "2c", "3b", "won", "lost", "kiv"]) {
+    expect(shouldAllocateOpportunityProjectCode("won")).toBe(true)
+    for (const code of ["0e", "1d", "2c", "3b", "lost", "kiv"]) {
       expect(shouldAllocateOpportunityProjectCode(code)).toBe(false)
     }
   })

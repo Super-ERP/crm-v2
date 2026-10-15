@@ -1,5 +1,6 @@
 "use client"
 
+import { ProjectCodeLink } from "@/components/project-code-link"
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -58,9 +59,9 @@ type Stage = FunnelWithStages["stages"][number]
 function CardBody({ c }: { c: OpportunityListRow }) {
   return (
     <>
-      <p className="truncate text-sm font-medium">{c.name}</p>
-      {c.projectCode ? <p className="truncate text-xs text-muted-foreground">Project code: {c.projectCode}</p> : null}
-      {c.crossDealProjectCode ? <p className="truncate text-xs text-muted-foreground">Cross-deal project code: {c.crossDealProjectCode}</p> : null}
+      <Link href={`/funnel/${c.id}`} className="block truncate text-sm font-medium hover:underline">{c.name}</Link>
+      {c.projectCode ? <p className="truncate text-xs text-muted-foreground">Project code: <ProjectCodeLink code={c.projectCode} /></p> : null}
+      {c.crossDealProjectCode ? <p className="truncate text-xs text-muted-foreground">Cross-deal project code: <ProjectCodeLink code={c.crossDealProjectCode} /></p> : null}
       <p className="truncate text-xs text-muted-foreground">{c.accountName}</p>
       <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-semibold tabular-nums">
@@ -102,13 +103,8 @@ function DraggableCard({
       {...dragProps}
     >
       <CardContent className="px-3 py-3">
-        {/* The Link stays navigable: the PointerSensor only starts a drag
-            after a small movement, so plain clicks open the deal. */}
-        <Link href={`/funnel/${c.id}`} className="block">
-          <span className="block [&_p:first-child]:hover:underline">
-            <CardBody c={c} />
-          </span>
-        </Link>
+        {/* Separate links avoid nesting the code destination inside the deal link. */}
+        <CardBody c={c} />
       </CardContent>
     </Card>
   )

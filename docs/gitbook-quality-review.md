@@ -244,11 +244,12 @@ Browser rendering, actual PDF pagination and live reporting-profile permissions
 still require deployment QA. Public GitBook publication/sync was not performed
 by this audit; repository edits do not prove the published pages have updated.
 
-Project-code ingestion/display was investigated separately by the coordinator:
-the current internal Opportunity project code is generated when a child first
-enters 4a; Salesforce source project codes are not currently imported by the
-existing importer. No planned source-code display/backfill behavior is described
-here as shipped. Optional delivery, procurement and finance workflows need their
+This audit snapshot predates the project-code feature. At audit time, only the
+internal Opportunity code was generated at 4A and the importer omitted Salesforce
+source codes. PR #263 subsequently added source-code import and core CRM display;
+the maintained sales guides describe that behavior and its later directory and
+stage-visibility refinements. This historical inventory is not a live release
+status report. Optional delivery, procurement and finance workflows need their
 own deployment-specific guides if they become part of this Base documentation.
 
 Historical review entries above describe earlier snapshots. Where they conflict

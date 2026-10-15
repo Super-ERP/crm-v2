@@ -112,6 +112,19 @@ describe("module-owned nested API readers", () => {
     moduleState.map = createDisabledModuleMap()
   })
 
+  it("hides an inaccessible parent's CRM code on an owned active funnel", async () => {
+    const rep = { ...ctx, isSuperadmin: false, can: (permission: string) => permission === "opportunities.view" }
+    const tx = tableTx([
+      [funnels, [[{ id: "f", accountId: "a", opportunityId: "o", ownerMemberId: "member-1", currentStageId: "s", pipelineId: "p", status: "open", projectCode: "OWN-CODE", crossDealProjectCode: null }]]],
+      [accounts, [[{ name: "Account" }]]],
+      [opportunities, [[{ id: "o", ownerMemberId: "other", projectCode: "PRIVATE-CRM" }]]],
+      [pipelineStages, [[{ id: "s", code: "4a", kind: "OPEN", name: "Commit" }], []]],
+    ])
+    const detail = await funnelsGet(tx, rep, "f")
+    expect(detail?.opportunity.projectCode).toBe("OWN-CODE")
+    expect(detail?.container?.projectCode).toBeNull()
+  })
+
   it("does not query or return project rows from a core person detail", async () => {
     const tx = tableTx([
       [persons, [[{ person: { id: "person-1" }, accountName: "Acme", accountOwner: "member-1" }]]],
@@ -232,8 +245,8 @@ describe("module-owned nested API readers", () => {
     expect(tx.joins).toContain(accounts)
     expect(result.rows[0]).toMatchObject({ projectCode: "SF-ORIGINAL-001", crossDealProjectCode: "SF-CROSS-002" })
     const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls[0]![0]
-    expect(selection.projectCode).toBe(funnels.projectCode)
-    expect(selection.crossDealProjectCode).toBe(funnels.crossDealProjectCode)
+    expect(new PgDialect().sqlToQuery(selection.projectCode).sql).toContain("code_stage.code = '4a'")
+    expect(new PgDialect().sqlToQuery(selection.crossDealProjectCode).sql).toContain("code_stage.kind = 'WON'")
     expect(tx.joins).not.toContain(projects)
     expect(tx.joins).toContain(opportunities)
   })
@@ -247,8 +260,8 @@ describe("module-owned nested API readers", () => {
     const detail = await quotationsGet(tx, ctx, "quote-1")
     expect(detail).toMatchObject({ projectCode: "SF-001", crossDealProjectCode: "SF-CROSS-001" })
     const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls[0]![0]
-    expect(selection.projectCode).toBe(funnels.projectCode)
-    expect(selection.crossDealProjectCode).toBe(funnels.crossDealProjectCode)
+    expect(new PgDialect().sqlToQuery(selection.projectCode).sql).toContain("code_stage.code = '4a'")
+    expect(new PgDialect().sqlToQuery(selection.crossDealProjectCode).sql).toContain("code_stage.kind = 'WON'")
     expect(tx.joins).not.toContain(projects)
   })
 

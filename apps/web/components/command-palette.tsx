@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
+  HashIcon,
   SearchIcon,
   PlusIcon,
   TargetIcon,
@@ -87,6 +88,7 @@ const ICONS: Record<SearchHit["type"], React.ComponentType<{ className?: string 
   opportunity: FilterIcon,
   quotation: FileTextIcon,
   project: FolderKanbanIcon,
+  "project-code": HashIcon,
 }
 
 const QUICK_CREATE: {

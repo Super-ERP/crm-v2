@@ -1,4 +1,6 @@
 import "server-only"
+import { activeProjectCodeFunnel, visibleProjectCode } from "@/server/services/project-code-visibility"
+import { isProjectCodeActive } from "@/lib/project-code-policy"
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { expectedCloseYearFilter } from "@/server/services/funnel-filters"
@@ -585,8 +587,8 @@ export async function opportunitiesList(
     .select({
       opportunityId: funnels.opportunityId,
       n: sql<number>`count(*)::int`,
-      projectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.projectCode} order by ${funnels.projectCode}) filter (where ${funnels.projectCode} is not null), ARRAY[]::text[])`,
-      crossDealProjectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.crossDealProjectCode} order by ${funnels.crossDealProjectCode}) filter (where ${funnels.crossDealProjectCode} is not null), ARRAY[]::text[])`,
+      projectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.projectCode} order by ${funnels.projectCode}) filter (where ${activeProjectCodeFunnel()} and ${funnels.projectCode} is not null), ARRAY[]::text[])`,
+      crossDealProjectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.crossDealProjectCode} order by ${funnels.crossDealProjectCode}) filter (where ${activeProjectCodeFunnel()} and ${funnels.crossDealProjectCode} is not null), ARRAY[]::text[])`,
     })
     .from(funnels)
     .where(
@@ -710,13 +712,14 @@ export async function opportunitiesGet(
     .select({
       id: funnels.id,
       name: funnels.name,
-      projectCode: funnels.projectCode,
-      crossDealProjectCode: funnels.crossDealProjectCode,
+      projectCode: visibleProjectCode(funnels.projectCode),
+      crossDealProjectCode: visibleProjectCode(funnels.crossDealProjectCode),
       status: funnels.status,
       estimatedAmount: funnels.estimatedAmount,
       currency: funnels.currency,
       stageName: pipelineStages.name,
       stageKind: pipelineStages.kind,
+      stageCode: pipelineStages.code,
     })
     .from(funnels)
     .leftJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
@@ -758,7 +761,7 @@ export async function opportunitiesGet(
     : []
 
   return {
-    opportunity: opp,
+    opportunity: { ...opp, projectCode: children.some(c => isProjectCodeActive({ stageCode: c.stageCode, stageKind: c.stageKind, status: c.status })) ? opp.projectCode : null },
     accountId: opp.accountId,
     accountName: acct?.name ?? "—",
     accountCurrency: acct?.currency ?? "MYR",
@@ -910,8 +913,8 @@ export async function funnelsList(
         id: funnels.id,
         opportunityId: funnels.opportunityId,
         name: funnels.name,
-      projectCode: funnels.projectCode,
-      crossDealProjectCode: funnels.crossDealProjectCode,
+      projectCode: visibleProjectCode(funnels.projectCode),
+      crossDealProjectCode: visibleProjectCode(funnels.crossDealProjectCode),
         accountId: funnels.accountId,
         accountName: accounts.name,
         accountOwnerMemberId: accounts.ownerMemberId,
@@ -1224,10 +1227,10 @@ export async function funnelsGet(
   }))
 
   return {
-    opportunity: opp,
+    opportunity: { ...opp, ...(!isProjectCodeActive({ stageCode: stage?.code, stageKind: stage?.kind, status: opp.status }) ? { projectCode: null, crossDealProjectCode: null } : {}) },
     accountName: acct?.name ?? "—",
     accountCurrency: acct?.currency ?? "MYR",
-    container: container ?? null,
+    container: container ? { ...container, projectCode: ownsOrManages(visible, container.ownerMemberId) && isProjectCodeActive({ stageCode: stage?.code, stageKind: stage?.kind, status: opp.status }) ? container.projectCode : null } : null,
     parties,
     partnerResponses,
     personName,
@@ -1335,8 +1338,8 @@ export async function quotationsList(
         accountOwnerMemberId: accounts.ownerMemberId,
         accountOwnerName: accountOwnerUser.name,
         funnelName: funnels.name,
-        projectCode: funnels.projectCode,
-        crossDealProjectCode: funnels.crossDealProjectCode,
+        projectCode: visibleProjectCode(funnels.projectCode),
+        crossDealProjectCode: visibleProjectCode(funnels.crossDealProjectCode),
         opportunityId: opportunities.id,
         opportunityCode: opportunities.code,
         opportunityName: opportunities.name,
@@ -1454,8 +1457,8 @@ export async function quotationsGet(
     .select({
       q: quotations,
       opportunityName: funnels.name,
-      projectCode: funnels.projectCode,
-      crossDealProjectCode: funnels.crossDealProjectCode,
+      projectCode: visibleProjectCode(funnels.projectCode),
+      crossDealProjectCode: visibleProjectCode(funnels.crossDealProjectCode),
       oppOwner: funnels.ownerMemberId,
       accountId: funnels.accountId,
       accountName: accounts.name,

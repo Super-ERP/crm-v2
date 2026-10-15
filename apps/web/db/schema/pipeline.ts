@@ -159,8 +159,9 @@ export const opportunities = pgTable(
     /** Full set of project natures (first = primary). */
     projectNatures: jsonb("project_natures").$type<string[]>(),
     /** Internal delivery code (`YYYY-ENTITY-ACCOUNT-NATURE-NNN`, via
-     *  nextProjectCode) generated on the first entry to stage 4A. Never shown in
-     *  the UI — used only to prefix payment milestones' hidden `name` field. */
+     *  nextProjectCode) generated on the first eligible entry (4A or Won).
+     *  Separate from imported funnel identifiers; visible as CRM project code
+     *  only through active, accessible sales relationships. */
     projectCode: text("project_code"),
     /** Single-currency rollup; null when child funnels use multiple currencies. */
     totalEstimatedFunnelAmount: numeric("total_estimated_funnel_amount", {

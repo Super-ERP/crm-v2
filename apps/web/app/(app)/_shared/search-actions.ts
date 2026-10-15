@@ -1,5 +1,7 @@
 "use server"
 
+import { listProjectCodes } from "@/server/services/project-codes"
+import { projectCodeHref } from "@/lib/project-code-policy"
 import { and, ilike, isNull, or, sql } from "drizzle-orm"
 import { requireContext } from "@/lib/server-context"
 import { runInTenant } from "@/db"
@@ -22,6 +24,7 @@ export type SearchHitType =
   | "opportunity"
   | "quotation"
   | "project"
+  | "project-code"
 
 export type SearchHit = {
   id: string
@@ -198,6 +201,15 @@ export async function globalSearch(query: string): Promise<SearchHit[]> {
           subtitle: r.oppName ?? undefined,
           href: `/quotations/${r.id}`,
         })
+    }
+
+    if (ctx.can(PERMISSIONS.OPPORTUNITY_VIEW)) {
+      const codes = await listProjectCodes(tx, ctx, { search: q })
+      for (const row of codes.rows.slice(0, PER_TYPE_LIMIT)) hits.push({
+        id: row.code, type: "project-code", group: "Project Codes", title: row.code,
+        subtitle: `${row.funnelCount} linked funnel${row.funnelCount === 1 ? "" : "s"}`,
+        href: projectCodeHref(row.code),
+      })
     }
 
     if (modules.projects && ctx.can(PERMISSIONS.PROJECT_VIEW)) {
