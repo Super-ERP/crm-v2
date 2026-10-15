@@ -181,6 +181,24 @@ export function ProjectCreateForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
+  const [sourceCode, setSourceCode] = React.useState<string | null>(null)
+  const selectedFunnelId = form.watch("funnelId")
+  React.useEffect(() => {
+    let cancelled = false
+    setSourceCode(null)
+    if (selectedFunnelId && selectedFunnelId !== NONE) {
+      void prefillFromOpportunity(selectedFunnelId).then((prefill) => {
+        if (cancelled) return
+        setSourceCode(prefill?.projectCode ?? null)
+        if (prefill?.projectCode) {
+          form.setValue("codeNature", "auto")
+          form.setValue("projectCode", "")
+        }
+      })
+    }
+    return () => { cancelled = true }
+  }, [selectedFunnelId, form])
+
   const codeNature = form.watch("codeNature")
   const watchedAccountId = form.watch("accountId")
   const watchedProjectNature = form.watch("projectNatureCode")
@@ -224,7 +242,7 @@ export function ProjectCreateForm({
       setSubmitting(false)
       return
     }
-    toast.success(`Project ${res.data.projectCode} created`)
+    toast.success(`Project ${res.data.projectCode} ready`)
     router.push(`/projects/${res.data.id}`)
   }
 
@@ -300,6 +318,7 @@ export function ProjectCreateForm({
                   <FormItem>
                     <FormLabel>Code assignment</FormLabel>
                     <Select
+                      disabled={!!sourceCode}
                       value={field.value}
                       onValueChange={(v) => {
                         field.onChange(v)
@@ -354,14 +373,14 @@ export function ProjectCreateForm({
             {codeNature === "manual" ? null : (
               <div className="grid gap-1 rounded-lg border border-dashed bg-muted/30 p-3">
                 <span className="text-muted-foreground text-xs">
-                  Generated code (preview)
+                  {sourceCode ? "Source CRM project code" : "Generated code (preview)"}
                 </span>
                 <span className="font-mono text-sm font-semibold">
-                  {previewCode}
+                  {sourceCode ?? previewCode}
                 </span>
                 <span className="text-muted-foreground text-xs">
-                  ### becomes the next running number for {codeYear} on creation.
-                  {!selectedAccountHasCode
+                  {sourceCode ? "Reuses this code and opens the existing delivery project when one is already linked." : `### becomes the next running number for ${codeYear} on creation.`}
+                  {!sourceCode && !selectedAccountHasCode
                     ? " Set the account's code so ACCOUNT resolves."
                     : null}
                 </span>

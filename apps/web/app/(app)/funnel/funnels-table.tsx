@@ -29,6 +29,18 @@ const columns: ColumnDef<OpportunityListRow>[] = [
     ),
   },
   {
+    accessorKey: "projectCode",
+    header: "Project code",
+    enableSorting: false,
+    cell: ({ row }) => row.original.projectCode ?? "—",
+  },
+  {
+    accessorKey: "crossDealProjectCode",
+    header: "Cross-deal project code",
+    enableSorting: false,
+    cell: ({ row }) => row.original.crossDealProjectCode ?? "—",
+  },
+  {
     id: "opportunityId",
     accessorFn: (row) => ({ id: row.opportunityId, label: row.opportunityName }),
     header: "Opportunity",

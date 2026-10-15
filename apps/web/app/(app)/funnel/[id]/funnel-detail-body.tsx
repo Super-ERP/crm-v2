@@ -105,6 +105,8 @@ const INVOICE_MONTHS = [
 type StageLite = OpportunityDetail["funnelStagesList"][number]
 
 export type FunnelDetailData = {
+  projectCode?: string | null
+  crossDealProjectCode?: string | null
   funnelId: string
   currentStageId: string
   stages: StageLite[]
@@ -940,6 +942,8 @@ export function FunnelDetailBody(props: FunnelDetailData) {
 
             {/* Salesforce "Funnel Info" section (SPEC §4). */}
             <h3 className="text-sm font-semibold">Funnel Info</h3>
+            <FieldRow label="Project code">{props.projectCode ?? "—"}</FieldRow>
+            <FieldRow label="Cross-deal project code">{props.crossDealProjectCode ?? "—"}</FieldRow>
             <FieldRow label="Funnel Name">
               {canEdit ? (
                 <InlineValue

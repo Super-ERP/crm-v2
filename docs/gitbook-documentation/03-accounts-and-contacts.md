@@ -133,6 +133,14 @@ When generating quotations or advancing sales stages:
 * The primary contact's details are automatically copied into the quotation's **Attention** field.
 * Contacts can be assigned as the **Power Sponsor** during opportunity qualification.
 
+## Related project codes
+
+Account and Contact details include **Related project codes**, independently of the optional Projects module. An account or contact can relate to several sales pursuits, so there is no single project-code field that overwrites those relationships.
+
+Accounts show codes from their end-user funnels and, when you can view quotations, funnels whose quotations bill that account. Contacts show explicit funnel/opportunity contact relationships and, when quotation viewing is permitted, quotation attention-contact links. Merely sharing a company does not assign all its project codes to a contact.
+
+The panel lists the original Project code, Cross-deal project code, separate CRM project code, and links to the Funnel and Opportunity. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
+
 ## Continue
 
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)

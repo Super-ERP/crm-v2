@@ -159,7 +159,7 @@ export const opportunities = pgTable(
     /** Full set of project natures (first = primary). */
     projectNatures: jsonb("project_natures").$type<string[]>(),
     /** Internal delivery code (`YYYY-ENTITY-ACCOUNT-NATURE-NNN`, via
-     *  nextProjectCode) generated once at container creation. Never shown in
+     *  nextProjectCode) generated on the first entry to stage 4A. Never shown in
      *  the UI — used only to prefix payment milestones' hidden `name` field. */
     projectCode: text("project_code"),
     /** Single-currency rollup; null when child funnels use multiple currencies. */
@@ -236,6 +236,10 @@ export const funnels = pgTable(
       .notNull()
       .references(() => opportunities.id, { onDelete: "restrict" }),
     name: text("name").notNull(),
+    /** Salesforce deal identifier, available independently of the Projects module. */
+    projectCode: text("project_code"),
+    /** Independent Salesforce cross-deal identifier; never inferred from projectCode. */
+    crossDealProjectCode: text("cross_deal_project_code"),
     // Auto-populated from the parent Opportunity's account. Composite FK below.
     accountId: uuid("account_id").notNull(),
     primaryPersonId: uuid("primary_person_id").references(() => persons.id, {

@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { listRelatedProjectCodes } from "@/app/(app)/_shared/project-code-actions"
+import { ProjectCodePanel } from "@/app/(app)/_shared/project-code-panel"
 import { notFound } from "next/navigation"
 
 import { Plus } from "lucide-react"
@@ -54,6 +56,7 @@ export default async function AccountDetailPage({
     ])
 
   if (!data) notFound()
+  const projectCodes = ctx.can(PERMISSIONS.OPPORTUNITY_VIEW) ? await listRelatedProjectCodes("account", id) : null
   const {
     account,
     parent,
@@ -250,6 +253,7 @@ export default async function AccountDetailPage({
             modules.projects && ctx.can(PERMISSIONS.PROJECT_CREATE)
           }
         />
+        {projectCodes ? <ProjectCodePanel kind="account" recordId={id} initialPage={projectCodes} /> : null}
       </PageBody>
     </>
   )

@@ -18,7 +18,7 @@ import {
   stageApprovalRequests,
 } from "@/db/schema"
 import { createDisabledModuleMap } from "@/lib/module-registry"
-import { accountsList, funnelsGet, funnelsList, leadsList, opportunitiesList, personsGet, personsList, quotationsList } from "@/lib/api-readers"
+import { accountsList, funnelsGet, funnelsList, leadsList, opportunitiesList, personsGet, personsList, quotationsList, quotationsGet } from "@/lib/api-readers"
 import type { QuotationStatus } from "@/lib/quotation-transitions"
 import type { Tx } from "@/db"
 import type { ServerContext } from "@/lib/server-context"
@@ -208,6 +208,8 @@ describe("module-owned nested API readers", () => {
         accountCode: "ACM-01",
         funnelId: "funnel-1",
         funnelName: "ERP migration",
+        projectCode: "SF-ORIGINAL-001",
+        crossDealProjectCode: "SF-CROSS-002",
         opportunityId: "opportunity-1",
         opportunityCode: "OPP-27-001",
         opportunityName: "FY27 Modernization",
@@ -228,7 +230,39 @@ describe("module-owned nested API readers", () => {
       opportunityName: "FY27 Modernization",
     })
     expect(tx.joins).toContain(accounts)
+    expect(result.rows[0]).toMatchObject({ projectCode: "SF-ORIGINAL-001", crossDealProjectCode: "SF-CROSS-002" })
+    const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls[0]![0]
+    expect(selection.projectCode).toBe(funnels.projectCode)
+    expect(selection.crossDealProjectCode).toBe(funnels.crossDealProjectCode)
+    expect(tx.joins).not.toContain(projects)
     expect(tx.joins).toContain(opportunities)
+  })
+
+  it("returns the linked funnel codes on quotation detail with Projects disabled", async () => {
+    const tx = tableTx([[quotations, [[{
+      q: { id: "quote-1", funnelId: "funnel-1" },
+      opportunityName: "Funnel", oppOwner: "member-1",
+      projectCode: "SF-001", crossDealProjectCode: "SF-CROSS-001",
+    }]]]])
+    const detail = await quotationsGet(tx, ctx, "quote-1")
+    expect(detail).toMatchObject({ projectCode: "SF-001", crossDealProjectCode: "SF-CROSS-001" })
+    const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls[0]![0]
+    expect(selection.projectCode).toBe(funnels.projectCode)
+    expect(selection.crossDealProjectCode).toBe(funnels.crossDealProjectCode)
+    expect(tx.joins).not.toContain(projects)
+  })
+
+  it("rolls up distinct child codes separately from the opportunity identifier with Projects disabled", async () => {
+    const tx = tableTx([
+      [opportunities, [[{ id: "opp-1", code: "OPP-26-001" }], [{ count: 1 }]]],
+      [funnels, [[{ opportunityId: "opp-1", n: 3, projectCodes: ["SF-001", "SF-002"], crossDealProjectCodes: ["CROSS-001"] }]]],
+    ])
+    const result = await opportunitiesList(tx, ctx, { limit: 25, offset: 0 })
+    expect(result.rows[0]).toMatchObject({ code: "OPP-26-001", funnelCount: 3, projectCodes: ["SF-001", "SF-002"], crossDealProjectCodes: ["CROSS-001"] })
+    const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls.find(([value]) => value?.projectCodes)?.[0]
+    const query = new PgDialect().sqlToQuery(selection.projectCodes as SQL<unknown>)
+    expect(query.sql).toContain('array_agg(distinct "funnels"."project_code"')
+    expect(tx.joins).not.toContain(projects)
   })
 
   it("applies quotation search and filters before limiting a page", async () => {

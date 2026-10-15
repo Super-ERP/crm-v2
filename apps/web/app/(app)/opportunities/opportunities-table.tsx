@@ -46,6 +46,18 @@ export function OpportunitiesTable({ initialPage, filterOptions }: {
         ),
       },
       {
+        accessorKey: "projectCodes",
+        header: "Project code",
+        enableSorting: false,
+        cell: ({ row }) => row.original.projectCodes?.join(", ") || "—",
+      },
+      {
+        accessorKey: "crossDealProjectCodes",
+        header: "Cross-deal project code",
+        enableSorting: false,
+        cell: ({ row }) => row.original.crossDealProjectCodes?.join(", ") || "—",
+      },
+      {
         accessorKey: "funnelCount",
         header: ({ column }) => <SortableHeader column={column} title="Funnels" />,
         cell: ({ row }) => (

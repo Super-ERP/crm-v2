@@ -48,6 +48,18 @@ export function QuotationsTable({
         (a.original.accountName ?? "").localeCompare(b.original.accountName ?? ""),
     },
     {
+      accessorKey: "projectCode",
+      header: "Project code",
+      enableSorting: false,
+      cell: ({ row }) => row.original.projectCode ?? "—",
+    },
+    {
+      accessorKey: "crossDealProjectCode",
+      header: "Cross-deal project code",
+      enableSorting: false,
+      cell: ({ row }) => row.original.crossDealProjectCode ?? "—",
+    },
+    {
       id: "opportunityId",
       header: ({ column }) => (
         <SortableHeader column={column} title="Opportunity" />

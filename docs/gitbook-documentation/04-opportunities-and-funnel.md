@@ -172,6 +172,14 @@ A queued KIV-to-open approval now applies the reopen when the original transitio
 
 ---
 
+## Project codes across sales records
+
+**Project code** and **Cross-deal project code** are core CRM identifiers, available even when the optional **Projects** module is disabled. The Funnel list, board and detail show the original funnel codes. Opportunity lists show the distinct child-funnel codes, and Opportunity details show each child separately. Multiple child codes are not collapsed into one parent code.
+
+Salesforce `Opportunity.Project_Code__c` maps to the funnel's Project code; `Project_Code_For_Cross_Deal__c` is kept separately. Historical text and punctuation are preserved rather than reformatted. The existing generated Opportunity **CRM project code** remains a separate identifier; entering 4a can allocate that internal code without creating a delivery project.
+
+When Projects is enabled and you have its permissions, creating a delivery project from a coded funnel reuses that code. A visible existing project with the same code and account is reused; conflicting account/code links are rejected rather than overwritten. If an uncoded funnel creates a delivery project, the chosen code is saved back to the funnel. Enabling Projects alone does not automatically create projects.
+
 ## Continue
 
 * [Quotations & revisions](05-quotations-and-revisions.md)

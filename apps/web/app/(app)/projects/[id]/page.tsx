@@ -28,7 +28,7 @@ export default async function ProjectDetailPage({
   if (!detail) notFound()
   const modules = await getEntitledModuleMap()
 
-  const { project, accountName, opportunityName, quotationNumber, ownerName } =
+  const { project, accountName, quotationNumber, ownerName } =
     detail
 
   const [activity, documents, milestones, salesOrders, ctx, billing] =
@@ -86,17 +86,14 @@ export default async function ProjectDetailPage({
       ),
     },
     {
-      label: "Funnel",
-      value: project.funnelId ? (
-        <Link
-          href={`/funnel/${project.funnelId}`}
-          className="font-medium link"
-        >
-          {opportunityName ?? "View funnel"}
-        </Link>
-      ) : (
-        "—"
-      ),
+      label: "Related sales funnels",
+      value: detail.relatedFunnels.length ? (
+        <div className="flex flex-col gap-1">
+          {detail.relatedFunnels.map((funnel) => (
+            <Link key={funnel.id} href={`/funnel/${funnel.id}`} className="font-medium link">{funnel.name}</Link>
+          ))}
+        </div>
+      ) : "—",
     },
     {
       label: "Quotation",
