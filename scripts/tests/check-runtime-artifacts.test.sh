@@ -298,6 +298,14 @@ mkdir -p "$agent_root/app" "$agent_root/usr/local/bin" "$agent_root/var/lib/crm-
 touch "$agent_root/app/index.js" "$agent_root/usr/local/bin/agent-health"
 chmod 0555 "$agent_root/usr/local/bin/agent-health"
 scripts/check-runtime-artifacts.sh "$agent_root"
+printf '%s\n' 'const adminPassword = parsed.values.get("POSTGRES_PASSWORD");' 'const administratorPasswordConfigured = Boolean(adminPassword);' > "$agent_root/app/index.js"
+scripts/check-runtime-artifacts.sh "$agent_root"
+printf '%s\n' 'const password = process.env.POSTGRES_PASSWORD;' > "$agent_root/app/index.js"
+if scripts/check-runtime-artifacts.sh "$agent_root"; then
+  echo "expected direct deployment agent administrator credential access to fail" >&2
+  exit 1
+fi
+: > "$agent_root/app/index.js"
 
 printf '%s\n' 'const leaked = "DATABASE_ADMIN_URL"' >>"$agent_root/app/index.js"
 if scripts/check-runtime-artifacts.sh "$agent_root"; then
