@@ -192,3 +192,11 @@ it("keeps a reseller's quote contact and distinct bill-to account on an end-user
   })
   expect(p.records.find(r => r.sourceId === "f")?.values.account_id).toBe(migrationId(options.tenantId, "Account", "a"))
 })
+
+it("recovers omitted account addresses from unambiguous field history without replacing explicit addresses", () => {
+  const d = fixture()
+  d.AccountHistory = source([{ Id: "history", AccountId: "a", IsDeleted: "false", Field: "BillingStreet", NewValue: "Original Salesforce street", CreatedDate: "2026-01-01T00:00:00Z" }])
+  expect(planMigration(d, options).records.find(r => r.sourceId === "a")?.values.billing_address).toEqual({ line1: "Original Salesforce street" })
+  d.Account.rows[0].BillingStreet = "Explicit export address"
+  expect(planMigration(d, options).records.find(r => r.sourceId === "a")?.values.billing_address).toMatchObject({ line1: "Explicit export address" })
+})

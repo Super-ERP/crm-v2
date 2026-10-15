@@ -1,3 +1,4 @@
+import { recoverAccountAddresses } from "./account-address-history"
 import { resolveSourceBillTo } from "./quotation-billing"
 import { projectQuoteProduct } from "../../server/services/quote-sync-projection"
 import { createHash } from "node:crypto"
@@ -248,6 +249,21 @@ export function planMigration(data: Dataset, options: PlanOptions) {
       q.values.is_primary=false
     }
     const funnel=byId.get(funnelId);if(funnel)funnel.values.quote_running_number=running
+  }
+
+  // Standard address columns are absent in some exports; use only unambiguous
+  // latest field-history values, preserving explicit source address snapshots.
+  const recoveredAddresses = recoverAccountAddresses(data.AccountHistory?.rows ?? [])
+  for (const recovered of recoveredAddresses.ready) {
+    const account = byId.get(ctx.detId("Account", recovered.sourceAccountId))
+    if (account && !account.values.billing_address) {
+      account.values.billing_address = recovered.address
+      note(account, "AccountHistory.Billing*", "Recovered latest unambiguous NewValue per address field; original street retained without parsing")
+    }
+  }
+  for (const unresolved of recoveredAddresses.review) {
+    const account = byId.get(ctx.detId("Account", unresolved.sourceAccountId))
+    if (account && !account.values.billing_address) note(account, "AccountHistory.Billing*", unresolved.reason)
   }
 
   // Infer only a unique end user, and only from the actual recipient contacts.

@@ -87,20 +87,64 @@ Unresolved or conflicting explicit billing names quarantine the quote for review
 rather than silently addressing it to an unrelated company. Do not rerun a full
 import against production to perform this focused recovery.
 
-## Missing-address follow-up (2026-10-15)
+## Address restoration from field history (2026-10-15)
 
-Salesforce is the sole source authorized for historical account-address recovery.
-Both the working export and the archived original source export were checked:
-`Account.csv` has no billing-address columns; `Company__c.csv` has no address
-column; `Quote.csv` has billing/shipping company names but no address fields.
-The named source account descriptions do not contain recoverable addresses.
-`Attachment.csv` and `ContentVersion.csv` contain no records; ContentDocument
-metadata does not provide original file contents. DatacloudAddress's export
-contains a failed-job response, not address records.
+Salesforce is the sole historical source. Although the working and archived
+`Account.csv` and `Company__c.csv` omit address columns, **AccountHistory.csv
+contains recoverable BillingStreet/City/State/PostalCode/Country changes**. The
+earlier audit overlooked field history; the conclusion that the export had no
+recoverable addresses was incorrect.
 
-A fresh read-only production check confirms Bridgenet Solutions, Mesiniaga and
-IGS Protech still lack billing addresses, while the matched Zurich accounts have
-addresses. No addresses were overwritten or fabricated. Restoration remains
-blocked until address values can be obtained from a Salesforce export containing
-the original address fields or Salesforce file contents. Keep existing manual
-addresses intact. This is a source-data gap, not a completed restoration.
+Recovery uses the latest timestamp per account and address field. Conflicting
+NewValues at the same timestamp require review; Salesforce record IDs are not
+used to guess event order. Cleared values are not resurrected. A street is
+required; country/city alone is insufficient. Existing nonempty CRM addresses
+are preserved in full, including manually entered values. Deterministic imported
+account IDs and tenant checks prevent name-based matching mistakes.
+
+**Completed in production:** 8 accounts restored, 8 audit events recorded, and
+all other accounts verified unchanged:
+
+- Dell Global Business Center
+- Petronas Lubricants International
+- Fraser & Neave (Malaya)
+- Alliance Bank Malaysia
+- Eco-Shop Marketing
+- Lumut Maritime Terminal
+- TT Dotcom
+- Malaysia Aviation Group
+
+The private before/after reports and guarded SQL are retained outside Git.
+Restoration changed only billing_address and updated_at; no application release
+or new database migration was required. Quotation Bill To migration/backfill
+remains a separate pending release operation.
+
+**Still unresolved:** six accounts have conflicting latest street changes at
+the same timestamp: Universiti Teknologi MARA, Quandatics Omnitech, Opensoft,
+PR1MA, TARC Education Foundation, and Mesiniaga. Isianpadu has only a country
+change. Bridgenet and IGS have no address values in the available field history.
+TM/MOHR still need an authoritative Salesforce address record. Existing Zurich
+addresses were preserved. This is partial restoration, not recovery of every
+missing address.
+
+For another export/snapshot, prepare a dry-run report and SQL transaction from
+`apps/web`:
+
+```sh
+pnpm exec tsx db/import/prepare-account-address-recovery.ts \
+  --dir /secure/salesforce-export \
+  --tenant TENANT_ID \
+  --snapshot /secure/accounts-snapshot.json \
+  --report-dir /secure/address-recovery
+```
+
+The snapshot contains an `accounts` array with id, tenant_id, name,
+billing_address, exact updated_at, and deleted_at. The tool only prepares SQL;
+it never executes it. Review the report before running restore.sql with
+`psql -v ON_ERROR_STOP=1` through the deployment's administrative connection.
+The transaction compares both prior address and exact timestamp, audits each
+update, and rolls back all updates if any account changed since planning.
+
+The normal Salesforce import now applies the same field-history fallback when
+explicit source address columns are absent. Existing imported production rows
+must use the focused recovery instead of rerunning the full import.
