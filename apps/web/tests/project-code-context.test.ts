@@ -40,6 +40,11 @@ describe("project codes without the Project module", () => {
     expect((await listRelatedProjectCodes("account", "hidden")).rows).toEqual([])
     expect(execute).not.toHaveBeenCalled()
   })
+  it("supports the standard table page sizes", async () => {
+    await listRelatedProjectCodes("account", "account", 1, { pageSize: 50 })
+    const query = new PgDialect().sqlToQuery(execute.mock.calls[0][0])
+    expect(query.params.slice(-2)).toEqual([51, 50])
+  })
   it("bounds pages without dropping project code relationships", async () => {
     execute.mockResolvedValue(Array.from({ length: 26 }, (_, i) => ({ funnelId: String(i), projectCode: "SF-" + i })))
     const result = await listRelatedProjectCodes("account", "account")
