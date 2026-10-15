@@ -69,6 +69,7 @@ type NavItem = {
   /** Salesforce-style object tile colour (Tailwind bg-* class). */
   tile: string
   permission?: string
+  anyPermission?: string[]
   /** Optional signed runtime entitlement gate, on top of permission. */
   module?: ModuleId
   external?: boolean
@@ -99,7 +100,7 @@ const NAV_SECTIONS: NavSection[] = [
       { title: "Payment Milestones", url: "/payment-milestones", icon: CreditCardIcon, tile: OBJECT_TILES.milestone.color, permission: PERMISSIONS.PAYMENT_MILESTONE_VIEW },
       { title: "Projects", url: "/projects", icon: FolderKanbanIcon, tile: OBJECT_TILES.project.color, permission: PERMISSIONS.PROJECT_VIEW, module: "projects" },
       { title: "Sales Orders", url: "/sales-orders", icon: ReceiptIcon, tile: OBJECT_TILES.salesOrder.color, permission: PERMISSIONS.SALES_ORDER_VIEW, module: "salesOrders" },
-      { title: "Approvals", url: "/approvals", icon: StampIcon, tile: "bg-rose-500", permission: PERMISSIONS.STAGE_ADVANCE },
+      { title: "Approvals", url: "/approvals", icon: StampIcon, tile: "bg-rose-500", anyPermission: [PERMISSIONS.STAGE_ADVANCE, PERMISSIONS.STAGE_ADVANCE_APPROVE, PERMISSIONS.QUOTATION_UPDATE, PERMISSIONS.QUOTATION_APPROVE] },
     ],
   },
   {
@@ -164,6 +165,7 @@ export function AppSidebar({
     items: s.items.filter(
       (i) =>
         (!i.permission || isSuperadmin || perms.has(i.permission)) &&
+        (!i.anyPermission || isSuperadmin || i.anyPermission.some(p => perms.has(p))) &&
         (!i.module || modules[i.module])
     ),
   })).filter((s) => s.items.length > 0)

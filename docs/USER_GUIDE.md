@@ -182,8 +182,9 @@ stateDiagram-v2
 
 ## 8. Approvals Hub
 
-Located at **Sales → Approvals** (`/approvals`), this shows stage requests assigned to eligible reporting managers:
-* **Pending Approvals Queue**: Displays stage advancement requests, 25 per page. Quotation approvals are reviewed on quotation detail pages.
+Located at **Sales → Approvals** (`/approvals`), this shows quotation and funnel-stage requests assigned to eligible reporting managers:
+* **Incoming**: Separate quotation and funnel-stage sections, each with 25 records per page. Review quotation details and approve or reject directly from its card.
+* **My requests**: Tracks your stage requests and latest quotation submissions. Eligible requesters can recall pending quotations to Draft.
 * **Reviewing**: Inspect the funnel, requested stage, attachments, and requester notes.
 * **Decision**:
   * **Approve**: Advances the funnel if its current transition and required fields remain valid.

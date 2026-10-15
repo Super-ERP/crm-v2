@@ -815,6 +815,7 @@ export async function createQuotation(input: {
     return created
   })
   revalidatePath("/quotations")
+  revalidatePath("/approvals")
   return row
   })
 }
@@ -950,6 +951,7 @@ export async function updateQuotation(
     return updated
   })
   revalidatePath("/quotations")
+  revalidatePath("/approvals")
   revalidatePath(`/quotations/${id}`)
   revalidatePath(`/quotations/${id}/preview`)
   return row
@@ -1179,6 +1181,7 @@ async function createQuotationCopy(
       return created
     })
     revalidatePath("/quotations")
+  revalidatePath("/approvals")
     revalidatePath(`/quotations/${sourceQuotationId}`)
     if (sourceFunnelId) revalidatePath(`/funnel/${sourceFunnelId}`)
     return result
@@ -1226,6 +1229,7 @@ export async function submitQuotationForApproval(
       })
     })
     revalidatePath("/quotations")
+  revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1256,6 +1260,7 @@ export async function approveQuotation(id: string): Promise<ActionResult<void>> 
       })
     })
     revalidatePath("/quotations")
+  revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1294,6 +1299,7 @@ export async function rejectQuotation(
       })
     })
     revalidatePath("/quotations")
+  revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1340,6 +1346,7 @@ async function returnQuotationToDraft(
       })
     })
     revalidatePath("/quotations")
+  revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1474,6 +1481,7 @@ export async function sendQuotation(id: string): Promise<ActionResult<void>> {
     })
   })
   revalidatePath("/quotations")
+  revalidatePath("/approvals")
   revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1580,6 +1588,7 @@ export async function acceptQuotation(
   })
 
   revalidatePath("/quotations")
+  revalidatePath("/approvals")
   revalidatePath(`/quotations/${id}`)
   return {
     funnelId: result.funnelId,
@@ -1621,6 +1630,7 @@ export async function rejectCustomerQuotation(id: string): Promise<ActionResult<
     })
   })
   revalidatePath("/quotations")
+  revalidatePath("/approvals")
   revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1758,6 +1768,7 @@ export async function setPrimaryQuotation(
     return { previousPrimaryId }
   })
   revalidatePath("/quotations")
+  revalidatePath("/approvals")
   revalidatePath(`/quotations/${id}`)
   return out
   })
@@ -1813,6 +1824,7 @@ export async function deleteQuotation(id: string): Promise<ActionResult<void>> {
     })
   })
   revalidatePath("/quotations")
+  revalidatePath("/approvals")
   })
 }
 

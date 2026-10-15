@@ -1,5 +1,5 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { sql, type SQL } from "drizzle-orm"
 import type { Tx } from "@/db"
 
 /**
@@ -7,8 +7,8 @@ import type { Tx } from "@/db"
  * RLS scopes every table to the caller's tenant. Match normal authorization:
  * union assigned roles; use the legacy primary role only when none are assigned.
  */
-export async function findManagerApprover(tx: Tx, memberId: string, permission: string): Promise<string | null> {
-  const rows = await tx.execute<{ memberId: string }>(sql`
+export function managerApproverQuery(memberId: string | SQL, permission: string): SQL {
+  return sql`
     WITH RECURSIVE reporting_line AS (
       SELECT p.manager_member_id AS member_id, 1 AS depth,
         ARRAY[p.member_id, p.manager_member_id]::text[] AS seen
@@ -37,7 +37,11 @@ export async function findManagerApprover(tx: Tx, memberId: string, permission: 
       )
     )
     ORDER BY line.depth LIMIT 1
-  `)
+  `
+}
+
+export async function findManagerApprover(tx: Tx, memberId: string, permission: string): Promise<string | null> {
+  const rows = await tx.execute<{ memberId: string }>(managerApproverQuery(memberId, permission))
   return rows[0]?.memberId ?? null
 }
 

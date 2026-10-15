@@ -1,11 +1,11 @@
 ---
-description: Review stage requests routed to you and track the requests you have submitted.
+description: Review quotation and funnel-stage requests routed to you and track your submissions.
 icon: stamp
 ---
 
-# Stage approvals
+# Approvals inbox
 
-Use **Sales → Approvals** to review requests to change a funnel stage. Quotation approval is handled on the quotation itself; see [Quotation approvals](05-quotations-and-revisions.md#the-quotation-lifecycle).
+Use **Sales → Approvals** to review quotation and funnel-stage requests. Both **Incoming** and **My requests** contain separate, labelled sections for the two workflows.
 
 **New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#stage-gate).
 
@@ -16,7 +16,7 @@ Use **Sales → Approvals** to review requests to change a funnel stage. Quotati
 * [Follow up after a decision](#follow-up-after-a-decision)
 
 {% hint style="info" %}
-**Who can use this page?** People with stage-change or stage-approval permissions can participate. Requests route to the first active manager in the requester’s reporting line with stage-approval permission. Only the assigned manager who remains eligible can decide the request; requesters cannot approve their own request. Permissions from all assigned roles count. Platform superadmins retain an operational override.
+**Who can use this page?** People with stage-change, stage-approval, quotation-update, or quotation-approval permissions can participate. Quotation cards also require quotation-view permission and record access. Requests route to the first active manager in the requester’s reporting line with stage-approval permission. Only the assigned manager who remains eligible can decide the request; requesters cannot approve their own request. Permissions from all assigned roles count. Platform superadmins retain an operational override.
 {% endhint %}
 
 ## Find your requests
@@ -47,7 +47,7 @@ Choose **My requests** to track requests you submitted.
 
 #### Navigate requests
 
-Use **Previous** and **Next** to navigate the selected tab’s 25-request pages. Use **Review quotations** to open the separate quotation list.
+Each section has its own **Previous** and **Next** controls, with 25 records per page. **Review quotations** opens the full quotation list.
 
 {% endstep %}
 {% endstepper %}
@@ -120,7 +120,11 @@ KIV-to-open moves use approval policy, but the current queued decision path trea
 
 ## Quotation approvals
 
-Every quotation requires approval before sending. The eligible approver is the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that manager can approve or reject; a rejection requires a reason. These actions record audit events but do not send email notifications.
+Every quotation requires approval before sending. **Incoming → Quotation approvals** lists pending quotations routed to you as the currently eligible manager and within your record access. Quotation routing follows reporting-line and approval-permission changes, matching the checks performed when deciding. Cards show quotation number, funnel, end-user customer, Bill To, total, requester and submission date. Use **View quotation** to review the full details, then **Approve** or **Reject** here or on the quotation itself. Rejection requires a reason and returns the quotation to Draft.
+
+The eligible approver is the first active manager in the funnel owner's reporting line with **Approve quotations** permission. The existing quotation actions recheck permissions, record access, current manager eligibility and status when deciding. These actions record audit events but do not send email notifications.
+
+**My requests → Quotation approvals** shows the latest submission for each quotation you submitted, using the actual submission audit actor rather than the account owner. Cards show the current quotation status and rejection reason where present. Pending quotations can be **Recalled to Draft** by eligible requesters. Recalled, rejected and approved quotations leave Incoming. This section is not a complete history of every resubmission. Legacy pending quotations without submission audit data can appear in Incoming with an unknown requester/date; they are not attributed to a guessed requester.
 
 See [Quotation lifecycle](05-quotations-and-revisions.md#the-quotation-lifecycle).
 

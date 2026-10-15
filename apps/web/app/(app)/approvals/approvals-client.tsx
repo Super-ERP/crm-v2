@@ -29,6 +29,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { QuotationApprovalCard } from "./quotation-cards"
+import type { QuotationApprovalPage } from "./quotation-actions"
 import { formatDate } from "@/lib/format"
 import { AttachmentList } from "@/components/attachments/attachment-upload"
 import {
@@ -265,7 +267,7 @@ function IncomingCard({ row }: { row: ApprovalRow }) {
             <span className="font-medium">{row.opportunityName}</span>
             <StagePath row={row} />
           </div>
-          <StatusBadge status={row.status} />
+          <div className="flex gap-2"><Badge variant="outline">Funnel stage</Badge><StatusBadge status={row.status} /></div>
         </div>
         <p className="text-sm text-muted-foreground">{row.reason}</p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -304,7 +306,7 @@ function MineCard({ row }: { row: ApprovalRow }) {
             <span className="font-medium">{row.opportunityName}</span>
             <StagePath row={row} />
           </div>
-          <StatusBadge status={row.status} />
+          <div className="flex gap-2"><Badge variant="outline">Funnel stage</Badge><StatusBadge status={row.status} /></div>
         </div>
         <p className="text-sm text-muted-foreground">{row.reason}</p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -346,16 +348,16 @@ function GateHelp() {
         Gated funnel stages require approval from the first active manager in your reporting line
         who has stage-approval permission. Permissions from all assigned roles count.
         Only that assigned manager can decide your request; you cannot approve your own request.
-        Stage approvers can enter gated stages directly. Quotation approvals are handled on the quotation page.
+        Stage approvers can enter gated stages directly. Quotation requests appear below alongside funnel-stage requests. Open a quotation to review its full details before deciding.
       </p>
     </div>
   )
 }
 
-export function ApprovalsClient({ tab, page }: { tab: "incoming" | "mine"; page: ApprovalPage }) {
+export function ApprovalsClient({ tab, page, quotationPage }: { tab: "incoming" | "mine"; page: ApprovalPage; quotationPage: QuotationApprovalPage }) {
   const router = useRouter()
   const [navigating, startTransition] = React.useTransition()
-  const href = (pageIndex: number) => `/approvals?tab=${tab}&page=${pageIndex}`
+  const href = (pageIndex: number) => `/approvals?tab=${tab}&page=${pageIndex}&quotationPage=${quotationPage.pageIndex}`
 
   return (
     <div className="flex flex-col gap-4">
@@ -367,6 +369,16 @@ export function ApprovalsClient({ tab, page }: { tab: "incoming" | "mine"; page:
           <TabsTrigger value="mine" disabled={navigating}>My requests</TabsTrigger>
         </TabsList>
         <TabsContent value={tab} className="mt-4" aria-busy={navigating}>
+          <h2 className="mb-3 text-base font-semibold">Quotation approvals</h2>
+          {quotationPage.rows.length === 0 ? <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            {tab === "incoming" ? "No pending quotation approvals routed to you." : "No quotation requests on this page."}
+          </p> : <div className="grid gap-3">{quotationPage.rows.map(row => <QuotationApprovalCard key={row.id} row={row} incoming={tab === "incoming"} />)}</div>}
+          <nav className="my-4 flex items-center justify-between gap-3" aria-label="Quotation approval pages">
+            <Button variant="outline" disabled={quotationPage.pageIndex === 0 || navigating} render={<Link href={`/approvals?tab=${tab}&page=${page.pageIndex}&quotationPage=${Math.max(0, quotationPage.pageIndex - 1)}`} />}>Previous</Button>
+            <span className="text-sm text-muted-foreground">Page {quotationPage.pageIndex + 1}</span>
+            <Button variant="outline" disabled={!quotationPage.hasNextPage || navigating} render={<Link href={`/approvals?tab=${tab}&page=${page.pageIndex}&quotationPage=${quotationPage.pageIndex + 1}`} />}>Next</Button>
+          </nav>
+          <h2 className="mb-3 mt-6 text-base font-semibold">Funnel-stage approvals</h2>
           {page.rows.length === 0 ? (
             <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
               {page.pageIndex > 0 ? "No requests on this page. Use Previous to return to earlier pages." : tab === "incoming" ? "No pending approvals routed to you." : "You haven't requested any approvals."}

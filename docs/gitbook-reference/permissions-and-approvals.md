@@ -24,7 +24,7 @@ The **Owner** role is different from ownership of an account or funnel. See [Ter
 
 The app starts from the **Account owner's reporting line** and finds the first active manager with **Approve quotations** permission. Only that eligible manager can approve or reject the quotation, subject to the platform superadmin's operational override. An Account owner cannot approve their own quotation.
 
-Every quote needs approval before sending. Review happens on the quotation page, not in the stage-request inbox. Rejection requires a reason and returns the quote to Draft. See [Quotation lifecycle](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#the-quotation-lifecycle).
+Every quote needs approval before sending. Review happens in **Sales → Approvals → Incoming → Quotation approvals** or on the quotation page. Rejection requires a reason and returns the quote to Draft. See [Quotation lifecycle](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#the-quotation-lifecycle).
 
 ## Who approves a stage request?
 

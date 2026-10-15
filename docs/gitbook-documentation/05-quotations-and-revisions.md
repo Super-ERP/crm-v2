@@ -146,7 +146,7 @@ The sales rep drafts and edits line items, notes, and pricing.
 A draft must be approved before it can be sent:
 
 * Click **Submit for Approval**.
-* The quote is locked against further edits and reviewed on the quotation by the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that eligible manager may approve or reject it. The **Approvals** module handles stage requests separately.
+* The quote is locked against further edits and reviewed on the quotation by the first active manager in the funnel owner’s reporting line with **Approve quotations** permission. Only that eligible manager may approve or reject it. The same quotation requests also appear in **Sales → Approvals**, alongside funnel-stage requests.
 * To make changes before approval, use **Recall to Draft** with **Edit quotations** permission and access to the record. Recall clears the approval assignment and metadata, keeps the same quotation number, and allows editing and resubmitting. If approval has already completed, use **Return to Draft** instead.
 * If the account owner changes while approval is pending, the quotation returns to Draft with an explanation. The new owner must resubmit it.
 
