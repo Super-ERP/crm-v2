@@ -3,15 +3,10 @@ import { PageBody } from "@/components/page-header"
 import { Forbidden } from "@/components/forbidden"
 import { getServerContext } from "@/lib/server-context"
 import { PERMISSIONS } from "@/lib/permissions"
-import {
-  listIncomingApprovals,
-  listMyApprovals,
-} from "./actions"
-import { listLeadConversionApprovals } from "./lead-conversion-actions"
-import { listQuotationApprovals } from "./quotation-actions"
+import { listApprovalQueue } from "./queue-actions"
 import { ApprovalsClient } from "./approvals-client"
 
-export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string; quotationPage?: string; leadPage?: string }> }) {
+export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   // All three workflows share the inbox; each read and mutation enforces its own permissions.
   const ctx = await getServerContext()
   const canParticipate =
@@ -36,20 +31,13 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
 
   const params = await searchParams
   const tab = params.tab === "mine" ? "mine" : "incoming"
-  const leadApprovals = await listLeadConversionApprovals(tab, params.leadPage)
-  const quotationApprovals = await listQuotationApprovals(tab, params.quotationPage)
-  const approvals = tab === "mine" ? await listMyApprovals(params.page) : await listIncomingApprovals(params.page)
+  const queue = await listApprovalQueue({tab,order:"oldest"})
 
   return (
     <>
       <SiteHeader title="Approvals" />
       <PageBody>
-        <ApprovalsClient
-          tab={tab}
-          page={approvals}
-          quotationPage={quotationApprovals}
-          leadPage={leadApprovals}
-        />
+        <ApprovalsClient key={tab} tab={tab} initialPage={queue} />
       </PageBody>
     </>
   )

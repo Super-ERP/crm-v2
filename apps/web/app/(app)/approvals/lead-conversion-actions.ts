@@ -1,5 +1,7 @@
 "use server"
 
+import { approvalQueueSql } from "@/server/services/approval-queue-query"
+import type { ApprovalQueueRead, ApprovalQueueMeta } from "@/lib/approval-queue"
 import { sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { runInTenant } from "@/db"
@@ -14,16 +16,16 @@ import { APPROVAL_PAGE_SIZE, normalizeApprovalPage } from "@/lib/approval-pagina
 
 import type { LeadConversionInput } from "@/lib/lead-conversion-approval"
 
-export type LeadConversionApprovalRow = {
+export type LeadConversionApprovalRow = ApprovalQueueMeta & {
   inputSnapshot: LeadConversionInput; email: string | null; phone: string | null
   id: string; leadId: string; leadName: string; companyName: string | null
   status: string; requesterName: string | null; approverName: string | null
   requestedAt: string | null; decidedAt: string | null; rejectionReason: string | null
   canCancel: boolean; accountName: string | null; opportunityName: string | null
 }
-export type LeadConversionApprovalPage = { rows: LeadConversionApprovalRow[]; pageIndex: number; hasNextPage: boolean }
+export type LeadConversionApprovalPage = { rows: LeadConversionApprovalRow[]; pageIndex: number; hasNextPage: boolean; total?: number }
 
-export async function listLeadConversionApprovals(tab: "incoming" | "mine", page: unknown = 0, leadId?: string): Promise<LeadConversionApprovalPage> {
+export async function listLeadConversionApprovals(tab: "incoming" | "mine", page: unknown = 0, leadId?: string, queue?: ApprovalQueueRead): Promise<LeadConversionApprovalPage> {
   const ctx = await requireContext()
   const pageIndex = normalizeApprovalPage(page)
   const empty = { rows: [], pageIndex, hasNextPage: false }
@@ -35,8 +37,9 @@ export async function listLeadConversionApprovals(tab: "incoming" | "mine", page
     const filter = tab === "incoming"
       ? sql`r.status = 'pending' AND ${ctx.isSuperadmin ? sql`true` : sql`current_approver."memberId" = ${ctx.memberId} AND r.requester_member_id <> ${ctx.memberId}`}`
       : sql`r.requester_member_id = ${ctx.memberId}`
-    const rows = await tx.execute<LeadConversionApprovalRow>(sql`
-      SELECT r.input_snapshot AS "inputSnapshot", r.lead_snapshot->>'email' AS email, r.lead_snapshot->>'phone' AS phone, r.id, l.id AS "leadId", r.lead_snapshot->>'name' AS "leadName", r.lead_snapshot->>'companyName' AS "companyName",
+    const source = sql`
+      SELECT floor(extract(epoch from r.requested_at)*1000000)::bigint::text AS "queueSortKey",
+        concat_ws(' ',r.lead_snapshot->>'name',r.lead_snapshot->>'companyName',a.name,requester.name) AS "queueSearch", r.input_snapshot AS "inputSnapshot", r.lead_snapshot->>'email' AS email, r.lead_snapshot->>'phone' AS phone, r.id, l.id AS "leadId", r.lead_snapshot->>'name' AS "leadName", r.lead_snapshot->>'companyName' AS "companyName",
         r.status, requester.name AS "requesterName", approver.name AS "approverName",
         r.requested_at AS "requestedAt", r.decided_at AS "decidedAt", r.decision_note AS "rejectionReason",
         (r.requester_member_id = ${ctx.memberId} AND r.status = 'pending') AS "canCancel",
@@ -50,12 +53,15 @@ export async function listLeadConversionApprovals(tab: "incoming" | "mine", page
       LEFT JOIN member approver_member ON approver_member.id = CASE WHEN r.status = 'pending' THEN current_approver."memberId" ELSE coalesce(r.decided_by_member_id, r.approver_member_id) END AND approver_member.organization_id = r.tenant_id
       LEFT JOIN "user" approver ON approver.id = approver_member.user_id
       WHERE r.tenant_id = ${ctx.tenantId} AND l.deleted_at IS NULL AND ${scope} AND ${filter} AND ${leadId ? sql`l.id = ${leadId}` : sql`true`}
-      ORDER BY r.requested_at DESC, r.id DESC LIMIT ${APPROVAL_PAGE_SIZE + 1} OFFSET ${pageIndex * APPROVAL_PAGE_SIZE}
-    `)
-    return { rows: rows.slice(0, APPROVAL_PAGE_SIZE).map(row => ({ ...row,
+    `
+    const rows = await tx.execute<LeadConversionApprovalRow & {queueTotal?:number;queueSearch?:string}>(queue
+      ? approvalQueueSql(source,'lead',queue)
+      : sql`${source} ORDER BY r.requested_at DESC,r.id DESC LIMIT ${APPROVAL_PAGE_SIZE+1} OFFSET ${pageIndex*APPROVAL_PAGE_SIZE}`)
+    const records=rows.filter(row=>row.id)
+    return { rows: (queue ? records : records.slice(0, APPROVAL_PAGE_SIZE)).map(row => { const clean={...row};delete clean.queueSearch;delete clean.queueTotal;return ({ ...clean,
       requestedAt: row.requestedAt ? new Date(row.requestedAt).toISOString() : null,
       decidedAt: row.decidedAt ? new Date(row.decidedAt).toISOString() : null,
-    })), pageIndex, hasNextPage: rows.length > APPROVAL_PAGE_SIZE }
+    })}), pageIndex, hasNextPage: records.length > APPROVAL_PAGE_SIZE, total:queue ? Number(rows[0]?.queueTotal ?? 0) : undefined }
   })
 }
 

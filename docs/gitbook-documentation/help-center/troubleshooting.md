@@ -74,7 +74,7 @@ Complete the listed fields on the opportunity or funnel, save, and retry.
 
 #### Check the approval request
 
-If approval is required, check **Sales → Approvals → My requests**. The approver uses **Incoming**.
+If approval is required, check **Sales → Approvals → My requests**. The approver uses **Needs my review**.
 
 {% endstep %}
 {% step %}

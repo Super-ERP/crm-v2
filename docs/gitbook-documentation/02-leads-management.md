@@ -137,7 +137,7 @@ flowchart TD
 
 ### Approval before conversion
 
-The conversion form saves a request with the selected account and conversion details. No linked records are created while it is pending, and the lead remains unconverted. The eligible reporting manager reviews it under **Sales → Approvals → Incoming → Lead conversion approvals**. The requester can track or cancel it in **My requests**. Rejection requires a reason and leaves the lead available for correction and resubmission.
+The conversion form saves a request with the selected account and conversion details. No linked records are created while it is pending, and the lead remains unconverted. The eligible reporting manager reviews it under **Sales → Approvals → Needs my review**, filtered to **Lead conversions**. The requester can track or cancel it in **My requests**. Rejection requires a reason and leaves the lead available for correction and resubmission.
 
 A manager with **Approve lead conversions** permission and no manager above them can convert directly. A manager with a superior must request approval, just like other users. Missing reporting configuration is not an exemption. See [Shared manager approval policy](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals#shared-manager-approval-policy).
 

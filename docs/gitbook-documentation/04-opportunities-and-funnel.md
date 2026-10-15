@@ -202,3 +202,15 @@ When Projects is enabled, creating or relinking a delivery Project to a funnel r
 **Columns** supports show/hide, keyboard reordering, resizing and left/right pinning. Personal layouts are saved by user and list. Named **Views** include the complete filter and column configuration; select **Update with current settings** to replace an existing view. See [Workspace and personal views](../user-guide/01-workspace-and-views.md).
 
 On Account and Contact details, **Project codes** is a tab in the existing right-hand related block. Its compact list links to the central code page. Central code related lists cover the whole accessible code relationship, independently of the current funnel page.
+
+### Review requests in Approvals
+
+**Sales → Approvals → Needs my review** is one queue for assigned pending funnel-stage, quotation and lead-conversion requests. **My requests** shows requests you submitted. Request visibility and decision permissions follow the existing reporting and record-access rules.
+
+The default order is **Oldest first**, across all three request types. Search request information or requester names, filter by request type, or choose **Newest first**. There is one 25-request pagination control. Counts reflect the accessible requests matching the current search and type; requests are not grouped into three separately paginated sections.
+
+Select a request to review its submitted context and what approval does. On desktop, the queue sits beside the review panel. On smaller screens, selecting a request opens a full-width review; **Back to requests** returns to the queue. Decision controls stay outside the scrolling evidence area. **How approvals work** contains routing guidance.
+
+Statuses and action placement are shared: pending requests show **Awaiting approval**, approved states use the success colour, rejected states use the rejection colour, and record navigation appears alongside a consistently placed decision group. Quotation history displays the quotation's current status: rejection or recall returns it to **Draft**, rather than inventing a separate persistent Rejected quotation status.
+
+Confirmation dialogs and each workflow's validation remain in force. Quotation and lead-conversion rejections require a reason. A funnel-stage decision note remains optional. Eligible requesters can recall a quotation or cancel a stage/conversion request from **My requests**. After a decision, the queue refreshes using its current filters; a request that leaves the queue is replaced by the next available selection. Requests already changed by another reviewer are still validated by the server.
