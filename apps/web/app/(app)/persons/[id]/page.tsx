@@ -1,4 +1,6 @@
 import Link from "next/link"
+import { listRelatedProjectCodes } from "@/app/(app)/_shared/project-code-actions"
+import { ProjectCodePanel } from "@/app/(app)/_shared/project-code-panel"
 import { notFound } from "next/navigation"
 
 import { PageBody } from "@/components/page-header"
@@ -26,6 +28,7 @@ export default async function PersonDetailPage({
   ])
 
   if (!data) notFound()
+  const projectCodes = ctx.can(PERMISSIONS.OPPORTUNITY_VIEW) ? await listRelatedProjectCodes("person", id) : null
   const { person, accountName, funnels, projects } = data
 
   const [activity, documents] = await Promise.all([
@@ -119,6 +122,7 @@ export default async function PersonDetailPage({
           activity={activity}
           documents={documents}
         />
+        {projectCodes ? <ProjectCodePanel kind="person" recordId={id} initialPage={projectCodes} /> : null}
       </PageBody>
     </>
   )

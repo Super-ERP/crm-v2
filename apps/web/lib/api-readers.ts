@@ -503,6 +503,8 @@ export async function personsGet(
 export type ContactRef = { id: string; name: string; designation: string | null }
 
 export type OpportunityContainerRow = {
+  projectCodes?: string[]
+  crossDealProjectCodes?: string[]
   id: string
   code: string
   name: string
@@ -583,15 +585,17 @@ export async function opportunitiesList(
     .select({
       opportunityId: funnels.opportunityId,
       n: sql<number>`count(*)::int`,
+      projectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.projectCode} order by ${funnels.projectCode}) filter (where ${funnels.projectCode} is not null), ARRAY[]::text[])`,
+      crossDealProjectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.crossDealProjectCode} order by ${funnels.crossDealProjectCode}) filter (where ${funnels.crossDealProjectCode} is not null), ARRAY[]::text[])`,
     })
     .from(funnels)
     .where(
-      and(isNull(funnels.deletedAt), inArray(funnels.opportunityId, rows.map((r) => r.id)))
+      and(isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible), inArray(funnels.opportunityId, rows.map((r) => r.id)))
     )
     .groupBy(funnels.opportunityId)
-  const countBy = new Map(counts.map((c) => [c.opportunityId, c.n]))
+  const countBy = new Map(counts.map((c) => [c.opportunityId, c]))
   return {
-    rows: rows.map((r) => ({ ...r, funnelCount: countBy.get(r.id) ?? 0 })),
+    rows: rows.map((r) => ({ ...r, funnelCount: countBy.get(r.id)?.n ?? 0, projectCodes: countBy.get(r.id)?.projectCodes ?? [], crossDealProjectCodes: countBy.get(r.id)?.crossDealProjectCodes ?? [] })),
     total: countOf(totalRows),
   }
 }
@@ -623,6 +627,8 @@ export type OpportunityContainerDetail = {
   funnels: {
     id: string
     name: string
+    projectCode?: string | null
+    crossDealProjectCode?: string | null
     stageName: string | null
     stageKind: string | null
     status: string
@@ -704,6 +710,8 @@ export async function opportunitiesGet(
     .select({
       id: funnels.id,
       name: funnels.name,
+      projectCode: funnels.projectCode,
+      crossDealProjectCode: funnels.crossDealProjectCode,
       status: funnels.status,
       estimatedAmount: funnels.estimatedAmount,
       currency: funnels.currency,
@@ -712,7 +720,7 @@ export async function opportunitiesGet(
     })
     .from(funnels)
     .leftJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
-    .where(and(eq(funnels.opportunityId, id), isNull(funnels.deletedAt)))
+    .where(and(eq(funnels.opportunityId, id), isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
     .orderBy(desc(funnels.createdAt))
 
   const funnelIds = children.map((c) => c.id)
@@ -826,6 +834,8 @@ export async function loadPartiesByOpportunity(
 }
 
 export type OpportunityListRow = {
+  projectCode?: string | null
+  crossDealProjectCode?: string | null
   id: string
   opportunityId: string
   name: string
@@ -900,6 +910,8 @@ export async function funnelsList(
         id: funnels.id,
         opportunityId: funnels.opportunityId,
         name: funnels.name,
+      projectCode: funnels.projectCode,
+      crossDealProjectCode: funnels.crossDealProjectCode,
         accountId: funnels.accountId,
         accountName: accounts.name,
         accountOwnerMemberId: accounts.ownerMemberId,
@@ -1238,6 +1250,8 @@ export type QuotationRow = typeof quotations.$inferSelect
 export type QuotationLineRow = typeof quotationLineItems.$inferSelect
 
 export type QuotationListItem = QuotationRow & {
+  projectCode?: string | null
+  crossDealProjectCode?: string | null
   accountId: string | null
   accountName: string | null
   accountCode: string | null
@@ -1321,6 +1335,8 @@ export async function quotationsList(
         accountOwnerMemberId: accounts.ownerMemberId,
         accountOwnerName: accountOwnerUser.name,
         funnelName: funnels.name,
+        projectCode: funnels.projectCode,
+        crossDealProjectCode: funnels.crossDealProjectCode,
         opportunityId: opportunities.id,
         opportunityCode: opportunities.code,
         opportunityName: opportunities.name,
@@ -1355,6 +1371,8 @@ export async function quotationsList(
       accountOwnerMemberId: r.accountOwnerMemberId,
       accountOwnerName: r.accountOwnerName,
       funnelName: r.funnelName,
+      projectCode: r.projectCode,
+      crossDealProjectCode: r.crossDealProjectCode,
       opportunityId: r.opportunityId,
       opportunityCode: r.opportunityCode,
       opportunityName: r.opportunityName,
@@ -1416,6 +1434,8 @@ export async function quotationsFilterOptions(
 }
 
 export type QuotationDetail = {
+  projectCode?: string | null
+  crossDealProjectCode?: string | null
   quotation: QuotationRow
   lines: QuotationLineRow[]
   opportunityName: string | null
@@ -1434,6 +1454,8 @@ export async function quotationsGet(
     .select({
       q: quotations,
       opportunityName: funnels.name,
+      projectCode: funnels.projectCode,
+      crossDealProjectCode: funnels.crossDealProjectCode,
       oppOwner: funnels.ownerMemberId,
       accountId: funnels.accountId,
       accountName: accounts.name,
@@ -1457,6 +1479,8 @@ export async function quotationsGet(
     quotation: row.q,
     lines,
     opportunityName: row.opportunityName,
+    projectCode: row.projectCode,
+    crossDealProjectCode: row.crossDealProjectCode,
     container:
       row.containerId && row.containerName
         ? { id: row.containerId, name: row.containerName }

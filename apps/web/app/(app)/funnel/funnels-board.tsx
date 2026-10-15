@@ -59,6 +59,8 @@ function CardBody({ c }: { c: OpportunityListRow }) {
   return (
     <>
       <p className="truncate text-sm font-medium">{c.name}</p>
+      {c.projectCode ? <p className="truncate text-xs text-muted-foreground">Project code: {c.projectCode}</p> : null}
+      {c.crossDealProjectCode ? <p className="truncate text-xs text-muted-foreground">Cross-deal project code: {c.crossDealProjectCode}</p> : null}
       <p className="truncate text-xs text-muted-foreground">{c.accountName}</p>
       <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-semibold tabular-nums">

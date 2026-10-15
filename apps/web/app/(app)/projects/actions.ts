@@ -1,5 +1,6 @@
 "use server"
 
+import { resolveDeliveryCode, validateDeliverySource, reusableDeliveryProject } from "@/lib/project-delivery-code"
 import { milestoneReadScope } from "@/server/services/milestone-access"
 import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
 
@@ -66,6 +67,7 @@ export type ProjectDetail = {
   /** Whether the caller may edit this project — mirrors updateProject's own
    *  ownership check, so the Edit button never appears only to be denied. */
   canEdit: boolean
+  relatedFunnels: { id: string; name: string }[]
 }
 
 export type ProjectCodeNature = "auto" | "manual"
@@ -174,6 +176,11 @@ export async function getProject(id: string): Promise<ProjectDetail | null> {
     if (!row) return null
     if (!ownsOrManages(visible, row.project.ownerMemberId)) return null
     return {
+      relatedFunnels: await tx.select({ id: funnels.id, name: funnels.name }).from(funnels)
+        .where(and(isNull(funnels.deletedAt), eq(funnels.accountId, row.project.accountId),
+          ownerScope(funnels.ownerMemberId, visible),
+          or(row.project.funnelId ? eq(funnels.id, row.project.funnelId) : undefined, eq(funnels.projectCode, row.project.projectCode))))
+        .orderBy(asc(funnels.name)),
       project: row.project,
       accountName: row.accountName,
       opportunityName: row.opportunityName,
@@ -212,6 +219,17 @@ export async function createProject(
         throw new Error("FORBIDDEN: not permitted on this account")
       }
 
+      // Lock the source before resolving its identity or allocating any counter.
+      const [source] = input.funnelId ? await tx.select().from(funnels)
+        .where(and(eq(funnels.id, input.funnelId), isNull(funnels.deletedAt)))
+        .limit(1).for("update") : []
+      if (input.funnelId && !source) throw new Error("Source funnel not found")
+      if (source && !ownsOrManages(visible, source.ownerMemberId)) throw new Error("FORBIDDEN: source funnel")
+      const [quote] = input.quotationId ? await tx.select({ funnelId: quotations.funnelId }).from(quotations)
+        .where(and(eq(quotations.id, input.quotationId), isNull(quotations.deletedAt))).limit(1) : []
+      if (input.quotationId && !quote) throw new Error("Selected quotation not found")
+      validateDeliverySource(input.accountId, source ?? null, quote ?? null)
+
       // An intercompany-delivery project must reference a deal actually
       // assigned to THIS tenant as handling partner (the two-sided RLS lets
       // us read it; the partner predicate pins the direction).
@@ -232,6 +250,32 @@ export async function createProject(
           )
       }
 
+      if (source?.projectCode) {
+        await resolveDeliveryCode(source.projectCode, input.codeNature === "manual" ? input.projectCode : undefined, async () => "")
+        const existingProjects = await tx.select().from(projects)
+          .where(and(eq(projects.tenantId, ctx.tenantId),
+            or(eq(projects.projectCode, source.projectCode), and(eq(projects.funnelId, source.id), isNull(projects.deletedAt))))).limit(2)
+        if (existingProjects.some((project) => project.projectCode !== source.projectCode)) throw new Error("Project code conflict: the source funnel already has a delivery project with a different code")
+        const existing = existingProjects[0]
+        if (existing) {
+          reusableDeliveryProject(existing, input.accountId, ownsOrManages(visible, existing.ownerMemberId))
+          if (input.intercompanyDealId && existing.intercompanyDealId !== input.intercompanyDealId) throw new Error("Project code conflict: different intercompany deal")
+          return { id: existing.id, projectCode: existing.projectCode }
+        }
+      }
+      if (source && !source.projectCode) {
+        const [existing] = await tx.select().from(projects)
+          .where(and(eq(projects.tenantId, ctx.tenantId), eq(projects.funnelId, source.id), isNull(projects.deletedAt))).limit(1)
+        if (existing) {
+          reusableDeliveryProject(existing, input.accountId, ownsOrManages(visible, existing.ownerMemberId))
+          await resolveDeliveryCode(existing.projectCode, input.codeNature === "manual" ? input.projectCode : undefined, async () => "")
+          if (input.intercompanyDealId && existing.intercompanyDealId !== input.intercompanyDealId) throw new Error("Project code conflict: different intercompany deal")
+          await tx.update(funnels).set({ projectCode: existing.projectCode, updatedAt: new Date() })
+            .where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
+          return { id: existing.id, projectCode: existing.projectCode }
+        }
+      }
+
       // Default to "auto" so the funnel "create project" path (and any caller
       // that omits codeNature) keeps auto-generating as before.
       const codeNature: ProjectCodeNature =
@@ -244,7 +288,9 @@ export async function createProject(
       const projectNatureCode = (input.projectNatureCode ?? "").trim() || "GEN"
 
       let projectCode: string
-      if (codeNature === "manual") {
+      if (source?.projectCode) {
+        projectCode = source.projectCode
+      } else if (codeNature === "manual") {
         projectCode = (input.projectCode ?? "").trim()
         if (!projectCode) throw new Error("Project code is required")
         // Enforce per-tenant uniqueness up front for a friendly message.
@@ -330,6 +376,11 @@ export async function createProject(
         throw e
       }
 
+      if (source && !source.projectCode) {
+        await tx.update(funnels).set({ projectCode, updatedAt: new Date() })
+          .where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
+      }
+
       await logActivity(tx, ctx, {
         entityType: "project",
         entityId: row.id,
@@ -376,6 +427,28 @@ export async function updateProject(
     if (!canManageAllRecords(ctx) && !ownsOrManages(visible, before.ownerMemberId)) {
       throw new Error("FORBIDDEN: not permitted on this project")
     }
+
+    const nextAccountId = input.accountId ?? before.accountId
+    const [account] = await tx.select({ ownerMemberId: accounts.ownerMemberId }).from(accounts)
+      .where(and(eq(accounts.id, nextAccountId), isNull(accounts.deletedAt))).limit(1)
+    if (!account || !ownsOrManages(visible, account.ownerMemberId)) throw new Error("FORBIDDEN: account")
+    const funnelId = input.funnelId === undefined ? before.funnelId : input.funnelId
+    const quotationId = input.quotationId === undefined ? before.quotationId : input.quotationId
+    const [source] = funnelId ? await tx.select().from(funnels)
+      .where(and(eq(funnels.id, funnelId), isNull(funnels.deletedAt))).limit(1).for("update") : []
+    if (funnelId && (!source || !ownsOrManages(visible, source.ownerMemberId))) throw new Error("FORBIDDEN: source funnel")
+    const [quote] = quotationId ? await tx.select({ funnelId: quotations.funnelId }).from(quotations)
+      .where(and(eq(quotations.id, quotationId), isNull(quotations.deletedAt))).limit(1) : []
+    if (quotationId && !quote) throw new Error("Selected quotation not found")
+    validateDeliverySource(nextAccountId, source ?? null, quote ?? null)
+    if (source?.projectCode && source.projectCode !== before.projectCode) throw new Error("Project code must match the source funnel code")
+    if (source) {
+      const [linkedProject] = await tx.select({ id: projects.id }).from(projects)
+        .where(and(eq(projects.tenantId, ctx.tenantId), eq(projects.funnelId, source.id),
+          ne(projects.id, before.id), isNull(projects.deletedAt))).limit(1)
+      if (linkedProject) throw new Error("Project code conflict: the source funnel already has another delivery project")
+    }
+    if (source && !source.projectCode) await tx.update(funnels).set({ projectCode: before.projectCode, updatedAt: new Date() }).where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
 
     const nextValue =
       input.value === undefined
@@ -607,6 +680,7 @@ export async function listProjectCreateMeta(): Promise<ProjectCreateMeta> {
 }
 
 export type ProjectPrefill = {
+  projectCode: string | null
   accountId: string
   accountName: string | null
   value: string
@@ -648,6 +722,7 @@ export async function prefillFromOpportunity(
         currency: funnels.currency,
         projectNatureCode: funnels.projectNatureCode,
         projectYear: funnels.projectYear,
+        projectCode: funnels.projectCode,
         ownerMemberId: funnels.ownerMemberId,
       })
       .from(funnels)
@@ -689,6 +764,7 @@ export async function prefillFromOpportunity(
     }
 
     return {
+      projectCode: opp.projectCode,
       accountId: opp.accountId,
       accountName: opp.accountName,
       value,

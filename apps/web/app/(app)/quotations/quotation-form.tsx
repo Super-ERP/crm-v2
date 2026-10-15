@@ -1452,6 +1452,10 @@ export function QuotationForm({
           <PrintButton quotationId={quotation.id} quoteNumber={quotation.quoteNumber} />
         </div>
 
+        <div className="grid gap-1 text-sm">
+          <p><span className="text-muted-foreground">Project code: </span>{detail.projectCode ?? "—"}</p>
+          <p><span className="text-muted-foreground">Cross-deal project code: </span>{detail.crossDealProjectCode ?? "—"}</p>
+        </div>
         {/* PDF-style A4 document floating on a desk background. */}
         <div className="flex justify-center rounded-lg bg-muted/40 p-4 sm:p-6">
           {liveEntityPreview && entityTemplate ? (

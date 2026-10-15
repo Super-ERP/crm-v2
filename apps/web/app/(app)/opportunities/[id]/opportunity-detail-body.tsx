@@ -119,6 +119,18 @@ export function OpportunityDetailBody({
         ),
       },
       {
+        accessorKey: "projectCode",
+        header: "Project code",
+        enableSorting: false,
+        cell: ({ row }) => row.original.projectCode ?? "—",
+      },
+      {
+        accessorKey: "crossDealProjectCode",
+        header: "Cross-deal project code",
+        enableSorting: false,
+        cell: ({ row }) => row.original.crossDealProjectCode ?? "—",
+      },
+      {
         accessorKey: "stageName",
         header: "Stage",
         cell: ({ row }) => (

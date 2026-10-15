@@ -3,7 +3,7 @@
 import { findManagerApprover, resolveApprovalRoute } from "@/server/services/approval-routing"
 
 import { canSelectBillToAccount, resolveQuotationBillingAccount, type QuotationBillingSnapshot } from "@/lib/quotation-billing"
-import { and, asc, desc, eq, isNull, ne, notInArray, sql } from "drizzle-orm"
+import { and, asc, desc, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -66,6 +66,8 @@ export type QuotationRow = typeof quotations.$inferSelect
 export type QuotationLineRow = typeof quotationLineItems.$inferSelect
 
 export type QuotationListItem = QuotationRow & {
+  projectCode?: string | null
+  crossDealProjectCode?: string | null
   accountId: string | null
   accountName: string | null
   accountCode: string | null
@@ -105,6 +107,8 @@ export type QuotationHeaderInput = {
 }
 
 export type QuotationDetail = {
+  projectCode?: string | null
+  crossDealProjectCode?: string | null
   quotation: QuotationRow
   lines: QuotationLineRow[]
   opportunityName: string | null
@@ -397,9 +401,10 @@ export async function getProjectForQuotation(
 ): Promise<{ id: string; projectCode: string; name: string } | null> {
   if (!(await getEntitledModuleMap()).projects) return null
   return withTenant(PERMISSIONS.QUOTATION_VIEW, async (tx, ctx) => {
+    if (!ctx.can(PERMISSIONS.PROJECT_VIEW)) return null
     const visible = await visibleMemberIds(tx, ctx)
     const [scope] = await tx
-      .select({ oppOwner: funnels.ownerMemberId })
+      .select({ oppOwner: funnels.ownerMemberId, funnelId: funnels.id, accountId: funnels.accountId, sourceCode: funnels.projectCode })
       .from(quotations)
       .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
       .where(and(eq(quotations.id, quotationId), isNull(quotations.deletedAt)))
@@ -413,7 +418,11 @@ export async function getProjectForQuotation(
       })
       .from(projects)
       .where(
-        and(eq(projects.quotationId, quotationId), isNull(projects.deletedAt))
+        and(
+          or(eq(projects.quotationId, quotationId), scope.funnelId ? eq(projects.funnelId, scope.funnelId) : undefined, scope.sourceCode ? eq(projects.projectCode, scope.sourceCode) : undefined),
+          scope.accountId ? eq(projects.accountId, scope.accountId) : undefined,
+          ownerScope(projects.ownerMemberId, visible), isNull(projects.deletedAt)
+        )
       )
       .orderBy(desc(projects.createdAt))
       .limit(1)

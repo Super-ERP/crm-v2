@@ -25,6 +25,8 @@ import { normalizePpvvcPatch } from "@/lib/ppvvc"
 export type ContactRef = { id: string; name: string; designation: string | null }
 
 export type OpportunityContainerRow = {
+  projectCodes?: string[]
+  crossDealProjectCodes?: string[]
   id: string
   code: string
   name: string
@@ -60,6 +62,8 @@ export type OpportunityContainerDetail = {
   /** Power Sponsor Contact, resolved with its derived Designation. */
   powerSponsorContact: ContactRef | null
   funnels: {
+    projectCode?: string | null
+    crossDealProjectCode?: string | null
     id: string
     name: string
     stageName: string | null

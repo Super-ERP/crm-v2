@@ -236,6 +236,8 @@ export const MAPPINGS: ObjectMap[] = [
     sfId: "Id",
     fields: {
       Name: { col: "name", xform: asText },
+      Project_Code__c: { col: "project_code", xform: (v) => v.trim() || null },
+      Project_Code_For_Cross_Deal__c: { col: "cross_deal_project_code", xform: (v) => v.trim() || null },
       Opportunity__c: { col: "opportunity_id", xform: ref("Opportunity_ID__c") },
       AccountId: { col: "account_id", xform: ref("Account") },
       ContactId: { col: "primary_person_id", xform: ref("Contact") },

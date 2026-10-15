@@ -264,6 +264,12 @@ Open **Preview** on the quotation:
 * Use **Download PDF** to generate and save the PDF. Generation errors appear beside the controls.
 * **Print** opens the browser print dialog; choose **Save as PDF** if needed. Inspect the saved file before sharing.
 
+## Project-code context
+
+Quotation lists and details show **Project code** and **Cross-deal project code** from the linked funnel. This information is available without the Projects module. Duplicating a quotation within the same funnel keeps that relationship; it does not allocate a different project identity. The code fields are CRM context, not a change to the quotation's running number or PDF template.
+
+If Projects is enabled, the linked delivery project can be found through its explicit quotation/funnel relationship or matching funnel code, subject to matching account and project-view access. Creating a project reuses the existing funnel code; it does not silently replace it with a newly generated number.
+
 ## Continue
 
 * [Payment milestones](06-payment-milestones.md)

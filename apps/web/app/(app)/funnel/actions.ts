@@ -1,6 +1,6 @@
 "use server"
 
-import { and, asc, desc, eq, isNull } from "drizzle-orm"
+import { and, asc, desc, eq, isNull, or } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, requireContext, assertCan } from "@/lib/actions"
 import { runInTenant } from "@/db"
@@ -214,6 +214,8 @@ function assertRecognizedPercent(v: string | null | undefined): void {
 }
 
 export type OpportunityListRow = {
+  projectCode?: string | null
+  crossDealProjectCode?: string | null
   id: string
   opportunityId: string
   name: string
@@ -915,7 +917,11 @@ export async function listOpportunityProjects(
 ): Promise<OpportunityProjectRow[]> {
   if (!(await getEntitledModuleMap()).projects) return []
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, async (tx, ctx) => {
+    if (!ctx.can(PERMISSIONS.PROJECT_VIEW)) return []
     const visible = await visibleMemberIds(tx, ctx)
+    const [source] = await tx.select({ accountId: funnels.accountId, projectCode: funnels.projectCode, ownerMemberId: funnels.ownerMemberId }).from(funnels)
+      .where(and(eq(funnels.id, funnelId), isNull(funnels.deletedAt))).limit(1)
+    if (!source || !ownsOrManages(visible, source.ownerMemberId)) return []
     return tx
       .select({
         id: projects.id,
@@ -926,7 +932,8 @@ export async function listOpportunityProjects(
       .from(projects)
       .where(
         and(
-          eq(projects.funnelId, funnelId),
+          or(eq(projects.funnelId, funnelId), source.projectCode ? eq(projects.projectCode, source.projectCode) : undefined),
+          eq(projects.accountId, source.accountId),
           isNull(projects.deletedAt),
           ownerScope(projects.ownerMemberId, visible)
         )
