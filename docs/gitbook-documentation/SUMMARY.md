@@ -4,22 +4,22 @@
 
 ## Customer Records
 
-* [Leads & conversion](02-leads-management.md)
-* [Accounts & contacts](03-accounts-and-contacts.md)
+* [Leads & conversion](customer-records/02-leads-management.md)
+* [Accounts & contacts](customer-records/03-accounts-and-contacts.md)
 
 ## Sales
 
-* [Opportunities & sales funnel](04-opportunities-and-funnel.md)
-* [Quotations & revisions](05-quotations-and-revisions.md)
-* [Payment milestones](06-payment-milestones.md)
-* [Stage approvals](08-approvals-inbox.md)
+* [Opportunities & sales funnel](sales/04-opportunities-and-funnel.md)
+* [Quotations & revisions](sales/05-quotations-and-revisions.md)
+* [Payment milestones](sales/06-payment-milestones.md)
+* [Stage approvals](sales/08-approvals-inbox.md)
 
 ## Administration
 
-* [Roles & RBAC](roles-and-rbac.md)
-* [Administration & settings](09-admin-and-settings.md)
+* [Roles & RBAC](administration/roles-and-rbac.md)
+* [Administration & settings](administration/09-admin-and-settings.md)
 
 ## Help
 
-* [Troubleshooting](help-center/troubleshooting.md)
-* [Frequently asked questions](help-center/faqs.md)
+* [Troubleshooting](help/troubleshooting.md)
+* [Frequently asked questions](help/faqs.md)

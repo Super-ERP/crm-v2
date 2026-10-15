@@ -1,0 +1,126 @@
+---
+description: Maintain the companies and people involved in your deals.
+icon: address-book
+---
+
+# Accounts & contacts
+
+Maintain the companies and people involved in your deals.
+
+**New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#account).
+
+## On this page
+
+* [Create an account](03-accounts-and-contacts.md#creating-an-account)
+* [Create a contact](03-accounts-and-contacts.md#creating-a-contact)
+
+***
+
+## Accounts
+
+An **Account** represents an enterprise customer, client, partner, or reseller. It serves as the parent container for all commercial interactions, including contacts, active opportunities, and quotations.
+
+### Creating an Account
+
+Accounts are usually created automatically during **Lead Conversion**, but can also be created manually:
+
+{% stepper %}
+{% step %}
+#### Open Accounts
+
+Navigate to **CRM → Accounts** in the sidebar.
+{% endstep %}
+
+{% step %}
+#### Start a new account
+
+Click **+ New Account**.
+{% endstep %}
+
+{% step %}
+#### Enter company details
+
+Fill in the organization details:
+
+* **Company Name**: Official registered company name.
+* **Account Code**: Unique short business identifier (e.g., `ACME-01`).
+* **Account Type**: Select **Client** or **Reseller**.
+* **Currency**: Select the standard ISO Currency (e.g., `MYR`, `USD`, `SGD`, `EUR`).
+* **Phone & Website**: Primary office contact channels.
+* **Billing Address**: Street address, city, state/province, postal code, and country.
+{% endstep %}
+
+{% step %}
+#### Save the account
+
+Click **Save Account**.
+{% endstep %}
+{% endstepper %}
+
+{% hint style="warning" %}
+**Currency Configuration**: Every Account must have an assigned ISO currency. All downstream Opportunities, Funnel deals, and Quotations created under this Account will inherit this currency to prevent multi-currency calculation errors.
+{% endhint %}
+
+### The Account Overview
+
+Opening any Account presents a comprehensive 360-degree customer view:
+
+* **Summary Cards**: Displays key metrics including total lifetime value, open deal count, and active quotations.
+* **Contacts**: All stakeholders associated with this organization.
+* **Opportunities & Funnels**: Historical and currently active sales pursuits.
+* **Quotations**: All generated commercial proposals and revision histories.
+* **Activity Stream**: An audit log showing recent updates, stage advances, and notes.
+
+### Changing the account owner
+
+Edit **Account owner** on the account detail page to transfer responsibility. Active contacts, Opportunities, and Funnels under the account receive the new owner in the same transaction. Quotations and payment milestones inherit access through their Funnel.
+
+Pending stage requests are cancelled, and pending quotations return to Draft with a resubmission explanation. The new account owner can submit them again so approval reaches their eligible reporting manager. Completed approval decisions remain historical records.
+
+***
+
+## Contacts
+
+A **Contact** represents an individual stakeholder employed by an Account (e.g., procurement officer, project manager, technical lead, or executive sponsor).
+
+### Creating a Contact
+
+{% stepper %}
+{% step %}
+#### Open Contacts
+
+Navigate to **CRM → Contacts** (or click **+ Add Contact** from within an Account's detail view).
+{% endstep %}
+
+{% step %}
+#### Enter stakeholder details
+
+Enter the stakeholder's information:
+
+* **First Name & Last Name**
+* **Job Title**: (e.g., _Head of IT, Procurement Director, CFO_)
+* **Email Address**: Direct business email.
+* **Phone Number**: Direct office or mobile line.
+* **Account**: The parent company this contact belongs to.
+* **Primary Contact**: Toggle on if this individual is the primary point of contact for proposals and invoice attention.
+{% endstep %}
+
+{% step %}
+#### Save the contact
+
+Click **Save Contact**.
+{% endstep %}
+{% endstepper %}
+
+### Using Contacts in Sales Workflows
+
+When generating quotations or advancing sales stages:
+
+* The primary contact's details are automatically copied into the quotation's **Attention** field.
+* Contacts can be assigned as the **Power Sponsor** during opportunity qualification.
+
+## Continue
+
+* [Opportunities & sales funnel](../sales/04-opportunities-and-funnel.md)
+* [Troubleshooting](../help/troubleshooting.md)
+* [Back to start](https://jienweng.gitbook.io/q-app)
