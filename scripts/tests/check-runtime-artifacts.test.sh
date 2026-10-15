@@ -52,11 +52,13 @@ mkdir -p "$base_runtime/app" \
   "$base_runtime/usr/local/lib/node_modules/npm/docs" \
   "$base_runtime/usr/local/lib/node_modules/npm/node_modules/glob/dist/commonjs" \
   "$base_runtime/usr/local/lib/node_modules/pnpm" \
+  "$base_runtime/usr/local/share/doc/node" \
   "$base_runtime/opt/yarn-v1.22.22" \
   "$base_runtime/root/.npm" \
   "$base_runtime/tmp/node-compile-cache/v22"
 mv "$fixture/apps" "$fixture/node_modules" "$fixture/packages" "$base_runtime/app/"
-touch "$base_runtime/usr/bin/test" \
+touch "$base_runtime/usr/local/share/doc/node/lldb_commands.py" \
+  "$base_runtime/usr/bin/test" \
   "$base_runtime/usr/local/bin/corepack" \
   "$base_runtime/usr/local/bin/npm" \
   "$base_runtime/usr/local/bin/npx" \
@@ -77,6 +79,7 @@ scripts/strip-runtime-package-managers.sh "$base_runtime"
 scripts/check-runtime-artifacts.sh "$base_runtime"
 
 for manager_path in \
+  usr/local/share/doc/node \
   usr/local/bin/corepack \
   usr/local/bin/npm \
   usr/local/bin/npx \
@@ -228,12 +231,12 @@ mkdir -p "$backup_root/opt/backup" \
   "$backup_root/var/lib/backup"
 touch "$backup_root/opt/backup/check-tools.sh" \
   "$backup_root/usr/bin/pg_dump" \
-  "$backup_root/usr/local/bin/age" \
-  "$backup_root/usr/local/bin/rclone"
+  "$backup_root/usr/bin/rsync" \
+  "$backup_root/usr/bin/ssh"
 chmod 0555 "$backup_root/opt/backup/check-tools.sh" \
   "$backup_root/usr/bin/pg_dump" \
-  "$backup_root/usr/local/bin/age" \
-  "$backup_root/usr/local/bin/rclone"
+  "$backup_root/usr/bin/rsync" \
+  "$backup_root/usr/bin/ssh"
 scripts/check-runtime-artifacts.sh "$backup_root"
 
 touch "$backup_root/opt/backup/build-notes.md"
@@ -295,6 +298,14 @@ mkdir -p "$agent_root/app" "$agent_root/usr/local/bin" "$agent_root/var/lib/crm-
 touch "$agent_root/app/index.js" "$agent_root/usr/local/bin/agent-health"
 chmod 0555 "$agent_root/usr/local/bin/agent-health"
 scripts/check-runtime-artifacts.sh "$agent_root"
+printf '%s\n' 'const adminPassword = parsed.values.get("POSTGRES_PASSWORD");' 'const administratorPasswordConfigured = Boolean(adminPassword);' > "$agent_root/app/index.js"
+scripts/check-runtime-artifacts.sh "$agent_root"
+printf '%s\n' 'const password = process.env.POSTGRES_PASSWORD;' > "$agent_root/app/index.js"
+if scripts/check-runtime-artifacts.sh "$agent_root"; then
+  echo "expected direct deployment agent administrator credential access to fail" >&2
+  exit 1
+fi
+: > "$agent_root/app/index.js"
 
 printf '%s\n' 'const leaked = "DATABASE_ADMIN_URL"' >>"$agent_root/app/index.js"
 if scripts/check-runtime-artifacts.sh "$agent_root"; then
@@ -329,3 +340,23 @@ assert_root_alias_rejected /.
 root_alias="$scratch/root-alias"
 ln -s / "$root_alias"
 assert_root_alias_rejected "$root_alias"
+
+# OpenSSH binaries contain PEM/age format constants, not exported identities.
+# The text-secret scan must not mistake these NUL-delimited symbols for keys.
+new_fixture
+mkdir -p "$fixture/node_modules/postgres/src"
+printf '\177ELF\000%s\000' '-----BEGIN OPENSSH PRIVATE KEY-----' > "$fixture/node_modules/postgres/src/ssh-binary"
+scripts/check-runtime-artifacts.sh "$fixture"
+printf '%s\n' '-----BEGIN OPENSSH PRIVATE KEY-----' > "$fixture/plain-credential"
+if scripts/check-runtime-artifacts.sh "$fixture"; then
+  echo "expected plaintext private-key header to fail" >&2
+  exit 1
+fi
+rm "$fixture/plain-credential"
+printf '\177ELF\000%s\000' 'AGE-SECRET-KEY-1' > "$fixture/node_modules/postgres/src/age-binary"
+scripts/check-runtime-artifacts.sh "$fixture"
+printf '%s\n' 'AGE-SECRET-KEY-1' > "$fixture/plain-identity"
+if scripts/check-runtime-artifacts.sh "$fixture"; then
+  echo "expected plaintext age identity to fail" >&2
+  exit 1
+fi

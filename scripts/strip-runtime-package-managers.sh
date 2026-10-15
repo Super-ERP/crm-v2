@@ -50,6 +50,7 @@ for runtime_path in \
   usr/local/lib/node_modules/corepack \
   usr/local/lib/node_modules/npm \
   usr/local/lib/node_modules/pnpm \
+  usr/local/share/doc/node \
   opt/yarn-v1.22.22 \
   root/.npm \
   tmp/node-compile-cache
