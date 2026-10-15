@@ -50,3 +50,27 @@ export async function requireManagerApprover(tx: Tx, memberId: string, permissio
   if (!approver) throw new Error("No eligible manager is available. Ask an administrator to configure your reporting manager and their approval permission.")
   return approver
 }
+
+/** Only active approvers at the top of their reporting line may act directly.
+ * A missing/ineligible superior is a configuration error, not a bypass.
+ * Platform superadmins retain the existing operational override.
+ */
+export async function resolveApprovalRoute(
+  tx: Tx,
+  ctx: { memberId: string | null; isSuperadmin: boolean; can: (permission: string) => boolean },
+  permission: string,
+): Promise<{ direct: boolean; approverMemberId: string | null }> {
+  if (ctx.isSuperadmin) return { direct: true, approverMemberId: null }
+  if (!ctx.memberId) throw new Error("No member context")
+  const [profile] = await tx.execute<{ managerMemberId: string | null; status: string }>(sql`
+    SELECT manager_member_id AS "managerMemberId", status FROM membership_profiles
+    WHERE member_id = ${ctx.memberId} LIMIT 1
+  `)
+  if (!profile || profile.status !== "active") {
+    throw new Error("An active reporting profile is required. Ask an administrator to configure your reporting line.")
+  }
+  if (ctx.can(permission) && profile.managerMemberId === null) {
+    return { direct: true, approverMemberId: null }
+  }
+  return { direct: false, approverMemberId: await requireManagerApprover(tx, ctx.memberId, permission) }
+}

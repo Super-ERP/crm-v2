@@ -1,5 +1,5 @@
 import "server-only"
-import { findManagerApprover, requireManagerApprover } from "./approval-routing"
+import { findManagerApprover, resolveApprovalRoute } from "./approval-routing"
 import { and, eq, isNull } from "drizzle-orm"
 import { runInTenant, type Tx } from "@/db"
 import {
@@ -28,7 +28,6 @@ import {
   isRollbackTransition,
   requiresApprovalForTransition,
   requiresTransitionReason,
-  canBypassApproval,
   type CustomFunnelField,
   type StageGateState,
 } from "@/lib/stage-gate"
@@ -96,6 +95,7 @@ async function createApprovalRequest(
   ctx: ServerContext,
   opp: OppRow,
   target: StageRow,
+  approverMemberId: string,
   reason?: string
 ): Promise<{ approvalRequestId: string }> {
   if (!ctx.memberId) throw new Error("No member context")
@@ -113,7 +113,6 @@ async function createApprovalRequest(
     .limit(1)
   if (existing) return { approvalRequestId: existing.id }
 
-  const approver = await requireManagerApprover(tx, ctx.memberId, PERMISSIONS.STAGE_ADVANCE_APPROVE)
   const [req] = await tx
     .insert(stageApprovalRequests)
     .values({
@@ -126,7 +125,7 @@ async function createApprovalRequest(
       // write a reason unless closing Lost/KIV.
       reason: reason?.trim() || "Stage advance requested",
       status: "pending",
-      approverMemberId: approver,
+      approverMemberId,
     })
     .returning()
   await writeAudit(tx, ctx, {
@@ -141,7 +140,8 @@ async function createApprovalRequest(
 async function cancelPendingApprovalRequests(
   tx: Tx,
   ctx: ServerContext,
-  funnelId: string
+  funnelId: string,
+  reason = "funnel moved back"
 ): Promise<void> {
   const pending = await tx
     .select({ id: stageApprovalRequests.id })
@@ -160,7 +160,7 @@ async function cancelPendingApprovalRequests(
       .set({
         status: "cancelled",
         decidedAt: new Date(),
-        decisionNote: "Request cancelled because the funnel moved back.",
+        decisionNote: `Request cancelled because the ${reason}.`,
       })
       .where(
         and(
@@ -174,7 +174,7 @@ async function cancelPendingApprovalRequests(
       action: "approval.cancelled",
       entityType: "stage_approval_request",
       entityId: request.id,
-      after: { reason: "funnel moved back" },
+      after: { reason },
     })
   }
 }
@@ -447,11 +447,12 @@ export async function requestStageAdvance(
         .where(eq(funnels.id, opp.id))
     }
 
-    const gated =
-      requiresApprovalForTransition(from, target) && !canBypassApproval(ctx)
+    const route = requiresApprovalForTransition(from, target)
+      ? await resolveApprovalRoute(tx, ctx, PERMISSIONS.STAGE_ADVANCE_APPROVE)
+      : { direct: true, approverMemberId: null }
 
-    if (!gated) {
-      if (rollback) await cancelPendingApprovalRequests(tx, ctx, opp.id)
+    if (route.direct) {
+      await cancelPendingApprovalRequests(tx, ctx, opp.id, rollback ? "funnel moved back" : "funnel moved directly")
       await applyStageMove(
         tx,
         ctx,
@@ -464,11 +465,13 @@ export async function requestStageAdvance(
       return { moved: true }
     }
 
+    if (!route.approverMemberId) throw new Error("No eligible reporting manager")
     const { approvalRequestId } = await createApprovalRequest(
       tx,
       ctx,
       opp,
       target,
+      route.approverMemberId,
       input.reason
     )
     return { moved: false, approvalRequestId }
@@ -568,12 +571,12 @@ export async function decideApproval(
     }
 
     const assertAssignedApprover = () => {
+      if (req.requesterMemberId === ctx.memberId)
+        throw new Error("Cannot approve your own request")
       if (ctx.isSuperadmin) return
       if (!ctx.memberId || req.approverMemberId !== ctx.memberId ||
           !ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE))
         throw new Error("Not authorized to decide this request")
-      if (req.requesterMemberId === ctx.memberId)
-        throw new Error("Cannot approve your own request")
     }
     const assertCurrentApprover = async () => {
       assertAssignedApprover()
@@ -661,7 +664,7 @@ export async function decideApproval(
       from.id === target.id ||
       target.pipelineId !== opp.pipelineId ||
       req.fromStageId !== from.id ||
-      isRollbackTransition(from, target)
+      (isRollbackTransition(from, target) && !requiresApprovalForTransition(from, target))
     if (staleTransition) {
       const closeNote =
         "This funnel no longer has the requested forward transition; request closed."

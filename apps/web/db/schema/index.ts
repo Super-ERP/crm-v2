@@ -21,3 +21,5 @@ export * from "./platform-billing"
 export * from "./deployment-control"
 export * from "./saved-views"
 export * from "./operator-alerts"
+
+export * from "./lead-conversion-approvals"

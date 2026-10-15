@@ -145,8 +145,8 @@ The sales rep drafts and edits line items, notes, and pricing.
 ### `Pending Approval`
 A draft must be approved before it can be sent:
 
-* Click **Submit for Approval**.
-* The quote is locked against further edits and reviewed on the quotation by the first active manager in the funnel owner’s reporting line with **Approve quotations** permission. Only that eligible manager may approve or reject it. The same quotation requests also appear in **Sales → Approvals**, alongside funnel-stage requests.
+* Click **Submit for Approval**, or **Approve quotation** when you have quotation-approval permission and no reporting manager above you. Direct approval moves Draft to Approved without a pending request.
+* The quote is locked against further edits and reviewed on the quotation by the first active eligible manager in the submitter’s reporting line (the funnel owner is the fallback for legacy requests without submission audit data) with **Approve quotations** permission. Only that eligible manager may approve or reject it. The same quotation requests also appear in **Sales → Approvals**, alongside funnel-stage requests.
 * To make changes before approval, use **Recall to Draft** with **Edit quotations** permission and access to the record. Recall clears the approval assignment and metadata, keeps the same quotation number, and allows editing and resubmitting. If approval has already completed, use **Return to Draft** instead.
 * If the account owner changes while approval is pending, the quotation returns to Draft with an explanation. The new owner must resubmit it.
 
@@ -169,7 +169,7 @@ Each action also requires record access and its permission. **Edit quotations** 
 
 | Current status | Available lifecycle actions | Editing and revision |
 | --- | --- | --- |
-| Draft | Submit for Approval. | Edit this record; no revision action. |
+| Draft | Submit for Approval, or direct approval by an eligible top manager. | Edit this record; no revision action. |
 | Pending Approval | Eligible reviewer approves or rejects with a reason; an authorized editor can Recall to Draft. | Read-only until recalled or rejected to Draft. Edit and resubmit with the same number. No revision action for a live record. |
 | Approved | Send, or Return to Draft. | Read-only until returned to Draft. Returning clears approval; resubmit after editing. No revision action for a live record. |
 | Sent | Record customer acceptance or rejection. | Read-only; create a separate Draft revision with Create quotations permission. |

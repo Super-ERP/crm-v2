@@ -72,7 +72,7 @@ When a lead is ready for proposal:
    * **Account**: Link an existing Account or create a new one (*Client* or *Reseller*, Code, Address).
    * **Contact**: Creates or links the primary stakeholder contact.
    * **Opportunity & Funnel**: Creates the Opportunity container and seeds the sales deal into stage **`0e` (Identified)**.
-3. Click **Confirm Conversion**. This is an atomic, permanent one-way transaction.
+3. Submit the conversion for reporting-manager approval. Linked records are created atomically only after approval. A member with lead-conversion approval permission and no manager above them can confirm conversion directly.
 
 ---
 
@@ -142,7 +142,7 @@ A **Quotation** (`/quotations`) defines itemized pricing and terms.
 
 ### Approval & Revision Lifecycle
 * **`Draft`**: Being drafted by sales rep.
-* **Submit for Approval**: Submit every quotation to the first active reporting manager with quotation approval permission. Review happens on the quotation detail page. Status moves to **`Pending Approval`**.
+* **Submit for Approval**: Route the quotation to the submitter’s eligible reporting manager, or approve directly if the submitter has quotation-approval permission and no manager above them. Review is available in Sales → Approvals or on the quotation details.
 * **`Approved`**: Manager approves the quote.
 * **`Sent`**: Rep marks quote as delivered to the customer.
 * **Revisions**: If the customer requests changes, click **Revise**. The system keeps the original quote locked in history and creates a new linked Draft revision (e.g., `-Rev1`).
@@ -183,7 +183,7 @@ stateDiagram-v2
 ## 8. Approvals Hub
 
 Located at **Sales → Approvals** (`/approvals`), this shows quotation and funnel-stage requests assigned to eligible reporting managers:
-* **Incoming**: Separate quotation and funnel-stage sections, each with 25 records per page. Review quotation details and approve or reject directly from its card.
+* **Incoming**: Separate quotation, funnel-stage and lead-conversion sections, each with 25 records per page. Review quotation details and approve or reject directly from its card.
 * **My requests**: Tracks your stage requests and latest quotation submissions. Eligible requesters can recall pending quotations to Draft.
 * **Reviewing**: Inspect the funnel, requested stage, attachments, and requester notes.
 * **Decision**:

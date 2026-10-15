@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   LEAD_UPDATE: "lead.update",
   LEAD_DELETE: "lead.delete",
   LEAD_CONVERT: "lead.convert",
+  LEAD_CONVERT_APPROVE: "lead.convert.approve",
   // accounts
   ACCOUNT_VIEW: "account.view",
   ACCOUNT_CREATE: "account.create",
@@ -126,6 +127,7 @@ const REP_BASE: PermissionKey[] = [
 
 const MANAGER: PermissionKey[] = [
   ...REP_BASE,
+  PERMISSIONS.LEAD_CONVERT_APPROVE,
   PERMISSIONS.RECORDS_VIEW_TEAM,
   PERMISSIONS.SALES_ORDER_APPROVE,
   PERMISSIONS.LEAD_DELETE,
@@ -182,6 +184,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
       { key: PERMISSIONS.LEAD_UPDATE, label: "Edit leads" },
       { key: PERMISSIONS.LEAD_DELETE, label: "Delete leads" },
       { key: PERMISSIONS.LEAD_CONVERT, label: "Convert leads" },
+      { key: PERMISSIONS.LEAD_CONVERT_APPROVE, label: "Approve lead conversions" },
     ],
   },
   {

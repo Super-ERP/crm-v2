@@ -23,6 +23,7 @@ describe("quotation approval inbox", () => {
     expect(query.sql).toContain('q.status = \'pending_approval\'')
     expect(query.sql).toContain('current_approver."memberId" =')
     expect(query.sql).toContain('WITH RECURSIVE reporting_line')
+    expect(query.sql).toContain('CASE WHEN submission.created_at IS NULL THEN f.owner_member_id ELSE submission.actor_member_id END')
     expect(query.sql).toContain('q.deleted_at IS NULL')
     expect(query.sql).toContain('f.deleted_at IS NULL')
     expect(query.sql).toContain('f.owner_member_id IN')

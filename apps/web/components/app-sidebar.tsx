@@ -100,7 +100,7 @@ const NAV_SECTIONS: NavSection[] = [
       { title: "Payment Milestones", url: "/payment-milestones", icon: CreditCardIcon, tile: OBJECT_TILES.milestone.color, permission: PERMISSIONS.PAYMENT_MILESTONE_VIEW },
       { title: "Projects", url: "/projects", icon: FolderKanbanIcon, tile: OBJECT_TILES.project.color, permission: PERMISSIONS.PROJECT_VIEW, module: "projects" },
       { title: "Sales Orders", url: "/sales-orders", icon: ReceiptIcon, tile: OBJECT_TILES.salesOrder.color, permission: PERMISSIONS.SALES_ORDER_VIEW, module: "salesOrders" },
-      { title: "Approvals", url: "/approvals", icon: StampIcon, tile: "bg-rose-500", anyPermission: [PERMISSIONS.STAGE_ADVANCE, PERMISSIONS.STAGE_ADVANCE_APPROVE, PERMISSIONS.QUOTATION_UPDATE, PERMISSIONS.QUOTATION_APPROVE] },
+      { title: "Approvals", url: "/approvals", icon: StampIcon, tile: "bg-rose-500", anyPermission: [PERMISSIONS.STAGE_ADVANCE, PERMISSIONS.STAGE_ADVANCE_APPROVE, PERMISSIONS.QUOTATION_UPDATE, PERMISSIONS.QUOTATION_APPROVE, PERMISSIONS.LEAD_CONVERT, PERMISSIONS.LEAD_CONVERT_APPROVE] },
     ],
   },
   {

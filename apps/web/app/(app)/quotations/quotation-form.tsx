@@ -124,6 +124,7 @@ type ProjectNatureOption = { code: string; name: string }
  * permitted so the component stays drop-in for any caller that omits them. */
 export type QuotationPerms = {
   canUpdate: boolean
+  canDirectApprove?: boolean
   canApprove: boolean
   canSend: boolean
   canAccept: boolean
@@ -544,9 +545,9 @@ export function QuotationForm({
     router.push(`/quotations/${res.data.id}`)
   }
 
-  async function submitAction(
-    fn: () => Promise<ActionResult<unknown>>,
-    successMsg: string,
+  async function submitAction<T>(
+    fn: () => Promise<ActionResult<T>>,
+    successMsg: string | ((data: T) => string),
     options?: { redirect?: string }
   ) {
     setBusy(true)
@@ -556,7 +557,7 @@ export function QuotationForm({
       setBusy(false)
       return
     }
-    toast.success(successMsg)
+    toast.success(typeof successMsg === "function" ? successMsg(res.data) : successMsg)
     if (options?.redirect) router.push(options.redirect)
     setBusy(false)
   }
@@ -1078,15 +1079,15 @@ export function QuotationForm({
                 <AlertDialogTrigger
                   render={
                     <Button variant="default" disabled={busy}>
-                      Submit for approval
+                      {perms.canDirectApprove ? "Approve quotation" : "Submit for approval"}
                     </Button>
                   }
                 />
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Submit this quotation for approval?</AlertDialogTitle>
+                    <AlertDialogTitle>{perms.canDirectApprove ? "Approve this quotation?" : "Submit this quotation for approval?"}</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Submission locks editing until an approver returns it to Draft or approves it.
+                      {perms.canDirectApprove ? "Approval locks editing and allows this quotation to be sent." : "Submission locks editing until an approver returns it to Draft or approves it."}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -1095,11 +1096,11 @@ export function QuotationForm({
                       onClick={() =>
                         submitAction(
                           () => submitQuotationForApproval(quotation.id),
-                          "Quotation submitted for approval"
+                          data => data.status === "approved" ? "Quotation approved" : "Quotation submitted for approval"
                         )
                       }
                     >
-                      Submit
+                      {perms.canDirectApprove ? "Approve" : "Submit"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

@@ -26,7 +26,7 @@ A saved record is not necessarily approved. A manager's quotation approval does 
 
 | Decision | Required capability | Routing and place to act |
 | --- | --- | --- |
-| Approve or reject quotation approval | **Approve quotations**, access to the quotation, and current eligible-manager status | First active manager in the **funnel owner's** reporting line with that permission; act in **Sales → Approvals → Incoming → Quotation approvals** or on the Pending Approval quotation. |
+| Approve or reject quotation approval | **Approve quotations**, access to the quotation, and current eligible-manager status | First active manager in the **submitter's** reporting line (legacy requests without submission audit data use the funnel owner) with that permission; act in **Sales → Approvals → Incoming → Quotation approvals** or on the Pending Approval quotation. |
 | Approve or reject a stage request | **Approve stage advances**, assignment to that pending request, and current eligible-manager status | First active manager in the **requester's** reporting line with that permission; act in **Sales → Approvals → Incoming**. |
 | Record customer acceptance or rejection | **Accept quotations** and access to the quotation | Act on the **Sent** quotation after the customer responds. This records the customer's decision; it is not manager approval. |
 | Record sending | **Send quotations** and access to the quotation | Act on an **Approved** quotation whose funnel remains open and whose validity date has not passed. |

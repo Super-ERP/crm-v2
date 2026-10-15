@@ -39,7 +39,7 @@ export async function listQuotationApprovals(tab: "incoming" | "mine", page: unk
     if (visible !== null && visible.length === 0) return empty
     const scope = visible === null ? sql`true` : sql`f.owner_member_id IN (${sql.join(visible.map(id => sql`${id}`), sql`, `)})`
     const filter = tab === "incoming"
-      ? sql`q.status = 'pending_approval' AND ${ctx.isSuperadmin ? sql`true` : sql`current_approver."memberId" = ${ctx.memberId} AND f.owner_member_id <> ${ctx.memberId}`}`
+      ? sql`q.status = 'pending_approval' AND ${ctx.isSuperadmin ? sql`true` : sql`current_approver."memberId" = ${ctx.memberId} AND coalesce(submission.actor_member_id, f.owner_member_id) <> ${ctx.memberId}`}`
       : sql`submission.actor_member_id = ${ctx.memberId}`
     const rows = await tx.execute<Omit<QuotationApprovalRow, "requestedAt" | "decidedAt"> & {
       requestedAt: Date | string | null; decidedAt: Date | string | null
@@ -56,13 +56,13 @@ export async function listQuotationApprovals(tab: "incoming" | "mine", page: unk
       INNER JOIN funnels f ON f.id = q.funnel_id AND f.tenant_id = q.tenant_id
       INNER JOIN accounts customer ON customer.id = f.account_id AND customer.tenant_id = q.tenant_id
       LEFT JOIN accounts bill_to ON bill_to.id = q.bill_to_account_id AND bill_to.tenant_id = q.tenant_id
-      LEFT JOIN LATERAL (${managerApproverQuery(sql`f.owner_member_id`, PERMISSIONS.QUOTATION_APPROVE)}) current_approver ON true
       LEFT JOIN LATERAL (
         SELECT a.actor_member_id, a.actor_user_id, a.created_at, a.after
         FROM audit_log a WHERE a.tenant_id = q.tenant_id AND a.entity_type = 'quotation'
           AND a.entity_id = q.id::text AND a.action = 'quotation.submitted_for_approval' AND a.outcome = 'success'
         ORDER BY a.created_at DESC, a.id DESC LIMIT 1
       ) submission ON true
+      LEFT JOIN LATERAL (${managerApproverQuery(sql`CASE WHEN submission.created_at IS NULL THEN f.owner_member_id ELSE submission.actor_member_id END`, PERMISSIONS.QUOTATION_APPROVE)}) current_approver ON true
       LEFT JOIN LATERAL (
         SELECT a.created_at FROM audit_log a
         WHERE a.tenant_id = q.tenant_id AND a.entity_type = 'quotation' AND a.entity_id = q.id::text

@@ -687,6 +687,13 @@
 			"when": 1792037286256,
 			"tag": "0097_quotation_bill_to",
 			"breakpoints": true
+		},
+		{
+			"idx": 98,
+			"version": "7",
+			"when": 1792040000000,
+			"tag": "0098_lead_conversion_approval",
+			"breakpoints": true
 		}
 	]
 }

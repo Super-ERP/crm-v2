@@ -50,7 +50,7 @@ See [PPVVC qualification](../04-opportunities-and-funnel.md#the-ppvvc-qualificat
 <details>
 <summary>Can I move a deal backward or reopen it?</summary>
 
-An open deal can move to an earlier open stage. A parked/KIV deal uses the reopen approval policy. The current queued-review path can mark this request obsolete; an authorized stage approver can reopen directly. See [KIV](../04-opportunities-and-funnel.md#kiv-keep-in-view). Closed Won and Closed Lost are terminal and cannot change stage.
+An open deal can move to an earlier open stage. A parked/KIV deal uses the reopen approval policy. The assigned eligible reviewer can approve the reopen; a member with stage-approval permission and no superior can reopen directly. Managers with a superior require approval. See [KIV](../04-opportunities-and-funnel.md#kiv-keep-in-view). Closed Won and Closed Lost are terminal and cannot change stage.
 
 See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules).
 
@@ -80,7 +80,7 @@ See [Managing revisions](../05-quotations-and-revisions.md#managing-revisions).
 <details>
 <summary>Where do I approve a quotation?</summary>
 
-The eligible reporting manager reviews quotation approval on the quotation itself. This is the first active manager in the funnel owner’s reporting line with quotation approval permission. **Sales → Approvals** includes quotation and funnel-stage requests in both **Incoming** and **My requests**. Managers can approve or reject quotation cards; eligible requesters can recall pending quotations.
+The eligible reporting manager reviews quotation approval on the quotation itself. This is the first active eligible manager in the submitter’s reporting line with quotation approval permission. **Sales → Approvals** includes quotation, funnel-stage and lead-conversion requests in both **Incoming** and **My requests**. Managers can approve or reject quotation cards; eligible requesters can recall pending quotations.
 
 See [Quotations](../05-quotations-and-revisions.md) and [Stage approvals](../08-approvals-inbox.md).
 

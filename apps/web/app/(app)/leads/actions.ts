@@ -69,6 +69,7 @@ export async function getLead(id: string): Promise<LeadDetail | null> {
 export async function createLead(input: LeadInput): Promise<ActionResult<Lead>> {
   return runAction(async () => {
     const normalized = normalizeLeadInput(input)
+    if (normalized.status === "converted") throw new Error("Use the conversion approval workflow to convert a lead")
     if (!normalized.name) throw new Error("Name is required")
     const email = requireEmail(normalized.email)
 
@@ -168,7 +169,9 @@ export async function updateLead(
       if (!canManageAllRecords(ctx) && !ownsOrManages(visible, before.ownerMemberId))
         throw new Error("FORBIDDEN: not permitted on this lead")
 
+      if (before.status === "converted") throw new Error("Converted leads cannot be edited")
       const normalized = normalizeLeadInput(input)
+      if (normalized.status === "converted") throw new Error("Use the conversion approval workflow to convert a lead")
       if (!normalized.name) throw new Error("Name is required")
       const email = requireEmail(normalized.email)
 
@@ -512,6 +515,7 @@ export async function convertLeadAction(input: ConvertLeadInput) {
 
     revalidatePath("/leads")
     revalidatePath(`/leads/${input.leadId}`)
+    revalidatePath("/approvals")
     return result
   })
 }

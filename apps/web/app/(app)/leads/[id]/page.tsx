@@ -9,6 +9,8 @@ import { listEntityAttachments } from "@/app/(app)/_shared/attachment-actions"
 import { listFunnelsWithStages } from "@/lib/lookups"
 import { formatDate } from "@/lib/format"
 import { getLead } from "../actions"
+import { listLeadConversionApprovals } from "../../approvals/lead-conversion-actions"
+import { LeadConversionApprovalCard } from "../../approvals/lead-conversion-cards"
 import { LeadDetailActions } from "./lead-detail-actions"
 import { LeadDetailBody, type LeadDetailSection } from "./lead-detail-body"
 
@@ -126,10 +128,13 @@ export default async function LeadDetailPage({
       ? buildFunnelSteps(leadFunnelStages, lead.currentStageId)
       : null
   const leadProgress = buildLeadSteps(lead.status)
+  const [myConversions, incomingConversions] = await Promise.all([listLeadConversionApprovals("mine", 0, id), listLeadConversionApprovals("incoming", 0, id)])
+  const conversion = incomingConversions.rows[0] ?? myConversions.rows[0]
 
   return (
     <>
       <PageBody>
+        {conversion ? <LeadConversionApprovalCard row={conversion} incoming={incomingConversions.rows.length > 0} /> : null}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             {stageName ? (

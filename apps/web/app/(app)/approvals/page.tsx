@@ -7,25 +7,28 @@ import {
   listIncomingApprovals,
   listMyApprovals,
 } from "./actions"
+import { listLeadConversionApprovals } from "./lead-conversion-actions"
 import { listQuotationApprovals } from "./quotation-actions"
 import { ApprovalsClient } from "./approvals-client"
 
-export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string; quotationPage?: string }> }) {
-  // Both workflows share the inbox; each read and mutation enforces its own permissions.
+export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string; quotationPage?: string; leadPage?: string }> }) {
+  // All three workflows share the inbox; each read and mutation enforces its own permissions.
   const ctx = await getServerContext()
   const canParticipate =
     !!ctx &&
     (ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) ||
       ctx.can(PERMISSIONS.STAGE_ADVANCE) ||
       ctx.can(PERMISSIONS.QUOTATION_APPROVE) ||
-      ctx.can(PERMISSIONS.QUOTATION_UPDATE))
+      ctx.can(PERMISSIONS.QUOTATION_UPDATE) ||
+      ctx.can(PERMISSIONS.LEAD_CONVERT) ||
+      ctx.can(PERMISSIONS.LEAD_CONVERT_APPROVE))
 
   if (!canParticipate) {
     return (
       <>
         <SiteHeader title="Approvals" />
         <PageBody>
-          <Forbidden description="Approvals are handled by people who request or approve funnel-stage changes and quotations. Your role doesn't take part in this workflow." />
+          <Forbidden description="Approvals are handled by people who request or approve funnel-stage changes, quotations and lead conversions. Your role doesn't take part in this workflow." />
         </PageBody>
       </>
     )
@@ -33,6 +36,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
 
   const params = await searchParams
   const tab = params.tab === "mine" ? "mine" : "incoming"
+  const leadApprovals = await listLeadConversionApprovals(tab, params.leadPage)
   const quotationApprovals = await listQuotationApprovals(tab, params.quotationPage)
   const approvals = tab === "mine" ? await listMyApprovals(params.page) : await listIncomingApprovals(params.page)
 
@@ -44,6 +48,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
           tab={tab}
           page={approvals}
           quotationPage={quotationApprovals}
+          leadPage={leadApprovals}
         />
       </PageBody>
     </>

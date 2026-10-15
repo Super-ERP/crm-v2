@@ -166,6 +166,12 @@ export function ConvertForm({
         showActionError(res)
         return
       }
+      if (res.data.pending) {
+        toast.success("Conversion submitted for manager approval")
+        router.push(`/leads/${lead.id}`)
+        router.refresh()
+        return
+      }
       toast.success("Lead converted", {
         description: creatingNew
           ? "Company account, contact, opportunity and funnel created."
@@ -487,7 +493,7 @@ export function ConvertForm({
           <AlertDialogHeader>
             <AlertDialogTitle>Convert this lead?</AlertDialogTitle>
             <AlertDialogDescription>
-              This creates linked sales records and cannot be undone. Check the account and names before continuing.
+              This submits the conversion for reporting-manager approval. Records are created after approval. Eligible managers without a reporting manager can convert immediately. Check the account and names before continuing.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <dl className="grid gap-3 rounded-md border p-3 text-sm">
@@ -515,7 +521,7 @@ export function ConvertForm({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={submitting}>Back to edit</AlertDialogCancel>
             <AlertDialogAction onClick={handleConvert} disabled={blocked}>
-              {submitting ? "Converting…" : "Convert lead"}
+              {submitting ? "Submitting…" : "Submit conversion"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

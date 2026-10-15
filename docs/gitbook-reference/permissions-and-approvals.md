@@ -20,38 +20,34 @@ Sales roles see only records they own. Managers also see records owned by their 
 
 The **Owner** role is different from ownership of an account or funnel. See [Terminology](terminology.md#owner-salesperson-and-reporting-manager).
 
-## Who approves a quotation?
+## Shared manager approval policy
 
-The app starts from the **Account owner's reporting line** and finds the first active manager with **Approve quotations** permission. Only that eligible manager can approve or reject the quotation, subject to the platform superadmin's operational override. An Account owner cannot approve their own quotation.
+Quotation approval, gated funnel-stage changes and lead conversion use the same rule:
 
-Every quote needs approval before sending. Review happens in **Sales → Approvals → Incoming → Quotation approvals** or on the quotation page. Rejection requires a reason and returns the quote to Draft. See [Quotation lifecycle](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#the-quotation-lifecycle).
+* A member with the matching approval permission and **no manager configured above them** can proceed directly.
+* A manager who has a manager above them must request approval from the first active, eligible manager in that reporting line.
+* A salesperson without approval permission still requires approval. Having no reporting manager does not grant an exemption.
+* A configured superior who lacks permission or is inactive is skipped in favour of an eligible higher manager. If none qualifies, the request is blocked until the reporting line or permissions are corrected.
+* Missing or inactive reporting profiles do not qualify for direct action. Platform superadmins retain their operational override.
 
-## Who approves a stage request?
+Approving a subordinate's request does not create another approval request for the reviewer. The policy governs the person initiating the business action.
 
-The app starts from the **requester's reporting line** and finds the first active manager with **Approve stage advances** permission. Only the assigned manager who remains eligible can decide the request, subject to the platform superadmin's operational override. A requester cannot approve their own request.
+## Review requests
 
-Stage approvers can enter gated stages directly using their stage-approval capability. Other users follow the request process when a stage requires approval. See [Stage approvals](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox).
+Use **Sales → Approvals → Incoming** for quotation, funnel-stage and lead-conversion requests routed to you. **My requests** tracks your submissions. Each workflow has its own labelled section and pagination.
+
+Quotation routing follows the actual submitter's reporting line, with the funnel owner as the fallback for legacy requests without submission audit data. Stage and lead-conversion requests follow the requester's reporting line. Decisions recheck eligibility, permissions, status and record access. A queued request cannot be self-approved; eligible top managers use the direct action instead.
+
+Quotation rejection requires a reason and returns the quote to Draft. Lead-conversion rejection leaves the lead unconverted, allowing correction and a new submission. Lead conversion creates no account, contact, opportunity or funnel until the conversion is approved or an eligible top manager confirms the direct conversion.
 
 ## Routing examples
 
-Suppose Sam owns the Account, Sam reports to Maya, and Maya reports to Lee.
+Suppose Sam reports to Maya, and Maya reports to Lee. All three have active reporting profiles; Maya and Lee have the required approval permission.
 
-* If Maya is active and has **Approve quotations**, Maya reviews Sam's quotation. If Maya lacks that permission, the app checks Lee next. Lee can review only if active and permitted. A different administrator outside this reporting line is not selected just because they have an administrative role.
-* If Alex submits a stage request on an accessible funnel, the request follows **Alex's** reporting line, even when Sam owns the Account. The quotation still follows Sam's line.
-* Quotation approval does not bypass its Draft → Pending Approval → Approved process merely because the person preparing it is a manager. For stage movement, users with **Approve stage advances** can make gated transitions directly, subject to stage requirements.
-
-```mermaid
-flowchart TD
-    Q["Quotation submitted"] --> O["Start at Account owner's manager"]
-    R["Stage request submitted"] --> U["Start at requester's manager"]
-    O --> E["First active manager with the matching approval permission"]
-    U --> E
-    E --> D["Review the specific Pending item"]
-    O --> N["No eligible manager: submission blocked"]
-    U --> N
-```
-
-The matching permission differs between the two routes. One person may qualify for quotation approval but not stage approval. For a stage request, the reviewer must also match the stored assignment when deciding. For a quotation, the app checks the owner's current eligible manager at decision time.
+* Sam's request goes to Maya.
+* Maya's own request goes to Lee, even though Maya can approve Sam's requests.
+* If Lee has no manager above them, Lee can proceed directly.
+* If Maya's manager lacks approval permission and there is no eligible higher manager, Maya's action is blocked. It does not silently become a direct action.
 
 ## Check the version before approval
 

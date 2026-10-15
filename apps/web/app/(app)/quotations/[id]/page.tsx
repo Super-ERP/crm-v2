@@ -11,6 +11,7 @@ import { listEntityAttachments } from "@/app/(app)/_shared/attachment-actions"
 import {
   getQuotation,
   canApproveQuotation,
+  canDirectlyApproveQuotation,
   getQuotationDocument,
   getProjectForQuotation,
   getQuotationFormMeta,
@@ -49,6 +50,7 @@ export default async function QuotationDetailPage({
     formMeta,
     preview,
     canApprove,
+    canDirectApprove,
   ] = await Promise.all([
     listTaxOptions(),
     getTaxInclusive(),
@@ -61,11 +63,13 @@ export default async function QuotationDetailPage({
     getQuotationFormMeta(detail.quotation.funnelId, detail.quotation.billToAccountId, id),
     getQuotationDocument(id),
     canApproveQuotation(id),
+    canDirectlyApproveQuotation(),
   ])
 
   const perms = {
     canUpdate: ctx.can(PERMISSIONS.QUOTATION_UPDATE),
     canApprove,
+    canDirectApprove,
     canSend: ctx.can(PERMISSIONS.QUOTATION_SEND),
     canAccept: ctx.can(PERMISSIONS.QUOTATION_ACCEPT),
     canDelete: ctx.can(PERMISSIONS.QUOTATION_DELETE),

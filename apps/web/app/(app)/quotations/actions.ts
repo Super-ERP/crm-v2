@@ -1,9 +1,9 @@
 "use server"
 
-import { findManagerApprover, requireManagerApprover } from "@/server/services/approval-routing"
+import { findManagerApprover, resolveApprovalRoute } from "@/server/services/approval-routing"
 
 import { canSelectBillToAccount, resolveQuotationBillingAccount, type QuotationBillingSnapshot } from "@/lib/quotation-billing"
-import { and, asc, desc, eq, isNull, ne, notInArray } from "drizzle-orm"
+import { and, asc, desc, eq, isNull, ne, notInArray, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -986,10 +986,24 @@ async function assertQuotationAccess(
   return funnel?.ownerMemberId ?? null
 }
 
-async function assertQuotationApprover(tx: Tx, ctx: Parameters<typeof visibleMemberIds>[1], quotation: QuotationRow) {
+async function isQuotationApprover(tx: Tx, ctx: Parameters<typeof visibleMemberIds>[1], quotation: QuotationRow) {
   const ownerId = await assertQuotationAccess(tx, ctx, quotation)
-  if (!ctx.isSuperadmin && (!ctx.memberId || !ownerId || ctx.memberId === ownerId || await findManagerApprover(tx, ownerId, PERMISSIONS.QUOTATION_APPROVE) !== ctx.memberId)) {
-    throw new Error("Only the quotation owner's eligible reporting manager can approve or reject this quotation.")
+  const [submission] = await tx.execute<{ memberId: string | null; userId: string | null }>(sql`
+    SELECT actor_member_id AS "memberId", actor_user_id AS "userId" FROM audit_log
+    WHERE tenant_id = ${ctx.tenantId} AND entity_type = 'quotation'
+      AND entity_id = ${quotation.id} AND action = 'quotation.submitted_for_approval'
+      AND outcome = 'success' ORDER BY created_at DESC, id DESC LIMIT 1
+  `)
+  const requesterId = submission ? submission.memberId : ownerId
+  if ((ctx.memberId && requesterId === ctx.memberId) || submission?.userId === ctx.userId) return false
+  if (ctx.isSuperadmin) return true
+  if (!requesterId || !ctx.memberId || !ctx.can(PERMISSIONS.QUOTATION_APPROVE)) return false
+  return await findManagerApprover(tx, requesterId, PERMISSIONS.QUOTATION_APPROVE) === ctx.memberId
+}
+
+async function assertQuotationApprover(tx: Tx, ctx: Parameters<typeof visibleMemberIds>[1], quotation: QuotationRow) {
+  if (!await isQuotationApprover(tx, ctx, quotation)) {
+    throw new Error("Only the requester's eligible reporting manager can approve or reject this quotation.")
   }
 }
 
@@ -999,8 +1013,15 @@ export async function canApproveQuotation(id: string): Promise<boolean> {
     if (!ctx.can(PERMISSIONS.QUOTATION_APPROVE)) return false
     const [quotation] = await tx.select().from(quotations).where(and(eq(quotations.id, id), isNull(quotations.deletedAt))).limit(1)
     if (!quotation || quotation.status !== "pending_approval") return false
-    const ownerId = await assertQuotationAccess(tx, ctx, quotation)
-    return ctx.isSuperadmin || !!ctx.memberId && !!ownerId && ctx.memberId !== ownerId && await findManagerApprover(tx, ownerId, PERMISSIONS.QUOTATION_APPROVE) === ctx.memberId
+    return isQuotationApprover(tx, ctx, quotation)
+  })
+}
+
+export async function canDirectlyApproveQuotation(): Promise<boolean> {
+  return withTenant(PERMISSIONS.QUOTATION_VIEW, async (tx, ctx) => {
+    if (!ctx.can(PERMISSIONS.QUOTATION_UPDATE)) return false
+    try { return (await resolveApprovalRoute(tx, ctx, PERMISSIONS.QUOTATION_APPROVE)).direct }
+    catch { return false }
   })
 }
 
@@ -1181,7 +1202,7 @@ async function createQuotationCopy(
       return created
     })
     revalidatePath("/quotations")
-  revalidatePath("/approvals")
+    revalidatePath("/approvals")
     revalidatePath(`/quotations/${sourceQuotationId}`)
     if (sourceFunnelId) revalidatePath(`/funnel/${sourceFunnelId}`)
     return result
@@ -1190,9 +1211,9 @@ async function createQuotationCopy(
 
 export async function submitQuotationForApproval(
   id: string
-): Promise<ActionResult<void>> {
+): Promise<ActionResult<{ status: "approved" | "pending_approval" }>> {
   return runAction(async () => {
-    await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
+    const result = await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
       // Lock the account before the quotation. Owner reassignment locks the
       // account first, then updates its funnels and pending quotations.
       const [account] = await tx
@@ -1207,30 +1228,34 @@ export async function submitQuotationForApproval(
       const quotation = await getLockedQuotation(tx, id)
       const ownerId = await assertQuotationAccess(tx, ctx, quotation)
       if (!ownerId) throw new Error("Assign an account owner before requesting quotation approval.")
-      const approverId = await requireManagerApprover(tx, ownerId, PERMISSIONS.QUOTATION_APPROVE)
+      const route = await resolveApprovalRoute(tx, ctx, PERMISSIONS.QUOTATION_APPROVE)
+      const approverId = route.direct ? ctx.memberId : route.approverMemberId
+      const status = route.direct ? "approved" : "pending_approval"
       assertQuotationTransition(quotation.status, "pending_approval")
 
       await tx
         .update(quotations)
         .set({
-          status: "pending_approval",
+          status,
           approverMemberId: approverId,
-          approvedAt: null,
+          approvedAt: route.direct ? new Date() : null,
           rejectionReason: null,
           updatedAt: new Date(),
         })
         .where(eq(quotations.id, id))
       await writeAudit(tx, ctx, {
-        action: "quotation.submitted_for_approval",
+        action: route.direct ? "quotation.approved" : "quotation.submitted_for_approval",
         entityType: "quotation",
         entityId: id,
         before: { status: quotation.status },
-        after: { status: "pending_approval", approverMemberId: approverId },
+        after: { status, approverMemberId: approverId },
       })
+      return { status } as const
     })
     revalidatePath("/quotations")
-  revalidatePath("/approvals")
+    revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
+    return result
   })
 }
 
@@ -1260,7 +1285,7 @@ export async function approveQuotation(id: string): Promise<ActionResult<void>> 
       })
     })
     revalidatePath("/quotations")
-  revalidatePath("/approvals")
+    revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1299,7 +1324,7 @@ export async function rejectQuotation(
       })
     })
     revalidatePath("/quotations")
-  revalidatePath("/approvals")
+    revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
   })
 }
@@ -1346,7 +1371,7 @@ async function returnQuotationToDraft(
       })
     })
     revalidatePath("/quotations")
-  revalidatePath("/approvals")
+    revalidatePath("/approvals")
     revalidatePath(`/quotations/${id}`)
   })
 }
