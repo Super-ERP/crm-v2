@@ -1,0 +1,88 @@
+# Salesforce quotation Bill To recovery
+
+## Verified source and production findings (2026-10-15)
+
+The Salesforce export contains 943 quotations. In 158 quotations the explicit
+`Quote.Bill_To_Name__c` differs from `Quote.AccountId`'s account name. All 158
+Bill To names agree with the quote contact's Salesforce account. The source
+quote/opportunity account identifies the end user; the billing account identifies
+the intermediary. Some billing accounts are classified Customer, Prospect or
+blank in Salesforce, so account type must not determine historical billing.
+
+With the existing approved missing-funnel overrides, the updated billing import
+planner resolves billing data for all 943 source quotations without billing
+conflicts.
+
+A read-only production snapshot and the recovery planner matched all 158 to
+existing imported quotation, account and contact IDs: **158 ready, 0 review**.
+No production data was changed by this audit. The private report contains before
+images and the proposed billing snapshots; do not commit it or the source CSVs.
+
+The subset whose billing accounts have source Type Reseller spans 37 distinct
+reseller/end-user pairs across 67 quotes; eight resellers serve multiple end
+users. A single `accounts.end_user_account_id` cannot represent this relationship.
+Quotation `bill_to_account_id` plus the existing Funnel account represents each
+transaction's relationship, supporting both directions without inferring account
+ownership or changing source account types.
+
+## Application behavior
+
+Migration 0097 adds nullable `bill_to_account_id` and `billing_snapshot` fields.
+Existing quotations retain legacy rendering until deliberately recovered or edited
+as Draft. New quotation creation stores an explicit billing account, defaulting
+to the Funnel account, and a saved account/contact snapshot. PDF document readers
+use the billing snapshot. Draft edits can change Bill To; Attention must belong
+to it. Copies/revisions preserve billing data in a new Draft.
+
+Account and contact reads share reseller master data within the tenant. Related
+sales transactions keep owner/team scope. Edits/deletes retain their existing
+owner permission checks. Resellers no longer require one default end user.
+
+This change does not change Funnel ownership, quotation numbering, totals,
+approvals, currencies, or payment milestone eligibility.
+
+## Recovery procedure
+
+Deploy migration 0097 and the matching application version before applying data.
+Use the exact original export, outside the repository. Run from `apps/web` with
+`DATABASE_ADMIN_URL` set through the deployment's normal secret mechanism:
+
+```sh
+pnpm exec tsx db/import/backfill-quotation-billing.ts \
+  --dir /secure/salesforce-export \
+  --tenant TENANT_ID \
+  --report-dir /secure/billing-recovery/dry-run
+```
+
+Review the ready/review counts and before/after images. For an offline audit,
+`--snapshot /secure/database-snapshot.json` accepts arrays named `accounts`,
+`persons`, and `quotations` with database column names. Offline mode cannot apply.
+
+Apply against a fresh live read after deploying:
+
+```sh
+pnpm exec tsx db/import/backfill-quotation-billing.ts \
+  --dir /secure/salesforce-export \
+  --tenant TENANT_ID \
+  --report-dir /secure/billing-recovery/apply \
+  --apply
+```
+
+Each run writes a unique private subdirectory within `--report-dir`, preserving
+previous before-image reports when rerun. The tool defaults to dry-run. Apply updates only the three billing fields and
+`updated_at`, records source hashes and an audit event per quotation, and commits
+all ready rows in one transaction. It refuses to overwrite existing billing
+snapshots or conflicting manually selected contacts. Deleted/missing/cross-tenant
+parents and unresolved source matches go to review. An intervening quote change
+rolls back the entire transaction. Exact timestamp comparison preserves
+PostgreSQL microseconds. A rerun recognizes completed records without rewriting
+history. Keep the before-image report for any deliberate reversal.
+
+Source account billing addresses are absent from this export; recovery snapshots
+use the currently stored CRM billing address. This does not recover missing
+addresses. Do not claim the current address was the original Salesforce address.
+
+The full Salesforce importer now uses the same explicit Bill To matching policy.
+Unresolved or conflicting explicit billing names quarantine the quote for review
+rather than silently addressing it to an unrelated company. Do not rerun a full
+import against production to perform this focused recovery.

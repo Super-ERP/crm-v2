@@ -292,7 +292,7 @@ export const MAPPINGS: ObjectMap[] = [
       ContactId: { col: "attention_contact_id", xform: ref("Contact") },
       Tax_Percentage__c: { col: "tax_rate_snapshot", xform: asNum },
     },
-    consumes: ["Status", "Tax_Amount__c", "Total_Including_Tax__c", "Total_Discount__c"],
+    consumes: ["Bill_To_Name__c", "Status", "Tax_Amount__c", "Total_Including_Tax__c", "Total_Discount__c"],
     // This export's subtotal is already NET of its line discounts. The plan
     // additionally verifies these values with the application's shared math.
     defaults: (r) => {

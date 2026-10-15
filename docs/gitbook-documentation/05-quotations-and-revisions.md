@@ -44,6 +44,16 @@ The system automatically links the quote to the Opportunity, Account, and Accoun
 {% endstep %}
 {% endstepper %}
 
+### Bill To when quoting through a reseller
+
+Keep the Opportunity and Funnel under the **end user**. In the quotation, select the company that receives and pays the quotation in **Bill To**, then choose an **Attention** contact from that company.
+
+For example, when Uniti sells to MCMC, keep the Funnel under **MCMC**, select **Uniti Office** as Bill To, and select Uniti's contact. Quandatics bills Uniti; Uniti bills MCMC. Different quotations in the same Funnel may be addressed to different resellers, so you do not need a separate Funnel for every reseller quote.
+
+The Bill To picker includes accounts you can access and shared reseller accounts in your current entity. Selecting a reseller does not transfer the Funnel or expose another salesperson's deals. For a direct sale, keep **End-user account (same as funnel)**.
+
+Saving a new quotation or its Draft captures the billing company, address, phone and selected contact. Issued quotations use that saved snapshot in the PDF. To correct an issued quotation, follow the available return-to-Draft or revision workflow. Duplicating or revising a quotation copies its billing snapshot into the new Draft for review.
+
 ### Check defaults before sending
 
 Review payment terms, delivery notes, the recipient contact, currency, and tax before submitting the quote. Defaults help you prepare a draft; do not assume that every default becomes immutable at creation.

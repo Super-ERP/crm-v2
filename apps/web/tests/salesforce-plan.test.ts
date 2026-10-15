@@ -175,3 +175,20 @@ it("imports account children under the account owner and records source owner di
     expect(p.records.find(r=>r.sourceId===id)?.values.owner_member_id).toBe("member-account-owner")
   expect(p.changes.filter(c=>c.field==="owner_member_id"&&c.after==="member-account-owner").length).toBeGreaterThanOrEqual(4)
 })
+
+it("keeps a reseller's quote contact and distinct bill-to account on an end-user funnel", () => {
+  const d = fixture()
+  d.Account.rows.push({ Id: "reseller", Name: "Uniti", Type: "Reseller", CurrencyIsoCode: "MYR" })
+  d.Contact = source([{ Id: "reseller-contact", AccountId: "reseller", FirstName: "Billing", LastName: "Contact" }])
+  d.Quote.rows[0].Bill_To_Name__c = "Uniti"
+  d.Quote.rows[0].ContactId = "reseller-contact"
+  const p = planMigration(d, options)
+  const quote = p.records.find(r => r.sourceId === "q1")!
+  expect(quote.status).toBe("ready")
+  expect(quote.values).toMatchObject({
+    bill_to_account_id: migrationId(options.tenantId, "Account", "reseller"),
+    attention_contact_id: migrationId(options.tenantId, "Contact", "reseller-contact"),
+    billing_snapshot: { account: { name: "Uniti" }, contact: { name: "Billing Contact" } },
+  })
+  expect(p.records.find(r => r.sourceId === "f")?.values.account_id).toBe(migrationId(options.tenantId, "Account", "a"))
+})

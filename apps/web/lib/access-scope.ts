@@ -1,5 +1,5 @@
 import "server-only"
-import { eq, inArray, sql, type SQL, type Column } from "drizzle-orm"
+import { eq, inArray, or, sql, type SQL, type Column } from "drizzle-orm"
 import { type Tx } from "@/db"
 import {
   membershipProfiles,
@@ -92,6 +92,11 @@ export function ownerScope(
   if (visible === null) return undefined
   if (visible.length === 0) return sql`false`
   return inArray(ownerColumn, visible)
+}
+
+/** Reseller master data is shared; sales transactions retain their owner scope. */
+export function accountReadScope(visible: string[] | null): SQL | undefined {
+  return visible === null ? undefined : or(eq(accounts.accountType, "reseller"), ownerScope(accounts.ownerMemberId, visible))
 }
 
 /**

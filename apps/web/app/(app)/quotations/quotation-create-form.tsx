@@ -71,6 +71,7 @@ const schema = z.object({
   notes: z.string().max(QUOTATION_CONTENT_LIMITS.notes, "Notes must be 2000 characters or fewer"),
   delivery: z.string().max(QUOTATION_CONTENT_LIMITS.delivery, "Delivery must be 500 characters or fewer"),
   paymentTerm: z.string().max(QUOTATION_CONTENT_LIMITS.paymentTerm, "Payment term must be 120 characters or fewer"),
+  billToAccountId: z.string(),
   attentionContactId: z.string(),
   headerDiscount: headerDiscountSchema,
   lines: z.array(quotationLineSchema).min(1, "Add at least one line item"),
@@ -90,6 +91,7 @@ function isFormDraft(value: unknown): value is FormValues {
     "notes",
     "delivery",
     "paymentTerm",
+    "billToAccountId",
     "attentionContactId",
     "headerDiscount",
   ]
@@ -186,6 +188,7 @@ export function QuotationCreateForm({
     notes: quoteDefaults.notes ?? "",
     delivery: quoteDefaults.delivery ?? "",
     paymentTerm: quoteDefaults.paymentTerm ?? "",
+    billToAccountId: "__funnel__",
     attentionContactId: defaultAttentionContactId ?? NO_CONTACT,
     headerDiscount: "0",
     lines: [
@@ -244,6 +247,9 @@ export function QuotationCreateForm({
   })
 
   const watchedFunnelId = useWatch({ control: form.control, name: "funnelId" })
+  const watchedBillToAccountId = useWatch({ control: form.control, name: "billToAccountId" })
+  const [billToAccounts, setBillToAccounts] = React.useState<{ id: string; name: string }[]>([])
+  const [billingLoading, setBillingLoading] = React.useState(false)
   const [availableContacts, setAvailableContacts] = React.useState(contacts)
   const renderedContacts = watchedFunnelId ? availableContacts : []
 
@@ -255,20 +261,21 @@ export function QuotationCreateForm({
         active = false
       }
     }
+    setBillingLoading(true)
     React.startTransition(() => {
-      void getQuotationFormMeta(watchedFunnelId).then((meta) => {
+      void getQuotationFormMeta(watchedFunnelId, watchedBillToAccountId === "__funnel__" ? null : watchedBillToAccountId).then((meta) => {
         if (!active) return
+        setBillToAccounts(meta.billToAccounts)
         setAvailableContacts(meta.contacts)
         const currentContactId = form.getValues("attentionContactId")
         if (!meta.contacts.some((contact) => contact.id === currentContactId)) {
           form.setValue("attentionContactId", meta.defaultAttentionContactId ?? NO_CONTACT)
         }
-      })
+      }).catch(() => { if (active) { setAvailableContacts([]); form.setValue("billToAccountId", "__funnel__"); toast.error("Could not load billing contacts") } })
+        .finally(() => { if (active) setBillingLoading(false) })
     })
-    return () => {
-      active = false
-    }
-  }, [form, watchedFunnelId])
+    return () => { active = false }
+  }, [form, watchedFunnelId, watchedBillToAccountId])
 
   // Product picker items + a helper that fills a line from the chosen product.
   const productItems = React.useMemo(
@@ -345,6 +352,7 @@ export function QuotationCreateForm({
       notes: values.notes || null,
       delivery: values.delivery || null,
       paymentTerm: values.paymentTerm || null,
+      billToAccountId: values.billToAccountId === "__funnel__" ? null : values.billToAccountId,
       attentionContactId:
         values.attentionContactId === NO_CONTACT
           ? null
@@ -558,6 +566,26 @@ export function QuotationCreateForm({
             )}
           />
 
+                <FormField
+                  control={form.control}
+                  name="billToAccountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bill To</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          value={field.value}
+                          onChange={(value) => { field.onChange(value); form.setValue("attentionContactId", NO_CONTACT) }}
+                          options={[{ value: "__funnel__", label: "End-user account (same as funnel)" }, ...billToAccounts.map(account => ({ value: account.id, label: account.name }))]}
+                          disabled={!watchedFunnelId || billingLoading}
+                          placeholder="Select billing account…"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">Select the reseller when they receive and pay this quotation. The funnel stays under the end user.</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
           <FormField
             control={form.control}
             name="attentionContactId"
@@ -875,7 +903,7 @@ export function QuotationCreateForm({
           </Card>
 
           <div className="grid gap-2">
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy || billingLoading}>
               {busy ? "Creating…" : submitLabel}
             </Button>
             {onCancel ? (

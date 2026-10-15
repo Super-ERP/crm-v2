@@ -1,3 +1,4 @@
+import { resolveSourceBillTo } from "./quotation-billing"
 import { projectQuoteProduct } from "../../server/services/quote-sync-projection"
 import { createHash } from "node:crypto"
 import { MAPPINGS, type Ctx } from "./mapping"
@@ -39,7 +40,7 @@ export const TECHNIQUES: Record<string, { fields: string[]; targets: string[]; t
   Quote:[{fields:["OpportunityId"],targets:["funnel_id"],technique:"Use source funnel ID, or an explicit data-owner-approved missing-parent override. Validate the target and log the decision; child lines retain their original QuoteId and follow automatically."},{fields:["Revision_Number__c","QuoteNumber","Quote_Number__c","Ref_No__c","Quote_Running_Number__c"],targets:["version","quote_number","revision_of_id"],technique:"Sort by source revision, creation time and ID. Preserve positive revisions when greater than the preceding revision; advance collisions and following revisions to keep the chain increasing. Use one globally unique running number per funnel and formatQuoteRef; record old/new references."},
     {fields:["Total_Excluding_Tax__c","Total_Including_Tax__c","Tax_Amount__c","Tax_Percentage__c","Total_Discount__c","Subtotal"],targets:["subtotal","discount_total","header_discount","tax_total","total","tax_rate_snapshot","tax_setting_id"],technique:"Use shared computeQuotation and numeric validator with source line discounts. Negative adjustment lines become header discounts and zero-value descriptive lines. Source net equals CRM subtotal minus header discount; never subtract Total_Discount__c twice. Quarantine if totals differ by more than 0.02."},
     {fields:["Tax_Category__c"],targets:["tax_setting_id"],technique:"Resolve a tax setting by explicit source rate. Category labels are descriptive only; no withholding-tax behavior is invented."},
-    {fields:["ContactId"],targets:["attention_contact_id"],technique:"Keep only contacts belonging to the recipient account (including a uniquely resolved reseller end user); otherwise omit this optional link and report it."}],
+    {fields:["Bill_To_Name__c","ContactId"],targets:["bill_to_account_id","attention_contact_id","billing_snapshot"],technique:"Resolve explicit Bill To against imported account names, corroborated by contact account. Preserve per-quotation billing relationships across multiple end users regardless of source account type. Conflicts/ambiguity are reported for review; never infer billing from contact alone."}],
   QuoteLineItem:[{fields:["Quantity","UnitPrice","Item_Discount__c","Subtotal","Subtotal__c","Discount"],targets:["quantity","unit_price","discount_percent","line_subtotal","line_tax","line_total"],technique:"Absolute Item_Discount__c is authoritative. Compute all line totals and proportional tax using the shared quote calculator; standard Discount and source subtotals are comparison-only."}],
   OpportunityLineItem:[{fields:["OpportunityId","Product2Id","Quantity","UnitPrice","Discount","Item_Discount__c","TotalPrice","Product_Category__c","UOM__c","SortOrder","Description","Description__c"],targets:["opportunity_products"],technique:"For funnels with a valid primary quote, supersede the old snapshot and rebuild products using the same projection as manual quote sync. Otherwise preserve the historical source snapshot. Superseded source fields are not claimed as transferred."}],
   Payment_Milestone__c:[{fields:["Status__c"],targets:["status"],technique:"Invoiced/Billed/Paid map to invoiced. Won/Pending/4A/blank map to won (unbilled planning bucket). 4A/blank normalization is explicitly reported; no finance payment is invented."},
@@ -57,7 +58,7 @@ export const references: Record<string, Record<string,string>> = Object.fromEntr
   Object.fromEntries(Object.values(m.fields).filter(f=>f.xform?.reference).map(f=>[f.col,f.xform!.reference!]))]))
 Object.assign(references.Account,{end_user_account_id:"Account"})
 Object.assign(references.Opportunity_ID__c,{owner_contact_id:"Contact"})
-Object.assign(references.Quote,{revision_of_id:"Quote"})
+Object.assign(references.Quote,{revision_of_id:"Quote",bill_to_account_id:"Account"})
 Object.assign(references.Payment_Milestone__c,{quotation_id:"Quote"})
 
 const number = (v: unknown) => Number(v || 0)
@@ -258,8 +259,23 @@ export function planMigration(data: Dataset, options: PlanOptions) {
   }
   for(const quote of group("Quote")) {
     const funnel=target(quote,"funnel_id"),account=funnel?target(funnel,"account_id"):undefined,person=target(quote,"attention_contact_id")
-    const recipient=account?.values.end_user_account_id??account?.values.id
-    if(person&&person.values.account_id!==recipient) {change(quote,"attention_contact_id",null,"Omitted contact outside recipient account, matching manual recipient validation");note(quote,"ContactId","Attention contact omitted: belongs to a different recipient account")}
+    const billing = resolveSourceBillTo({
+      billToName: original(quote).Bill_To_Name__c || "",
+      contactAccountId: person ? String(person.values.account_id) : null,
+      endUserAccountId: account ? String(account.values.id) : null,
+      accounts: group("Account").filter(a => a.status === "ready").map(a => ({ id: String(a.values.id), name: String(a.values.name) })),
+    })
+    quote.values.bill_to_account_id = billing.accountId
+    if (billing.issue) { note(quote, "Bill_To_Name__c; ContactId", billing.issue); quarantine(quote, billing.issue) }
+    const recipient = billing.accountId ?? account?.values.end_user_account_id ?? account?.values.id
+    if(person&&person.values.account_id!==recipient) {change(quote,"attention_contact_id",null,"Omitted contact outside billing account");note(quote,"ContactId","Attention contact omitted: belongs to a different billing account")}
+    const billTo = billing.accountId ? byId.get(billing.accountId) : undefined
+    if (billTo?.status === "ready") quote.values.billing_snapshot = {
+      account: { name: billTo.values.name, code: billTo.values.code ?? null, phone: billTo.values.phone ?? null, address: billTo.values.billing_address ?? null },
+      contact: person?.status === "ready" && person.values.account_id === billing.accountId ? {
+        name: [person.values.first_name, person.values.last_name].filter(Boolean).join(" "), email: person.values.email ?? null, phone: person.values.phone ?? null,
+      } : null,
+    }
     if(funnel)quote.values.product_type_code=funnel.values.product_type_code??null
   }
   for(const milestone of group("Payment_Milestone__c")) {

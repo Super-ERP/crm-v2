@@ -365,3 +365,19 @@ describe("quotation revisions", () => {
     expect(mocks.nextQuoteNumber).not.toHaveBeenCalled()
   })
 })
+
+it("duplicates the quote-specific reseller billing snapshot without using the end-user contact", async () => {
+  vi.clearAllMocks()
+  mocks.ownsOrManages.mockReturnValue(true)
+  mocks.visibleMemberIds.mockResolvedValue(["member-1"])
+  const billingSnapshot = { account: { name: "Uniti", code: null, phone: null, address: null }, contact: { name: "Billing Contact", email: null, phone: null } }
+  const fixture = txWithSelects([
+    [{ ...source, billToAccountId: "reseller", billingSnapshot }],
+    [{ ownerMemberId: "member-1" }], [sourceLine], [{ accountId: "end-user" }],
+    [{ accountType: "reseller", endUserAccountId: "another-end-user" }], [{ accountId: "reseller" }],
+  ], [[{ id: "duplicate", quoteNumber: "Q10001-4" }]])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(fixture.tx, ctx))
+  mocks.nextQuoteNumber.mockResolvedValue({ quoteNumber: "Q10001-4", version: 4 })
+  expect(await duplicateQuotation(source.id)).toEqual({ ok: true, data: { id: "duplicate", quoteNumber: "Q10001-4" } })
+  expect(fixture.inserts[0]).toMatchObject({ funnelId: "funnel-1", billToAccountId: "reseller", billingSnapshot, attentionContactId: "contact-1", status: "draft" })
+})

@@ -74,6 +74,14 @@ Opening any Account presents a comprehensive 360-degree customer view:
 * **Quotations**: All generated commercial proposals and revision histories.
 * **Activity Stream**: An audit log showing recent updates, stage advances, and notes.
 
+### Shared resellers and billing relationships
+
+Reseller accounts and their contacts are shared within the entity so account managers can select them when preparing quotations. Viewing a reseller does not grant permission to change its account data or view other salespeople's Funnels, Opportunities, Projects or Quotations.
+
+A reseller can serve several end users, and an end user can receive quotations through several resellers. Select the actual **Bill To** account on each quotation. The account's **Default end user (optional)** field is a legacy convenience; it does not restrict the quotation's billing relationships. You can create a reseller without filling this field.
+
+Keep the Funnel under the end user and retain the responsible salesperson's ownership. See [quotation billing](05-quotations-and-revisions.md#bill-to-when-quoting-through-a-reseller).
+
 ### Changing the account owner
 
 Edit **Account owner** on the account detail page to transfer responsibility. Active contacts, Opportunities, and Funnels under the account receive the new owner in the same transaction. Quotations and payment milestones inherit access through their Funnel.

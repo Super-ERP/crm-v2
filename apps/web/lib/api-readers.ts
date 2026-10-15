@@ -9,6 +9,7 @@ import { PERMISSIONS, type PermissionKey } from "@/lib/permissions"
 import {
   visibleMemberIds,
   ownerScope,
+  accountReadScope,
   ownsOrManages,
 } from "@/lib/access-scope"
 import {
@@ -184,7 +185,7 @@ export async function accountsList(
   const parent = alias(accounts, "account_list_parent")
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const where = and(
-    isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible),
+    isNull(accounts.deletedAt), accountReadScope(visible),
     search ? or(ilike(accounts.name, search), ilike(accounts.code, search), ilike(accounts.registrationNumber, search), ilike(accounts.industry, search), ilike(user.name, search)) : undefined,
     query?.selections.accountType?.length ? inArray(accounts.accountType, query.selections.accountType) : undefined,
     query?.selections.industry?.length ? inArray(accounts.industry, query.selections.industry) : undefined,
@@ -225,7 +226,7 @@ export async function accountsFilterOptions(tx: Tx, ctx: ServerContext) {
   }).from(accounts)
     .leftJoin(member, eq(accounts.ownerMemberId, member.id))
     .leftJoin(user, eq(member.userId, user.id))
-    .where(and(isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible)))
+    .where(and(isNull(accounts.deletedAt), accountReadScope(visible)))
   return {
     types: (row?.types ?? []).sort(),
     industries: (row?.industries ?? []).sort(),
@@ -268,7 +269,7 @@ export async function accountsGet(
     .where(and(eq(accounts.id, id), isNull(accounts.deletedAt)))
     .limit(1)
   if (!account) return null
-  if (!ownsOrManages(visible, account.ownerMemberId)) return null
+  if (account.accountType !== "reseller" && !ownsOrManages(visible, account.ownerMemberId)) return null
 
   const parent = account.parentAccountId
     ? ((
@@ -276,7 +277,7 @@ export async function accountsGet(
           .select()
           .from(accounts)
           .where(
-            and(eq(accounts.id, account.parentAccountId), isNull(accounts.deletedAt))
+            and(eq(accounts.id, account.parentAccountId), isNull(accounts.deletedAt), accountReadScope(visible))
           )
           .limit(1)
       )[0] ?? null)
@@ -289,7 +290,7 @@ export async function accountsGet(
           .select({ id: accounts.id, name: accounts.name })
           .from(accounts)
           .where(
-            and(eq(accounts.id, account.endUserAccountId), isNull(accounts.deletedAt))
+            and(eq(accounts.id, account.endUserAccountId), isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible))
           )
           .limit(1)
       )[0] ?? null)
@@ -302,7 +303,7 @@ export async function accountsGet(
       and(
         eq(accounts.parentAccountId, id),
         isNull(accounts.deletedAt),
-        ownerScope(accounts.ownerMemberId, visible)
+        accountReadScope(visible)
       )
     )
     .orderBy(asc(accounts.name))
@@ -378,7 +379,7 @@ export async function personsList(
   const where = and(
     isNull(persons.deletedAt),
     isNull(accounts.deletedAt),
-    ownerScope(accounts.ownerMemberId, visible),
+    accountReadScope(visible),
     search ? or(ilike(persons.firstName, search), ilike(persons.lastName, search), ilike(persons.email, search), ilike(persons.phone, search), ilike(persons.title, search), ilike(persons.department, search), ilike(accounts.name, search)) : undefined,
     query?.selections.accountName?.length ? inArray(accounts.name, query.selections.accountName) : undefined,
     primaryValues.length === 1 && primaryValues[0] === "Primary" ? eq(persons.isPrimary, true) : undefined,
@@ -445,6 +446,7 @@ export async function personsGet(
       person: persons,
       accountName: accounts.name,
       accountOwner: accounts.ownerMemberId,
+      accountType: accounts.accountType,
     })
     .from(persons)
     .innerJoin(accounts, eq(persons.accountId, accounts.id))
@@ -453,7 +455,7 @@ export async function personsGet(
     )
     .limit(1)
   if (!row) return null
-  if (!ownsOrManages(visible, row.accountOwner)) return null
+  if (row.accountType !== "reseller" && !ownsOrManages(visible, row.accountOwner)) return null
 
   const opps = await tx
     .select({
@@ -468,7 +470,7 @@ export async function personsGet(
     })
     .from(funnels)
     .leftJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
-    .where(and(eq(funnels.primaryPersonId, id), isNull(funnels.deletedAt)))
+    .where(and(eq(funnels.primaryPersonId, id), isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
     .orderBy(desc(funnels.updatedAt))
 
   // Projects that belong to this contact's pipelines (the deals they're on).
@@ -482,7 +484,7 @@ export async function personsGet(
           status: projects.status,
         })
         .from(projects)
-        .where(and(inArray(projects.funnelId, oppIds), isNull(projects.deletedAt)))
+        .where(and(inArray(projects.funnelId, oppIds), isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible)))
         .orderBy(desc(projects.updatedAt))
     : []
 
