@@ -5,6 +5,7 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import Link from "next/link"
 import { useBusinessTimezone, useTablePreferenceIdentity } from "@/components/table-controls/business-timezone"
 import { AdvancedFilterEditor } from "@/components/table-controls/advanced-filter-editor"
+import {describeFilter,removeFilterNode} from "@/lib/table-controls/header-filters"
 import { computedTableValue } from "@/lib/table-controls/client-values"
 import { evaluateFilterTree } from "@/lib/table-controls/evaluate"
 import { validateFilterTree } from "@/lib/table-controls/filter-tree"
@@ -224,6 +225,7 @@ export function DataTable<TData, TValue>({
   const advancedEnabled = advancedFilters ?? (!!tableId && (!server && cap == null && tableId !== 'product-usage' || !!server && ['leads','accounts','persons','opportunities','funnel','quotations','products','projects','payment-milestones','sales-orders','finance-sale','finance-purchase','audit','intercompany-inbound','project-codes','project-code-funnels','product-usage','code-opportunities','code-quotations','code-accounts','code-contacts','code-projects'].includes(tableId)))
   const businessTimezone = useBusinessTimezone()
   // inject a faceted filterFn for facet columns so multi-select arrays work
+  const filterFields=React.useMemo(()=>fieldDefinitions.map(field=>{const quick=filters?.find(filter=>filter.columnId===field.id);return {...field,options:quick&&'options' in quick?quick.options:field.options}}),[fieldDefinitions,filters])
   const tableColumns = React.useMemo(
     () =>
       columns.map((c) => {
@@ -580,7 +582,7 @@ export function DataTable<TData, TValue>({
   // Search is shown whenever a caller opts in via `searchColumn` (kept as the
   // enable flag) — but it now filters ACROSS ALL columns, not just that one.
   const showSearch = !!searchColumn
-  const hasActiveFilters = columnFilters.length > 0 || globalFilter.length > 0 || filterTree.children.length>0
+  const hasActiveFilters = columnFilters.length > 0 || globalFilter.length > 0 || filterTree.children.length>0 || !!filterError || !!effectiveFilters.error
 
   const currentSavedPayload = React.useMemo<SavedViewPayload>(
     () => ({
@@ -667,7 +669,7 @@ export function DataTable<TData, TValue>({
         ) : null}
 
         <div className={renderFilteredView ? "order-3 flex w-full min-w-0 flex-wrap items-center gap-2" : "contents"}>
-          {(filters ?? []).map((filter) => {
+          {(filters ?? []).filter(filter=>!advancedEnabled||!!renderFilteredView||!fieldDefinitions.some(field=>field.id===filter.columnId)).map((filter) => {
             const col = table.getColumn(filter.columnId)
             if (!col) return null
             return (
@@ -679,7 +681,7 @@ export function DataTable<TData, TValue>({
             )
           })}
 
-          {(facets ?? []).map((f) => {
+          {(facets ?? []).filter(facet=>!advancedEnabled||!!renderFilteredView||!fieldDefinitions.some(field=>field.id===facet.columnId)).map((f) => {
             if (filterIds.has(f.columnId)) return null
             const col = table.getColumn(f.columnId)
             if (!col) return null
@@ -704,7 +706,7 @@ export function DataTable<TData, TValue>({
         </div>
 
         <div className={cn("ml-auto flex flex-wrap items-center justify-end gap-2", renderFilteredView && "order-2 shrink-0")}>
-          {advancedEnabled?<AdvancedFilterEditor fields={fieldDefinitions.map(field=>{const quick=filters?.find(f=>f.columnId===field.id);return {...field,options:quick&&'options' in quick?quick.options:field.options}})} value={effectiveFilters.tree} timezone={businessTimezone} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/>:null}
+          {advancedEnabled&&renderFilteredView?<AdvancedFilterEditor fields={filterFields} value={effectiveFilters.tree} timezone={businessTimezone} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/>:null}
           {toolbar}
           {tableId && savedViews && preferencesReady ? (
             <SavedViewMenu
@@ -721,9 +723,10 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
+      {advancedEnabled&&effectiveFilters.tree.children.length>0?<div aria-label="Active filters" className="flex min-w-0 flex-wrap items-center gap-2 text-sm"><span className="text-muted-foreground">{effectiveFilters.tree.logic==='and'?'Match all:':'Match any:'}</span>{effectiveFilters.tree.children.map(node=><div key={node.id} className="flex max-w-full min-w-0 items-center rounded-md border bg-muted/30 pr-1"><AdvancedFilterEditor fields={filterFields} value={effectiveFilters.tree} timezone={businessTimezone} title={describeFilter(node,filterFields)} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/><Button size="icon-sm" variant="ghost" aria-label={`Remove ${describeFilter(node,filterFields)}`} onClick={()=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(removeFilterNode(effectiveFilters.tree,node.id));setPagination(current=>({...current,pageIndex:0}))}}><X className="size-3.5"/></Button></div>)}</div>:null}
       {JSON.stringify(filterTree).length>4000?<p role="status" className="text-xs text-muted-foreground">These filters are too large for a shareable link. Save them as a view to reuse them.</p>:null}
       {effectiveFilters.error?<StatusCallout role="alert" tone="danger">{effectiveFilters.error}</StatusCallout>:null}
-      {filterError?<StatusCallout role="alert" tone="danger">{filterError}. Edit or clear the advanced filters to continue.</StatusCallout>:null}
+      {filterError?<StatusCallout role="alert" tone="danger">{filterError}. Edit or clear the filters to continue.</StatusCallout>:null}
       {initial.layoutError?<StatusCallout role="alert" tone="warning">The saved column layout is invalid. Reset the column layout to continue.</StatusCallout>:null}
       {serverError ? (
         <StatusCallout role="alert" tone="danger" className="flex items-center gap-2">
@@ -750,7 +753,13 @@ export function DataTable<TData, TValue>({
                   <TableHead key={header.id} style={columnStyle(header.column)} className="relative">
                     {header.isPlaceholder
                       ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
+                      : advancedEnabled && filterFields.find(field=>field.id===header.column.id)?.operators.length ? <AdvancedFilterEditor
+                        fields={filterFields} value={effectiveFilters.tree} fieldId={header.column.id}
+                        title={typeof header.column.columnDef.header==='string'?header.column.columnDef.header:filterFields.find(field=>field.id===header.column.id)!.label}
+                        timezone={businessTimezone} sorting={header.column.getIsSorted()}
+                        onSort={header.column.getCanSort()?direction=>{if(direction===false)header.column.clearSorting();else header.column.toggleSorting(direction==='desc')}:undefined}
+                        onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}
+                      /> : flexRender(header.column.columnDef.header, header.getContext())}
                     <div role="separator" aria-orientation="vertical" aria-label={`Resize ${header.column.id}`} tabIndex={0} onMouseDown={header.getResizeHandler()} onTouchStart={header.getResizeHandler()} onDoubleClick={()=>header.column.resetSize()} onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();layoutChanged.current=true;setColumnSizing(current=>({...current,[header.column.id]:Math.max(48,Math.min(800,header.column.getSize()+(event.key==='ArrowRight'?8:-8)))}))}}} className="absolute right-0 top-0 h-full w-1 cursor-col-resize touch-none bg-border opacity-0 hover:opacity-100 focus:opacity-100" />
                   </TableHead>
                 ))}

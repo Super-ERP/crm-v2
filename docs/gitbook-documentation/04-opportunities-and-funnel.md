@@ -197,7 +197,7 @@ When Projects is enabled, creating or relinking a delivery Project to a funnel r
 
 ## Advanced list controls
 
-**Advanced filters** combines conditions in nested AND/OR groups and applies them before pagination. Funnel name search and Expected close year remain available as shortcuts. The same effective filter applies to the Funnel board and list; access scope and stage eligibility are always enforced separately.
+Click a column header to sort or filter that field. Use **Match all (AND)** or **Match any (OR)** and add nested groups when needed. Active filters appear as editable chips above the table; remove a chip to remove that condition or group. Date filters include **Year** for expected-close-year filtering. In Board view, use **Filters** because there are no table headers. Filters apply before pagination. Funnel name search remains available. The same effective filter applies to the Funnel board and list; access scope and stage eligibility are always enforced separately.
 
 **Columns** supports show/hide, keyboard reordering, resizing and left/right pinning. Personal layouts are saved by user and list. Named **Views** include the complete filter and column configuration; select **Update with current settings** to replace an existing view. See [Workspace and personal views](../user-guide/01-workspace-and-views.md).
 
@@ -214,3 +214,5 @@ Select a request to review its submitted context and what approval does. On desk
 Statuses and action placement are shared: pending requests show **Awaiting approval**, approved states use the success colour, rejected states use the rejection colour, and record navigation appears alongside a consistently placed decision group. Quotation history displays the quotation's current status: rejection or recall returns it to **Draft**, rather than inventing a separate persistent Rejected quotation status.
 
 Confirmation dialogs and each workflow's validation remain in force. Quotation and lead-conversion rejections require a reason. A funnel-stage decision note remains optional. Eligible requesters can recall a quotation or cancel a stage/conversion request from **My requests**. After a decision, the queue refreshes using its current filters; a request that leaves the queue is replaced by the next available selection. Requests already changed by another reviewer are still validated by the server.
+
+Sales-stage badges show compact codes (0e, 1d, 2c, 3b, 4a), or Won/Lost/KIV. Hover for the full stage name and probability. Saved Views retain the same filter and column state.
