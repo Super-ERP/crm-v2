@@ -4,6 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useBusinessTimezone } from "@/components/table-controls/business-timezone"
 import { AdvancedFilterEditor } from "@/components/table-controls/advanced-filter-editor"
+import { computedTableValue } from "@/lib/table-controls/client-values"
 import { evaluateFilterTree } from "@/lib/table-controls/evaluate"
 import { validateFilterTree } from "@/lib/table-controls/filter-tree"
 import { ColumnControls } from "@/components/table-controls/column-controls"
@@ -38,7 +39,6 @@ import {
   ChevronRight,
   ListFilter,
   Search,
-  SlidersHorizontal,
   X,
 } from "lucide-react"
 
@@ -124,6 +124,7 @@ export interface DataTableProps<TData, TValue> {
    * Server-side row cap. When `data.length >= cap`, a notice is shown so users
    * know the list is truncated and should refine their search.
    */
+  fieldCurrencies?: Record<string,string>
   advancedFilters?: boolean
   cap?: number
   /** Fetch a bounded page after search, filters, sorting, or page controls change. */
@@ -198,6 +199,7 @@ export function DataTable<TData, TValue>({
   savedViews = true,
   cap,
   advancedFilters,
+  fieldCurrencies,
   server,
 }: DataTableProps<TData, TValue>) {
   const filterIds = React.useMemo(
@@ -209,8 +211,8 @@ export function DataTable<TData, TValue>({
     [facets]
   )
 
-  const fieldDefinitions = React.useMemo(() => tableId && tableExists(tableId) ? getTableFields(tableId, columns.map(c=>(c as {id?:string;accessorKey?:string}).id ?? (c as {accessorKey?:string}).accessorKey).filter((id):id is string=>!!id)) : [], [tableId, columns])
-  const advancedEnabled = advancedFilters ?? (!!server && !!tableId && ['leads','accounts','persons','opportunities','funnel','quotations','products','projects','payment-milestones','sales-orders','finance-sale','finance-purchase','audit','intercompany-inbound','project-codes','project-code-funnels'].includes(tableId))
+  const fieldDefinitions = React.useMemo(() => tableId && tableExists(tableId) ? getTableFields(tableId, columns.map(c=>(c as {id?:string;accessorKey?:string}).id ?? (c as {accessorKey?:string}).accessorKey).filter((id):id is string=>!!id)).map(field=>({...field,currency:fieldCurrencies?.[field.id]})) : [], [tableId, columns,fieldCurrencies])
+  const advancedEnabled = advancedFilters ?? (!!tableId && (!server && cap == null && tableId !== 'product-usage' || !!server && ['leads','accounts','persons','opportunities','funnel','quotations','products','projects','payment-milestones','sales-orders','finance-sale','finance-purchase','audit','intercompany-inbound','project-codes','project-code-funnels','product-usage'].includes(tableId)))
   const businessTimezone = useBusinessTimezone()
   // inject a faceted filterFn for facet columns so multi-select arrays work
   const tableColumns = React.useMemo(
@@ -281,6 +283,7 @@ export function DataTable<TData, TValue>({
     let filterTree=EMPTY_FILTER_TREE
     let filterError=''
     const encodedTree=searchParams.get(key("filter_v2"))
+    if(searchParams.get(key("filter_v2_view")))filterError="These filters must be loaded from a Saved View"
     if(encodedTree)try {filterTree=validateFilterTree(JSON.parse(encodedTree),fieldDefinitions)}catch(e){filterError=e instanceof Error?e.message:'Invalid filters'}
     let layout:TableLayout|undefined
     let layoutError=false
@@ -291,7 +294,7 @@ export function DataTable<TData, TValue>({
       sorting,
       columnFilters,
       globalFilter,
-      columnVisibility,
+      columnVisibility:normalizeTableLayout({visibility:columnVisibility},fieldDefinitions).visibility,
       pagination: { pageIndex, pageSize: size } as PaginationState,
     }
     // Intentionally read the URL once on mount; state is the source of truth after.
@@ -337,7 +340,7 @@ export function DataTable<TData, TValue>({
     initial.pagination.pageIndex > 0 ||
     initial.pagination.pageSize !== pageSize
 
-  const skipFirstServerFetch = React.useRef(!hasInitialUrlState)
+  const skipFirstServerFetch = React.useRef(false)
   const initialDataSynced = React.useRef(false)
   React.useEffect(() => {
     if (serverInitialTotal == null) return
@@ -396,8 +399,10 @@ export function DataTable<TData, TValue>({
   // `data` stable and avoiding a server round-trip (instant, smooth).
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if(filterTree.children.length)params.set(key("filter_v2"),JSON.stringify(filterTree))
-    else if(!filterError)params.delete(key("filter_v2"))
+    const serializedTree=JSON.stringify(filterTree)
+    if(filterTree.children.length && serializedTree.length<=4000){params.set(key("filter_v2"),serializedTree);params.delete(key("filter_v2_view"))}
+    else if(filterTree.children.length){params.delete(key("filter_v2"));params.set(key("filter_v2_view"),"required")}
+    else if(!filterError){params.delete(key("filter_v2"));params.delete(key("filter_v2_view"))}
     if(columnOrder.length || Object.keys(columnSizing).length || columnPinning.left.length || columnPinning.right.length)
       params.set(key("layout_v2"),JSON.stringify({visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}))
     else params.delete(key("layout_v2"))
@@ -478,6 +483,8 @@ export function DataTable<TData, TValue>({
 
   const tableData = React.useMemo(() => server ? serverRows : advancedEnabled && filterTree.children.length ? data.filter(row=>evaluateFilterTree(row,filterTree,fieldDefinitions,{now:new Date(),timezone:businessTimezone},(record,id)=>{
       const column=columns.find(c=>((c as {id?:string}).id??(c as {accessorKey?:string}).accessorKey)===id)
+      if(tableId==='settings-api-keys'&&id==='status'){const row=record as {revokedAt?:Date;expiresAt:Date};return row.revokedAt?'Revoked':new Date(row.expiresAt)<=new Date()?'Expired':'Active'}
+      if(['primary','converted','roles','lastActive','manager','relationship','stage','default','active','approval','forecast'].includes(id))return computedTableValue(record as Record<string,unknown>,id)
       if(column && 'accessorFn' in column && column.accessorFn)return column.accessorFn(record as TData,0)
       return (record as Record<string,unknown>)[id]
     })) : data, [server,serverRows,data,advancedEnabled,filterTree,fieldDefinitions,businessTimezone,columns])
@@ -690,10 +697,11 @@ export function DataTable<TData, TValue>({
               onReset={resetToBaseView}
             />
           ) : null}
-          <ColumnControls table={table} onReset={resetColumnLayout} />
+          <ColumnControls table={table} onReset={resetColumnLayout} labels={Object.fromEntries(fieldDefinitions.map(field=>[field.id,field.label]))} />
         </div>
       </div>
 
+      {JSON.stringify(filterTree).length>4000?<p role="status" className="text-xs text-muted-foreground">These filters are too large for a shareable link. Save them as a view to reuse them.</p>:null}
       {filterError?<StatusCallout role="alert" tone="danger">{filterError}. Edit or clear the advanced filters to continue.</StatusCallout>:null}
       {initial.layoutError?<StatusCallout role="alert" tone="warning">The saved column layout is invalid. Reset the column layout to continue.</StatusCallout>:null}
       {serverError ? (

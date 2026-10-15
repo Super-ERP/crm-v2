@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUp, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-export function ColumnControls<T>({table,onReset}:{table:TableInstance<T>;onReset:()=>void}) {
+export function ColumnControls<T>({table,onReset,labels}:{table:TableInstance<T>;onReset:()=>void;labels:Record<string,string>}) {
  const columns=table.getAllLeafColumns()
  const order=table.getState().columnOrder
  const ordered=[...columns].sort((a,b)=>(order.indexOf(a.id)<0?columns.indexOf(a):order.indexOf(a.id))-(order.indexOf(b.id)<0?columns.indexOf(b):order.indexOf(b.id)))
@@ -13,7 +13,7 @@ export function ColumnControls<T>({table,onReset}:{table:TableInstance<T>;onRese
   <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
    <DialogHeader><DialogTitle>Table columns</DialogTitle><DialogDescription>Choose visible columns, their order, width and pinned position. Changes are saved to your layout.</DialogDescription></DialogHeader>
    <div className="space-y-2">{ordered.map((column,index)=>{
-    const title=typeof column.columnDef.header==='string'?column.columnDef.header:column.id.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' ')
+    const title=labels[column.id] ?? (typeof column.columnDef.header==='string'?column.columnDef.header:column.id.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' '))
     function move(delta:number){const ids=ordered.map(c=>c.id);[ids[index],ids[index+delta]]=[ids[index+delta],ids[index]];table.setColumnOrder(ids)}
     return <div key={column.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2">
      <label className="flex min-w-32 flex-1 items-center gap-2 text-sm capitalize"><input type="checkbox" checked={column.getIsVisible()} disabled={!column.getCanHide()} onChange={event=>column.toggleVisibility(event.target.checked)}/>{title}</label>

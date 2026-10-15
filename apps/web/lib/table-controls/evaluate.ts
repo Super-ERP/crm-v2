@@ -19,8 +19,8 @@ export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: read
     if(empty)return false
     if(field.type==='date'){
       let date:string
-      if(value instanceof Date || String(value).includes('T') || String(value).includes(' ')){
-        const d=new Date(value as string|Date);if(Number.isNaN(d.getTime()))return false
+      if(value instanceof Date || typeof value==='number' || String(value).includes('T') || String(value).includes(' ')){
+        const d=new Date(value as string|number|Date);if(Number.isNaN(d.getTime()))return false
         const p=new Intl.DateTimeFormat('en-CA',{timeZone:context.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d)
         const get=(type:string)=>p.find(x=>x.type===type)!.value;date=`${get('year')}-${get('month')}-${get('day')}`
       } else date=String(value).slice(0,10)
@@ -29,7 +29,7 @@ export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: read
     if(field.type==='number'||field.type==='money'){
       const n=Number(value);if(!Number.isFinite(n))return false
       const money=v as {currency:string;amount:number;min:number;max:number}
-      if(field.type==='money'&&String((row as Record<string,unknown>).currency??'')!==money.currency)return false
+      if(field.type==='money'&&String(field.currency??(row as Record<string,unknown>).currency??'')!==money.currency)return false
       const expected=field.type==='money'?money.amount:Number(v)
       if(op==='between'){const range=field.type==='money'?[money.min,money.max]:v as number[];return n>=range[0]&&n<=range[1]}
       if(op==='equals')return n===expected;if(op==='not-equals')return n!==expected
@@ -37,7 +37,8 @@ export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: read
       if(op==='less-than')return n<expected;return n<=expected
     }
     if(field.type==='boolean')return value===v
-    const values=(Array.isArray(value)?value:[value]).map(x=>String(tableScalar(x)).toLocaleLowerCase())
+    const selecting=['any-of','none-of','equals','not-equals'].includes(op)
+    const values=(Array.isArray(raw)?raw:[raw]).map(x=>String(selecting&&x&&typeof x==='object'&&!Array.isArray(x)?((x as Record<string,unknown>).value??(x as Record<string,unknown>).id??tableScalar(x)):tableScalar(x)).toLowerCase())
     const target=String(v).toLocaleLowerCase()
     if(op==='any-of'||op==='none-of'){
       const choices=(v as string[]).map(x=>x.toLocaleLowerCase())

@@ -125,4 +125,22 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
     await client`update funnels set current_stage_id = ${stage.commit}, pipeline_id = ${randomUUID()} where id = ${early}`
     expect(await getProjectCode(tx, ctx, "EARLY", 0, false)).toBeNull()
   })
+  it("keeps code relationships beyond the first funnel page and through an empty funnel filter",async()=>{
+    const extra=Array.from({length:26},()=>randomUUID()),extraQuote=randomUUID()
+    try {
+      for(const id of extra)await client`insert into funnels (id,tenant_id,name,opportunity_id,owner_member_id,account_id,current_stage_id,pipeline_id,status,project_code) select ${id},'qm',${'Extra '+id},${parent},'rep',${account},${stage.commit},pipeline_id,'open','CROSS' from funnels where id=${active}`
+      await client`insert into quotations (id,tenant_id,quote_number,funnel_id) values (${extraQuote},'qm','Last quote',${extra[25]!})`
+      const result=await getProjectCode(tx,ctx,'CROSS',0,false,{pageSize:25})
+      expect(result?.total).toBe(27)
+      expect(result?.quotations.some(q=>q.id===extraQuote)).toBe(true)
+      expect(result?.opportunities.map(o=>o.id)).toContain(parent)
+      const filtered=await getProjectCode(tx,ctx,'CROSS',0,false,{filterTree:{kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId:'name',operator:'equals',value:'No such funnel'}]}})
+      expect(filtered?.funnels).toHaveLength(0)
+      expect(filtered?.quotations.some(q=>q.id===extraQuote)).toBe(true)
+    }finally{
+      await client`delete from quotations where id=${extraQuote}`
+      for(const id of extra)await client`delete from funnels where id=${id}`
+    }
+  })
+
 })

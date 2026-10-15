@@ -659,6 +659,7 @@ export type OpportunityContainerDetail = {
     id: string
     description: string | null
     quantity: string
+    currency: string
     unitPrice: string
     productCategory: string | null
     funnelId: string
@@ -761,10 +762,12 @@ export async function opportunitiesGet(
           description: opportunityProducts.description,
           quantity: opportunityProducts.quantity,
           unitPrice: opportunityProducts.unitPrice,
+          currency: funnels.currency,
           productCategory: opportunityProducts.productCategory,
           funnelId: opportunityProducts.funnelId,
         })
         .from(opportunityProducts)
+        .innerJoin(funnels,eq(opportunityProducts.funnelId,funnels.id))
         .where(inArray(opportunityProducts.funnelId, funnelIds))
         .orderBy(desc(opportunityProducts.createdAt))
     : []

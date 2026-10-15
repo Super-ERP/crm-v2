@@ -45,7 +45,7 @@ function RecordTable({ rows, kind, base, tableId }: { rows: CodeRelatedRecord[];
   }, [base, kind, meta.label, meta.object])
   return <DataTable columns={columns} data={rows} tableId={tableId} searchColumn="name"
     searchPlaceholder={`Search ${meta.plural}…`} emptyIcon={meta.Icon}
-    emptyMessage={`No linked ${meta.plural}`} emptyDescription="Accessible records connected to the funnels on the current page appear here." />
+    emptyMessage={`No linked ${meta.plural}`} emptyDescription="Accessible records connected to this project code appear here." />
 }
 
 export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDetail: CodeDetail; initialTab?: string }) {
@@ -60,7 +60,7 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
     if (request.current === currentRequest) setLoaded({ source: initialDetail, detail: result })
     return { rows: result.funnels, total: result.total }
   }, [initialDetail])
-  const opportunities = [...new Map(detail.funnels.flatMap(f => f.opportunity ? [[f.opportunity.id, f.opportunity] as const] : [])).values()]
+  const opportunities = detail.opportunities
   const accounts = React.useMemo(() => new Map(detail.accounts.map(account => [account.id, account])), [detail.accounts])
   const funnelColumns = React.useMemo<ColumnDef<FunnelRow>[]>(() => [
     { accessorKey: "name", header: ({ column }) => <SortableHeader column={column} title="Funnel" />, cell: ({ row }) => objectLink("funnel", `/funnel/${row.original.id}`, row.original.name) },
@@ -101,7 +101,7 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
       <TabsContent value="accounts" className="mt-4"><RecordTable rows={detail.accounts} kind="accounts" base="/accounts" tableId="code-accounts" /></TabsContent>
       <TabsContent value="contacts" className="mt-4"><RecordTable rows={detail.contacts} kind="contacts" base="/persons" tableId="code-contacts" /></TabsContent>
       {detail.projects.length ? <TabsContent value="projects" className="mt-4"><RecordTable rows={detail.projects} kind="projects" base="/projects" tableId="code-projects" /></TabsContent> : null}
-      <p className="mt-4 text-xs text-muted-foreground">Related lists show the accessible records for the current funnel page.</p>
+      <p className="mt-4 text-xs text-muted-foreground">Related lists include accessible records across all active funnels linked to this code.</p>
     </DetailTabs>
   </div>
 }

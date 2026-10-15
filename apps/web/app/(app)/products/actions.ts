@@ -353,3 +353,22 @@ export async function restoreProduct(id: string): Promise<ActionResult<void>> {
     revalidatePath("/products")
   })
 }
+
+/** Full authorized quotation relationship, filtered and paged in PostgreSQL. */
+export async function listProductUsagePage(productId:string,input:ServerTableQuery):Promise<{rows:ProductUsageRow[];total:number}> {
+ return withTenant(PERMISSIONS.QUOTATION_VIEW,async(tx,ctx)=>{
+  const visible=await visibleMemberIds(tx,ctx)
+  const {limit,offset,query}=normalizeRecordListQuery(input,['quoteNumber','funnelName','status','total','createdAt'],[],getTableFields('product-usage'))
+  const pattern=query.search?`%${query.search.replace(/[\\%_]/g,'\\$&')}%`:null
+  const fields={quoteNumber:quotations.quoteNumber,funnelName:funnels.name,status:quotations.status,total:quotations.total,createdAt:quotations.createdAt}
+  const where=and(isNull(quotations.deletedAt),isNull(funnels.deletedAt),ownerScope(funnels.ownerMemberId,visible),
+   sql`exists(select 1 from ${quotationLineItems} where ${quotationLineItems.quotationId}=${quotations.id} and ${quotationLineItems.productId}=${productId})`,
+   pattern?or(ilike(quotations.quoteNumber,pattern),ilike(funnels.name,pattern)):undefined,
+   recordFilter('product-usage',query.filterTree,fields,{currency:quotations.currency}))
+  const [rows,count]=await Promise.all([
+   tx.select({quotationId:quotations.id,quoteNumber:quotations.quoteNumber,status:quotations.status,total:quotations.total,currency:quotations.currency,createdAt:quotations.createdAt,funnelId:funnels.id,funnelName:funnels.name}).from(quotations).innerJoin(funnels,eq(quotations.funnelId,funnels.id)).where(where).orderBy(...recordSort(query.sorting,fields,desc(quotations.createdAt)),desc(quotations.id)).limit(limit).offset(offset),
+   tx.select({count:sql<number>`count(*)::int`}).from(quotations).innerJoin(funnels,eq(quotations.funnelId,funnels.id)).where(where),
+  ])
+  return {rows:rows.map(row=>({...row,createdAt:row.createdAt.toISOString()})),total:count[0]?.count??0}
+ })
+}

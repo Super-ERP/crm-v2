@@ -24,7 +24,7 @@ type CodeFunnel = {
 export type CodeDetail = {
   code: string; pageIndex: number; hasNextPage: boolean; total: number
   funnels: Array<Omit<CodeFunnel, "opportunityName" | "opportunityOwner"> & { opportunity: RelatedRecord | null }>
-  quotations: RelatedRecord[]; accounts: RelatedRecord[]; contacts: RelatedRecord[]; projects: RelatedRecord[]
+  opportunities: RelatedRecord[]; quotations: RelatedRecord[]; accounts: RelatedRecord[]; contacts: RelatedRecord[]; projects: RelatedRecord[]
 }
 
 function codeSource(ctx: ServerContext, visible: string[] | null): SQL {
@@ -92,10 +92,13 @@ export async function getProjectCode(tx: Tx, ctx: ServerContext, code: string, p
     if (!search && !options.filterTree?.children.length && pageIndex === 0) return null
     const existing = await tx.execute(sql`WITH eligible AS (${codeSource(ctx, visible)}) SELECT 1 AS present FROM eligible f WHERE ${match} LIMIT 1`)
     if (!existing.length) return null
-    return { code, pageIndex, hasNextPage: false, total: 0, funnels: [], quotations: [], accounts: [], contacts: [], projects: [] }
+
   }
   const current = rows.slice(0, pageSize)
   const ids = sql`WITH eligible AS (${codeSource(ctx,visible)}) SELECT f.id FROM eligible f WHERE ${match}`
+  const relatedOpportunities = await tx.execute<RelatedRecord>(sql`SELECT o.id,o.name FROM opportunities o
+    WHERE o.tenant_id=${ctx.tenantId} AND o.deleted_at IS NULL AND ${visible===null?sql`true`:sql`o.owner_member_id IN (${sql.join(visible.map(id=>sql`${id}`),sql`, `)})`}
+    AND o.id IN (SELECT opportunity_id FROM funnels WHERE id IN (${ids})) ORDER BY o.name,o.id`)
   // Only these already-authorized active funnels may contribute related data.
   const quoteSource = ctx.can(PERMISSIONS.QUOTATION_VIEW) ? sql`SELECT q.* FROM quotations q
     WHERE q.tenant_id = ${ctx.tenantId} AND q.funnel_id IN (${ids}) AND q.deleted_at IS NULL` : sql`SELECT * FROM quotations WHERE false`
@@ -129,6 +132,6 @@ export async function getProjectCode(tx: Tx, ctx: ServerContext, code: string, p
     code, pageIndex, hasNextPage: rows.length > pageSize, total: rows[0]?.total ?? 0,
     funnels: current.map(({ opportunityName, opportunityOwner, total: _total, ...row }) => ({ ...row,
       opportunity: ownsOrManages(visible, opportunityOwner) ? { id: row.opportunityId, name: opportunityName } : null })),
-    quotations: [...quotations], accounts: [...relatedAccounts], contacts: [...contacts], projects: [...deliveryProjects],
+    opportunities:[...relatedOpportunities],quotations: [...quotations], accounts: [...relatedAccounts], contacts: [...contacts], projects: [...deliveryProjects],
   }
 }
