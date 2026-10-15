@@ -86,3 +86,21 @@ The full Salesforce importer now uses the same explicit Bill To matching policy.
 Unresolved or conflicting explicit billing names quarantine the quote for review
 rather than silently addressing it to an unrelated company. Do not rerun a full
 import against production to perform this focused recovery.
+
+## Missing-address follow-up (2026-10-15)
+
+Salesforce is the sole source authorized for historical account-address recovery.
+Both the working export and the archived original source export were checked:
+`Account.csv` has no billing-address columns; `Company__c.csv` has no address
+column; `Quote.csv` has billing/shipping company names but no address fields.
+The named source account descriptions do not contain recoverable addresses.
+`Attachment.csv` and `ContentVersion.csv` contain no records; ContentDocument
+metadata does not provide original file contents. DatacloudAddress's export
+contains a failed-job response, not address records.
+
+A fresh read-only production check confirms Bridgenet Solutions, Mesiniaga and
+IGS Protech still lack billing addresses, while the matched Zurich accounts have
+addresses. No addresses were overwritten or fabricated. Restoration remains
+blocked until address values can be obtained from a Salesforce export containing
+the original address fields or Salesforce file contents. Keep existing manual
+addresses intact. This is a source-data gap, not a completed restoration.
