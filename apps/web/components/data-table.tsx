@@ -2,11 +2,15 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useBusinessTimezone } from "@/components/table-controls/business-timezone"
+import { AdvancedFilterEditor } from "@/components/table-controls/advanced-filter-editor"
+import { evaluateFilterTree } from "@/lib/table-controls/evaluate"
+import { validateFilterTree } from "@/lib/table-controls/filter-tree"
 import { ColumnControls } from "@/components/table-controls/column-controls"
 import { readTablePreferences, saveTablePreferences } from "@/app/(app)/_shared/table-preference-actions"
 import { getTableFields, tableExists } from "@/lib/table-controls/registry"
 import { normalizeTableLayout, validateTableState } from "@/lib/table-controls/state"
-import { EMPTY_FILTER_TREE, type TableLayout } from "@/lib/table-controls/types"
+import { EMPTY_FILTER_TREE, type TableLayout, type FilterGroup } from "@/lib/table-controls/types"
 import { usePathname, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { formatMoney } from "@/lib/format"
@@ -120,6 +124,7 @@ export interface DataTableProps<TData, TValue> {
    * Server-side row cap. When `data.length >= cap`, a notice is shown so users
    * know the list is truncated and should refine their search.
    */
+  advancedFilters?: boolean
   cap?: number
   /** Fetch a bounded page after search, filters, sorting, or page controls change. */
   server?: {
@@ -192,6 +197,7 @@ export function DataTable<TData, TValue>({
   tableId,
   savedViews = true,
   cap,
+  advancedFilters,
   server,
 }: DataTableProps<TData, TValue>) {
   const filterIds = React.useMemo(
@@ -204,6 +210,8 @@ export function DataTable<TData, TValue>({
   )
 
   const fieldDefinitions = React.useMemo(() => tableId && tableExists(tableId) ? getTableFields(tableId, columns.map(c=>(c as {id?:string;accessorKey?:string}).id ?? (c as {accessorKey?:string}).accessorKey).filter((id):id is string=>!!id)) : [], [tableId, columns])
+  const advancedEnabled = advancedFilters ?? (!!server && !!tableId && ['leads','accounts','persons','opportunities','funnel','quotations','products','projects','payment-milestones','sales-orders','finance-sale','finance-purchase','audit','intercompany-inbound','project-codes','project-code-funnels'].includes(tableId))
+  const businessTimezone = useBusinessTimezone()
   // inject a faceted filterFn for facet columns so multi-select arrays work
   const tableColumns = React.useMemo(
     () =>
@@ -270,12 +278,16 @@ export function DataTable<TData, TValue>({
       ? requestedSize
       : pageSize
 
+    let filterTree=EMPTY_FILTER_TREE
+    let filterError=''
+    const encodedTree=searchParams.get(key("filter_v2"))
+    if(encodedTree)try {filterTree=validateFilterTree(JSON.parse(encodedTree),fieldDefinitions)}catch(e){filterError=e instanceof Error?e.message:'Invalid filters'}
     let layout:TableLayout|undefined
     let layoutError=false
     const encoded=searchParams.get(key("layout_v2"))
     if(encoded)try {layout=normalizeTableLayout(JSON.parse(encoded),fieldDefinitions)}catch{layoutError=true}
     return {
-      layout,layoutError,
+      filterTree,filterError,layout,layoutError,
       sorting,
       columnFilters,
       globalFilter,
@@ -286,6 +298,8 @@ export function DataTable<TData, TValue>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const [filterTree,setFilterTree]=React.useState<FilterGroup>(initial.filterTree)
+  const [filterError,setFilterError]=React.useState(initial.filterError)
   const [sorting, setSorting] = React.useState<SortingState>(initial.sorting)
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     initial.columnFilters
@@ -315,7 +329,7 @@ export function DataTable<TData, TValue>({
   const serverInitialTotal = server?.total
 
   const hasInitialUrlState =
-    !!initial.layout || initial.layoutError ||
+    !!initial.filterTree.children.length || !!initial.filterError || !!initial.layout || initial.layoutError ||
     initial.sorting.length > 0 ||
     initial.columnFilters.length > 0 ||
     initial.globalFilter.length > 0 ||
@@ -337,7 +351,7 @@ export function DataTable<TData, TValue>({
   }, [data, serverInitialTotal])
 
   React.useEffect(() => {
-    if (!serverLoadPage) return
+    if (!serverLoadPage || filterError) return
     if (skipFirstServerFetch.current) {
       skipFirstServerFetch.current = false
       return
@@ -350,6 +364,7 @@ export function DataTable<TData, TValue>({
         pageIndex: pagination.pageIndex,
         pageSize: pagination.pageSize,
         search: globalFilter,
+        ...(advancedEnabled?{filterTree}:{}),
         sorting,
         filters: columnFilters as ServerTableQuery["filters"],
       }).then((result) => {
@@ -371,7 +386,7 @@ export function DataTable<TData, TValue>({
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [serverLoadPage, pagination.pageIndex, pagination.pageSize, globalFilter, sorting, columnFilters, refreshKey])
+  }, [serverLoadPage, pagination.pageIndex, pagination.pageSize, globalFilter, sorting, columnFilters, refreshKey,filterTree,filterError,advancedEnabled])
 
   // Write state back to the URL whenever it changes, using history.replaceState
   // (NOT router.replace): a soft router navigation re-runs the server component,
@@ -381,6 +396,8 @@ export function DataTable<TData, TValue>({
   // `data` stable and avoiding a server round-trip (instant, smooth).
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    if(filterTree.children.length)params.set(key("filter_v2"),JSON.stringify(filterTree))
+    else if(!filterError)params.delete(key("filter_v2"))
     if(columnOrder.length || Object.keys(columnSizing).length || columnPinning.left.length || columnPinning.right.length)
       params.set(key("layout_v2"),JSON.stringify({visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}))
     else params.delete(key("layout_v2"))
@@ -445,6 +462,7 @@ export function DataTable<TData, TValue>({
     }
   }, [
     sorting,
+    filterTree,filterError,
     columnFilters,
     globalFilter,
     columnVisibility,
@@ -458,8 +476,13 @@ export function DataTable<TData, TValue>({
     pathname,
   ])
 
+  const tableData = React.useMemo(() => server ? serverRows : advancedEnabled && filterTree.children.length ? data.filter(row=>evaluateFilterTree(row,filterTree,fieldDefinitions,{now:new Date(),timezone:businessTimezone},(record,id)=>{
+      const column=columns.find(c=>((c as {id?:string}).id??(c as {accessorKey?:string}).accessorKey)===id)
+      if(column && 'accessorFn' in column && column.accessorFn)return column.accessorFn(record as TData,0)
+      return (record as Record<string,unknown>)[id]
+    })) : data, [server,serverRows,data,advancedEnabled,filterTree,fieldDefinitions,businessTimezone,columns])
   const table = useReactTable({
-    data: server ? serverRows : data,
+    data: tableData,
     columns: tableColumns,
     state: {
       sorting,
@@ -486,7 +509,7 @@ export function DataTable<TData, TValue>({
     onColumnVisibilityChange: updater => { layoutChanged.current=true; setColumnVisibility(updater) },
     onColumnOrderChange: updater => { layoutChanged.current=true; setColumnOrder(updater) },
     onColumnSizingChange: updater => { layoutChanged.current=true; setColumnSizing(updater) },
-    onColumnPinningChange: updater => { layoutChanged.current=true; setColumnPinning(updater) },
+    onColumnPinningChange: updater => { layoutChanged.current=true; setColumnPinning(current=>{const next=typeof updater==='function'?updater(current):updater;return {left:next.left??[],right:next.right??[]}}) },
     columnResizeMode: "onChange",
     defaultColumn: { minSize:48, maxSize:800, size:160 },
     maxMultiSortColCount: 5,
@@ -533,11 +556,11 @@ export function DataTable<TData, TValue>({
   // Search is shown whenever a caller opts in via `searchColumn` (kept as the
   // enable flag) — but it now filters ACROSS ALL columns, not just that one.
   const showSearch = !!searchColumn
-  const hasActiveFilters = columnFilters.length > 0 || globalFilter.length > 0
+  const hasActiveFilters = columnFilters.length > 0 || globalFilter.length > 0 || filterTree.children.length>0
 
   const currentSavedPayload = React.useMemo<SavedViewPayload>(
     () => ({
-      ...(tableId && tableExists(tableId) ? {tableState:{version:2 as const,filterTree:EMPTY_FILTER_TREE,layout:{visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}}} : {}),
+      ...(tableId && tableExists(tableId) ? {tableState:{version:2 as const,filterTree,layout:{visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}}} : {}),
       filters: {
         ...(globalFilter ? { global: globalFilter } : {}),
         columns: Object.fromEntries(columnFilters.map((filter) => [filter.id, filter.value])) as SavedViewPayload["filters"]["columns"],
@@ -546,7 +569,7 @@ export function DataTable<TData, TValue>({
       visibility: columnVisibility,
       pageSize: pagination.pageSize,
     }),
-    [columnFilters, columnVisibility, columnOrder, columnSizing, columnPinning, tableId, globalFilter, pagination.pageSize, sorting]
+    [filterTree,columnFilters, columnVisibility, columnOrder, columnSizing, columnPinning, tableId, globalFilter, pagination.pageSize, sorting]
   )
 
   const applySavedView = React.useCallback(
@@ -565,7 +588,8 @@ export function DataTable<TData, TValue>({
         (facets ?? []).map((facet) => facet.columnId)
       )
       if(result.invalidFilters){toast.error("This view uses filters that are no longer available. Update the view before applying it.");return}
-      if(state?.filterTree.children.length){toast.error("Advanced filters are not available for this list yet.");return}
+      if(state?.filterTree.children.length&&!advancedEnabled){toast.error("Advanced filters are not available for this list yet.");return}
+      setFilterTree(state?.filterTree??EMPTY_FILTER_TREE);setFilterError('')
       if(state)applyLayout(state.layout)
       setSorting(result.sorting)
       setColumnFilters(result.columnFilters)
@@ -574,10 +598,11 @@ export function DataTable<TData, TValue>({
       setPagination({ pageIndex: 0, pageSize: server ? normalizeTablePageSize(result.pageSize) : result.pageSize })
       if (result.stale) toast.warning("Some saved view columns are no longer available.")
     },
-    [columns, facets, filters, server, fieldDefinitions, applyLayout]
+    [columns, facets, filters, server, fieldDefinitions, applyLayout,advancedEnabled]
   )
 
   const resetToBaseView = React.useCallback(() => {
+    setFilterTree(EMPTY_FILTER_TREE);setFilterError('')
     setSorting([])
     setColumnFilters([])
     setGlobalFilter("")
@@ -654,6 +679,7 @@ export function DataTable<TData, TValue>({
         </div>
 
         <div className={cn("ml-auto flex flex-wrap items-center justify-end gap-2", renderFilteredView && "order-2 shrink-0")}>
+          {advancedEnabled?<AdvancedFilterEditor fields={fieldDefinitions.map(field=>{const quick=filters?.find(f=>f.columnId===field.id);return {...field,options:quick&&'options' in quick?quick.options:field.options}})} value={filterTree} timezone={businessTimezone} onApply={tree=>{setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/>:null}
           {toolbar}
           {tableId && savedViews && preferencesReady ? (
             <SavedViewMenu
@@ -668,6 +694,8 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
+      {filterError?<StatusCallout role="alert" tone="danger">{filterError}. Edit or clear the advanced filters to continue.</StatusCallout>:null}
+      {initial.layoutError?<StatusCallout role="alert" tone="warning">The saved column layout is invalid. Reset the column layout to continue.</StatusCallout>:null}
       {serverError ? (
         <StatusCallout role="alert" tone="danger" className="flex items-center gap-2">
           Could not load this page.
@@ -681,7 +709,7 @@ export function DataTable<TData, TValue>({
         </StatusCallout>
       ) : null}
 
-      {renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original), {
+      {filterError ? null : renderFilteredView ? renderFilteredView(table.getFilteredRowModel().rows.map((row) => row.original), {
         pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, search: globalFilter,
         sorting, filters: columnFilters as ServerTableQuery["filters"],
       }) : <div className="overflow-hidden rounded-lg border">

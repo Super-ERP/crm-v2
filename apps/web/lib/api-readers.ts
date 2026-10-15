@@ -1,3 +1,5 @@
+import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+import type { FilterGroup } from "@/lib/table-controls/types"
 import "server-only"
 import { activeProjectCodeFunnel, visibleProjectCode } from "@/server/services/project-code-visibility"
 import { isProjectCodeActive } from "@/lib/project-code-policy"
@@ -68,6 +70,7 @@ export async function leadsList(
   const validStatuses = ["new", "contacted", "qualified", "disqualified", "converted"] as const
   const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
   const where = and(
+    recordFilter("leads",query?.filterTree,{name:leads.name,company:leads.companyName,companyName:leads.companyName,mobile:leads.mobile,phone:leads.phone,email:leads.email,status:leads.status,ownerName:user.name,source:leads.source,stage:sql`(select name from ${pipelineStages} where ${pipelineStages.id}=${leads.currentStageId})`,converted:sql`${leads.convertedAccountId} is not null`,createdAt:leads.createdAt},{}),
     isNull(leads.deletedAt), ownerScope(leads.ownerMemberId, visible),
     search ? or(ilike(leads.name, search), ilike(leads.companyName, search), ilike(leads.email, search), ilike(leads.phone, search), ilike(leads.mobile, search), ilike(leads.source, search), ilike(user.name, search)) : undefined,
     statuses?.length ? inArray(leads.status, statuses) : undefined,
@@ -84,7 +87,7 @@ export async function leadsList(
       .leftJoin(member, eq(leads.ownerMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
       .where(where)
-      .orderBy(ordering, desc(leads.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), desc(leads.id))
       .limit(limit)
       .offset(offset),
     tx.select({ count: sql<number>`count(*)::int` }).from(leads)
@@ -187,6 +190,7 @@ export async function accountsList(
   const parent = alias(accounts, "account_list_parent")
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const where = and(
+    recordFilter("accounts",query?.filterTree,{name:accounts.name,ownerName:user.name,code:accounts.code,accountType:accounts.accountType,currency:accounts.currency,industry:accounts.industry,parentAccountName:parent.name,createdAt:accounts.createdAt},{}),
     isNull(accounts.deletedAt), accountReadScope(visible),
     search ? or(ilike(accounts.name, search), ilike(accounts.code, search), ilike(accounts.registrationNumber, search), ilike(accounts.industry, search), ilike(user.name, search)) : undefined,
     query?.selections.accountType?.length ? inArray(accounts.accountType, query.selections.accountType) : undefined,
@@ -204,12 +208,13 @@ export async function accountsList(
       .leftJoin(user, eq(member.userId, user.id))
       .leftJoin(parent, and(eq(accounts.parentAccountId, parent.id), isNull(parent.deletedAt)))
       .where(where)
-      .orderBy(ordering, asc(accounts.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), asc(accounts.id))
       .limit(limit)
       .offset(offset),
     tx.select({ count: sql<number>`count(*)::int` }).from(accounts)
       .leftJoin(member, eq(accounts.ownerMemberId, member.id))
-      .leftJoin(user, eq(member.userId, user.id)).where(where),
+      .leftJoin(user, eq(member.userId, user.id))
+      .leftJoin(parent,and(eq(accounts.parentAccountId,parent.id),isNull(parent.deletedAt))).where(where),
   ])
   const mapped: AccountListItem[] = rows.map((r) => ({
     ...r.account,
@@ -379,6 +384,7 @@ export async function personsList(
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const primaryValues = query?.selections.primary ?? []
   const where = and(
+    recordFilter("persons",query?.filterTree,{name:sql`concat_ws(' ',${persons.firstName},${persons.lastName})`,accountName:accounts.name,email:persons.email,title:persons.title,department:persons.department,phone:persons.phone,primary:persons.isPrimary},{}),
     isNull(persons.deletedAt),
     isNull(accounts.deletedAt),
     accountReadScope(visible),
@@ -396,7 +402,7 @@ export async function personsList(
       .from(persons)
       .innerJoin(accounts, eq(persons.accountId, accounts.id))
       .where(where)
-      .orderBy(ordering, asc(persons.lastName), asc(persons.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), asc(persons.lastName), asc(persons.id))
       .limit(limit)
       .offset(offset),
     tx
@@ -531,6 +537,7 @@ export async function opportunitiesList(
   const accountOwnerMember = alias(member, "opportunity_account_owner_member")
   const accountOwnerUser = alias(user, "opportunity_account_owner_user")
   const where = and(
+    recordFilter("opportunities",query?.filterTree,{name:opportunities.name,accountId:opportunities.accountId,accountOwnerMemberId:accounts.ownerMemberId,totalEstimatedFunnelAmount:opportunities.totalEstimatedFunnelAmount,funnelCount:sql`(select count(*) from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,projectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.projectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,crossDealProjectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.crossDealProjectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`},{currency:opportunities.currency,arrays:['projectCodes','crossDealProjectCodes'],relationNames:{accountId:accounts.name,accountOwnerMemberId:accountOwnerUser.name}}),
     isNull(opportunities.deletedAt),
     ownerScope(opportunities.ownerMemberId, visible),
     query?.search ? or(
@@ -572,13 +579,15 @@ export async function opportunitiesList(
       .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(where)
-      .orderBy(ordering, desc(opportunities.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), desc(opportunities.id))
       .limit(limit)
       .offset(offset),
     tx
       .select({ count: sql<number>`count(*)::int` })
       .from(opportunities)
       .innerJoin(accounts, eq(opportunities.accountId, accounts.id))
+      .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
+      .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(where),
   ])
 
@@ -891,6 +900,7 @@ export async function funnelsList(
   const validStatuses = ["open", "won", "lost", "on_hold"] as const
   const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
   const where = and(
+    recordFilter("funnel",query?.filterTree,{id:funnels.name,accountId:funnels.accountId,projectCode:visibleProjectCode(funnels.projectCode),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:funnels.opportunityId,accountOwnerMemberId:accounts.ownerMemberId,amount:sql`coalesce(${funnels.estimatedAmount},${funnels.amount},0)`,expectedCloseDate:funnels.expectedCloseDate,stageId:funnels.currentStageId,status:funnels.status},{currency:funnels.currency,dateOnly:['expectedCloseDate'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name}}),
     isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible),
     isNull(opportunities.deletedAt),
     search ? ilike(funnels.name, search) : undefined,
@@ -959,7 +969,7 @@ export async function funnelsList(
       .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(where)
-      .orderBy(ordering, desc(funnels.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), desc(funnels.id))
       .limit(limit)
       .offset(offset),
     tx
@@ -1268,6 +1278,8 @@ export type QuotationListItem = QuotationRow & {
 }
 
 export type QuotationListQuery = {
+  filterTree?: FilterGroup
+  sorting?: {id:string;desc:boolean}[]
   search?: string
   accountIds?: string[]
   accountOwnerIds?: string[]
@@ -1288,6 +1300,7 @@ export async function quotationsList(
   const term = query?.search?.trim()
   const pattern = term ? `%${term.replace(/[\\%_]/g, "\\$&")}%` : null
   const where = and(
+    recordFilter('quotations',query?.filterTree,{quoteNumber:quotations.quoteNumber,accountId:funnels.accountId,projectCode:visibleProjectCode(funnels.projectCode),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:opportunities.id,accountOwnerMemberId:accounts.ownerMemberId,funnelId:funnels.id,lineItemCount:sql`(select count(*) from ${quotationLineItems} where ${quotationLineItems.quotationId}=${quotations.id})`,subtotal:quotations.subtotal,taxTotal:quotations.taxTotal,total:quotations.total,status:quotations.status,primary:quotations.isPrimary,validUntil:quotations.validUntil},{currency:quotations.currency,dateOnly:['validUntil'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name,funnelId:funnels.name}}),
     isNull(quotations.deletedAt),
     ownerScope(funnels.ownerMemberId, visible),
     pattern ? or(
@@ -1352,7 +1365,7 @@ export async function quotationsList(
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .where(where)
-      .orderBy(order, desc(quotations.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,order), desc(quotations.id))
       .limit(limit)
       .offset(offset),
     tx

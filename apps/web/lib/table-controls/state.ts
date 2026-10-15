@@ -2,7 +2,7 @@ import { EMPTY_FILTER_TREE, EMPTY_LAYOUT, type FilterGroup, type TableStateV2 } 
 import type { DataTableFilterValue } from '@/lib/data-table-filters'
 export function legacyFiltersToTree(filters: Record<string,DataTableFilterValue|readonly string[]>):FilterGroup {
   return {...EMPTY_FILTER_TREE,children:Object.entries(filters).flatMap(([fieldId,raw])=>{
-    const value=Array.isArray(raw)?{type:'enum',value:raw}:raw as DataTableFilterValue
+    const value=Array.isArray(raw)?{type:'enum' as const,value:raw}:raw as DataTableFilterValue
     let operand:unknown=('value' in value)?value.value:undefined
     let operator:string='operator' in value?String(value.operator):'equals'
     if(value.type==='enum'||value.type==='relation') {operator='any-of';operand=Array.isArray(operand)?operand:operand==null?[]:[operand]}

@@ -1,5 +1,8 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+
 import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
 import { resolveDeliveryCode, validateDeliverySource, reusableDeliveryProject } from "@/lib/project-delivery-code"
 import { milestoneReadScope } from "@/server/services/milestone-access"
@@ -117,10 +120,10 @@ export async function listProjectPage(input: ServerTableQuery): Promise<{ rows: 
   return withModule("projects", PERMISSIONS.PROJECT_VIEW, async (tx, ctx) => {
     const visible = await visibleMemberIds(tx, ctx)
     const { limit, offset, query } = normalizeRecordListQuery(input,
-      ["projectCode", "name", "accountName", "status", "value", "opportunityName"], ["status"])
+      ["projectCode", "name", "accountName", "status", "value", "opportunityName"], ["status"],getTableFields("projects"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const statuses = query.selections.status?.filter((value): value is (typeof projectStatus.enumValues)[number] => projectStatus.enumValues.includes(value as (typeof projectStatus.enumValues)[number]))
-    const where = and(isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
+    const where = and(recordFilter("projects",query.filterTree,{projectCode:projects.projectCode,name:projects.name,accountName:accounts.name,status:projects.status,value:projects.value,opportunityName:funnels.name},{currency:projects.currency}),isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
       search ? or(ilike(projects.projectCode, search), ilike(projects.name, search), ilike(accounts.name, search), ilike(funnels.name, search)) : undefined,
       statuses?.length ? inArray(projects.status, statuses) : undefined)
     const sortColumns = { projectCode: projects.projectCode, name: projects.name, accountName: accounts.name, status: projects.status, value: projects.value, opportunityName: funnels.name }
@@ -144,7 +147,7 @@ export async function listProjectPage(input: ServerTableQuery): Promise<{ rows: 
       .leftJoin(accounts, eq(projects.accountId, accounts.id))
       .leftJoin(funnels, eq(projects.funnelId, funnels.id))
       .where(where)
-      .orderBy(ordering, desc(projects.id))
+      .orderBy(...recordSort(query.sorting,sortColumns,ordering), desc(projects.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(projects)
         .leftJoin(accounts, eq(projects.accountId, accounts.id))

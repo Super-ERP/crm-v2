@@ -76,6 +76,8 @@ export type AccountDetailSection = {
 }
 
 export type AccountDetailData = {
+  projectCodes?: React.ReactNode
+  projectCodeCount?: number
   accountId: string
   sections: AccountDetailSection[]
   /** Raw field values — updateAccount is full-replace, so each inline save
@@ -112,6 +114,7 @@ export type AccountDetailData = {
 export function AccountDetailBody(props: AccountDetailData) {
   const {
     accountId,
+    projectCodes,projectCodeCount,
     sections,
     record,
     canEdit,
@@ -476,6 +479,7 @@ export function AccountDetailBody(props: AccountDetailData) {
           <CountTab value="children" count={childAccounts.length}>
             Child accounts
           </CountTab>
+          {projectCodes ? <CountTab value="project-codes" count={projectCodeCount}>Project codes</CountTab> : null}
           <CountTab value="activity">Activity</CountTab>
           <CountTab value="documents" count={documents.length}>
             Documents
@@ -587,6 +591,8 @@ export function AccountDetailBody(props: AccountDetailData) {
             pageSize={5}
           />
         </TabsContent>
+
+        {projectCodes ? <TabsContent value="project-codes" className="mt-4">{projectCodes}</TabsContent> : null}
 
         <TabsContent value="activity" className="mt-4">
           <ActivityTimeline

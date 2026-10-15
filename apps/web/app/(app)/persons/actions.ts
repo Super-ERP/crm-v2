@@ -1,5 +1,7 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+
 import { revalidatePath } from "next/cache"
 import { and, eq, isNull, ne } from "drizzle-orm"
 import { withTenant, type Tx } from "@/lib/actions"
@@ -89,7 +91,7 @@ export type PersonInput = {
 /** All non-deleted persons with their account name resolved. */
 export async function listPersonPage(input: ServerTableQuery): Promise<{ rows: PersonListItem[]; total: number }> {
   return withTenant(PERMISSIONS.PERSON_VIEW, (tx, ctx) => personsList(tx, ctx,
-    normalizeRecordListQuery(input, ["name", "accountName", "title", "email", "primary"], ["accountName", "primary"])))
+    normalizeRecordListQuery(input, ["name", "accountName", "title", "email", "primary"], ["accountName", "primary"], getTableFields("persons"))))
 }
 
 /**

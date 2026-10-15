@@ -1,5 +1,7 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+
 import { and, eq, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant } from "@/lib/actions"
@@ -44,7 +46,7 @@ export type OpportunityContainerRow = {
 
 export async function listOpportunityPage(input: ServerTableQuery): Promise<{ rows: OpportunityContainerRow[]; total: number }> {
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => opportunitiesList(tx, ctx,
-    normalizeRecordListQuery(input, ["name", "accountId", "funnelCount", "accountOwnerMemberId"], ["accountId", "accountOwnerMemberId"])))
+    normalizeRecordListQuery(input, ["name", "accountId", "funnelCount", "accountOwnerMemberId"], ["accountId", "accountOwnerMemberId"], getTableFields("opportunities"))))
 }
 
 export async function listOpportunityFilterOptions() {

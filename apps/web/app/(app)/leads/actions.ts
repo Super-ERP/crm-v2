@@ -1,5 +1,7 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+
 import { and, eq, isNull, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, requireContext } from "@/lib/actions"
@@ -43,7 +45,7 @@ function requireEmail(v?: string | null): string {
 
 export async function listLeadPage(input: ServerTableQuery): Promise<{ rows: Lead[]; total: number }> {
   return withTenant(PERMISSIONS.LEAD_VIEW, (tx, ctx) => leadsList(tx, ctx,
-    normalizeRecordListQuery(input, ["name", "company", "status", "ownerName", "source", "createdAt"], ["status", "source", "ownerName"])))
+    normalizeRecordListQuery(input, ["name", "company", "status", "ownerName", "source", "createdAt"], ["status", "source", "ownerName"], getTableFields("leads"))))
 }
 
 export async function listLeadFilterSources(): Promise<string[]> {

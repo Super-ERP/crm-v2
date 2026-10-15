@@ -30,7 +30,7 @@ export const FIELD_TYPES: Record<string, TableFieldType> = {
   "department": "enum",
   "description": "text",
   "docDate": "date",
-  "document": "text",
+  "document": "action",
   "dueDate": "date",
   "email": "text",
   "entityId": "text",

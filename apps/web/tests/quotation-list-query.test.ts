@@ -24,6 +24,7 @@ describe("quotation list paging", () => {
       query: {
         search: "Academy",
         sort: { id: "quoteNumber", desc: true },
+        sorting: [{id:"quoteNumber",desc:true}],
         accountIds: ["account-1"],
         statuses: ["draft", "sent"],
       },

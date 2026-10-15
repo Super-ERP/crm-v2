@@ -1,20 +1,5 @@
 [
   {
-    "file": "apps/web/app/(app)/_shared/project-code-panel.tsx",
-    "keys": [
-      "account-project-codes",
-      "person-project-codes"
-    ],
-    "fields": [
-      "projectCode",
-      "crossDealProjectCode",
-      "crmProjectCode",
-      "funnelName",
-      "opportunityName"
-    ],
-    "mode": "pending-adapter-audit"
-  },
-  {
     "file": "apps/web/app/(app)/accounts/[id]/account-contacts.tsx",
     "keys": [
       "account-contacts"

@@ -1,5 +1,7 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+
 import type { ServerTableQuery } from "@/lib/table-pagination"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import { withTenant } from "@/lib/actions"
@@ -17,16 +19,16 @@ export async function getProjectCodeDetail(code: string, page: unknown = 0) {
 }
 
 export async function listProjectCodeTablePage(query: ServerTableQuery) {
-  const normalized = normalizeRecordListQuery(query, ["code", "funnelCount"], [])
+  const normalized = normalizeRecordListQuery(query, ["code", "funnelCount"], [],getTableFields("project-codes"))
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => listProjectCodes(tx, ctx, {
-    search: normalized.query.search, page: normalized.offset / normalized.limit, pageSize: normalized.limit, sort: normalized.query.sort,
+    search: normalized.query.search, page: normalized.offset / normalized.limit, pageSize: normalized.limit, sort: normalized.query.sort,filterTree:normalized.query.filterTree,sorting:normalized.query.sorting,
   }))
 }
 
 export async function getProjectCodeTablePage(code: string, query: ServerTableQuery) {
   const modules = await getEntitledModuleMap()
-  const normalized = normalizeRecordListQuery(query, ["name", "estimatedAmount", "expectedCloseDate", "stageName"], [])
+  const normalized = normalizeRecordListQuery(query, ["name", "estimatedAmount", "expectedCloseDate", "stageName"], [],getTableFields("project-code-funnels"))
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => getProjectCode(tx, ctx, code, normalized.offset / normalized.limit, modules.projects, {
-    search: normalized.query.search, pageSize: normalized.limit, sort: normalized.query.sort,
+    search: normalized.query.search, pageSize: normalized.limit, sort: normalized.query.sort,filterTree:normalized.query.filterTree,sorting:normalized.query.sorting,
   }))
 }

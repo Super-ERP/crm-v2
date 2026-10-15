@@ -1,5 +1,8 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+
 import { milestoneReadScope } from "@/server/services/milestone-access"
 import { milestoneStatusForFunnel, milestoneContextForFunnel } from "@/server/services/milestone-status"
 
@@ -37,6 +40,7 @@ export type PaymentMilestoneRow = typeof paymentMilestones.$inferSelect
 
 /** A milestone row for the list, joined to its funnel + quotation for display. */
 export type PaymentMilestoneListItem = PaymentMilestoneRow & {
+  currency: string | null
   funnelName: string | null
   quoteNumber: string | null
 }
@@ -87,10 +91,10 @@ async function resolveMilestoneProduct(
 export async function listPaymentMilestonePage(input: ServerTableQuery): Promise<{ rows: PaymentMilestoneListItem[]; total: number }> {
   return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx, ctx) => {
     const { limit, offset, query } = normalizeRecordListQuery(input,
-      ["title", "amount", "quoteNumber", "status", "funnelName"], ["status"])
+      ["title", "amount", "quoteNumber", "status", "funnelName"], ["status"],getTableFields("payment-milestones"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const statuses = query.selections.status?.filter((value): value is (typeof paymentMilestoneStatus.enumValues)[number] => paymentMilestoneStatus.enumValues.includes(value as (typeof paymentMilestoneStatus.enumValues)[number]))
-    const where = and(
+    const where = and(recordFilter("payment-milestones",query.filterTree,{title:paymentMilestones.title,amount:paymentMilestones.amount,quoteNumber:quotations.quoteNumber,status:paymentMilestones.status,funnelName:funnels.name},{currency:quotations.currency}),
       await milestoneReadScope(tx, ctx),
       search ? or(ilike(paymentMilestones.title, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
       statuses?.length ? inArray(paymentMilestones.status, statuses) : undefined)
@@ -100,6 +104,7 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
     const [rows, totalRows] = await Promise.all([tx
       .select({
         m: paymentMilestones,
+        currency: quotations.currency,
         funnelName: funnels.name,
         quoteNumber: quotations.quoteNumber,
       })
@@ -107,7 +112,7 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
       .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
       .leftJoin(quotations, eq(paymentMilestones.quotationId, quotations.id))
       .where(where)
-      .orderBy(ordering, desc(paymentMilestones.id))
+      .orderBy(...recordSort(query.sorting,sortColumns,ordering), desc(paymentMilestones.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(paymentMilestones)
         .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
@@ -115,6 +120,7 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
     ])
     return { rows: rows.map((r) => ({
       ...r.m,
+      currency:r.currency,
       funnelName: r.funnelName,
       quoteNumber: r.quoteNumber,
     })), total: totalRows[0]?.count ?? 0 }

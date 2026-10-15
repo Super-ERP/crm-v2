@@ -1,5 +1,8 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+
 import { revalidatePath } from "next/cache"
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
@@ -54,11 +57,11 @@ function normalizePrice(v?: string | null): string {
 export async function listProductPage(input: ServerTableQuery): Promise<{ rows: ProductRow[]; total: number }> {
   return withTenant(PERMISSIONS.PRODUCT_VIEW, async (tx, ctx) => {
     const { limit, offset, query } = normalizeRecordListQuery(input,
-      ["name", "productCode", "subcategory", "uom", "standardPrice", "isActive"], ["productCode", "isActive"])
+      ["name", "productCode", "subcategory", "uom", "standardPrice", "isActive"], ["productCode", "isActive"],getTableFields("products"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const active = query.selections.isActive?.includes("true") && !query.selections.isActive.includes("false")
       ? true : query.selections.isActive?.includes("false") && !query.selections.isActive.includes("true") ? false : undefined
-    const where = and(eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt),
+    const where = and(recordFilter("products",query.filterTree,{name:products.name,description:products.description,productCode:products.productCode,subcategory:products.subcategory,uom:products.uom,standardPrice:products.standardPrice,isActive:products.isActive},{currency:products.currency}),eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt),
       search ? or(ilike(products.name, search), ilike(products.productCode, search), ilike(products.subcategory, search), ilike(products.description, search)) : undefined,
       query.selections.productCode?.length ? inArray(products.productCode, query.selections.productCode) : undefined,
       active === undefined ? undefined : eq(products.isActive, active))
@@ -69,7 +72,7 @@ export async function listProductPage(input: ServerTableQuery): Promise<{ rows: 
       .select()
       .from(products)
       .where(where)
-      .orderBy(ordering, asc(products.id))
+      .orderBy(...recordSort(query.sorting,sortColumns,ordering), asc(products.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(products).where(where),
     ])

@@ -1,3 +1,5 @@
+import { getTableFields } from "@/lib/table-controls/registry"
+import { validateFilterTree } from "@/lib/table-controls/filter-tree"
 import { validateFilterValue } from "@/lib/data-table-filters"
 import type { QuotationListQuery } from "@/lib/api-readers"
 import { normalizeTablePageSize, type ServerTableQuery } from "@/lib/table-pagination"
@@ -12,11 +14,14 @@ const STATUSES = new Set<QuotationStatus>([
 ])
 
 export function normalizeQuotationListQuery(input: ServerTableQuery) {
+  if (input.sorting?.length > 5) throw new Error("Use at most five sort fields.")
   const limit = normalizeTablePageSize(input.pageSize)
   const pageIndex = Number.isSafeInteger(input.pageIndex)
     ? Math.max(0, Math.min(input.pageIndex, 100_000))
     : 0
   const query: QuotationListQuery = {
+    ...(input.filterTree ? {filterTree:validateFilterTree(input.filterTree,getTableFields("quotations"))} : {}),
+    sorting: (Array.isArray(input.sorting)?input.sorting:[]).filter(sort=>SORT_COLUMNS.has(sort.id)).map(sort=>({id:sort.id,desc:sort.desc===true})),
     search: typeof input.search === "string" ? input.search.trim().slice(0, 100) : "",
   }
   const firstSort = Array.isArray(input.sorting) ? input.sorting[0] : undefined

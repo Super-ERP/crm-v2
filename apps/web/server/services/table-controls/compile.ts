@@ -3,7 +3,7 @@ import { and, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm'
 import { validateFilterTree } from '@/lib/table-controls/filter-tree'
 import { filterDateRange } from '@/lib/table-controls/date-range'
 import type { FilterContext, FilterNode, TableFieldDefinition } from '@/lib/table-controls/types'
-export type SqlTableField = { field: TableFieldDefinition; expression: SQLWrapper; currency?: SQLWrapper; dateOnly?: boolean; array?: boolean }
+export type SqlTableField = { field: TableFieldDefinition; expression: SQLWrapper; searchExpression?: SQLWrapper; currency?: SQLWrapper; dateOnly?: boolean; array?: boolean }
 export type SqlFieldRegistry = Record<string, SqlTableField>
 export function compileFilterTree(input: unknown, registry: SqlFieldRegistry, context: FilterContext): SQL {
   const tree=validateFilterTree(input,Object.values(registry).map(v=>v.field))
@@ -12,7 +12,8 @@ export function compileFilterTree(input: unknown, registry: SqlFieldRegistry, co
       if(!node.children.length)return sql`true`
       return (node.logic==='and'?and(...node.children.map(compile)):or(...node.children.map(compile)))!
     }
-    const f=registry[node.fieldId], e=f.expression, op=node.operator, v=node.value
+    const f=registry[node.fieldId], op=node.operator, v=node.value
+    const e = f.searchExpression && ["contains","not-contains","starts-with","ends-with"].includes(op) ? f.searchExpression : f.expression
     const text=sql`${e}::text`
     const notEmpty=f.field.type==='text'||f.field.type==='enum'||f.field.type==='relation'
       ? f.array?sql`coalesce(cardinality(${e}),0)>0`:sql`nullif(${text},'') IS NOT NULL`:sql`${e} IS NOT NULL`

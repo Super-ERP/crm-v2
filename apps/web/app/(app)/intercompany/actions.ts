@@ -1,5 +1,8 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
@@ -62,10 +65,10 @@ export type InboundIntercompanyDeal = {
 export async function listInboundIntercompanyDealPage(input: ServerTableQuery): Promise<{ rows: InboundIntercompanyDeal[]; total: number }> {
   return withModule("finance", PERMISSIONS.INTERCOMPANY_VIEW, async (tx, ctx) => {
     const { limit, offset, query } = normalizeRecordListQuery(input,
-      ["name", "originEntityName", "status", "dealValue", "yourShare", "expectedCloseDate", "updatedAt"], ["status", "response"])
+      ["name", "originEntityName", "status", "dealValue", "yourShare", "expectedCloseDate", "updatedAt"], ["status", "response"],getTableFields("intercompany-inbound"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const responses = query.selections.response?.filter((value): value is IntercompanyResponseValue => value === "accepted" || value === "declined")
-    const where = and(eq(intercompanyDeals.partnerTenantId, ctx.tenantId),
+    const where = and(recordFilter("intercompany-inbound",query.filterTree,{name:intercompanyDeals.name,originEntityName:organization.name,status:intercompanyDeals.status,response:intercompanyDealResponses.response,dealValue:sql`coalesce(${intercompanyDeals.quotedAmount},${intercompanyDeals.estimatedAmount},0)`,yourShare:sql`greatest(0,case when ${intercompanyDeals.shareType}='amount' then ${intercompanyDeals.shareValue} else coalesce(${intercompanyDeals.quotedAmount},${intercompanyDeals.estimatedAmount},0)*${intercompanyDeals.shareValue}/100 end)`,project:projects.projectCode,expectedCloseDate:intercompanyDeals.expectedCloseDate},{currency:intercompanyDeals.currency,dateOnly:["expectedCloseDate"]}),eq(intercompanyDeals.partnerTenantId, ctx.tenantId),
       search ? or(ilike(intercompanyDeals.name, search), ilike(intercompanyDeals.accountName, search), ilike(organization.name, search)) : undefined,
       query.selections.status?.length ? inArray(intercompanyDeals.status, query.selections.status) : undefined,
       responses?.length ? inArray(intercompanyDealResponses.response, responses) : undefined)
@@ -111,7 +114,7 @@ export async function listInboundIntercompanyDealPage(input: ServerTableQuery): 
         eq(projects.intercompanyDealId, intercompanyDeals.id)
       )
       .where(where)
-      .orderBy(ordering, desc(intercompanyDeals.id))
+      .orderBy(...recordSort(query.sorting,sortColumns,ordering), desc(intercompanyDeals.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(intercompanyDeals)
         .leftJoin(organization, eq(intercompanyDeals.tenantId, organization.id))
