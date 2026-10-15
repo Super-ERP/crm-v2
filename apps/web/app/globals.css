@@ -326,6 +326,15 @@
 .qm-lines .qm-col-uom { width: 6.2%; }
 .qm-lines .qm-col-unit-price { width: 12.5%; }
 .qm-lines .qm-col-subtotal { width: 12.6%; }
+/* Seven-column variant for absolute line discounts imported from Salesforce. */
+.qm-lines-discounted .qm-col-description { width: 49%; }
+.qm-lines-discounted .qm-col-quantity { width: 8%; }
+.qm-lines-discounted .qm-col-uom { width: 6%; }
+.qm-lines-discounted .qm-col-unit-price { width: 10.5%; }
+.qm-lines-discounted .qm-col-discount { width: 10.5%; }
+.qm-lines-discounted .qm-col-subtotal { width: 10.5%; }
+.qm-line-currency { display: block; }
+.qm-lines-discounted td.qm-description { padding-right: 6pt; }
 .qm-lines thead { display: table-header-group; }
 .qm-lines thead th { padding: 8.5pt 2pt 1.5pt; color: #fff; background: #454545; text-align: center; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .qm-lines tbody.qm-row-alt > tr { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

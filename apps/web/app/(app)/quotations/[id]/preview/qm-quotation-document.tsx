@@ -123,6 +123,10 @@ export function QmQuotationDocument({ doc, template = "qm" }: { doc: QuotationDo
   const notes = parseNotes(quote.notes)
   const currency = quote.currency || "MYR"
   const discount = Number(quote.discountTotal) || 0
+  const hasLineDiscounts = doc.lines.some((line) => Number(line.discountAmount) > 0)
+  const lineMoney = (value: string | number) => hasLineDiscounts
+    ? <><span className="qm-line-currency">{currency}</span>{money(value, "")}</>
+    : money(value, currency)
   const netSubtotal = Number(quote.subtotal) - discount
 
   return (
@@ -166,14 +170,16 @@ export function QmQuotationDocument({ doc, template = "qm" }: { doc: QuotationDo
           </div>
         </section>
 
-        <table className="qm-lines">
+        <table className={`qm-lines${hasLineDiscounts ? " qm-lines-discounted" : ""}`}>
           <colgroup>
             <col className="qm-col-item" /><col className="qm-col-description" />
             <col className="qm-col-quantity" /><col className="qm-col-uom" />
-            <col className="qm-col-unit-price" /><col className="qm-col-subtotal" />
+            <col className="qm-col-unit-price" />
+            {hasLineDiscounts ? <col className="qm-col-discount" /> : null}
+            <col className="qm-col-subtotal" />
           </colgroup>
           <thead><tr>
-            <th>Item</th><th>Description</th><th>Quantity</th><th>UOM</th><th>Unit Price</th><th>Sub-total</th>
+            <th>Item</th><th>Description</th><th>Quantity</th><th>UOM</th><th>Unit Price</th>{hasLineDiscounts ? <th>Discount</th> : null}<th>Sub-total</th>
           </tr></thead>
             {doc.lines.map((line, index) => {
               const { subject, description } = subjectAndDescription(line.description, index)
@@ -190,8 +196,9 @@ export function QmQuotationDocument({ doc, template = "qm" }: { doc: QuotationDo
                     </td>
                     <td className="qm-number">{Number(line.quantity).toFixed(2)}</td>
                     <td className="qm-uom">{line.uom ?? ""}</td>
-                    <td className="qm-money">{money(line.unitPrice, currency)}</td>
-                    <td className="qm-money">{money(line.lineSubtotal, currency)}</td>
+                    <td className="qm-money">{lineMoney(line.unitPrice)}</td>
+                    {hasLineDiscounts ? <td className="qm-money">{lineMoney(-Number(line.discountAmount || 0))}</td> : null}
+                    <td className="qm-money">{lineMoney(line.lineSubtotal)}</td>
                   </tr>
                 </tbody>
               )

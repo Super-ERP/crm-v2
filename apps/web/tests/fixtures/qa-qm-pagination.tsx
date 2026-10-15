@@ -50,6 +50,8 @@ if (!outDir) throw new Error("Pass an output directory")
 const css = readFileSync("apps/web/app/globals.css", "utf8").replace(/^@import[^;]+;/gm, "")
 const cases: Array<{name: string; count: number; description?: string; notes?: string; terms?: string}> = [
   {name: "short", count: 1},
+  {name: "discount-short", count: 2},
+  {name: "discount-multi-page", count: 30},
   ...[10, 11, 12, 13, 14].map(count => ({name: `boundary-${count}`, count})),
   {name: "multi-page", count: 30},
   {name: "long-description", count: 1, description: Array.from({length: 100}, (_, i) => `Paragraph${i + 1} Implementation services and support for the project.`).join("\n\n")},
@@ -59,7 +61,7 @@ const cases: Array<{name: string; count: number; description?: string; notes?: s
 for (const template of ["qm", "qa"] as const) {
  for (const fixture of cases) {
   const doc = documentWithTax("8.000", null)
-  doc.lines = Array.from({length: fixture.count}, (_, i) => ({id: String(i), description: fixture.description ?? `Service ${i + 1}\nImplementation and support services`, quantity: "1", uom: "Unit", unitPrice: "100", lineSubtotal: "100"})) as QuotationDocument["lines"]
+  doc.lines = Array.from({length: fixture.count}, (_, i) => ({id: String(i), description: fixture.description ?? `Service ${i + 1}\nImplementation and support services`, quantity: "1", uom: "Unit", unitPrice: "100", discountAmount: fixture.name.startsWith("discount-") ? "10" : "0", lineSubtotal: fixture.name.startsWith("discount-") ? "90" : "100"})) as QuotationDocument["lines"]
   doc.quotation.notes = fixture.notes ?? "1. Prices valid for the quotation period.\n2. Work begins after acceptance."
   doc.company.quoteFooter = fixture.terms ?? "Payment due within 30 days."
   doc.company.bankDetails = "Sample payment details."
