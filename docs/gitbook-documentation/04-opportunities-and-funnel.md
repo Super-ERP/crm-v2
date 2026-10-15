@@ -140,7 +140,7 @@ Complete and save the listed opportunity and funnel fields. Budget gates require
 
 #### Submit or move directly
 
-You need **Advance funnel stage** permission and access to the record. Standard forward moves into 1d, 2c, 3b, 4a, and Won require approval unless you also have **Approve stage advances**. That approval capability skips the request, but does not waive field gates. Standard Lost and KIV entry do not require approval; their written reason remains required. Organization settings can change entry approval flags.
+You need **Advance funnel stage** permission and access to the record. Standard forward moves into 1d, 2c, 3b, 4a, and Won require approval. A member with **Approve stage advances**, an active reporting profile and no superior can move directly. Managers with a superior still request approval. Direct movement does not waive field gates. Standard Lost and KIV entry do not require approval; their written reason remains required. Organization settings can change entry approval flags.
 
 {% endstep %}
 {% step %}

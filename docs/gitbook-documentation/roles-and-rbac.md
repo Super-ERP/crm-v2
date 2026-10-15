@@ -70,7 +70,7 @@ All default roles can view quotations within their record scope. Approval follow
 | Rep | Yes | No | Yes |
 | Viewer | No | No | No |
 
-Users without stage-approval permission submit requests when the transition requires approval. Eligible assigned reviewers decide requests in Incoming. Users with stage-approval permission can enter gated stages directly only when they have no reporting manager above them, after satisfying stage requirements. Managers with a superior request approval. Milestone-management permission does not add a status control that is absent from the interface.
+Users without stage-approval permission submit requests when the transition requires approval. Eligible assigned reviewers decide requests in Incoming. Users with stage-approval permission can enter gated stages directly only when they have no reporting manager above them, after satisfying stage requirements. Managers with a superior request approval. Use **Mark invoiced** on an eligible Pending invoicing milestone; the status cannot be reversed.
 
 {% endtab %}
 {% tab title="Catalog & administration" %}

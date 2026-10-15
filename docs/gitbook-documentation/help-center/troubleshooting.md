@@ -173,9 +173,9 @@ If it is already **Invoiced**, the status cannot be reverted.
 {% endstep %}
 {% step %}
 
-#### Check the interface limitation
+#### Check permission and the action
 
-The current repository screens show status badges without a status-editing control. If your deployed version also has no action, contact your administrator or support team; this is not necessarily a permission issue.
+Use **Mark invoiced** on the milestone detail or shared schedule. The action requires milestone-management permission and an eligible schedule. Ask your administrator to check these conditions if it is missing.
 
 {% endstep %}
 {% endstepper %}
@@ -184,7 +184,7 @@ The current repository screens show status badges without a status-editing contr
 Record the customer's actual commercial outcome. Do not close a deal as Won just to enable a milestone action.
 {% endhint %}
 
-**Expected result:** an authorized user records billing on an eligible Won milestone. The milestone status does not issue an invoice or receipt.
+**Expected result:** an authorized user records billing on an eligible Pending invoicing milestone. The milestone status does not issue an invoice or receipt.
 
 See [Payment milestones](../06-payment-milestones.md).
 

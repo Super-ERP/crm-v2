@@ -77,7 +77,7 @@ Major record lists provide controls for finding records and adjusting your view.
 
 #### Searching Records
 
-Type keywords into the search box. The search instantly filters records across primary identifiers (e.g., names, company names, codes, emails).
+Type keywords into the search box. Searchable fields vary by module. Funnel search matches only the funnel name; use Account, Opportunity and Account owner filters for related records. Search inside a relation picker narrows its options.
 
 {% endstep %}
 {% step %}
@@ -114,9 +114,9 @@ Use the page-size selector at the bottom of the table to switch between **25**, 
 Once you have configured your ideal filters, sorting, and column preferences, you can save your setup:
 
 * Click the **Views** dropdown on the toolbar.
-* Select **Save view as...** and give your view a memorable name (e.g., *"My High Priority Deals"*).
-* **Set as Default**: Check the default option if you want this view to load every time you open the module.
-* **Manage Views**: You can rename, duplicate, or delete your custom views at any time.
+* Select **Save current view** and give your view a memorable name (e.g., *"My High Priority Deals"*).
+* **Set as default**: Select a saved view, then use this action in Views to load it by default for that module.
+* Select a saved view to **Rename**, **Duplicate**, or **Delete** it from Views.
 
 {% hint style="info" %}
 **Privacy of Saved Views**: Saved views are strictly personal to your account. Creating, modifying, or deleting a saved view will never impact your team members' lists.

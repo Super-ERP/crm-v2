@@ -29,7 +29,7 @@ The action that, after reporting-manager approval or an eligible top manager's d
 
 ### Account
 
-The company or organization you work with, such as Acme. It holds customer context and links to contacts and commercial records. The account currency establishes the currency used for related commercial work.
+The company or organization you work with, such as Acme. It holds customer context and links to contacts and commercial records. The account currency supplies a default for related commercial work; review the currency on each sales record.
 
 ### Contact and person
 

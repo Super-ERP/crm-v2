@@ -130,7 +130,7 @@ After billing, the supported manual status transition is **Pending invoicing →
 {% endstepper %}
 
 {% hint style="info" %}
-**Current interface limitation:** the milestone list, detail page, and shared payment schedule display status badges rather than a status-editing control in this repository version. If you need to record Invoiced and no action is available in your deployed version, contact your administrator or support team. Do not assume clicking the badge changes the status.
+**Record billing:** use **Mark invoiced** on the milestone detail page or shared payment schedule. The action requires milestone-management permission and an eligible schedule; clicking a status badge does not change it.
 {% endhint %}
 
 **Check the result:** confirm the status saved as Invoiced after an authorized update. Keep the invoice and billing reference in your billing system; a milestone status change does not issue an invoice or receipt.

@@ -79,7 +79,7 @@ Create a quotation, check items, currency, tax, and terms, then submit it for ap
 **You are done when:** the customer records are linked correctly, the funnel stage reflects the work completed, and the quote has the appropriate status.
 
 {% hint style="info" %}
-**Customer needs a change?** A sent quote can be revised into a separate draft. An approved quote must be returned to Draft before editing and approved again before sending. A pending quote needs a review decision first.
+**Customer needs a change?** A sent quote can be revised into a separate draft. An approved quote must be returned to Draft before editing and approved again before sending. An authorized editor can recall a pending quote to Draft, edit and resubmit.
 {% endhint %}
 
 {% endtab %}

@@ -116,7 +116,7 @@ See [Milestone statuses](../06-payment-milestones.md#milestone-statuses).
 <details>
 <summary>Does marking a milestone Invoiced generate an invoice?</summary>
 
-No. The supported manual transition is **Won → Invoiced** after billing. The current repository screens do not expose a status-editing control; contact your administrator if your deployed version also has no action. Payment milestones are planning records; they do not create or update invoices or receipts.
+No. Use **Mark invoiced** after billing on an eligible **Pending invoicing** milestone. These planning records do not create or update invoices or receipts.
 
 See [Payment milestones](../06-payment-milestones.md).
 
