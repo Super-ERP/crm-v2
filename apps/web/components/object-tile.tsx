@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import {
+  HashIcon,
   TargetIcon,
   Building2Icon,
   UsersIcon,
@@ -28,6 +29,7 @@ export type ObjectKind =
   | "funnel"
   | "quotation"
   | "product"
+  | "projectCode"
   | "project"
   | "salesOrder"
   | "milestone"
@@ -44,6 +46,7 @@ export const OBJECT_TILES: Record<
   funnel: { label: "Funnel", color: "bg-amber-500", Icon: FilterIcon },
   quotation: { label: "Quotation", color: "bg-green-600", Icon: FileTextIcon },
   product: { label: "Product", color: "bg-sky-500", Icon: PackageIcon },
+  projectCode: { label: "Project code", color: "bg-indigo-500", Icon: HashIcon },
   project: { label: "Project", color: "bg-indigo-500", Icon: FolderKanbanIcon },
   salesOrder: { label: "Sales order", color: "bg-pink-600", Icon: ReceiptIcon },
   milestone: { label: "Payment milestone", color: "bg-yellow-600", Icon: CreditCardIcon },

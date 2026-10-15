@@ -46,3 +46,15 @@ it("omits related record categories the user cannot view, including Projects whe
   expect(result?.funnels[0].opportunity).toBeNull()
   expect(execute).toHaveBeenCalledTimes(1)
 })
+
+it("uses the shared table's page size and sorting before limiting directory rows", async () => {
+  await listProjectCodes(tx, ctx, { page: 1, pageSize: 50, sort: { id: "funnelCount", desc: true } })
+  const q = new PgDialect().sqlToQuery(execute.mock.calls[0][0])
+  expect(q.sql).toContain('ORDER BY "funnelCount" DESC')
+  expect(q.params.slice(-2)).toEqual([51, 50])
+})
+it("keeps an accessible code page available when its funnel search has no matches", async () => {
+  execute.mockResolvedValueOnce([]).mockResolvedValueOnce([{ present: 1 }])
+  const result = await getProjectCode(tx, ctx, "CODE", 0, false, { search: "unmatched" })
+  expect(result).toMatchObject({ code: "CODE", total: 0, funnels: [], quotations: [] })
+})

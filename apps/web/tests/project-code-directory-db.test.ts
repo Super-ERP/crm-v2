@@ -48,6 +48,18 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
     ]) await client`insert into funnels (id, tenant_id, name, opportunity_id, owner_member_id, account_id, current_stage_id, pipeline_id, status, project_code, cross_deal_project_code) values (${id!}, ${tenant!}, ${code!}, ${parent}, ${owner!}, ${account}, ${st!}, ${pipeline}, ${st === stage.won ? "won" : "open"}, ${code!}, ${crossCode})`
     await client`insert into quotations values (${quotation}, 'qm', 'Q-1', ${active}, ${reseller}, ${contact}, null)`
     await client`insert into projects values (${delivery}, 'qm', 'Delivery', 'A/a & #1', ${active}, ${account}, 'rep', null)`
+    await client.unsafe(`
+      alter table funnels add column estimated_amount numeric default 1000, add column currency text default 'MYR', add column expected_close_date date;
+      alter table quotations add column status text default 'draft', add column total numeric default 1000, add column currency text default 'MYR';
+      alter table accounts add column code text;
+      alter table persons add column email text, add column title text;
+      alter table projects add column status text default 'active', add column value numeric default 1000, add column currency text default 'MYR';
+      create table member (id text, user_id text, organization_id text);
+      create table "user" (id text, name text);
+      insert into member values ('rep', 'rep-user', 'qm');
+      insert into "user" values ('rep-user', 'Sales representative');
+    `)
+
   })
   afterAll(async () => { await client?.end(); await admin?.unsafe(`drop database "${database}" with (force)`); await admin?.end() })
   beforeEach(() => { scope.members = ["rep"] })
@@ -57,6 +69,15 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
     expect(result.rows.find(r => r.code === "A/a & #1")).toMatchObject({ funnelCount: 2, primaryCount: 1, crossDealCount: 1 })
     expect((await listProjectCodes(tx, ctx, { search: "A/a & #1" })).rows).toHaveLength(1)
     expect((await listProjectCodes(tx, ctx, { search: "%" })).rows).toEqual([])
+  })
+  it("returns standard table totals and funnels with CRM summary fields", async () => {
+    const directory = await listProjectCodes(tx, ctx, { pageSize: 50, sort: { id: "funnelCount", desc: true } })
+    expect(directory.total).toBe(4)
+    const detail = await getProjectCode(tx, ctx, "A/a & #1", 0, false, { pageSize: 50, search: "A/a" })
+    expect(detail?.total).toBe(1)
+    expect(detail?.funnels[0]).toMatchObject({ estimatedAmount: "1000", currency: "MYR", ownerName: "Sales representative", stageKind: "OPEN" })
+    const empty = await getProjectCode(tx, ctx, "A/a & #1", 0, false, { search: "no matches" })
+    expect(empty).toMatchObject({ total: 0, funnels: [] })
   })
   it("resolves the end user, shared billed reseller, attention contact and quotation without Projects", async () => {
     const result = await getProjectCode(tx, ctx, "A/a & #1", 0, false)

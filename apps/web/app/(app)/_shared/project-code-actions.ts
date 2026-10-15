@@ -8,19 +8,21 @@ import { runInTenant } from "@/db"
 import { requireContext } from "@/lib/server-context"
 import { visibleMemberIds, canAccessAttachable } from "@/lib/access-scope"
 import { PERMISSIONS } from "@/lib/permissions"
-import { APPROVAL_PAGE_SIZE, normalizeApprovalPage } from "@/lib/approval-pagination"
+import { normalizeTablePageSize, type ServerTableQuery } from "@/lib/table-pagination"
+import { normalizeApprovalPage } from "@/lib/approval-pagination"
 
 export type RelatedProjectCodeRow = {
   funnelId: string; funnelName: string; opportunityId: string | null; opportunityName: string | null
   projectCode: string | null; crossDealProjectCode: string | null; crmProjectCode: string | null
 }
-export type RelatedProjectCodePage = { rows: RelatedProjectCodeRow[]; pageIndex: number; hasNextPage: boolean }
+export type RelatedProjectCodePage = { rows: RelatedProjectCodeRow[]; pageIndex: number; hasNextPage: boolean; total: number }
 
 /** Sales identifiers are core CRM data; the optional delivery Project module is not required. */
-export async function listRelatedProjectCodes(kind: "account" | "person", id: string, page: unknown = 0): Promise<RelatedProjectCodePage> {
+export async function listRelatedProjectCodes(kind: "account" | "person", id: string, page: unknown = 0, options: { pageSize?: unknown; search?: string; sort?: { id: string; desc: boolean } } = {}): Promise<RelatedProjectCodePage> {
   const ctx = await requireContext()
   const pageIndex = normalizeApprovalPage(page)
-  const empty = { rows: [], pageIndex, hasNextPage: false }
+  const pageSize = normalizeTablePageSize(options.pageSize)
+  const empty = { rows: [], pageIndex, hasNextPage: false, total: 0 }
   if (!["account", "person"].includes(kind)) return empty
   if (!ctx.can(PERMISSIONS.OPPORTUNITY_VIEW) || !ctx.can(kind === "account" ? PERMISSIONS.ACCOUNT_VIEW : PERMISSIONS.PERSON_VIEW)) return empty
   return runInTenant(ctx.tenantId, async tx => {
@@ -36,14 +38,25 @@ export async function listRelatedProjectCodes(kind: "account" | "person", id: st
       : sql`(f.primary_person_id = ${id} OR o.primary_person_id = ${id} OR o.owner_contact_id = ${id}
           OR o.power_sponsor_contact_id = ${id} OR ${quoteRelationship})`
     const parentScope = visible === null ? sql`true` : sql`o.owner_member_id IN (${sql.join(visible.map(value => sql`${value}`), sql`, `)})`
-    const rows = await tx.execute<RelatedProjectCodeRow>(sql`
-      SELECT f.id AS "funnelId", f.name AS "funnelName", CASE WHEN ${parentScope} THEN o.id END AS "opportunityId", CASE WHEN ${parentScope} THEN o.name END AS "opportunityName",
+    const search = (options.search ?? "").trim().slice(0, 300)
+    const like = `%${search.replace(/[\\%_]/g, "\\$&")}%`
+    const sort = options.sort?.id === "funnelName" ? sql`f.name` : sql`f.project_code`
+    const direction = options.sort?.desc ? sql`DESC` : sql`ASC`
+    const rows = await tx.execute<RelatedProjectCodeRow & { total: number }>(sql`
+      SELECT (count(*) OVER ())::int AS total, f.id AS "funnelId", f.name AS "funnelName", CASE WHEN ${parentScope} THEN o.id END AS "opportunityId", CASE WHEN ${parentScope} THEN o.name END AS "opportunityName",
         f.project_code AS "projectCode", f.cross_deal_project_code AS "crossDealProjectCode", CASE WHEN ${parentScope} THEN o.project_code END AS "crmProjectCode"
       FROM funnels f JOIN opportunities o ON o.id = f.opportunity_id AND o.tenant_id = f.tenant_id
       WHERE f.tenant_id = ${ctx.tenantId} AND f.deleted_at IS NULL AND o.deleted_at IS NULL AND ${scope} AND ${relation} AND ${activeProjectCodeFunnel(alias(funnels, "f"))}
         AND (nullif(trim(f.project_code), '') IS NOT NULL OR nullif(trim(f.cross_deal_project_code), '') IS NOT NULL OR (${parentScope} AND nullif(trim(o.project_code), '') IS NOT NULL))
-      ORDER BY f.project_code NULLS LAST, f.name, f.id LIMIT ${APPROVAL_PAGE_SIZE + 1} OFFSET ${pageIndex * APPROVAL_PAGE_SIZE}
+        AND ${search ? sql`(f.project_code ILIKE ${like} OR f.cross_deal_project_code ILIKE ${like} OR f.name ILIKE ${like}
+          OR (${parentScope} AND (o.project_code ILIKE ${like} OR o.name ILIKE ${like})))` : sql`true`}
+      ORDER BY ${sort} ${direction} NULLS LAST, f.name, f.id LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}
     `)
-    return { rows: rows.slice(0, APPROVAL_PAGE_SIZE), pageIndex, hasNextPage: rows.length > APPROVAL_PAGE_SIZE }
+    return { rows: rows.slice(0, pageSize).map(({ total: _total, ...row }) => row), pageIndex, hasNextPage: rows.length > pageSize, total: rows[0]?.total ?? 0 }
   })
+}
+
+/** Uses the same page/search contract as other CRM related tables. */
+export async function listRelatedProjectCodeTablePage(kind: "account" | "person", id: string, query: ServerTableQuery) {
+  return listRelatedProjectCodes(kind, id, query.pageIndex, { pageSize: query.pageSize, search: query.search, sort: Array.isArray(query.sorting) ? query.sorting[0] : undefined })
 }

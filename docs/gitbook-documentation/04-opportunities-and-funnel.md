@@ -174,9 +174,9 @@ A queued KIV-to-open approval now applies the reopen when the original transitio
 
 ## Project codes across sales records
 
-**Project Codes** is a core CRM page in the **Sales** navigation. It works even when the optional **Projects** module is disabled. Search the directory by all or part of a code, or use global search and choose a result in **Project Codes**. The Funnel page's search continues to match funnel names only.
+**Project Codes** is a core CRM page in the **Sales** navigation. It works even when the optional **Projects** module is disabled. Search the directory by all or part of a code, or use global search and choose a result in **Project Codes**. The directory uses the same search, sorting, column controls and 25/50/100-row page sizes as other CRM lists. The Funnel page's search continues to match funnel names only.
 
-Click a code in the directory, a Funnel, Opportunity, Quotation, Account or Contact to open its central page. The page groups accessible funnels using that exact code and labels **Primary**, **Cross-deal** and **CRM** relationships separately. It also links to accessible Opportunities, Quotations, end-user and bill-to Accounts, and explicitly linked Contacts. Delivery Projects appear when the Projects module is enabled and you can view them. Funnel results are paginated; related records correspond to the funnels on the current page.
+Click a code in the directory, a Funnel, Opportunity, Quotation, Account or Contact to open its central page. The page groups accessible funnels using that exact code and labels **Primary**, **Cross-deal** and **CRM** relationships separately. It also links to accessible Opportunities, Quotations, end-user and bill-to Accounts, and explicitly linked Contacts. Delivery Projects appear when the Projects module is enabled and you can view them. The central page uses the same highlights, Related quick links and tabbed tables as Opportunity details. Funnel rows include their stage, estimated amount, expected close date, account, Opportunity and owner where accessible; quotation tables show status and amount. Funnel results are paginated; related records correspond to the funnels on the current page.
 
 ### Available from Commit (4A)
 
