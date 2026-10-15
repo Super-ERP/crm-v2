@@ -303,7 +303,7 @@ export function DataTable<TData, TValue>({
       sorting,
       columnFilters,
       globalFilter,
-      columnVisibility:normalizeTableLayout({visibility:columnVisibility},fieldDefinitions).visibility,
+      columnVisibility,
       pagination: { pageIndex, pageSize: size } as PaginationState,
     }
     // Intentionally read the URL once on mount; state is the source of truth after.
@@ -320,7 +320,7 @@ export function DataTable<TData, TValue>({
     initial.globalFilter
   )
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
-    initial.layout?.visibility ?? initial.columnVisibility
+    initial.layout?.visibility ?? normalizeTableLayout({visibility:initial.columnVisibility},fieldDefinitions).visibility
   )
   const [columnOrder, setColumnOrder] = React.useState<string[]>(initial.layout?.order ?? [])
   const [columnSizing, setColumnSizing] = React.useState<Record<string, number>>(initial.layout?.widths ?? {})
