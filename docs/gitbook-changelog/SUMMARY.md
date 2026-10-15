@@ -4,8 +4,8 @@
 
 ## Release Notes
 
-* [2026](2026.md)
+* [2026](release-notes/2026.md)
 
 ## Documentation
 
-* [Guide updates](guide-updates.md)
+* [Guide updates](documentation/guide-updates.md)

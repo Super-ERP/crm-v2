@@ -9,8 +9,8 @@ Choose a year to read release notes. Each release lists its version, date, and c
 
 ## Release notes by year
 
-* [2026 release notes](2026.md)
+* [2026 release notes](release-notes/2026.md)
 
 ## Documentation updates
 
-Read [Guide updates](guide-updates.md) for changes to the documentation.
+Read [Guide updates](documentation/guide-updates.md) for changes to the documentation.
