@@ -21,7 +21,7 @@ type FunnelRow = CodeDetail["funnels"][number]
 type Tab = "funnels" | "opportunities" | "quotations" | "accounts" | "contacts" | "projects"
 const VALID_TABS: Tab[] = ["funnels", "opportunities", "quotations", "accounts", "contacts", "projects"]
 function objectLink(kind: ObjectKind, href: string, name: string) {
-  return <Link href={href} className="flex min-w-0 items-center gap-2 link"><ObjectTile kind={kind} className="size-5" iconClassName="size-3" /><span>{name}</span></Link>
+  return <Link href={href} title={name} className="flex w-full min-w-0 items-start gap-2 link"><ObjectTile kind={kind} className="size-5" iconClassName="size-3" /><span className="min-w-0 whitespace-normal [overflow-wrap:anywhere]">{name}</span></Link>
 }
 
 function RecordTable({ rows, kind, base, tableId, code }: { code:string; rows: CodeRelatedRecord[]; kind: Exclude<Tab, "funnels">; base: string; tableId: string }) {

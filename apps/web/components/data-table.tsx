@@ -230,7 +230,8 @@ export function DataTable<TData, TValue>({
         const id =
           (c as { id?: string; accessorKey?: string }).id ??
           (c as { accessorKey?: string }).accessorKey
-        const configured = { ...c, enableHiding: fieldDefinitions.find(field=>field.id===id)?.required ? false : c.enableHiding }
+        const field = fieldDefinitions.find(field=>field.id===id)
+        const configured = { ...c, size: c.size ?? field?.defaultWidth, minSize: c.minSize ?? field?.minWidth, enableHiding: field?.required ? false : c.enableHiding }
         if (id && filterIds.has(id)) return { ...configured, filterFn: typedFilterFn }
         return id && facetIds.has(id) ? { ...configured, filterFn: facetFilterFn } : configured
       }),
@@ -763,7 +764,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} style={columnStyle(cell.column)}>
+                    <TableCell key={cell.id} style={columnStyle(cell.column)} title={typeof cell.getValue() === "string" ? cell.getValue() as string : undefined}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -1342,14 +1343,14 @@ export function SortableHeader({
       variant="ghost"
       size="sm"
       className={cn(
-        "-ml-2 h-7 data-[state=open]:bg-accent",
+        "-ml-2 h-7 max-w-full min-w-0 data-[state=open]:bg-accent",
         sorted && "text-foreground",
         className
       )}
       title="Click to sort; Shift+click to add a sort field"
       onClick={(event) => column.toggleSorting(sorted === "asc",event.shiftKey)}
     >
-      {title}
+      <span className="min-w-0 truncate">{title}</span>
       {sorted === "asc" ? (
         <ArrowUp className="ml-1 size-3.5" />
       ) : sorted === "desc" ? (
@@ -1397,7 +1398,7 @@ export function linkCell<TData>(
 ) {
   return function LinkCell({ row }: { row: { original: TData } }) {
     return (
-      <Link href={href(row.original)} className="font-medium link">
+      <Link href={href(row.original)} className="block min-w-0 whitespace-normal [overflow-wrap:anywhere] font-medium link">
         {label(row.original)}
       </Link>
     )

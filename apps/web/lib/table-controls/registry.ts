@@ -21,6 +21,6 @@ export function getTableFields(listKey: string, columnIds?: readonly string[]): 
     const type = FIELD_TYPES[id]
     if (!entry.fields.includes(id) || !type) throw new Error(`Unavailable table field: ${id}`)
     return { id, label: listKey === "funnel" && id === "id" ? "Funnel" : FIELD_LABELS[id] ?? id.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()), type, operators: id === "order" ? [] : FIELD_OPERATORS[type],
-      required: id === (REQUIRED_IDENTIFIERS[listKey] ?? (entry.fields.includes("name") ? "name" : entry.fields[0])) || type === "action", sortable: type !== "action", defaultVisible: !["crossDealProjectCode", "crossDealProjectCodes"].includes(id), minWidth: 48, defaultWidth: type === "action" ? 80 : 160 }
+      required: id === (REQUIRED_IDENTIFIERS[listKey] ?? (entry.fields.includes("name") ? "name" : entry.fields[0])) || type === "action", sortable: type !== "action", defaultVisible: !["crossDealProjectCode", "crossDealProjectCodes"].includes(id) && !(listKey === "project-code-funnels" && ["relationship", "account", "opportunity"].includes(id)), minWidth: 48, defaultWidth: type === "action" ? 56 : id === "description" ? 260 : id === "subcategory" ? 220 : id === "productCode" ? 200 : ["name", "title", "id"].includes(id) ? 280 : ["uom", "unit"].includes(id) ? 88 : type === "relation" ? 200 : type === "money" || type === "date" ? 168 : type === "boolean" ? 96 : type === "enum" ? 120 : 160 }
   })
 }
