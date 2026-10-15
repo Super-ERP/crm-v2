@@ -76,15 +76,18 @@ Users with **Manage tenant settings** permission (Owner and Admin by default) co
 
 ### Taxonomy Settings (`/settings/taxonomy`)
 
-* **Product Categories**: Define classification tags for the product catalog.
-* **Lead Sources**: Customize sources (e.g., *Google Ads, Tech Expo, Partner Referral*).
-* **Lost Reasons**: Standardize why deals are lost (e.g., *Price High, Missing Feature, Competitor*).
+* **Industries**: Maintain account industry choices.
+* **Project Natures**: Maintain project-nature codes and names.
+* **Product Codes**: Maintain categories and dependent subcategories.
+* **Funnel Stages**: Configure stage labels, probabilities, requirements and approval flags.
+
+The current Settings navigation has no Lead Sources or Lost Reasons editor.
 
 ### Document Settings (`/settings/documents`)
 
 * **Default Payment Terms**: e.g., *"30 Days from invoice date"*.
 * **Delivery**: Default delivery text copied into new quotations. Existing quotations retain their snapshots.
-* Tax-inclusive pricing is configured in General; tax rates are maintained in the quotation tax configuration.
+* Tax-inclusive pricing is configured in General; tax rates are maintained under **Settings → Billing → Tax**, with separate tax permissions. **Billing → Numbering** contains document-number configuration.
 
 ### Funnel stages and custom fields
 
@@ -92,7 +95,7 @@ With **Manage tenant settings**, open **Settings → Taxonomy → Funnel Stages*
 
 A required checkbox must be checked; budget presets require positive amounts. Required fields are evaluated on forward moves against stages earlier than the target. See [Fields and gates by stage](04-opportunities-and-funnel.md#fields-and-gates-by-stage) before changing the configuration.
 
-**New-organization check:** the organization-creation path seeds stage names and approval flags but currently leaves required-field lists empty. The standard database seed adds field lists separately. Do not assume a newly created organization has the matrix's gates enabled; inspect and save the intended requirements here. Won's own field list is currently not enforced on entry, and KIV reopening has a queued-review limitation described in the same guide.
+**New-organization check:** the organization-creation path seeds stage names and approval flags but currently leaves required-field lists empty. The standard database seed adds field lists separately. Do not assume a newly created organization has the matrix's gates enabled; inspect and save the intended requirements here. Won's own field list is currently not enforced on entry, and KIV reopening follows the manager approval policy described in the same guide.
 
 ## Continue
 

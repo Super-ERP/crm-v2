@@ -22,8 +22,8 @@ New to Q-App? Start with [Quick start by role](https://jienweng.gitbook.io/q-app
 | --- | --- |
 | [Opportunities and sales funnel](04-opportunities-and-funnel.md) | Record PPVVC qualification and manage deal stages. |
 | [Quotations and revisions](05-quotations-and-revisions.md) | Build a proposal, get approval, create revisions, and print a PDF. |
-| [Payment milestones](06-payment-milestones.md) | Review planned billing events and understand Won/Invoiced status. |
-| [Stage approvals](08-approvals-inbox.md) | Review assigned requests and follow up on your own requests. |
+| [Payment milestones](06-payment-milestones.md) | Configure agreed billing events and track Pending invoicing/Invoiced status. |
+| [Approvals inbox](08-approvals-inbox.md) | Review lead-conversion, quotation and funnel-stage requests; track your own submissions. |
 
 ## Administration
 

@@ -39,7 +39,7 @@ Open the target deal in **Sales → Funnel** and click **+ New Quotation** (or n
 
 #### Check linked records
 
-The system automatically links the quote to the Opportunity, Account, and Account Currency.
+Choose the Funnel when starting from the Quotations list. Its customer records are linked, and its currency supplies the default. Review the supported quotation currency before pricing.
 
 {% endstep %}
 {% endstepper %}
@@ -80,7 +80,7 @@ In the **Line Items** section, click **+ Add Line Item**.
 
 **Select from Product Catalog**:
 
-* Search for existing products by SKU or name. Selecting a product automatically populates its unit price, category, and tax eligibility.
+* Choose a product by name. Selection fills its description, standard unit price and unit of measure. Review price and currency; selection does not apply an exchange rate.
 
 {% endstep %}
 {% step %}
@@ -99,8 +99,8 @@ In the **Line Items** section, click **+ Add Line Item**.
 **Configure Pricing**:
 
 * **Quantity**: Number of units/days/hours.
-* **Unit Price**: Base price per unit in the account currency.
-* **Discount (%)**: Optional percentage discount.
+* **Unit Price**: Base price per unit in the quotation currency.
+* **Discount**: Optional amount in quotation currency. A header discount is also available.
 * **Tax Rate**: Applies tenant tax setting (e.g., 0% Exempt, 6%, 8% SST).
 
 {% endstep %}
@@ -117,10 +117,7 @@ The system computes subtotal, total discount, tax amount, and final total in rea
 
 ## Document Templates
 
-Select the template appropriate for your offering:
-
-* **Standard Proposal & Quotation**: Full commercial proposal layout suitable for software licenses, professional consulting, and managed services.
-* **Quandatics Academy Template**: Formatted specifically for training courses, workshops, certification programs, and educational services.
+The preview resolves the template from account and organization configuration, with a default fallback. Built-in layouts include Default, QAR, CC, Quandatics Malaysia and Quandatics Academy. The quotation editor has no per-quote Standard/Academy selector. Ask your administrator to review the configured template if branding is wrong.
 
 ---
 
@@ -129,7 +126,8 @@ Select the template appropriate for your offering:
 ```mermaid
 flowchart TD
     D["Draft"] --> P["Pending approval"]
-    P -->|"Approve"| A["Approved"]
+    D -->|"Eligible top manager approves directly"| A["Approved"]
+    P -->|"Eligible reviewer approves"| A
     P -->|"Reject with reason or Recall"| D
     A -->|"Return to Draft"| D
     A -->|"Send"| S["Sent"]
@@ -151,7 +149,7 @@ A draft must be approved before it can be sent:
 * If the account owner changes while approval is pending, the quotation returns to Draft with an explanation. The new owner must resubmit it.
 
 ### `Approved`
-The eligible reporting manager approves the quote. A member with send permission can then record sending it. To change an Approved quotation, use **Return to Draft**, then edit and resubmit. Approval is required again. Sending records the action; it does not send an email notification.
+The eligible reporting manager approves the queued quotation, or an eligible top manager approves their Draft directly. A member with send permission can then record sending it. To change an Approved quotation, use **Return to Draft**, then edit and resubmit. Approval is required again. Sending records the action; it does not send an email notification.
 
 ### `Sent`
 Once delivered to the customer via email or formal meeting, use **Send** to record sending.
@@ -262,9 +260,9 @@ The system executes the following:
 
 Open **Preview** on the quotation:
 
-* Generates a branded, publication-ready PDF proposal.
-* Includes company branding, billing addresses, line items table, payment milestones, terms, and signature acceptance blocks.
-* Open the quotation preview and use the print/PDF action. In the browser print dialog, choose **Save as PDF**, then check the saved file before sharing it.
+* Review the resolved template, billing recipient, items, totals and terms. Layout content varies by template.
+* Use **Download PDF** to generate and save the PDF. Generation errors appear beside the controls.
+* **Print** opens the browser print dialog; choose **Save as PDF** if needed. Inspect the saved file before sharing.
 
 ## Continue
 

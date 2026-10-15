@@ -133,12 +133,7 @@ flowchart TD
 
 **Result:** the converted lead links to the customer records and sales pursuit. Review account matching and currency before confirming; the same lead cannot be converted twice.
 
-<details>
-<summary>View a static copy of the conversion flow</summary>
 
-<figure><img src="assets/lead-conversion.png" alt="Review a qualified lead, link or create an account, create the contact and sales pursuit, then mark the lead Converted."><figcaption><p>Lead conversion creates linked records; it is not a status change alone.</p></figcaption></figure>
-
-</details>
 
 ### Approval before conversion
 
@@ -146,7 +141,7 @@ The conversion form saves a request with the selected account and conversion det
 
 A manager with **Approve lead conversions** permission and no manager above them can convert directly. A manager with a superior must request approval, just like other users. Missing reporting configuration is not an exemption. See [Shared manager approval policy](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals#shared-manager-approval-policy).
 
-Approval rechecks saved details, record access and current lead data. If the lead changes after submission, cancel and resubmit with the updated details. Duplicate pending requests and duplicate conversions are prevented.
+Approval rechecks saved details, record access and current lead data. If the lead changes after submission, cancel and resubmit with the updated details. Duplicate pending requests and duplicate conversions are prevented. The requester must remain active with **Convert leads** and access to the lead and selected account. The reviewer must have **Approve lead conversions** and access to the lead and selected account. A failed conversion rolls back both linked records and the approval decision, leaving the request pending.
 
 ### Step-by-step conversion
 
@@ -186,7 +181,7 @@ You will be redirected to the full-page conversion wizard:
 
 #### Convert the lead
 
-Submit the conversion for approval, or confirm direct conversion when eligible. Check **My requests** for the approval result.
+Click **Submit conversion**. The server either queues it for approval or performs direct conversion when you are eligible. Check **My requests** for the approval result.
 
 {% endstep %}
 {% endstepper %}

@@ -108,7 +108,7 @@ Only a **Draft** quotation is editable. Choose the action that matches its curre
 
 | Status | Next step |
 | --- | --- |
-| Pending Approval | Wait for the review. A rejection returns it to Draft with a reason. |
+| Pending Approval | Wait for review, or use **Recall to Draft** with quotation-edit permission and record access. A rejection returns it to Draft with a reason. |
 | Approved | Use **Return to Draft**, edit, and submit for approval again. |
 | Sent, Accepted, Rejected, Expired, or Void | Use the revision action to create a separate Draft where permitted. |
 | Draft, but actions are missing | Ask your administrator to check quotation update permissions and record access. |
@@ -154,14 +154,14 @@ See [Accounts & contacts](../03-accounts-and-contacts.md).
 
 #### Check the current status
 
-Check the milestone's current status. Only **Won → Invoiced** is an allowed manual status change.
+Check the milestone's current status. Only **Pending invoicing → Invoiced** is an allowed manual status change.
 
 {% endstep %}
 {% step %}
 
 #### Check the linked funnel
 
-If it is **Planned**, check the linked funnel. Planned milestones become Won when that funnel reaches Closed Won.
+The quotation must be customer Accepted and the funnel at 4a or Closed Won. Moving below 4a, to Lost or On Hold blocks new invoicing. Closing Won does not change milestone status.
 
 {% endstep %}
 {% step %}
@@ -173,9 +173,9 @@ If it is already **Invoiced**, the status cannot be reverted.
 {% endstep %}
 {% step %}
 
-#### Check the interface limitation
+#### Check permission and the action
 
-The current repository screens show status badges without a status-editing control. If your deployed version also has no action, contact your administrator or support team; this is not necessarily a permission issue.
+Use **Mark invoiced** on the milestone detail or shared schedule. The action requires milestone-management permission and an eligible schedule. Ask your administrator to check these conditions if it is missing.
 
 {% endstep %}
 {% endstepper %}
@@ -184,7 +184,7 @@ The current repository screens show status badges without a status-editing contr
 Record the customer's actual commercial outcome. Do not close a deal as Won just to enable a milestone action.
 {% endhint %}
 
-**Expected result:** an authorized user records billing on an eligible Won milestone. The milestone status does not issue an invoice or receipt.
+**Expected result:** an authorized user records billing on an eligible Pending invoicing milestone. The milestone status does not issue an invoice or receipt.
 
 See [Payment milestones](../06-payment-milestones.md).
 
@@ -231,3 +231,13 @@ Send your administrator or support contact the module name, record identifier, e
 
 * [Frequently asked questions](faqs.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+## A lead-conversion request cannot be approved
+
+* Check **Sales → Approvals → My requests → Lead conversion approvals** and the lead detail request card.
+* If the lead changed after submission, cancel the pending request and submit the current details again. The reviewer cannot approve the stale snapshot.
+* Check that the requester remains active, has **Convert leads**, and can still access the lead and selected existing account. The reviewer needs **Approve lead conversions** and access to those records.
+* A deleted, converted or disqualified lead cannot be converted through an old request. A new account code that has since been used must be corrected through a new submission.
+* If the reporting line changes, lead-conversion and quotation review follows the current eligible manager. Stage requests also require their stored assigned reviewer, so cancel and resubmit a stale stage request.
+* A manager with a superior still needs approval. If no superior is eligible, correct the reporting configuration; missing approval permission does not enable a direct action.
+* Conversion and the decision are one transaction. A failed conversion leaves the request pending without partial linked records; resolve the error or cancel and resubmit.

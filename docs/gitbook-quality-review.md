@@ -176,3 +176,80 @@ Roles capabilities are compared. No tenant permissions were changed.
 All seven default role names appear in every comparison tab. Navigation, links,
 anchors, balanced blocks, and git diff --check pass. Work was isolated from
 unrelated application edits in a documentation worktree.
+
+## Approval workflow audit — October 15, v1.2.177
+
+Compared the guide and reference pages with deployed source commit
+`1a43e697c1e6756413c13cd005b530e063579d16` (#261): lead conversion
+submission/decision service and form, shared manager routing, quotation actions,
+stage request/decision service, all three inbox queries/cards, permission templates,
+and the payment-milestone lifecycle.
+
+Corrected the stale claim that lead conversion has no approval, the quick-start's
+separate quotation-review instruction, default Rep/Senior Rep reporting scope,
+old Planned/Won milestone states, and KIV's former queued-reopen limitation.
+Added the lead approval permission matrix, exact Submit conversion action,
+atomic conversion/failure behavior, current-requester permission checks, and the
+three-section inbox. Clarified that stage inbox assignment and record-scoped
+quotation/lead inboxes have different read rules, and that stage reassignment
+requires cancellation/resubmission while quotation/lead routing is dynamic.
+The quotation flow diagram now includes eligible top managers' direct approval.
+Removed the old static conversion diagram, which omitted approval.
+
+This entry supersedes earlier audit statements that described the stage-only
+inbox, unconditional stage-approver bypass, or the pre-approval conversion flow.
+The audit updates repository GitBook content; publication is a separate Git sync
+step after merge. No navigation configuration or application behavior changed.
+
+## Full user-documentation source audit — October 15, v1.2.177
+
+This expands the approval-only pass above. Read every Markdown content page in
+`gitbook-documentation`, `gitbook-reference` and `user-guide`, and the legacy
+`USER_GUIDE.md`; read the three SUMMARY files as navigation inventories without
+editing them. Compared material workflow claims with the checked-out deployed
+implementation baseline `1a43e697c1e6756413c13cd005b530e063579d16` and retained the
+prior approval corrections. The table records source coverage, not a claim that
+every deployed tenant configuration or rendered screen has been exercised.
+Paths below are relative to `apps/web/` unless prefixed `docs/`.
+
+| Content page | Implementation evidence and result |
+| --- | --- |
+| `docs/user-guide/README.md` | `server/services/conversion.ts`, `server/services/stage.ts`, `server/services/milestone-status.ts`: overview distinguishes conversion approval, customer acceptance, Won and explicit schedule setup. |
+| `docs/user-guide/quick-start.md` | `app/(app)/leads/[id]/convert/convert-form.tsx`, `app/(app)/approvals/`, quotation actions and team/roles pages: retained current role checklists; corrected Pending Approval quote recall guidance. |
+| `docs/user-guide/01-workspace-and-views.md` | `components/data-table.tsx`, `components/saved-view-menu.tsx`, `app/(app)/_shared/saved-view-actions.ts`, `lib/saved-views.ts`, `app/(app)/dashboard/actions.ts`, dashboard currency control, `lib/access-scope.ts`: corrected search scope and exact save/default-view actions. Dashboard aggregation is currency-separated and due follow-ups are limited to ten with a full count. |
+| `docs/gitbook-documentation/README.md` | Module destinations and linked guides inspected; Base-module overview does not prescribe optional delivery/finance workflows. |
+| `docs/gitbook-documentation/02-leads-management.md` | Lead form/actions/detail actions, conversion form, `server/services/conversion.ts`, lead-conversion approval actions and routing service: email requirement, creator ownership, typed disqualification reason, locked Converted/Disqualified state, conversion-created records and atomic approval checked. No dedicated restore action. |
+| `docs/gitbook-documentation/03-accounts-and-contacts.md` | Account/contact forms and actions, account detail body, `lib/access-scope.ts`, `server/services/owner-cascade.ts`, quotation billing actions: corrected code format/automatic generation, create labels, optional manual-contact email, account relation-count description and currency-default wording. Shared reseller reading does not broaden transaction scope. |
+| `docs/gitbook-documentation/04-opportunities-and-funnel.md` | `server/services/stage.ts`, `lib/stage-gate.ts`, `lib/funnel-stages.ts`, stage-change UI, funnel filters/views and seed configuration: retained earlier-stage gate matrix, Won and board exceptions, KIV policy and terminal behavior. Corrected a remaining unconditional approver bypass sentence. |
+| `docs/gitbook-documentation/05-quotations-and-revisions.md` | Quotation form/actions, `lib/quotation-revision-policy.ts`, `lib/quotation-transitions.ts`, `server/services/numbering.ts`, `server/services/quotation-math.ts`, `lib/quotation-pdf-template.ts`, preview PrintButton and PDF route: checked statuses, copy/revision/deletion, primary quotation, running/version numbers, billing and tax snapshots. Corrected amount discounts, product-filled fields, currency defaults, configured templates and Download PDF/Print controls. |
+| `docs/gitbook-documentation/06-payment-milestones.md` | Milestone actions, `server/services/milestone-status.ts`, `server/services/milestone-access.ts`, `components/milestones-panel.tsx`, milestone detail body: explicit acceptance/stage eligibility, schedule split and forward-only invoicing checked. Removed stale claim that Mark invoiced is absent. |
+| `docs/gitbook-documentation/08-approvals-inbox.md` | Approvals page, three workflow card/query/action paths, `server/services/approval-routing.ts`, stage service and quotation actions: retained three sections, pagination, dynamic quotation/lead routing, assigned stage reviewers and requester tracking. |
+| `docs/gitbook-documentation/09-admin-and-settings.md` | `app/(app)/settings/_nav.ts`, General/Documents clients, taxonomy pages, billing tax/numbering pages, `settings/constants.ts`, stage settings, team/role actions: replaced invented Lead Sources/Lost Reasons editors with actual taxonomy destinations; clarified separate tax configuration/permissions. |
+| `docs/gitbook-documentation/roles-and-rbac.md` | `lib/permissions.ts` ROLE_TEMPLATES, `lib/access-scope.ts`, team/roles UI/actions and approval routing: seven defaults and additive grants retained. Corrected obsolete milestone-interface limitation. |
+| `docs/gitbook-documentation/help-center/faqs.md` | Same conversion, access, stage, quotation and milestone implementations as corresponding task guides: corrected leftover Won→Invoiced and missing-action statements. |
+| `docs/gitbook-documentation/help-center/troubleshooting.md` | Stage service/gates, quotation actions and preview controls, account form, milestone actions/detail/shared panel, conversion approval service: corrected milestone action instructions and Pending invoicing terminology. |
+| `docs/gitbook-reference/README.md` | Reference links and scope checked against the four reference content pages. |
+| `docs/gitbook-reference/terminology.md` | Conversion service, account/contact schema and forms, opportunity/funnel model, quotation actions, milestone eligibility and access scope: definitions retained; changed account currency from a universal downstream rule to a default. |
+| `docs/gitbook-reference/stages-and-statuses.md` | Stage service/gates, quotation transitions/actions and milestone status/access services: separate record states, terminal stages, acceptance and explicit schedule setup retained. |
+| `docs/gitbook-reference/permissions-and-approvals.md` | Permissions/access-scope, approval-routing, owner-cascade and the three workflow action paths: current grants, reviewer eligibility, scope and ownership-change behavior retained. |
+| `docs/gitbook-reference/documents-and-actions.md` | Quotation actions/revision policy, lead conversion and approval routing, stage service and milestone status: record-specific approval, independent revisions, accepted-quote restriction and PDF/action distinctions retained. |
+| `docs/USER_GUIDE.md` | Cross-checked against the implementation groups above. Replaced the stale duplicate manual with a concise workflow and links to maintained task guides. Removed obsolete four-role tiers, unrestricted rollback, automatic Won milestones, immutable-at-creation defaults, percentage discounts, revision suffix examples and unsupported optional Projects/Sales Orders instructions. |
+
+### Limits and follow-up
+
+This was a repository source and documentation audit. It did not sign in as each
+role, create live commercial records, download representative PDFs, or verify
+live tenant-specific stage gates, branding, numbering and enabled modules.
+Browser rendering, actual PDF pagination and live reporting-profile permissions
+still require deployment QA. Public GitBook publication/sync was not performed
+by this audit; repository edits do not prove the published pages have updated.
+
+Project-code ingestion/display was investigated separately by the coordinator:
+the current internal Opportunity project code is generated when a child first
+enters 4a; Salesforce source project codes are not currently imported by the
+existing importer. No planned source-code display/backfill behavior is described
+here as shipped. Optional delivery, procurement and finance workflows need their
+own deployment-specific guides if they become part of this Base documentation.
+
+Historical review entries above describe earlier snapshots. Where they conflict
+with this inventory, the current content and this entry supersede them.

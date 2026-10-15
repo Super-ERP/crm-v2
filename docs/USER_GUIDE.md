@@ -1,210 +1,69 @@
-# Q-App End-to-End User Guide
+# Q-App user guide
 
-A complete, practical guide to operating Q-App through the web interface across the full customer lifecycle.
+This repository guide points to the maintained task guides. It covers the current Base modules and Advanced Roles workflow. Available modules, record access and stage requirements depend on organization configuration.
 
----
+## Workspace and personal views
 
-## Table of Contents
+Check the active organization before working. Search and filter controls vary by module; Funnel search matches the funnel name. Use **Views → Save current view** to save personal filters, sorting, columns and page size. Select a saved view to set it as default, rename, duplicate or delete it.
 
-1. [System Overview & Lifecycle](#system-overview--lifecycle)
-2. [Workspace Basics & Personal Saved Views](#1-workspace-basics--personal-saved-views)
-3. [Lead Management & Conversion](#2-lead-management--conversion)
-4. [Accounts & Contacts](#3-accounts--contacts)
-5. [Opportunities & Sales Funnel](#4-opportunities--sales-funnel)
-6. [Quotations, Pricing & Approvals](#5-quotations-pricing--approvals)
-7. [Payment Milestones & Cash Planning](#6-payment-milestones--cash-planning)
-8. [Delivery Projects & Sales Orders](#7-delivery-projects--sales-orders)
-9. [Approvals Hub](#8-approvals-hub)
-10. [System Administration & Settings](#9-system-administration--settings)
+Read [Workspace and personal views](user-guide/01-workspace-and-views.md) and [Quick start by role](user-guide/quick-start.md).
 
----
+## Leads and conversion
 
-## System Overview & Lifecycle
+Create a lead with its contact name, company, valid email, optional phone, source and status. The creator receives ownership. Disqualification requires a typed reason; there is no dedicated restore-to-Contacted action. Converted status is set through conversion, not ordinary editing.
 
-Q-App connects sales, delivery, and commercial planning through a single business lifecycle:
+Conversion links or creates an Account, creates a Contact, and the current form creates an Opportunity and its first Funnel at 0e. Submit for reporting-manager approval; no linked records are created while pending. A member with conversion-approval permission, an active reporting profile and no superior can convert directly. Disqualified and already Converted leads cannot convert.
 
-```mermaid
-flowchart LR
-    L["1. Leads"] -->|"Qualify & Convert"| AC["2. Accounts & Contacts"]
-    AC --> OP["3. Opportunity & Funnel (0e – 4a)"]
-    OP --> Q["4. Quotation & Approvals"]
-    Q -->|"Deal Won"| W["5. Closed-Won & Milestones"]
-    W --> P["6. Delivery Projects & Sales Orders"]
-```
+Read [Leads and conversion](gitbook-documentation/02-leads-management.md).
 
----
+## Accounts and contacts
 
-## 1. Workspace Basics & Personal Saved Views
+Accounts hold company details, billing address, currency and related records. A manually created account can generate its code when blank; a new account in lead conversion requires a 2–6 character alphanumeric code. Contacts belong to accounts; manual contact creation permits an optional email, while conversion requires one.
 
-### Navigation & Tenant Switching
-* **Sidebar Groups**: CRM, Sales, Insights, and Admin.
-* **Organization Switcher** *(Top of Sidebar)*: Switch between organizations. All data, settings, and permissions are strictly isolated per tenant.
-* **User Roles**:
-  * **Owner (Tier 100)**: Full system configuration, billing, and all data.
-  * **Manager (Tier 60)**: Pipeline visibility over team, approvals authority.
-  * **Sales Rep (Tier 20)**: Day-to-day lead, deal, and quotation management.
-  * **Viewer (Tier 10)**: Read-only access across assigned records.
+Reseller accounts and contacts are shared master data within the entity; this does not expose other salespeople's transactions. Keep the Funnel under the end user and choose the actual quotation **Bill To** and its **Attention** contact. Review the saved billing snapshot before sending.
 
-### Mastering List Views
-Every major data list features a unified controls toolbar:
-* **Search**: Instant text search across names, codes, and emails.
-* **Filters**: Add structured conditions (e.g., `Status equals Qualified`).
-* **Columns**: Toggle visible fields to customize your screen layout.
-* **Page Size**: Choose between 25, 50, or 100 rows per page.
-* **Saved Views**: Save your filter/column setup under **Views → Save view as...**. Saved views are strictly **private to your account** and do not impact teammates.
+Read [Accounts and contacts](gitbook-documentation/03-accounts-and-contacts.md).
 
----
+## Opportunities and Funnel
 
-## 2. Lead Management & Conversion
+An Opportunity holds shared qualification and budget context; its Funnels hold individual pursuit stages and quotation links. Standard stages are 0e Identified, 1d Qualified, 2c Proposal, 3b Negotiation, 4a Commit, Closed Won, Closed Lost and KIV.
 
-A **Lead** (`/leads`) captures unverified inbound interest (web forms, events, referrals).
+Complete PPVVC and operational fields on the appropriate record. Forward moves check configured earlier-stage fields; Won and board workflows have qualification exceptions. Open-stage rollback skips forward field gates. KIV reopening uses manager approval policy. Won and Lost are terminal.
 
-### Creating & Qualifying Leads
-1. Navigate to **CRM → Leads** and click **+ New Lead**.
-2. Complete contact details, company name, lead source, estimated value, and assigned owner.
-3. Advance the lead status: `New` -> `Contacted` -> `Qualified` or `Disqualified`.
-4. If **Disqualified**, select a required reason (e.g., *No Budget, Out of Scope*). Disqualified leads can be restored back to `Contacted` at any time.
+Read the [stage requirements and exceptions](gitbook-documentation/04-opportunities-and-funnel.md#fields-and-gates-by-stage) before moving a stage.
 
-### The Conversion Transaction (`/leads/[id]/convert`)
-When a lead is ready for proposal:
-1. Open the lead and click **Convert Lead**.
-2. Complete the full-page conversion wizard:
-   * **Account**: Link an existing Account or create a new one (*Client* or *Reseller*, Code, Address).
-   * **Contact**: Creates or links the primary stakeholder contact.
-   * **Opportunity & Funnel**: Creates the Opportunity container and seeds the sales deal into stage **`0e` (Identified)**.
-3. Submit the conversion for reporting-manager approval. Linked records are created atomically only after approval. A member with lead-conversion approval permission and no manager above them can confirm conversion directly.
+## Quotations and revisions
 
----
+Draft quotations support catalog or custom lines, quantities, prices, currency-amount discounts, tax settings and terms. Review currency rather than assuming product prices are converted. Template selection comes from account/organization configuration.
 
-## 3. Accounts & Contacts
+Submit a Draft for approval, or approve directly when eligible under the shared manager policy. Approved quotations can be sent or returned to Draft; Pending Approval quotations can be recalled by an authorized editor. **Send** records sending and freezes the applicable tax rate; it does not email the customer. Customer acceptance is a separate action and does not close the Funnel.
 
-### Accounts (`/accounts`)
-* Represents the client company or partner entity.
-* **Required ISO Currency**: Every Account must have an assigned currency (e.g., `MYR`, `USD`, `SGD`). All downstream opportunities and quotes automatically inherit this currency.
-* **360° Account View**: Displays company details, linked Contacts, open Opportunities, generated Quotations, and an Activity audit stream.
+Duplication creates a new non-primary Draft in the same Funnel. Eligible historical quotations can create linked Draft revisions. Each copy requires its own approval. Deletion retains issued numbering: deleted versions and running numbers are never recycled. Accepted quotations cannot be deleted.
 
-### Contacts (`/persons`)
-* Represents individual stakeholders at client organizations.
-* Captures full name, job title, email, direct phone, and primary contact designation.
-* The primary contact's details are automatically copied into proposal attention fields.
+Open **Preview → Download PDF**, or use **Print** and the browser's Save as PDF option. Check the final recipient, number, currency, tax, totals and terms before sharing.
 
----
+Read [Quotations and revisions](gitbook-documentation/05-quotations-and-revisions.md).
 
-## 4. Opportunities & Sales Funnel
+## Payment milestones
 
-### Opportunity Codes & Two-Tier Model
-* **Opportunity Container**: Commercial header holding PPVVC qualification and overall budget.
-* **Funnel Deal**: The active pursuit tracking pipeline stages, line items, and closing dates.
-* **Code Format**: System-generated immutable identifier:
-  $$\text{ORGCODEOPP-YYYY-NNNN} \quad (\text{e.g., } \texttt{QDTOPP-2026-0015})$$
+Configure the schedule explicitly after customer acceptance and at Funnel stage 4a or Closed Won. Closing Won does not create a schedule or change milestone status. New milestones start **Pending invoicing**. After actual billing, use **Mark invoiced** with the required permission. This cannot be reversed and does not generate an invoice or record payment.
 
-### The PPVVC Qualification Framework
-Document qualification rigor directly on the Opportunity:
-* **Power Sponsor**: Who is the economic buyer with signature authority?
-* **Pain**: What critical business problem are they solving?
-* **Vision**: What agreed solution vision did you co-design?
-* **Value**: What is the quantifiable ROI / economic return for the client?
-* **Control**: What governance or influence do you have over their buying timeline?
+Read [Payment milestones](gitbook-documentation/06-payment-milestones.md).
 
-### Sales Stages & Automations
-* **`0e` Identified**: Initial discovery after lead conversion.
-* **`1d` Qualified**: Scoping and stakeholder alignment.
-* **`2c` Proposal**: Technical and commercial feasibility.
-* **`3b` Negotiation**: Formal quote submitted to customer.
-* **`4a` Commit**:
-  * **Automation**: Entering stage `4a` for the first time **automatically allocates the official Project Code** for delivery resource planning.
-* **Closed Won** *(Terminal)*:
-  * Deal is won.
-  * Automatically sets all linked payment milestones to **`Won`**.
-  * Locks the opportunity from further stage progression.
-* **Closed Lost** *(Terminal)*:
-  * Deal lost. Requires entering **Lost Reason** and **Winning Competitor**.
+## Approvals, roles and settings
 
-> **Stage Movement Rule**: You can roll back to any prior non-terminal stage without restriction. Advancing forward enforces stage-gate checks and required data validations.
+**Sales → Approvals** has Incoming and My requests sections for lead conversion, quotations and Funnel stages. Matching approval permission and an eligible reporting relationship determine review authority. Managers with a superior still request approval; a missing manager alone does not create an exemption.
 
----
+Seven default roles are Owner, Admin, Developer, Manager, Senior Rep, Rep and Viewer. System roles are fixed; custom roles can be configured and combined. Permissions add together. Account ownership is distinct from the Owner role.
 
-## 5. Quotations, Pricing & Approvals
+Read [Approvals inbox](gitbook-documentation/08-approvals-inbox.md), [Roles and RBAC](gitbook-documentation/roles-and-rbac.md) and [Administration and settings](gitbook-documentation/09-admin-and-settings.md).
 
-A **Quotation** (`/quotations`) defines itemized pricing and terms.
+## Reference and help
 
-### Creating Quotes & Snapshots
-1. Click **+ New Quotation** from the Funnel deal or Quotations list.
-2. The quote immediately captures an immutable snapshot of:
-   * **Payment Terms** & **Delivery Notes** (from Settings).
-   * **Attention Contact** (from Account Primary Contact).
-   * **Tax Rates** (e.g., 8% SST / Tax Inclusive vs Exclusive).
+* [Terminology](gitbook-reference/terminology.md)
+* [Stages and statuses](gitbook-reference/stages-and-statuses.md)
+* [Documents, actions and approval](gitbook-reference/documents-and-actions.md)
+* [Permissions and approval routing](gitbook-reference/permissions-and-approvals.md)
+* [Troubleshooting](gitbook-documentation/help-center/troubleshooting.md)
 
-### Line Items & Templates
-* Add items from the **Product Catalog** or enter custom descriptions.
-* Configure Quantity, Unit Price, and Discount %.
-* Select between **Standard Proposal** and **Quandatics Academy** templates.
-
-### Approval & Revision Lifecycle
-* **`Draft`**: Being drafted by sales rep.
-* **Submit for Approval**: Route the quotation to the submitter’s eligible reporting manager, or approve directly if the submitter has quotation-approval permission and no manager above them. Review is available in Sales → Approvals or on the quotation details.
-* **`Approved`**: Manager approves the quote.
-* **`Sent`**: Rep marks quote as delivered to the customer.
-* **Revisions**: If the customer requests changes, click **Revise**. The system keeps the original quote locked in history and creates a new linked Draft revision (e.g., `-Rev1`).
-* **PDF Export**: Click **Preview / PDF** to download a clean, client-ready proposal.
-
----
-
-## 6. Payment Milestones & Cash Planning
-
-Payment milestones (`/payment-milestones`) track commercial billing events (e.g., *Deposit, Milestone 1, Final Sign-off*).
-
-```mermaid
-stateDiagram-v2
-    [*] --> Planned: Defined on Deal/Quote
-    Planned --> Won: Opportunity Marked Closed Won
-    Won --> Invoiced: User Confirms Milestone Billed
-```
-
-* **Planning Role**: Serves as a cashflow and operational billing tracker (decoupled from automated ERP invoicing).
-* **Automated Won Trigger**: When the parent opportunity is marked **Closed Won**, all live milestones automatically transition to **`Won`**.
-* **Transition to Invoiced**: Once an invoice is issued to the client for that milestone, the user opens the milestone and marks it as **`Invoiced`**. Once invoiced, it cannot be reverted.
-
----
-
-## 7. Delivery Projects & Sales Orders
-
-### Projects (`/projects`)
-* Project codes are reserved on stage `4a` and formalized upon deal closing.
-* Assign Project Managers, delivery scopes, start dates, and target completion dates.
-
-### Sales Orders (`/sales-orders`)
-* Captures the customer's confirmed Purchase Order (PO) document.
-* Attach the customer PO number, PO date, approved quote reference, and signed PO scan.
-* Submitted orders are reviewed and approved by management to authorize procurement.
-
----
-
-## 8. Approvals Hub
-
-Located at **Sales → Approvals** (`/approvals`), this shows quotation and funnel-stage requests assigned to eligible reporting managers:
-* **Incoming**: Separate quotation, funnel-stage and lead-conversion sections, each with 25 records per page. Review quotation details and approve or reject directly from its card.
-* **My requests**: Tracks your stage requests and latest quotation submissions. Eligible requesters can recall pending quotations to Draft.
-* **Reviewing**: Inspect the funnel, requested stage, attachments, and requester notes.
-* **Decision**:
-  * **Approve**: Advances the funnel if its current transition and required fields remain valid.
-  * **Reject**: Closes the stage request; a review note is optional. Manager rejection requires a reason and returns the quotation to Draft for corrections. Customer rejection sets it to Rejected.
-
----
-
-## 9. System Administration & Settings
-
-### Team & Roles (`/team`)
-* Invite colleagues and assign access tiers (**Owner, Manager, Sales Rep, Viewer**).
-* Set direct reporting managers for approval routing.
-
-### Forecast (`/forecast`)
-* View weighted sales projections based on deal value, stage probability, and target close dates.
-
-### Audit Log (`/audit`)
-* Full compliance trail tracking all record creations, field updates, stage shifts, and administrative actions with old vs. new value diffs.
-
-### Tenant Settings (`/settings`)
-* **General**: Entity name, base ISO currency, fiscal calendar.
-* **Taxonomy**: Custom lead sources, lost reasons, and product categories.
-* **Documents**: Default quote terms, warranty clauses, and tax percentages.
+Projects, Sales Orders, Forecast and other optional modules depend on enabled capabilities. This Base guide does not prescribe their separate delivery, procurement or finance workflows.

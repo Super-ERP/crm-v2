@@ -25,11 +25,11 @@ An inquiry or prospect that you are still qualifying. For example, someone from 
 
 ### Lead conversion
 
-The action that links or creates an account, creates a contact, and creates the opportunity and funnel deal. The converted lead retains links to those records and cannot be converted again. See [Lead conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management#converting-a-lead).
+The action that, after reporting-manager approval or an eligible top manager's direct confirmation, links or creates an account and creates a contact. The current conversion form also requests an opportunity and funnel deal. Pending approval creates no linked records. The converted lead retains links to those records and cannot be converted again. See [Lead conversion](https://jienweng.gitbook.io/q-app/docs/customer-records/02-leads-management#converting-a-lead).
 
 ### Account
 
-The company or organization you work with, such as Acme. It holds customer context and links to contacts and commercial records. The account currency establishes the currency used for related commercial work.
+The company or organization you work with, such as Acme. It holds customer context and links to contacts and commercial records. The account currency supplies a default for related commercial work; review the currency on each sales record.
 
 ### Contact and person
 
@@ -69,7 +69,7 @@ See [PPVVC qualification](https://jienweng.gitbook.io/q-app/docs/sales/04-opport
 
 ### KIV and Keep In View
 
-A parked deal that needs follow-up later. KIV is not Closed Lost. Reopening follows the stage approval policy; the current request path has a limitation. See [KIV reopening](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#kiv-keep-in-view). See [Funnel stages](stages-and-statuses.md#funnel-stages).
+A parked deal that needs follow-up later. KIV is not Closed Lost. Reopening follows the stage approval policy. A queued approval applies only while its original transition remains current. See [KIV reopening](https://jienweng.gitbook.io/q-app/docs/sales/04-opportunities-and-funnel#kiv-keep-in-view). See [Funnel stages](stages-and-statuses.md#funnel-stages).
 
 ### Weighted pipeline
 
@@ -111,7 +111,7 @@ The currency used for an amount. **MYR**, **USD**, and **SGD** are examples of t
 
 ### Payment milestone
 
-A planned billing event, such as a deposit or delivery payment. Its status can be **Planned**, **Won**, or **Invoiced**. It is a planning record and does not issue an invoice or receipt. See [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
+A planned billing event, such as a deposit or delivery payment. Its status is **Pending invoicing** or **Invoiced**. Explicit setup requires customer acceptance of the quotation and a funnel at stage 4a or Closed Won. It is a planning record and does not issue an invoice or receipt. See [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
 
 ## Commercial terms
 
