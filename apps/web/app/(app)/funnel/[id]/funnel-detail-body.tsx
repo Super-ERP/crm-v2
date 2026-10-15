@@ -1,5 +1,6 @@
 "use client"
 
+import { ProjectCodeLink } from "@/components/project-code-link"
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -106,6 +107,7 @@ type StageLite = OpportunityDetail["funnelStagesList"][number]
 
 export type FunnelDetailData = {
   projectCode?: string | null
+  crmProjectCode?: string | null
   crossDealProjectCode?: string | null
   funnelId: string
   currentStageId: string
@@ -942,8 +944,9 @@ export function FunnelDetailBody(props: FunnelDetailData) {
 
             {/* Salesforce "Funnel Info" section (SPEC §4). */}
             <h3 className="text-sm font-semibold">Funnel Info</h3>
-            <FieldRow label="Project code">{props.projectCode ?? "—"}</FieldRow>
-            <FieldRow label="Cross-deal project code">{props.crossDealProjectCode ?? "—"}</FieldRow>
+            <FieldRow label="Project code"><ProjectCodeLink code={props.projectCode} /></FieldRow>
+            <FieldRow label="Cross-deal project code"><ProjectCodeLink code={props.crossDealProjectCode} /></FieldRow>
+            <FieldRow label="CRM project code"><ProjectCodeLink code={props.crmProjectCode} /></FieldRow>
             <FieldRow label="Funnel Name">
               {canEdit ? (
                 <InlineValue

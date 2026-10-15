@@ -1,10 +1,11 @@
 "use server"
 
+import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
 import { resolveDeliveryCode, validateDeliverySource, reusableDeliveryProject } from "@/lib/project-delivery-code"
 import { milestoneReadScope } from "@/server/services/milestone-access"
 import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
 
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
+import { getTableColumns, and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
@@ -220,11 +221,12 @@ export async function createProject(
       }
 
       // Lock the source before resolving its identity or allocating any counter.
-      const [source] = input.funnelId ? await tx.select().from(funnels)
+      const [source] = input.funnelId ? await tx.select({ ...getTableColumns(funnels), projectCodeActive: activeProjectCodeFunnel() }).from(funnels)
         .where(and(eq(funnels.id, input.funnelId), isNull(funnels.deletedAt)))
         .limit(1).for("update") : []
       if (input.funnelId && !source) throw new Error("Source funnel not found")
       if (source && !ownsOrManages(visible, source.ownerMemberId)) throw new Error("FORBIDDEN: source funnel")
+      if (source && !source.projectCodeActive) throw new Error("Source funnel must be at Commit (4A) or Closed Won before assigning a project code")
       const [quote] = input.quotationId ? await tx.select({ funnelId: quotations.funnelId }).from(quotations)
         .where(and(eq(quotations.id, input.quotationId), isNull(quotations.deletedAt))).limit(1) : []
       if (input.quotationId && !quote) throw new Error("Selected quotation not found")
@@ -434,9 +436,10 @@ export async function updateProject(
     if (!account || !ownsOrManages(visible, account.ownerMemberId)) throw new Error("FORBIDDEN: account")
     const funnelId = input.funnelId === undefined ? before.funnelId : input.funnelId
     const quotationId = input.quotationId === undefined ? before.quotationId : input.quotationId
-    const [source] = funnelId ? await tx.select().from(funnels)
+    const [source] = funnelId ? await tx.select({ ...getTableColumns(funnels), projectCodeActive: activeProjectCodeFunnel() }).from(funnels)
       .where(and(eq(funnels.id, funnelId), isNull(funnels.deletedAt))).limit(1).for("update") : []
     if (funnelId && (!source || !ownsOrManages(visible, source.ownerMemberId))) throw new Error("FORBIDDEN: source funnel")
+    if (source && !source.projectCodeActive && (funnelId !== before.funnelId || quotationId !== before.quotationId || nextAccountId !== before.accountId)) throw new Error("Source funnel must be at Commit (4A) or Closed Won before assigning a project code")
     const [quote] = quotationId ? await tx.select({ funnelId: quotations.funnelId }).from(quotations)
       .where(and(eq(quotations.id, quotationId), isNull(quotations.deletedAt))).limit(1) : []
     if (quotationId && !quote) throw new Error("Selected quotation not found")
@@ -448,7 +451,7 @@ export async function updateProject(
           ne(projects.id, before.id), isNull(projects.deletedAt))).limit(1)
       if (linkedProject) throw new Error("Project code conflict: the source funnel already has another delivery project")
     }
-    if (source && !source.projectCode) await tx.update(funnels).set({ projectCode: before.projectCode, updatedAt: new Date() }).where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
+    if (source?.projectCodeActive && !source.projectCode) await tx.update(funnels).set({ projectCode: before.projectCode, updatedAt: new Date() }).where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
 
     const nextValue =
       input.value === undefined
@@ -625,6 +628,7 @@ export async function listOpportunityOptions(): Promise<
       .where(
         and(
           isNull(funnels.deletedAt),
+          activeProjectCodeFunnel(),
           ownerScope(funnels.ownerMemberId, visible)
         )
       )
@@ -730,7 +734,8 @@ export async function prefillFromOpportunity(
       .where(
         and(
           eq(funnels.id, funnelId),
-          isNull(funnels.deletedAt)
+          isNull(funnels.deletedAt),
+          activeProjectCodeFunnel()
         )
       )
       .limit(1)

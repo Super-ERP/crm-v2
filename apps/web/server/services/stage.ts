@@ -59,9 +59,9 @@ function kindToStatus(kind: string): "open" | "won" | "lost" | "on_hold" {
   }
 }
 
-/** Project codes are minted only when a child funnel first enters 4A. */
+/** Allocate on the first eligible entry, including a direct advance to Won. */
 export function shouldAllocateOpportunityProjectCode(stageCode: string): boolean {
-  return stageCode.trim().toLowerCase() === "4a"
+  return ["4a", "won"].includes(stageCode.trim().toLowerCase())
 }
 
 function normalizeAdvanceCustomFields(

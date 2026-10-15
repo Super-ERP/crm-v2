@@ -1,5 +1,6 @@
 "use client"
 
+import { ProjectCodeLink } from "@/components/project-code-link"
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -1453,8 +1454,8 @@ export function QuotationForm({
         </div>
 
         <div className="grid gap-1 text-sm">
-          <p><span className="text-muted-foreground">Project code: </span>{detail.projectCode ?? "—"}</p>
-          <p><span className="text-muted-foreground">Cross-deal project code: </span>{detail.crossDealProjectCode ?? "—"}</p>
+          <p><span className="text-muted-foreground">Project code: </span><ProjectCodeLink code={detail.projectCode} /></p>
+          <p><span className="text-muted-foreground">Cross-deal project code: </span><ProjectCodeLink code={detail.crossDealProjectCode} /></p>
         </div>
         {/* PDF-style A4 document floating on a desk background. */}
         <div className="flex justify-center rounded-lg bg-muted/40 p-4 sm:p-6">

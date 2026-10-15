@@ -22,7 +22,7 @@ function query(value: unknown) {
   return q
 }
 function fixture(project: unknown[] = [], sourceOverrides = {}) {
-  const rows = [[{ code: "ACME", ownerMemberId: "owner" }], [{ id: "f", accountId: "a", ownerMemberId: "owner", projectCode: "CRM-1", ...sourceOverrides }], project]
+  const rows = [[{ code: "ACME", ownerMemberId: "owner" }], [{ id: "f", accountId: "a", ownerMemberId: "owner", projectCode: "CRM-1", projectCodeActive: true, ...sourceOverrides }], project]
   state.tx = { select: vi.fn(() => query(rows.shift() ?? [])), insert: vi.fn(() => query([{ id: "new", projectCode: "CRM-1" }])), update: vi.fn(() => query([])) }
 }
 beforeEach(() => { vi.clearAllMocks(); state.enabled = true; fixture() })
@@ -79,7 +79,7 @@ it("retains existing delivery identity when the source has no code", async () =>
 })
 
 it("refuses to relink a delivery project to a funnel with a different identity", async () => {
-  const rows = [[{ id: "p", projectCode: "ORIGINAL", accountId: "a", ownerMemberId: "owner", funnelId: "old", quotationId: null }], [{ ownerMemberId: "owner" }], [{ id: "new", accountId: "a", ownerMemberId: "owner", projectCode: "OTHER" }]]
+  const rows = [[{ id: "p", projectCode: "ORIGINAL", accountId: "a", ownerMemberId: "owner", funnelId: "old", quotationId: null }], [{ ownerMemberId: "owner" }], [{ id: "new", accountId: "a", ownerMemberId: "owner", projectCode: "OTHER", projectCodeActive: true }]]
   state.tx.select = vi.fn(() => query(rows.shift() ?? []))
   expect(await updateProject("p", { funnelId: "new" })).toMatchObject({ ok: false, error: expect.stringContaining("source funnel code") })
   expect(state.tx.update).not.toHaveBeenCalled()
@@ -88,10 +88,32 @@ it("rejects relinking to an empty-code funnel already linked to another delivery
   const rows = [
     [{ id: "p-a", projectCode: "CODE-A", accountId: "a", ownerMemberId: "owner", funnelId: "old", quotationId: null }],
     [{ ownerMemberId: "owner" }],
-    [{ id: "f", accountId: "a", ownerMemberId: "owner", projectCode: null }],
+    [{ id: "f", accountId: "a", ownerMemberId: "owner", projectCode: null, projectCodeActive: true }],
     [{ id: "p-b", projectCode: "CODE-B" }],
   ]
   state.tx.select = vi.fn(() => query(rows.shift() ?? []))
   expect(await updateProject("p-a", { funnelId: "f" })).toMatchObject({ ok: false, error: expect.stringContaining("conflict") })
   expect(state.tx.update).not.toHaveBeenCalled()
+})
+
+it("does not allocate or attach a code to a source funnel below 4A", async () => {
+  fixture([], { projectCode: null, projectCodeActive: false })
+  expect(await createProject({ name: "Delivery", accountId: "a", funnelId: "f" })).toMatchObject({ ok: false, error: expect.stringContaining("4A") })
+  expect(state.next).not.toHaveBeenCalled()
+  expect(state.tx.insert).not.toHaveBeenCalled()
+  expect(state.tx.update).not.toHaveBeenCalled()
+})
+
+it("allows an existing delivery name edit after rollback without assigning a code to the inactive funnel", async () => {
+  const rows = [
+    [{ id: "p", projectCode: "KEEP", accountId: "a", ownerMemberId: "owner", funnelId: "f", quotationId: null, status: "active", value: null }],
+    [{ ownerMemberId: "owner" }],
+    [{ id: "f", accountId: "a", ownerMemberId: "owner", projectCode: null, projectCodeActive: false }],
+    [],
+  ]
+  state.tx.select = vi.fn(() => query(rows.shift() ?? []))
+  expect(await updateProject("p", { name: "New delivery name" })).toMatchObject({ ok: true })
+  expect(state.tx.update).toHaveBeenCalledTimes(1)
+  expect(state.tx.update.mock.results[0].value.set.mock.calls[0][0]).not.toHaveProperty("projectCode")
+  expect(state.next).not.toHaveBeenCalled()
 })

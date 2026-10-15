@@ -133,16 +133,20 @@ When generating quotations or advancing sales stages:
 * The primary contact's details are automatically copied into the quotation's **Attention** field.
 * Contacts can be assigned as the **Power Sponsor** during opportunity qualification.
 
-## Related project codes
+## Project codes
 
-Account and Contact details include **Related project codes**, independently of the optional Projects module. An account or contact can relate to several sales pursuits, so there is no single project-code field that overwrites those relationships.
+Account and Contact details include a **Project codes** panel, independently of the optional Projects module. An account or contact can relate to several sales pursuits, so there is no single project-code field that overwrites those relationships.
 
 Accounts show codes from their end-user funnels and, when you can view quotations, funnels whose quotations bill that account. Contacts show explicit funnel/opportunity contact relationships and, when quotation viewing is permitted, quotation attention-contact links. Merely sharing a company does not assign all its project codes to a contact.
 
-The panel lists the original Project code, Cross-deal project code, separate CRM project code, and links to the Funnel and Opportunity. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
+The panel lists active original Project codes, Cross-deal project codes, the separate CRM project code, and links to the central code page, Funnel and Opportunity. Only funnels at Commit (4A) or Closed Won contribute codes. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
 
 ## Continue
 
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+### Open a project code
+
+Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
