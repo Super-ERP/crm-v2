@@ -30,3 +30,26 @@ export function recoverAccountAddresses(history: Record<string, string>[]) {
   }
   return { ready, review }
 }
+
+/** Contract Bill To is a historical billing address linked by AccountId.
+ * Only use it when address history supplied no decision for that account. */
+export function recoverAccountAddressSources(history: Record<string,string>[], contracts: Record<string,string>[]) {
+  const recovered=recoverAccountAddresses(history)
+  const ready: Array<typeof recovered.ready[number] & {contractIds?:string[]}>= [...recovered.ready]
+  const review=[...recovered.review]
+  const decided=new Set([...ready,...review].map(row=>row.sourceAccountId))
+  const grouped=new Map<string,Record<string,string>[]>()
+  for(const row of contracts){
+    if(!row.Id || !row.AccountId || /^(true|1)$/i.test(row.IsDeleted??'') || !row.Bill_To__c?.trim())continue
+    grouped.set(row.AccountId,[...(grouped.get(row.AccountId)??[]),row])
+  }
+  for(const [sourceAccountId,rows] of grouped){
+    if(decided.has(sourceAccountId))continue
+    const values=[...new Set(rows.map(row=>row.Bill_To__c.trim()))].sort()
+    if(new Set(values.map(value=>value.replace(/\s+/g,' '))).size!==1){review.push({sourceAccountId,reason:'Conflicting Contract.Bill_To__c values; review required'});continue}
+    // Do not turn city/country/postcode-only text into a street address.
+    if(!/\b(?:jalan|jln\.?|lorong|persiaran|lebuh|street|road|parkway|lot|plot|level|floor|tingkat|aras|menara|wisma|kompleks|complex|tower|locked bag)\b/i.test(values[0])){review.push({sourceAccountId,reason:'Contract Bill To lacks identifiable street/building detail; review required'});continue}
+    ready.push({sourceAccountId,address:{line1:values[0]},historyIds:[],contractIds:rows.map(row=>row.Id).sort()})
+  }
+  return {ready,review}
+}

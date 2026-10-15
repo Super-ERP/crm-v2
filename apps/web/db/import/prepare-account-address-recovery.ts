@@ -1,21 +1,23 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { parseArgs } from "node:util"
 import { createHash, randomUUID } from "node:crypto"
 import { parseCsv } from "./csv"
 import { migrationId } from "./plan"
-import { recoverAccountAddresses } from "./account-address-history"
+import { recoverAccountAddressSources } from "./account-address-history"
 
 const { values } = parseArgs({ options: { dir: { type: "string" }, tenant: { type: "string" }, snapshot: { type: "string" }, "report-dir": { type: "string" } } })
 if (!values.dir || !values.tenant || !values.snapshot || !values["report-dir"]) throw new Error("Required: --dir --tenant --snapshot --report-dir. Generates a guarded SQL transaction; never applies automatically.")
 const tenant = values.tenant
 const rawHistory = readFileSync(join(values.dir, "AccountHistory.csv"), "utf8")
+const contractPath=join(values.dir, "Contract.csv")
+const rawContracts=existsSync(contractPath)?readFileSync(contractPath,"utf8"):""
 const rawAccounts = readFileSync(join(values.dir, "Account.csv"), "utf8")
 const sourceAccounts = new Set(parseCsv(rawAccounts).rows.filter(row => !/^(true|1)$/i.test(row.IsDeleted ?? "")).map(row => row.Id))
-const hashes = { AccountHistory: createHash("sha256").update(rawHistory).digest("hex"), Account: createHash("sha256").update(rawAccounts).digest("hex") }
+const hashes = { Contract: createHash("sha256").update(rawContracts).digest("hex"), AccountHistory: createHash("sha256").update(rawHistory).digest("hex"), Account: createHash("sha256").update(rawAccounts).digest("hex") }
 const stored = JSON.parse(readFileSync(values.snapshot, "utf8")) as { accounts: { id: string; tenant_id: string; name: string; billing_address: unknown; updated_at: string; deleted_at: string | null }[] }
-const recovered = recoverAccountAddresses(parseCsv(rawHistory).rows)
-const ready: { account: typeof stored.accounts[number]; address: Record<string, string>; sourceAccountId: string; historyIds: string[] }[] = []
+const recovered = recoverAccountAddressSources(parseCsv(rawHistory).rows, rawContracts?parseCsv(rawContracts).rows:[])
+const ready: { account: typeof stored.accounts[number]; address: Record<string, string>; sourceAccountId: string; historyIds: string[]; contractIds?: string[] }[] = []
 const preserved: { sourceAccountId: string; accountName: string }[] = []
 const review = [...recovered.review]
 for (const row of recovered.ready) {
@@ -42,8 +44,8 @@ for (const row of ready) {
   ), audited AS (
     INSERT INTO audit_log (tenant_id, action, entity_type, entity_id, "before", "after", source, metadata)
     SELECT ${literal(tenant)}, 'account.address_restored', 'account', id::text,
-      ${json({ billingAddress: row.account.billing_address })}, ${json({ billingAddress: row.address })}, 'salesforce-address-history-recovery',
-      ${json({ sourceAccountId: row.sourceAccountId, historyIds: row.historyIds, sourceHashes: hashes })} FROM changed RETURNING id
+      ${json({ billingAddress: row.account.billing_address })}, ${json({ billingAddress: row.address })}, 'salesforce-address-recovery',
+      ${json({ sourceAccountId: row.sourceAccountId, historyIds: row.historyIds, contractIds: row.contractIds ?? [], sourceHashes: hashes })} FROM changed RETURNING id
   ) INSERT INTO address_recovery_counts SELECT count(*) FROM audited;`)
 }
 statements.push("DO $$ BEGIN IF EXISTS (SELECT 1 FROM address_recovery_counts WHERE n <> 1) THEN RAISE EXCEPTION 'Account changed since planning; entire address recovery rolled back'; END IF; END $$;", "COMMIT;")
