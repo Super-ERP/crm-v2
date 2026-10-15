@@ -81,15 +81,17 @@ export function StatusBadge({
   tone,
   label,
   className,
+  title,
 }: {
   status: string
   tone?: StatusTone
   label?: React.ReactNode
   className?: string
+  title?: string
 }) {
   const resolved = tone ?? statusTone(status)
   return (
-    <Badge className={cn(TONE_CLASSES[resolved], PILL_CLASS, className)}>
+    <Badge title={title} aria-label={title} className={cn(TONE_CLASSES[resolved], PILL_CLASS, className)}>
       {label ?? defaultLabel(status)}
     </Badge>
   )

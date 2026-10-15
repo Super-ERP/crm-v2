@@ -22,22 +22,8 @@ export function StageBadge({
   probability?: string | null
   className?: string
 }) {
-  return (
-    <StatusBadge
-      status={kind ?? ""}
-      tone={KIND_TONE[kind ?? ""] ?? "info"}
-      className={className}
-      label={
-        <>
-          {code ? (
-            <span className="font-mono uppercase opacity-70">{code}</span>
-          ) : null}
-          <span>{name}</span>
-          {probability != null ? (
-            <span className="opacity-70">· {formatPercent(probability)}</span>
-          ) : null}
-        </>
-      }
-    />
-  )
+  const stageCode=code?.trim() || name.match(/^(0e|1d|2c|3b|4a)\b/i)?.[1]
+  const label=kind==='WON'?'Won':kind==='LOST'?'Lost':kind==='PARKED'?'KIV':stageCode?.toLowerCase() || name
+  const description=name+(probability != null?` · ${formatPercent(probability)}`:'')
+  return <StatusBadge status={kind ?? ""} tone={KIND_TONE[kind ?? ""] ?? "info"} className={className} label={label} title={description}/>
 }
