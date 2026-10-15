@@ -228,12 +228,12 @@ mkdir -p "$backup_root/opt/backup" \
   "$backup_root/var/lib/backup"
 touch "$backup_root/opt/backup/check-tools.sh" \
   "$backup_root/usr/bin/pg_dump" \
-  "$backup_root/usr/local/bin/age" \
-  "$backup_root/usr/local/bin/rclone"
+  "$backup_root/usr/bin/rsync" \
+  "$backup_root/usr/bin/ssh"
 chmod 0555 "$backup_root/opt/backup/check-tools.sh" \
   "$backup_root/usr/bin/pg_dump" \
-  "$backup_root/usr/local/bin/age" \
-  "$backup_root/usr/local/bin/rclone"
+  "$backup_root/usr/bin/rsync" \
+  "$backup_root/usr/bin/ssh"
 scripts/check-runtime-artifacts.sh "$backup_root"
 
 touch "$backup_root/opt/backup/build-notes.md"
@@ -329,3 +329,23 @@ assert_root_alias_rejected /.
 root_alias="$scratch/root-alias"
 ln -s / "$root_alias"
 assert_root_alias_rejected "$root_alias"
+
+# OpenSSH binaries contain PEM/age format constants, not exported identities.
+# The text-secret scan must not mistake these NUL-delimited symbols for keys.
+new_fixture
+mkdir -p "$fixture/node_modules/postgres/src"
+printf '\177ELF\000%s\000' '-----BEGIN OPENSSH PRIVATE KEY-----' > "$fixture/node_modules/postgres/src/ssh-binary"
+scripts/check-runtime-artifacts.sh "$fixture"
+printf '%s\n' '-----BEGIN OPENSSH PRIVATE KEY-----' > "$fixture/plain-credential"
+if scripts/check-runtime-artifacts.sh "$fixture"; then
+  echo "expected plaintext private-key header to fail" >&2
+  exit 1
+fi
+rm "$fixture/plain-credential"
+printf '\177ELF\000%s\000' 'AGE-SECRET-KEY-1' > "$fixture/node_modules/postgres/src/age-binary"
+scripts/check-runtime-artifacts.sh "$fixture"
+printf '%s\n' 'AGE-SECRET-KEY-1' > "$fixture/plain-identity"
+if scripts/check-runtime-artifacts.sh "$fixture"; then
+  echo "expected plaintext age identity to fail" >&2
+  exit 1
+fi

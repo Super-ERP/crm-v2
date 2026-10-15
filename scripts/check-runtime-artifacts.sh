@@ -74,7 +74,7 @@ if [ -n "$forbidden" ]; then
 fi
 
 private_key=$(find "$canonical_root" -type f -size -1048576c \
-  -exec grep -l -- '-----BEGIN .*PRIVATE KEY-----' {} + 2>/dev/null \
+  -exec grep -Il -- '-----BEGIN .*PRIVATE KEY-----' {} + 2>/dev/null \
   | sed -n '1p')
 
 if [ -n "$private_key" ]; then
@@ -83,7 +83,7 @@ if [ -n "$private_key" ]; then
 fi
 
 age_identity=$(find "$canonical_root" -type f -size -1048576c \
-  -exec grep -l \
+  -exec grep -Il \
     -e 'AGE-SECRET-KEY-1' \
     -e 'AGE-SECRET-KEY-PQ-1' \
     {} + 2>/dev/null \
@@ -218,8 +218,8 @@ elif [ -f "$canonical_root/opt/backup/check-tools.sh" ]; then
   for required_tool in \
     opt/backup/check-tools.sh \
     usr/bin/pg_dump \
-    usr/local/bin/age \
-    usr/local/bin/rclone
+    usr/bin/rsync \
+    usr/bin/ssh
   do
     if [ ! -x "$canonical_root/$required_tool" ] \
       && [ ! -L "$canonical_root/$required_tool" ]; then
