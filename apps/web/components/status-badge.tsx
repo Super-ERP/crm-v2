@@ -38,6 +38,7 @@ const STATUS_TONE: Record<string, StatusTone> = {
   // warning — awaiting a decision / on hold
   pending: "warning",
   pending_review: "warning",
+  pending_invoicing: "warning",
   parked: "warning",
   kiv: "warning",
   invited: "warning",

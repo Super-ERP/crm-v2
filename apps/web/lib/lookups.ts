@@ -13,7 +13,7 @@ import {
   products,
 } from "@/db/schema"
 import { requireContext } from "@/lib/server-context"
-import { visibleMemberIds, ownerScope } from "@/lib/access-scope"
+import { visibleMemberIds, accountReadScope } from "@/lib/access-scope"
 import {
   DEFAULT_CURRENCIES,
   DEFAULT_LEAD_SOURCES,
@@ -44,7 +44,7 @@ export async function listAccountOptions(): Promise<Option[]> {
       .where(
         and(
           isNull(accounts.deletedAt),
-          ownerScope(accounts.ownerMemberId, visible)
+          accountReadScope(visible)
         )
       )
       .orderBy(asc(accounts.name))

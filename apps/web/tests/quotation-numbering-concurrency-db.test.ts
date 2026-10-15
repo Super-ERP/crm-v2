@@ -48,7 +48,8 @@ integration("quotation numbering PostgreSQL boundary", () => {
         "funnel_id" uuid NOT NULL,
         "quote_number" text NOT NULL UNIQUE,
         "version" integer NOT NULL,
-        "created_at" timestamp with time zone NOT NULL
+        "created_at" timestamp with time zone NOT NULL,
+        "deleted_at" timestamp with time zone
       )
     `)
     await sql`INSERT INTO "funnels" ("id") VALUES (${funnelId})`
@@ -115,4 +116,26 @@ integration("quotation numbering PostgreSQL boundary", () => {
     expect(await sql`SELECT "quote_running_number", "quote_next_number" FROM "funnels" CROSS JOIN "tenant_settings" WHERE "funnels"."id" = ${funnelId} AND "tenant_settings"."organization_id" = ${tenantId}`)
       .toEqual([{ quote_running_number: 100, quote_next_number: 101 }])
   }, 30_000)
+  it("reserves deleted versions and running numbers even after all quotes are deleted", async () => {
+    await sql`UPDATE quotations SET deleted_at = now() WHERE funnel_id = ${funnelId}`
+    const ctx = { tenantId } as Parameters<typeof nextQuoteNumber>[1]
+    const next = await db.transaction(async (tx) => {
+      const allocation = await nextQuoteNumber(tx as unknown as Tx, ctx, funnelId)
+      await tx.execute(query`INSERT INTO quotations (id, funnel_id, quote_number, version, created_at) VALUES (${randomUUID()}, ${funnelId}, ${allocation.quoteNumber}, ${allocation.version}, now())`)
+      return allocation
+    })
+    expect(next.version).toBe(3)
+    expect(next.quoteNumber).toMatch(/-3$/)
+    expect(await sql`SELECT quote_running_number FROM funnels WHERE id = ${funnelId}`)
+      .toEqual([{ quote_running_number: 100 }])
+    expect(await sql`SELECT count(*)::int AS count FROM quotations WHERE funnel_id = ${funnelId} AND deleted_at IS NOT NULL`)
+      .toEqual([{ count: 2 }])
+    const otherFunnel = randomUUID()
+    await sql`INSERT INTO funnels (id) VALUES (${otherFunnel})`
+    const other = await db.transaction((tx) => nextQuoteNumber(tx as unknown as Tx, ctx, otherFunnel))
+    expect(other.version).toBe(1)
+    expect(await sql`SELECT quote_running_number FROM funnels WHERE id = ${otherFunnel}`)
+      .toEqual([{ quote_running_number: 101 }])
+  })
+
 })

@@ -92,15 +92,7 @@ const schema = (country: string) =>
     postcode: z.string().optional(),
     country: z.string().min(1, "Country is required"),
   })
-  .superRefine((v, ctx) => {
-    if (v.accountType === "reseller" && !v.endUserAccountId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["endUserAccountId"],
-        message: "End user is required for resellers",
-      })
-    }
-  })
+
 
 type FormValues = z.infer<ReturnType<typeof schema>>
 
@@ -478,7 +470,7 @@ export function AccountForm({
                   name="endUserAccountId"
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel required>End user</FormLabel>
+                      <FormLabel>Default end user (optional)</FormLabel>
                       <FormControl>
                         <Combobox
                           value={field.value || ""}

@@ -44,6 +44,16 @@ The system automatically links the quote to the Opportunity, Account, and Accoun
 {% endstep %}
 {% endstepper %}
 
+### Bill To when quoting through a reseller
+
+Keep the Opportunity and Funnel under the **end user**. In the quotation, select the company that receives and pays the quotation in **Bill To**, then choose an **Attention** contact from that company.
+
+For example, when Uniti sells to MCMC, keep the Funnel under **MCMC**, select **Uniti Office** as Bill To, and select Uniti's contact. Quandatics bills Uniti; Uniti bills MCMC. Different quotations in the same Funnel may be addressed to different resellers, so you do not need a separate Funnel for every reseller quote.
+
+The Bill To picker includes accounts you can access and shared reseller accounts in your current entity. Selecting a reseller does not transfer the Funnel or expose another salesperson's deals. For a direct sale, keep **End-user account (same as funnel)**.
+
+Saving a new quotation or its Draft captures the billing company, address, phone and selected contact. Issued quotations use that saved snapshot in the PDF. To correct an issued quotation, follow the available return-to-Draft or revision workflow. Duplicating or revising a quotation copies its billing snapshot into the new Draft for review.
+
 ### Check defaults before sending
 
 Review payment terms, delivery notes, the recipient contact, currency, and tax before submitting the quote. Defaults help you prepare a draft; do not assume that every default becomes immutable at creation.
@@ -120,7 +130,7 @@ Select the template appropriate for your offering:
 flowchart TD
     D["Draft"] --> P["Pending approval"]
     P -->|"Approve"| A["Approved"]
-    P -->|"Reject with reason"| D
+    P -->|"Reject with reason or Recall"| D
     A -->|"Return to Draft"| D
     A -->|"Send"| S["Sent"]
     S --> C["Accepted"]
@@ -137,6 +147,7 @@ A draft must be approved before it can be sent:
 
 * Click **Submit for Approval**.
 * The quote is locked against further edits and reviewed on the quotation by the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that eligible manager may approve or reject it. The **Approvals** module handles stage requests separately.
+* To make changes before approval, use **Recall to Draft** with **Edit quotations** permission and access to the record. Recall clears the approval assignment and metadata, keeps the same quotation number, and allows editing and resubmitting. If approval has already completed, use **Return to Draft** instead.
 * If the account owner changes while approval is pending, the quotation returns to Draft with an explanation. The new owner must resubmit it.
 
 ### `Approved`
@@ -154,12 +165,12 @@ Once delivered to the customer via email or formal meeting, use **Send** to reco
 
 ## Actions by status
 
-Each action also requires record access and its permission. **Edit quotations** allows editing Drafts, submitting them, and returning Approved quotations to Draft. **Create quotations** allows creating eligible revisions. **Approve quotations** is limited to the current eligible reviewer. **Send quotations** and **Accept quotations** are separate permissions.
+Each action also requires record access and its permission. **Edit quotations** allows editing Drafts, submitting them, recalling Pending Approval quotations, and returning Approved quotations to Draft. **Create quotations** allows duplicating live quotations and creating eligible revisions. **Approve quotations** is limited to the current eligible reviewer. **Send quotations** and **Accept quotations** are separate permissions.
 
 | Current status | Available lifecycle actions | Editing and revision |
 | --- | --- | --- |
 | Draft | Submit for Approval. | Edit this record; no revision action. |
-| Pending Approval | Eligible reviewer approves or rejects with a reason. | Read-only; rejection returns this record to Draft. No revision action for a live record. |
+| Pending Approval | Eligible reviewer approves or rejects with a reason; an authorized editor can Recall to Draft. | Read-only until recalled or rejected to Draft. Edit and resubmit with the same number. No revision action for a live record. |
 | Approved | Send, or Return to Draft. | Read-only until returned to Draft. Returning clears approval; resubmit after editing. No revision action for a live record. |
 | Sent | Record customer acceptance or rejection. | Read-only; create a separate Draft revision with Create quotations permission. |
 | Accepted or customer Rejected | No further lifecycle decision on this record. | Read-only; an eligible revision starts a separate Draft. |
@@ -174,6 +185,38 @@ Each action also requires record access and its permission. **Edit quotations** 
 **PDF checks:** Preview and exporting do not approve or send the quotation. Sending captures the tax rate and recomputes stored totals using the current tax configuration. Review the final PDF's tax and totals before sharing, especially if settings changed during review.
 
 See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/reference/documents-and-actions) for version-specific examples.
+
+## Duplicate a quotation
+
+Use **Duplicate quotation** on a live quotation with **Create quotations** permission and access to the record. Duplication is available in any live status, including Draft and Pending Approval.
+
+* The copy belongs to the **same funnel only**. There is no destination funnel or entity selector.
+* It starts as a new, non-primary Draft with the next quotation version number. The source keeps its content, status, and history.
+* Pricing, line items, notes, delivery and payment terms are copied. Approval, sending and customer acceptance metadata are cleared.
+* The quotation date resets to today and **Valid until** is cleared. Review dates, contacts, pricing and tax before submitting the copy for its own approval.
+* Duplication creates an independent quotation; **Create revision** additionally links the new Draft to its source as a revision.
+* Deleted quotations cannot be duplicated. Eligible deleted non-Draft history can still be used to create a revision.
+
+## Delete quotations and preserve numbering
+
+**Issued quotation numbers are never reused after deletion, even for a Draft.** Deletion hides the quotation through a soft delete while retaining its original number and audit history. It does not reset a counter, renumber remaining quotations, or fill gaps.
+
+The running number belongs to the funnel. Every quotation in that funnel shares that running number and has a distinct version suffix. New quotations, duplicates and revisions use the highest version ever issued in the funnel plus one, including deleted versions.
+
+| Situation | Result |
+| --- | --- |
+| Delete `Q10001-2`, with version 2 the highest issued version. | The next quotation in the same funnel is `Q10001-3`; `Q10001-2` stays reserved. |
+| Delete an earlier version while `Q10001-3` exists. | The next quotation is `Q10001-4`; earlier gaps remain. |
+| Delete every quotation in a funnel after issuing versions 1–3. | A later quotation in that funnel retains running number `0001` and starts at version 4: `Q10001-4`. |
+| Create the first quotation in a different funnel. | It takes the entity's next running number; the deleted funnel's running number is not recycled. |
+| Recall Pending Approval or return Approved to Draft. | The same record keeps its existing number and version; editing and resubmitting do not allocate another number. |
+| Duplicate a quotation. | The new Draft takes the next version in the same funnel; the source keeps its number. |
+
+These examples use the current quotation format. Existing funnels retain their established reference format.
+
+Skipping numbers avoids ambiguity when an earlier PDF was emailed, downloaded, referenced in an approval, or retained by a customer. A visible gap is preferable to two different documents bearing the same reference.
+
+Deletion requires **Delete quotations** permission and access to the record. The current server allows deletion of Draft, Pending Approval, Approved, Sent, Rejected, Expired and Void quotations, provided no live project references them. **Accepted quotations cannot be deleted.** Deleting a primary quotation selects another eligible live quotation or clears the primary reference and updates the linked funnel value. Use Recall or Return to Draft when the intention is to edit an existing quotation rather than remove it.
 
 ## Managing Revisions
 
@@ -212,7 +255,7 @@ The system executes the following:
 ---
 
 {% hint style="warning" %}
-**Approved or pending quote?** An approved quote can be returned to Draft, edited, and submitted for approval again. A pending quote must first be reviewed. The revision action is not available on live Pending Approval or Approved quotes.
+**Approved or pending quote?** An approved quote can be returned to Draft, edited, and submitted for approval again. A pending quote can be recalled to Draft, edited, and resubmitted. The revision action is not available on live Pending Approval or Approved quotes.
 {% endhint %}
 
 ## Exporting Client PDFs

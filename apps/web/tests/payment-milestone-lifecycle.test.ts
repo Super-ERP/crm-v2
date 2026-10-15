@@ -4,41 +4,26 @@ import { describe, expect, it } from "vitest"
 import {
   PAYMENT_MILESTONE_STATUSES,
   canTransitionPaymentMilestone,
-  markLiveMilestonesWon,
-  initialPaymentMilestoneStatus,
+  isPaymentMilestoneEligible,
 } from "@/lib/payment-milestone-lifecycle"
 
 describe("payment milestone lifecycle", () => {
-  it("includes Planned before Won and Invoiced", () => {
-    expect(PAYMENT_MILESTONE_STATUSES).toEqual(["planned", "won", "invoiced"])
+  it("uses invoicing statuses independent of funnel closure", () => {
+    expect(PAYMENT_MILESTONE_STATUSES).toEqual(["pending_invoicing", "invoiced"])
+    expect(canTransitionPaymentMilestone("pending_invoicing", "invoiced")).toBe(true)
+    expect(canTransitionPaymentMilestone("invoiced", "pending_invoicing")).toBe(false)
   })
-
-  it("allows only manual Won to Invoiced progression", () => {
-    expect(canTransitionPaymentMilestone("won", "invoiced")).toBe(true)
-    expect(canTransitionPaymentMilestone("invoiced", "won")).toBe(false)
-    expect(canTransitionPaymentMilestone("invoiced", "invoiced")).toBe(true)
+  it.each(["4a", "won"])("allows an accepted quotation at %s", (stageCode) => {
+    expect(isPaymentMilestoneEligible({ stageCode, stageKind: stageCode === "won" ? "WON" : "OPEN", funnelStatus: stageCode === "won" ? "won" : "open", quotationStatus: "accepted" })).toBe(true)
   })
-
-  it("marks planned milestones Won without resetting invoiced ones when an opportunity closes Won", () => {
-    expect(
-      markLiveMilestonesWon([
-        { id: "before-close", status: "planned" },
-        { id: "already-invoiced", status: "invoiced" },
-      ])
-    ).toEqual([
-      { id: "before-close", status: "won" },
-      { id: "already-invoiced", status: "invoiced" },
-    ])
+  it.each(["0e", "1d", "2c", "3b", "lost", "kiv"])("hides milestones at %s", (stageCode) => {
+    expect(isPaymentMilestoneEligible({ stageCode, stageKind: "OPEN", funnelStatus: "open", quotationStatus: "accepted" })).toBe(false)
   })
-
-  it("keeps draft, submitted and approved quotation plans unconfirmed until the funnel is won", () => {
-    for (const status of ["open", "lost", "on_hold", null, undefined]) {
-      expect(initialPaymentMilestoneStatus(status)).toBe("planned")
-    }
-    expect(initialPaymentMilestoneStatus("won")).toBe("won")
-    expect(canTransitionPaymentMilestone("planned", "won")).toBe(false)
-    expect(canTransitionPaymentMilestone("planned", "invoiced")).toBe(false)
-    expect(canTransitionPaymentMilestone("planned", "planned")).toBe(true)
+  it.each(["draft", "pending_approval", "approved", "sent", "rejected", "void", null])("requires customer acceptance, not %s", (quotationStatus) => {
+    expect(isPaymentMilestoneEligible({ stageCode: "4a", stageKind: "OPEN", funnelStatus: "open", quotationStatus })).toBe(false)
+  })
+  it.each(["lost", "on_hold"])("blocks eligibility for %s funnels", (funnelStatus) => {
+    expect(isPaymentMilestoneEligible({ stageCode: "4a", stageKind: "OPEN", funnelStatus, quotationStatus: "accepted" })).toBe(false)
   })
 
   it("adds a compatibility migration that maps legacy statuses and preserves invoice columns", async () => {

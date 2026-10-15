@@ -1,6 +1,7 @@
 import "server-only"
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
+import { expectedCloseYearFilter } from "@/server/services/funnel-filters"
 import type { RecordListQuery } from "@/lib/record-list-query"
 import { type Tx, type ServerContext } from "@/lib/actions"
 import { getEntitledModuleMap } from "@/lib/modules.server"
@@ -8,6 +9,7 @@ import { PERMISSIONS, type PermissionKey } from "@/lib/permissions"
 import {
   visibleMemberIds,
   ownerScope,
+  accountReadScope,
   ownsOrManages,
 } from "@/lib/access-scope"
 import {
@@ -183,7 +185,7 @@ export async function accountsList(
   const parent = alias(accounts, "account_list_parent")
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const where = and(
-    isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible),
+    isNull(accounts.deletedAt), accountReadScope(visible),
     search ? or(ilike(accounts.name, search), ilike(accounts.code, search), ilike(accounts.registrationNumber, search), ilike(accounts.industry, search), ilike(user.name, search)) : undefined,
     query?.selections.accountType?.length ? inArray(accounts.accountType, query.selections.accountType) : undefined,
     query?.selections.industry?.length ? inArray(accounts.industry, query.selections.industry) : undefined,
@@ -224,7 +226,7 @@ export async function accountsFilterOptions(tx: Tx, ctx: ServerContext) {
   }).from(accounts)
     .leftJoin(member, eq(accounts.ownerMemberId, member.id))
     .leftJoin(user, eq(member.userId, user.id))
-    .where(and(isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible)))
+    .where(and(isNull(accounts.deletedAt), accountReadScope(visible)))
   return {
     types: (row?.types ?? []).sort(),
     industries: (row?.industries ?? []).sort(),
@@ -267,7 +269,7 @@ export async function accountsGet(
     .where(and(eq(accounts.id, id), isNull(accounts.deletedAt)))
     .limit(1)
   if (!account) return null
-  if (!ownsOrManages(visible, account.ownerMemberId)) return null
+  if (account.accountType !== "reseller" && !ownsOrManages(visible, account.ownerMemberId)) return null
 
   const parent = account.parentAccountId
     ? ((
@@ -275,7 +277,7 @@ export async function accountsGet(
           .select()
           .from(accounts)
           .where(
-            and(eq(accounts.id, account.parentAccountId), isNull(accounts.deletedAt))
+            and(eq(accounts.id, account.parentAccountId), isNull(accounts.deletedAt), accountReadScope(visible))
           )
           .limit(1)
       )[0] ?? null)
@@ -288,7 +290,7 @@ export async function accountsGet(
           .select({ id: accounts.id, name: accounts.name })
           .from(accounts)
           .where(
-            and(eq(accounts.id, account.endUserAccountId), isNull(accounts.deletedAt))
+            and(eq(accounts.id, account.endUserAccountId), isNull(accounts.deletedAt), ownerScope(accounts.ownerMemberId, visible))
           )
           .limit(1)
       )[0] ?? null)
@@ -301,7 +303,7 @@ export async function accountsGet(
       and(
         eq(accounts.parentAccountId, id),
         isNull(accounts.deletedAt),
-        ownerScope(accounts.ownerMemberId, visible)
+        accountReadScope(visible)
       )
     )
     .orderBy(asc(accounts.name))
@@ -377,7 +379,7 @@ export async function personsList(
   const where = and(
     isNull(persons.deletedAt),
     isNull(accounts.deletedAt),
-    ownerScope(accounts.ownerMemberId, visible),
+    accountReadScope(visible),
     search ? or(ilike(persons.firstName, search), ilike(persons.lastName, search), ilike(persons.email, search), ilike(persons.phone, search), ilike(persons.title, search), ilike(persons.department, search), ilike(accounts.name, search)) : undefined,
     query?.selections.accountName?.length ? inArray(accounts.name, query.selections.accountName) : undefined,
     primaryValues.length === 1 && primaryValues[0] === "Primary" ? eq(persons.isPrimary, true) : undefined,
@@ -444,6 +446,7 @@ export async function personsGet(
       person: persons,
       accountName: accounts.name,
       accountOwner: accounts.ownerMemberId,
+      accountType: accounts.accountType,
     })
     .from(persons)
     .innerJoin(accounts, eq(persons.accountId, accounts.id))
@@ -452,7 +455,7 @@ export async function personsGet(
     )
     .limit(1)
   if (!row) return null
-  if (!ownsOrManages(visible, row.accountOwner)) return null
+  if (row.accountType !== "reseller" && !ownsOrManages(visible, row.accountOwner)) return null
 
   const opps = await tx
     .select({
@@ -467,7 +470,7 @@ export async function personsGet(
     })
     .from(funnels)
     .leftJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
-    .where(and(eq(funnels.primaryPersonId, id), isNull(funnels.deletedAt)))
+    .where(and(eq(funnels.primaryPersonId, id), isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
     .orderBy(desc(funnels.updatedAt))
 
   // Projects that belong to this contact's pipelines (the deals they're on).
@@ -481,7 +484,7 @@ export async function personsGet(
           status: projects.status,
         })
         .from(projects)
-        .where(and(inArray(projects.funnelId, oppIds), isNull(projects.deletedAt)))
+        .where(and(inArray(projects.funnelId, oppIds), isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible)))
         .orderBy(desc(projects.updatedAt))
     : []
 
@@ -877,13 +880,14 @@ export async function funnelsList(
   const where = and(
     isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible),
     isNull(opportunities.deletedAt),
-    search ? or(ilike(funnels.name, search), ilike(accounts.name, search), ilike(opportunities.name, search), ilike(opportunities.code, search), ilike(user.name, search)) : undefined,
+    search ? ilike(funnels.name, search) : undefined,
     query?.selections.accountId?.length ? inArray(funnels.accountId, query.selections.accountId) : undefined,
     query?.selections.opportunityId?.length ? inArray(funnels.opportunityId, query.selections.opportunityId) : undefined,
     query?.selections.id?.length ? inArray(funnels.id, query.selections.id) : undefined,
     query?.selections.accountOwnerMemberId?.length ? inArray(accounts.ownerMemberId, query.selections.accountOwnerMemberId) : undefined,
     query?.selections.ownerMemberId?.length ? inArray(funnels.ownerMemberId, query.selections.ownerMemberId) : undefined,
     query?.selections.stageId?.length ? inArray(funnels.currentStageId, query.selections.stageId) : undefined,
+    expectedCloseYearFilter(funnels.expectedCloseDate, query?.selections.expectedCloseDate),
     statuses?.length ? inArray(funnels.status, statuses) : undefined,
     stageId ? eq(funnels.currentStageId, stageId) : undefined
   )
@@ -975,6 +979,7 @@ export async function funnelsFilterOptions(tx: Tx, ctx: ServerContext) {
   const accountOwnerMember = alias(member, "funnel_filter_account_owner_member")
   const accountOwnerUser = alias(user, "funnel_filter_account_owner_user")
   const [row] = await tx.select({
+    expectedCloseYears: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', extract(year from ${funnels.expectedCloseDate})::int::text, 'label', extract(year from ${funnels.expectedCloseDate})::int::text)) filter (where ${funnels.expectedCloseDate} is not null), '[]'::jsonb)`,
     accounts: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${accounts.id}, 'label', ${accounts.name})), '[]'::jsonb)`,
     opportunities: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${opportunities.id}, 'label', concat_ws(' — ', nullif(${opportunities.code}, ''), ${opportunities.name}))), '[]'::jsonb)`,
     funnels: sql<Array<{ value: string; label: string }>>`coalesce(jsonb_agg(distinct jsonb_build_object('value', ${funnels.id}, 'label', ${funnels.name})), '[]'::jsonb)`,
@@ -992,6 +997,7 @@ export async function funnelsFilterOptions(tx: Tx, ctx: ServerContext) {
     .where(and(isNull(funnels.deletedAt), isNull(opportunities.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
   const sort = (options: Array<{ value: string; label: string }>) => options.sort((a, b) => a.label.localeCompare(b.label))
   return {
+    expectedCloseYears: (row?.expectedCloseYears ?? []).sort((a, b) => Number(b.value) - Number(a.value)),
     accounts: sort(row?.accounts ?? []), opportunities: sort(row?.opportunities ?? []),
     funnels: sort(row?.funnels ?? []), accountOwners: sort(row?.accountOwners ?? []),
     owners: sort(row?.owners ?? []), stages: sort(row?.stages ?? []),
@@ -1021,6 +1027,7 @@ export type OpportunityDetail = {
     id: string
     quoteNumber: string
     status: QuotationStatus
+    netValue: string
     total: string
     currency: string
     isPrimary: boolean
@@ -1140,6 +1147,7 @@ export async function funnelsGet(
       quoteNumber: quotations.quoteNumber,
       status: quotations.status,
       total: quotations.total,
+      netValue: sql<string>`${quotations.subtotal} - ${quotations.discountTotal}`,
       currency: quotations.currency,
       isPrimary: quotations.isPrimary,
       deletedAt: quotations.deletedAt,

@@ -39,9 +39,10 @@ vi.mock("@/app/(app)/payment-milestones/actions", () => ({
 vi.mock("@/lib/modules.server", () => ({
   getEntitledModuleMap: vi.fn(async () => ({})),
 }))
+vi.mock("@/lib/quotation-template-registry", () => ({ listActiveQuotationTemplateCodes: vi.fn(async () => new Set(["default"])), getActiveQuotationTemplateByCode: vi.fn(async () => null) }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
-import { updateQuotation } from "@/app/(app)/quotations/actions"
+import { getQuotationDocument, updateQuotation } from "@/app/(app)/quotations/actions"
 
 type Chain = {
   from: ReturnType<typeof vi.fn>
@@ -57,6 +58,7 @@ type Chain = {
 function chain(value: unknown, updates: unknown[]): Chain {
   const promise = Promise.resolve(value)
   const q = {} as Chain
+  Object.assign(q, { leftJoin: vi.fn(() => q), orderBy: vi.fn(() => q) })
   q.from = vi.fn(() => q)
   q.where = vi.fn(() => q)
   q.limit = vi.fn(() => q)
@@ -180,4 +182,45 @@ describe("quotation edit currency persistence", () => {
     })
     expect(auditEntry.after).toEqual(auditEntry.before)
   })
+})
+
+it("changes billing to a shared reseller, validates its contact, and stores its address snapshot", async () => {
+  const existing = { id: "quotation-1", funnelId: "funnel-1", status: "draft", currency: "MYR", isPrimary: false, billToAccountId: null, attentionContactId: null }
+  const { tx, updates } = txWithSelects([
+    [existing], [{ ownerMemberId: "member-1", currency: "MYR", accountId: "end-user" }],
+    [{ currencies: ["MYR"], defaultCurrency: "MYR" }], [{ taxInclusive: false }],
+    [{ id: "reseller", accountType: "reseller", ownerMemberId: "other" }],
+    [{ accountId: "reseller" }], [{ name: "Uniti", code: null, phone: null, address: { line1: "Billing street" } }],
+    [{ firstName: "Billing", lastName: "Contact", email: null, phone: null }],
+  ])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
+  await updateQuotation("quotation-1", { billToAccountId: "reseller", attentionContactId: "billing-contact", taxSettingId: null, validUntil: null, notes: null, lines: [] })
+  expect(updates[0]).toMatchObject({ billToAccountId: "reseller", attentionContactId: "billing-contact", billingSnapshot: { account: { name: "Uniti", address: { line1: "Billing street" } }, contact: { name: "Billing Contact" } } })
+})
+
+it("rejects an end-user contact when billing changes to a reseller", async () => {
+  const { tx, updates } = txWithSelects([
+    [{ id: "quotation-1", funnelId: "funnel-1", status: "draft", currency: "MYR", billToAccountId: null, attentionContactId: "end-contact" }],
+    [{ ownerMemberId: "member-1", currency: "MYR", accountId: "end-user" }],
+    [{ currencies: ["MYR"], defaultCurrency: "MYR" }], [{ taxInclusive: false }],
+    [{ id: "reseller", accountType: "reseller", ownerMemberId: "other" }], [{ accountId: "end-user" }],
+  ])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
+  await expect(updateQuotation("quotation-1", { billToAccountId: "reseller", attentionContactId: "end-contact", taxSettingId: null, validUntil: null, notes: null, lines: [] })).rejects.toThrow("Attention contact must belong to recipient account")
+  expect(updates).toEqual([])
+})
+
+it("renders issued billing snapshots after live company details change", async () => {
+  mocks.ownsOrManages.mockReturnValue(true)
+  const billingSnapshot = { account: { name: "Uniti (issued)", code: null, phone: "123", address: { line1: "Original billing street" } }, contact: { name: "Original billing contact", email: null, phone: null } }
+  const { tx } = txWithSelects([
+    [{ q: { id: "quote", status: "sent", billToAccountId: "reseller", attentionContactId: "old-contact", billingSnapshot }, oppOwner: "member-1", accountId: "mcmc", projectName: "MCMC deal" }],
+    [], [{ name: "Uniti renamed", billingAddress: { line1: "New street" }, accountType: "reseller", endUserAccountId: "another-end-user" }],
+    [{ name: "Seller", slug: "seller" }], [],
+  ])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
+  const document = await getQuotationDocument("quote")
+  expect(document?.account).toEqual(billingSnapshot.account)
+  expect(document?.contact).toEqual(billingSnapshot.contact)
+  expect(document?.projectName).toBe("MCMC deal")
 })

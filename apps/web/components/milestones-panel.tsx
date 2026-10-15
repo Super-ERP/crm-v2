@@ -99,10 +99,7 @@ export function MilestonesPanel({
   onUpdate: (id: string, values: MilestoneUpdateValues) => Promise<ActionResult<unknown>>
   onDelete: (id: string) => Promise<ActionResult<unknown>>
   onReorder: (order: string[]) => Promise<ActionResult<unknown>>
-  /** When provided, offers a "Split payment" action — but only while the
-   *  funnel is in its default, unsplit state (one milestone == the full
-   *  value ceiling). Omit for callers that don't support splitting (e.g. the
-   *  Project-scoped panel). */
+  /** Configure an empty schedule or split an uninvoiced full-value row. */
   onSplit?: (parts: { title: string; amount: string }[]) => Promise<ActionResult<unknown>>
 }) {
   const router = useRouter()
@@ -135,16 +132,17 @@ export function MilestonesPanel({
     })
   }, [milestones])
 
-  // Splitting is only offered in the default, unsplit state — one milestone
-  // whose amount exactly equals the value ceiling ("never make it splitable"
-  // otherwise, since a split couldn't reconcile against a value that's
-  // already diverged).
+  // Configure an empty schedule or split an uninvoiced full-value row.
   const canSplit =
     !!onSplit &&
     hasValue &&
     value > 0 &&
-    milestones.length === 1 &&
-    Math.round((Number(milestones[0].amount) || 0) * 100) === Math.round(value * 100)
+    canManage &&
+    (milestones.length === 0 || (
+      milestones.length === 1 &&
+      milestones[0].status !== "invoiced" &&
+      Math.round((Number(milestones[0].amount) || 0) * 100) === Math.round(value * 100)
+    ))
 
   function run(
     fn: () => Promise<ActionResult<unknown>>,
@@ -214,7 +212,7 @@ export function MilestonesPanel({
           onClick={() => setSplitOpen(true)}
         >
           <SplitIcon className="size-4" />
-          Split payment
+          {milestones.length === 0 ? "Create payment schedule" : "Split payment"}
         </Button>
       ) : null}
       {milestones.length > 0 ? (
@@ -290,7 +288,7 @@ export function MilestonesPanel({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {canManage ? (
+                    {canManage && m.status !== "invoiced" ? (
                       <InlineValue
                         value={m.amount ?? ""}
                         display={formatMoney(m.amount, currency)}
@@ -311,6 +309,9 @@ export function MilestonesPanel({
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={m.status} />
+                    {canManage && m.status === "pending_invoicing" ? (
+                      <Button variant="ghost" size="sm" disabled={pending} onClick={() => save(() => onUpdate(m.id, { status: "invoiced" }))}>Mark invoiced</Button>
+                    ) : null}
                   </TableCell>
                   {canManage ? (
                     <TableCell className="text-right">
@@ -390,7 +391,7 @@ export function MilestonesPanel({
           </Table>
         </div>
       ) : (
-        <EmptyState title="No milestones yet." className="px-2 py-5" />
+        <EmptyState title="Payment schedule not configured" className="px-2 py-5" />
       )}
 
       {canManage ? (

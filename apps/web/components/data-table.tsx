@@ -778,6 +778,11 @@ function defaultOperator<T extends string>(
   return (current && options.includes(current as T) ? current : options[0]) as T
 }
 
+// Menu typeahead must not consume typing or caret navigation in form controls.
+function keepFilterInputFocus(event: React.KeyboardEvent<HTMLElement>) {
+  if (event.key !== "Escape" && event.key !== "Tab") event.stopPropagation()
+}
+
 function OperatorSelect({
   value,
   options,
@@ -789,6 +794,7 @@ function OperatorSelect({
 }) {
   return (
     <select
+      onKeyDown={keepFilterInputFocus}
       aria-label="Filter operator"
       value={value}
       onChange={(event) => onChange(event.target.value)}
@@ -848,6 +854,7 @@ function TypedFilter<TData, TValue>({
               }
             />
             <Input
+              onKeyDown={keepFilterInputFocus}
               autoFocus
               value={typed?.value ?? ""}
               onChange={(event) =>
@@ -875,6 +882,7 @@ function TypedFilter<TData, TValue>({
       const isBetween = operator === "between"
       const input = (field: "value" | "min" | "max", placeholder: string) => (
         <Input
+              onKeyDown={keepFilterInputFocus}
           type="number"
           value={typed?.[field] == null ? "" : String(typed[field])}
           onChange={(event) => {
@@ -941,6 +949,7 @@ function TypedFilter<TData, TValue>({
       const isBetween = operator === "between"
       const dateInput = (field: "value" | "from" | "to", placeholder: string) => (
         <Input
+              onKeyDown={keepFilterInputFocus}
           type="date"
           aria-label={placeholder}
           value={typed?.[field] ?? ""}
@@ -1097,6 +1106,7 @@ function OptionFilter({
         </DropdownMenuGroup>
         {(definition.type === "relation" || (definition.options?.length ?? 0) > 20) ? (
           <Input
+              onKeyDown={keepFilterInputFocus}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search"

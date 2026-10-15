@@ -76,12 +76,15 @@ import { quotationActionsFor } from "@/lib/quotation-transitions"
 import { canCreateQuotationRevision } from "@/lib/quotation-revision-policy"
 import { resolveQuotationPdfTemplate } from "@/lib/quotation-pdf-template"
 import {
+  getQuotationFormMeta,
   updateQuotation,
   createQuotationRevision,
+  duplicateQuotation,
   submitQuotationForApproval,
   approveQuotation,
   rejectQuotation,
   returnApprovedQuotationToDraft,
+  recallQuotation,
   sendQuotation,
   acceptQuotation,
   rejectCustomerQuotation,
@@ -101,6 +104,7 @@ const schema = z.object({
   notes: z.string().max(QUOTATION_CONTENT_LIMITS.notes, "Notes must be 2000 characters or fewer"),
   delivery: z.string().max(QUOTATION_CONTENT_LIMITS.delivery, "Delivery must be 500 characters or fewer"),
   paymentTerm: z.string().max(QUOTATION_CONTENT_LIMITS.paymentTerm, "Payment term must be 120 characters or fewer"),
+  billToAccountId: z.string(),
   attentionContactId: z.string(),
   headerDiscount: headerDiscountSchema,
   lines: z.array(quotationLineSchema).min(1, "Add at least one line item"),
@@ -195,10 +199,12 @@ export function QuotationForm({
   const showApproval =
     isPendingApproval && hasQuotationAction("approve")
   const showSend = isApproved && hasQuotationAction("send")
+  const showRecall = isPendingApproval && hasQuotationAction("recall")
   const showReset = isApproved && hasQuotationAction("return_to_draft")
   const showAcceptReject =
     isSent && hasQuotationAction("accept")
   const showCreateProject = isAccepted && !project && perms.canCreateProject
+  const showDuplicate = perms.canCreateRevision && !quotation.deletedAt
   const showRevision =
     perms.canCreateRevision &&
     canCreateQuotationRevision(quotation.status, quotation.deletedAt)
@@ -208,7 +214,7 @@ export function QuotationForm({
     perms.canUpdate
   const showDelete = perms.canDelete
   const hasAnyAction =
-    showSubmit || showApproval || showSend || showReset || showAcceptReject || showCreateProject || showRevision || showSetPrimary || showDelete
+    showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary || showDelete
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -220,6 +226,7 @@ export function QuotationForm({
       notes: quotation.notes ?? "",
       delivery: quotation.delivery ?? "",
       paymentTerm: quotation.paymentTerm ?? "",
+      billToAccountId: quotation.billToAccountId ?? "__funnel__",
       attentionContactId: quotation.attentionContactId ?? NO_CONTACT,
       headerDiscount: quotation.headerDiscount ?? "0",
       lines:
@@ -277,6 +284,26 @@ export function QuotationForm({
     },
     [products, form]
   )
+
+  const watchedBillToAccountId = useWatch({ control: form.control, name: "billToAccountId" })
+  const [billToAccounts, setBillToAccounts] = React.useState<{ id: string; name: string }[]>([])
+  const [billingContacts, setBillingContacts] = React.useState(contacts)
+  const [billingAccount, setBillingAccount] = React.useState(preview?.account ?? null)
+  const watchedAttentionContactId = useWatch({ control: form.control, name: "attentionContactId" })
+  const [billingLoading, setBillingLoading] = React.useState(false)
+  React.useEffect(() => {
+    let active = true
+    setBillingLoading(true)
+    void getQuotationFormMeta(quotation.funnelId,
+      watchedBillToAccountId === "__funnel__" ? null : watchedBillToAccountId, quotation.id).then(meta => {
+      if (!active) return
+      setBillingAccount(meta.billingAccount)
+      setBillToAccounts(meta.billToAccounts)
+      setBillingContacts(meta.contacts)
+    }).catch(() => { if (active) toast.error("Could not load billing contacts") })
+      .finally(() => { if (active) setBillingLoading(false) })
+    return () => { active = false }
+  }, [quotation.id, quotation.funnelId, watchedBillToAccountId])
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -350,6 +377,8 @@ export function QuotationForm({
   const liveEntityPreview = preview && isDraft
     ? {
         ...preview,
+        account: billingAccount,
+        contact: billingContacts.find(contact => contact.id === watchedAttentionContactId) ?? null,
         quotation: {
           ...preview.quotation,
           validUntil: watchedValidUntil || null,
@@ -422,6 +451,7 @@ export function QuotationForm({
       notes: values.notes || null,
       delivery: values.delivery || null,
       paymentTerm: values.paymentTerm || null,
+      billToAccountId: values.billToAccountId === "__funnel__" ? null : values.billToAccountId,
       attentionContactId:
         values.attentionContactId === NO_CONTACT
           ? null
@@ -488,6 +518,18 @@ export function QuotationForm({
         : {}),
     })
     setBusy(false)
+  }
+
+  async function onDuplicate() {
+    setBusy(true)
+    const res = await duplicateQuotation(quotation.id)
+    if (!res.ok) {
+      showActionError(res)
+      setBusy(false)
+      return
+    }
+    toast.success("Quotation duplicated as a new Draft")
+    router.push(`/quotations/${res.data.id}`)
   }
 
   async function onCreateRevision() {
@@ -675,6 +717,26 @@ export function QuotationForm({
                 />
                 <FormField
                   control={form.control}
+                  name="billToAccountId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Bill To</FormLabel>
+                      <FormControl>
+                        <Combobox
+                          value={field.value}
+                          onChange={(value) => { field.onChange(value); form.setValue("attentionContactId", NO_CONTACT) }}
+                          options={[{ value: "__funnel__", label: "End-user account (same as funnel)" }, ...billToAccounts.map(account => ({ value: account.id, label: account.name }))]}
+                          disabled={!canEditDraft || billingLoading}
+                          placeholder="Select billing account…"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">Select the reseller when they receive and pay this quotation. The funnel stays under the end user.</p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="attentionContactId"
                   render={({ field }) => (
                     <FormItem>
@@ -685,7 +747,7 @@ export function QuotationForm({
                         disabled={!canEditDraft}
                         items={[
                           { value: NO_CONTACT, label: "No contact" },
-                          ...contacts.map((contact) => ({
+                          ...billingContacts.map((contact) => ({
                             value: contact.id,
                             label: `${contact.name}${contact.isPrimary ? " (Primary)" : ""}`,
                           })),
@@ -698,7 +760,7 @@ export function QuotationForm({
                         </FormControl>
                         <SelectContent>
                           <SelectItem value={NO_CONTACT}>No contact</SelectItem>
-                          {contacts.map((contact) => (
+                          {billingContacts.map((contact) => (
                             <SelectItem key={contact.id} value={contact.id}>
                               {contact.name}{contact.isPrimary ? " (Primary)" : ""}
                             </SelectItem>
@@ -946,7 +1008,7 @@ export function QuotationForm({
 
             {canEditDraft ? (
               <div className="flex justify-end">
-                <Button type="submit" disabled={busy}>
+                <Button type="submit" disabled={busy || billingLoading}>
                   {busy ? "Saving…" : "Save draft"}
                 </Button>
               </div>
@@ -1196,18 +1258,18 @@ export function QuotationForm({
                 </AlertDialog>
               </>
             ) : null}
-            {showReset ? (
+            {showReset || showRecall ? (
               <AlertDialog>
                 <AlertDialogTrigger
                   render={
                     <Button variant="outline" disabled={busy}>
-                      Return to Draft to edit
+                      {showRecall ? "Recall to Draft" : "Return to Draft to edit"}
                     </Button>
                   }
                 />
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Return approved quotation to Draft?</AlertDialogTitle>
+                    <AlertDialogTitle>{showRecall ? "Recall quotation to Draft?" : "Return approved quotation to Draft?"}</AlertDialogTitle>
                     <AlertDialogDescription>
                       Approval metadata clears. Any later send requires approval again.
                     </AlertDialogDescription>
@@ -1217,7 +1279,7 @@ export function QuotationForm({
                     <AlertDialogAction
                       onClick={() =>
                         submitAction(
-                          () => returnApprovedQuotationToDraft(quotation.id),
+                          () => showRecall ? recallQuotation(quotation.id) : returnApprovedQuotationToDraft(quotation.id),
                           "Quotation returned to Draft"
                         )
                       }
@@ -1236,6 +1298,11 @@ export function QuotationForm({
                 render={<Link href={createProjectHref} />}
               >
                 Create project
+              </Button>
+            ) : null}
+            {showDuplicate ? (
+              <Button variant="outline" disabled={busy} onClick={onDuplicate}>
+                Duplicate quotation
               </Button>
             ) : null}
             {showRevision ? (
@@ -1414,12 +1481,14 @@ export function QuotationForm({
               </div>
             </div>
 
-            {detail.accountName ? (
+            {liveEntityPreview?.account ? (
               <div className="grid gap-0.5">
                 <span className="text-[0.65rem] font-medium uppercase tracking-[0.2em] text-zinc-400">
                   Bill to
                 </span>
-                <span className="font-medium">{detail.accountName}</span>
+                <span className="font-medium">{liveEntityPreview.account.name}</span>
+                {liveEntityPreview.contact ? <span>{liveEntityPreview.contact.name}</span> : null}
+                {liveEntityPreview.account.address ? <span className="text-sm text-zinc-500">{Object.values(liveEntityPreview.account.address).filter(Boolean).join(", ")}</span> : null}
               </div>
             ) : null}
 

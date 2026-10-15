@@ -1,5 +1,6 @@
 "use server"
 
+import { milestoneReadScope } from "@/server/services/milestone-access"
 import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
 
 import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
@@ -29,7 +30,6 @@ import { tenantDefaultCurrency } from "@/server/services/tenant-currency"
 import { logActivity } from "@/server/services/activity"
 import { opportunityNetValue } from "@/server/services/value"
 import { canTransitionPaymentMilestone } from "@/lib/payment-milestone-lifecycle"
-import { splitMilestones } from "@/lib/milestone-split"
 import { writeAudit } from "@/server/audit"
 import { recordChanges } from "@/server/services/changes/record"
 import { runAction, type ActionResult } from "@/lib/action-result"
@@ -348,30 +348,6 @@ export async function createProject(
         },
       })
 
-      // Automation: seed payment milestones from the tenant template when the
-      // project starts with a value (Settings → Numbering). Split math lives
-      // in lib/milestone-split.ts (pure + unit-tested).
-      const projectValue = Number(input.value ?? 0)
-      if (projectValue > 0) {
-        const [s] = await tx
-          .select({ template: tenantSettings.milestoneTemplate })
-          .from(tenantSettings)
-          .where(eq(tenantSettings.organizationId, ctx.tenantId))
-          .limit(1)
-        const seeded = splitMilestones(projectValue, s?.template ?? [])
-        if (seeded.length > 0) {
-          const status = await milestoneStatusForFunnel(tx, input.funnelId)
-          await tx.insert(paymentMilestones).values(
-            seeded.map((m) => ({
-              tenantId: ctx.tenantId,
-              projectId: row.id,
-              quotationId: input.quotationId || null,
-              status,
-              ...m,
-            }))
-          )
-        }
-      }
       return row
     }
   )
@@ -813,7 +789,7 @@ export async function listMilestones(
         sortOrder: paymentMilestones.sortOrder,
       })
       .from(paymentMilestones)
-      .where(eq(paymentMilestones.projectId, projectId))
+      .where(and(eq(paymentMilestones.projectId, projectId), await milestoneReadScope(tx, ctx)))
       .orderBy(asc(paymentMilestones.sortOrder), asc(paymentMilestones.createdAt))
     return rows
   })
@@ -937,7 +913,7 @@ export async function updateMilestone(
       // Lock the project row so concurrent milestone writes serialize against
       // the reconciliation check below (same guard as createMilestone).
       const [project] = await tx
-        .select({ value: projects.value, ownerMemberId: projects.ownerMemberId })
+        .select({ value: projects.value, ownerMemberId: projects.ownerMemberId, funnelId: projects.funnelId })
         .from(projects)
         .where(eq(projects.id, (existing.projectId ?? "")))
         .limit(1)
@@ -981,12 +957,15 @@ export async function updateMilestone(
       const nextStatus = isMilestoneStatus(input.status)
         ? input.status
         : existing.status
-      // Only Won → Invoiced is a user-controlled transition.
+      // Only Pending invoicing → Invoiced is a user-controlled transition.
       if (
         nextStatus !== existing.status &&
         !canTransitionPaymentMilestone(existing.status, nextStatus)
       ) {
         throw new Error("Milestone status cannot move backward.")
+      }
+      if (nextStatus === "invoiced" && existing.status !== "invoiced") {
+        await milestoneStatusForFunnel(tx, project?.funnelId)
       }
       const nextTitle =
         input.title === undefined

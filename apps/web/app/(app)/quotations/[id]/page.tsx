@@ -58,7 +58,7 @@ export default async function QuotationDetailPage({
     getProjectForQuotation(id),
     requireContext(),
     getEntitledModuleMap(),
-    getQuotationFormMeta(detail.quotation.funnelId),
+    getQuotationFormMeta(detail.quotation.funnelId, detail.quotation.billToAccountId, id),
     getQuotationDocument(id),
     canApproveQuotation(id),
   ])

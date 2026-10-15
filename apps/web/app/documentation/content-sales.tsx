@@ -39,9 +39,8 @@ flowchart TD
   QA -. "explicit reset" .-> Q
   O -- "stage transition" --> OW[Funnel stage: Closed Won]
   O -- "manual create" --> P[Project<br/>value = quote net]
-  O -- "prepare any time" --> M[Payment milestones<br/>Planned / Won / Invoiced]
-  OW -- "Closed Won marks planned" --> MW[Live milestones Won]
-  M -- "manual Won → Invoiced" --> MI[Milestone Invoiced]
+  QC -- "accepted + funnel 4a or Won: explicit setup" --> M[Payment milestones<br/>Pending invoicing]
+  M -- "manual mark invoiced" --> MI[Milestone Invoiced]
   P -- "submit for approval" --> SO[Sales order<br/>submitted → approved]
   SO -- "approved unlocks" --> INV[Invoice draft]
   INV -- "issue" --> INVI[Invoice issued]
@@ -76,7 +75,7 @@ flowchart TD
           [
             "Payment Milestone → Funnel",
             <Code key="c">payment_milestones.funnel_id</Code>,
-            "Prepared from the Funnel before close; Closed Won marks planned milestones Won.",
+            "Created explicitly after quotation acceptance at 4a or Closed Won; closing Won does not change invoicing status.",
           ],
           [
             "Sales order → Project",
@@ -106,14 +105,13 @@ flowchart TD
           just application checks.
         </Li>
         <Li>
-          Payment Milestones begin as <B>Planned</B> before the Funnel closes,
-          then progress through <B>Won</B> and <B>Invoiced</B>.
+          Payment Milestones begin as <B>Pending invoicing</B> after explicit setup.
         </Li>
         <Li>
-          <B>Closed Won</B> marks planned Payment Milestones Won.
+          Payment Milestones appear only with an accepted quotation at <B>4a or Closed Won</B>.
         </Li>
         <Li>
-          A user manually changes <B>Won → Invoiced</B>; there is no automatic
+          A user manually changes <B>Pending invoicing → Invoiced</B>; there is no automatic
           invoice or receipt transition.
         </Li>
         <Li>
@@ -169,7 +167,7 @@ flowchart TD
         <Code>draft → pending_approval → approved → sent → accepted / rejected</Code>; project{" "}
         <Code>planning → active → completed</Code> (plus{" "}
         <Code>on_hold / cancelled</Code>); milestone{" "}
-        <Code>Won → Invoiced</Code> (manual only); sales order{" "}
+        <Code>Pending invoicing → Invoiced</Code> (manual only); sales order{" "}
         <Code>submitted → approved / rejected</Code>; finance doc{" "}
         <Code>draft → issued → settled / cancelled</Code>.
       </Callout>
@@ -305,7 +303,7 @@ export const funnelForecastPage: DocPage = {
           ],
           [
             <B key="a">Quoted</B>,
-            "synced from the primary quotation's net",
+            "synced from the quotation's net",
             "display; becomes the recognized basis",
           ],
           [
@@ -318,7 +316,7 @@ export const funnelForecastPage: DocPage = {
       <P>
         The quoted amount syncs from the{" "}
         <Link className="link" href="/documentation/quotations">
-          primary quotation
+          quotation
         </Link>
         ; intercompany deals recognize only the entity’s cut (see{" "}
         <Link className="link" href="/documentation/intercompany">
@@ -416,11 +414,27 @@ stateDiagram-v2
         from Sent and never changes Funnel stage.
       </P>
       <P>
-        Any non-Draft or soft-deleted quotation can create a Draft revision.
+        Sent, Accepted, Rejected, Expired and Void quotations, plus deleted
+        non-Draft history, can create a Draft revision.
         The revision copies recipient, Attention, currency, tax inputs, dates,
         Notes, Delivery, Payment Term, header discount and lines; it increments
         the Funnel&apos;s running version/number and keeps <Code>revisionOfId</Code>.
         The source remains unchanged.
+      </P>
+
+      <P>
+        Pending Approval quotations can be recalled to Draft by an authorized
+        editor, then edited and resubmitted with the same number. Recall clears
+        approval metadata. Duplicate quotation creates an independent Draft in
+        the same funnel, copies content and lines, clears approval and customer
+        response metadata, resets the date to today and clears Valid until.
+      </P>
+      <P>
+        Deleted quotation numbers are permanently reserved. The funnel keeps
+        its running number; new quotations, duplicates and revisions use the
+        highest issued version plus one, including deleted versions. Deleting
+        every quotation does not restart numbering. Accepted quotations and
+        quotations referenced by a live project cannot be deleted.
       </P>
 
       <H2>Money math</H2>
@@ -500,32 +514,29 @@ export const projectsPage: DocPage = {
 
       <H2>Payment milestones</H2>
       <P>
-        Payment Milestones are planning records with three statuses:{" "}
-        <B>Planned</B>, <B>Won</B> and <B>Invoiced</B>. They are Planned before a Funnel
-        closes. When the Funnel reaches <B>Closed Won</B>, its planned milestones
-        are marked Won. A user manually changes Won to Invoiced; there is no
-        backward move.
+        Payment Milestones are billing schedule records with two statuses:{" "}
+        <B>Pending invoicing</B> and <B>Invoiced</B>. Create the schedule explicitly
+        after the quotation is accepted and the Funnel reaches 4a or Closed Won.
+        Closing Won does not change milestone statuses. A user manually changes
+        Pending invoicing to Invoiced; there is no backward move. Rollback, Lost,
+        or On Hold blocks new invoicing while preserving schedule history.
       </P>
-      <Mermaid
-        chart={`
+      <Mermaid chart={`
 stateDiagram-v2
-  [*] --> planned : prepared before close
-  planned --> won : Funnel reaches Closed Won
-  [*] --> won : prepared after Closed Won
-  won --> invoiced : manual status change
-  note right of won : Closed Won marks planned milestones Won
-`}
-      />
+  [*] --> pending_invoicing : explicit schedule setup after acceptance at 4a or Won
+  pending_invoicing --> invoiced : manual status change
+`} />
       <Ul>
         <Li>
           Milestones split by <B>exact amount</B> (not percent) for planning.
         </Li>
         <Li>
-          The <B>milestone template</B> in Settings seeds new projects
-          with a percent split of the value; the last row absorbs rounding.
+          Stage changes, quotations, project creation and sales-order approvals
+          do not create milestones. An empty eligible schedule shows
+          <B>Payment schedule not configured</B>.
         </Li>
         <Li>
-          Manual status moves are <B>forward-only</B> (<Code>Won → Invoiced</Code>).
+          Manual status moves are <B>forward-only</B> (<Code>Pending invoicing → Invoiced</Code>).
           Finance invoices and receipts do not change milestone status.
         </Li>
         <Li>

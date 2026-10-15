@@ -183,7 +183,7 @@ export const settingsReferencePage: DocPage = {
         head={["Setting", "Default", "Effect"]}
         rows={[
           [<Code key="s">quotation acceptance</Code>, "customer decision only", "Accept/Reject is allowed from Sent and never changes Funnel stage or creates a Project."],
-          [<Code key="s">milestone_template</Code>, "—", "Percent split seeds new Project planning records; it does not create invoice documents."],
+          [<Code key="s">milestone_template</Code>, "—", "Legacy percent split configuration; schedules now require explicit setup on eligible funnels."],
           [<Code key="s">follow_up_due_days</Code>, "7", 'Dashboard "due soon" window.'],
           [<Code key="s">stale_deal_days</Code>, "off", "Dashboard stale-funnel nudges."],
           [<Code key="s">lead_follow_up_days</Code>, "off", 'Auto "First contact" follow-up on new leads.'],
@@ -367,7 +367,7 @@ docker compose up -d --build   # full stack; migrate runs automatically`}</Pre>
       <Ul>
         <Li>Run the full web tests, lint, typecheck and production build before a release.</Li>
         <Li>Run migration-journal/fixture checks; PostgreSQL-bound fixtures require <Code>TEST_DATABASE_ADMIN_URL</Code> and <Code>TEST_DATABASE_URL</Code>.</Li>
-        <Li>After deployment, verify Account currency, Lead conversion, PPVVC sync, quotation approval/revision, stage rollback and Planned/Won/Invoiced milestone behavior in a tenant-safe smoke test.</Li>
+        <Li>After deployment, verify Account currency, Lead conversion, PPVVC sync, quotation approval/revision, stage rollback and Pending invoicing/Invoiced milestone behavior in a tenant-safe smoke test.</Li>
       </Ul>
 
       <H2>Environment variables</H2>
@@ -679,7 +679,7 @@ export const changelogPage: DocPage = {
         <Li>
           <B>Behavior:</B> quote letterhead from the company profile,
           SO submit captures document kind + payment term, manual Project
-          creation with milestone template seeding,
+          creation without automatic milestone seeding,
           create-form presets, duplicate guards (exact + trigram warn-only),
           dashboard stale-funnel and follow-up nudges, standardized{" "}
           <Code>StatusBadge</Code> + shared <Code>PicklistCard</Code>,
@@ -811,7 +811,7 @@ export const changelogPage: DocPage = {
           PPVVC is authoritative on Opportunities and syncs live child Funnels;
           nonterminal stage rollback skips gates while terminal stages lock;
           quotations require approval before send, revisions start Draft, and
-          customer acceptance never moves a Funnel; milestones are Planned/Won/Invoiced
+          customer acceptance never moves a Funnel; milestones are Pending invoicing/Invoiced
           planning records with no invoice or Project side effect.
         </Li>
         <Li>

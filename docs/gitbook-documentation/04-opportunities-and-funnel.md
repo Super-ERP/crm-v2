@@ -19,6 +19,14 @@ Qualify a customer need and keep each sales pursuit at the right stage.
 
 ---
 
+## Filter funnels by expected close year
+
+On **Funnel**, use **Expected close year** to select one or more calendar years. The same filter applies to both **Board** and **List** views, including stage counts and amount totals. It combines with Account, Opportunity, Account owner, Stage, Status and search filters.
+
+Year options come from Expected Close Dates on the records you can access. Selecting 2026 includes dates from 1 January through 31 December 2026. Funnels with no Expected Close Date are excluded while a year is selected; clear the filter to include them again. This filter uses **Expected Close Date**, rather than project year or creation date.
+
+The redundant Funnel selector has been removed from the Funnel page. Use search to find a specific funnel by its name. Funnel search matches only the funnel name; account names, opportunity names, owners and other columns are not searched. Relation filter search inputs narrow their own available options.
+
 ## The Opportunity Model
 
 In Q-App, sales pursuits are managed through a structured two-tier structure:

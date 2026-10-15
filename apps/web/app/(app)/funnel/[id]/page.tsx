@@ -1,3 +1,4 @@
+import { isPaymentMilestoneEligible } from "@/lib/payment-milestone-lifecycle"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { FolderPlusIcon, ClockIcon, FileTextIcon } from "lucide-react"
@@ -173,6 +174,13 @@ export default async function OpportunityDetailPage({
   const canAdvance = ctx.can(PERMISSIONS.STAGE_ADVANCE)
   const canCreateQuote = ctx.can(PERMISSIONS.QUOTATION_CREATE)
   const canManageMilestones = ctx.can(PERMISSIONS.PAYMENT_MILESTONE_MANAGE)
+  const acceptedQuotation = detail.quotations.find((q) => q.status === "accepted" && !q.deletedAt)
+  const milestoneEligible = isPaymentMilestoneEligible({
+    stageCode: stage.code,
+    stageKind: stage.kind,
+    funnelStatus: opp.status,
+    quotationStatus: acceptedQuotation?.status,
+  })
   const canCreateProject =
     modules.projects && ctx.can(PERMISSIONS.PROJECT_CREATE)
 
@@ -317,6 +325,8 @@ export default async function OpportunityDetailPage({
           documents={documents}
           milestones={milestones}
           canManageMilestones={canManageMilestones}
+          milestoneValueCeiling={acceptedQuotation?.netValue ?? null}
+          milestoneEligible={milestoneEligible}
         />
 
         <div>

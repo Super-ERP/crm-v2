@@ -470,18 +470,3 @@ export function closeRemarksLabel(kind: string): string {
   if (kind === "PARKED") return "KIV reason (close remarks)"
   return "Reason"
 }
-
-/**
- * Stage entry triggers the Salesforce "Create New Project Item List Records
- * in Renewal, 4A and Closed Won" flow (payment-milestone auto-create).
- * Applies identically to renewal and non-renewal funnels — there is no
- * separate "Renewal" pipeline stage to special-case here, so entering 4A or
- * Won is the whole trigger. The caller is still responsible for only
- * inserting when the funnel doesn't already have milestones.
- */
-export function entersMilestoneAutoCreateStage(stage: {
-  code: string
-  kind: string
-}): boolean {
-  return stage.code === "4a" || stage.kind === "WON"
-}

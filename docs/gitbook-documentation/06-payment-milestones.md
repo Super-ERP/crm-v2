@@ -29,7 +29,7 @@ Plan billing events and record when confirmed milestones have been invoiced.
 
 ## Setting Up Milestones
 
-Milestones are configured during quotation preparation or directly within the Funnel deal:
+Milestones are configured explicitly within the Funnel after its quotation is customer Accepted and its stage is 4a or Closed Won. The Payment Milestones tab is hidden below 4a and while the quotation is unaccepted.
 
 {% stepper %}
 {% step %}
@@ -69,30 +69,30 @@ The shared schedule adds a row named **New milestone**; edit its title, descript
 
 ---
 
-## Automatic milestones and splitting
+## Creating a schedule and splitting
 
-Entering **4a** or **Closed Won** creates a default **Full Payment** milestone only when the funnel has no milestone rows and its current value is positive. An existing schedule is preserved. Review the amount and due date rather than assuming the automatic row is a complete billing plan.
+Stage changes, quotation changes, project creation and sales-order approval do not create milestones automatically. Eligible funnels without a schedule show **Payment schedule not configured**. Use **Create payment schedule** to enter at least two titled amounts totaling the full net quotation value, or add a single milestone directly. Set due dates after setup.
 
-Where **Split** is available, divide a milestone into titled currency amounts. Review the total against the original milestone before confirming. Invoiced amounts are locked; use supported planning actions on eligible rows.
+**Split payment** is available for one uninvoiced milestone matching the full current value. Invoiced milestones cannot be split.
 
 ## The Milestone Lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Planned: Defined on Deal/Quote
-    Planned --> Won: Opportunity Reaches Closed Won
-    Won --> Invoiced: User Confirms Milestone Billed
+    [*] --> PendingInvoicing: Explicit setup after acceptance at 4a or Won
+    PendingInvoicing --> Invoiced: User records billing
 ```
 
-**Read the diagram:** Planned becomes Won automatically when the linked funnel closes Won. Won becomes Invoiced only when an authorized user records billing. Milestones created for an already won funnel start as Won.
+Closing the funnel Won does not change milestone status. Moving below 4a, to Lost or to On Hold hides the active schedule and blocks new invoicing. Historical invoiced milestones remain accessible from Sales → Payment Milestones under the usual ownership rules.
 
 ### Milestone Statuses
 
 | Status | Meaning | How it is Set |
 | :--- | :--- | :--- |
-| **`Planned`** | Draft or tentative milestone during proposal negotiations. | Set during initial creation. |
-| **`Won`** | Confirmed planning milestone on a won deal. | **Automated**: The system marks live Planned milestones as **`Won`** when the linked funnel moves to **Closed Won**. Invoiced milestones retain their status. |
-| **`Invoiced`** | The finance/operations team has issued the invoice to the customer for this phase. | **Manual**: The user updates the milestone status once billing is executed. |
+| **Pending invoicing** | An agreed payment milestone awaiting invoicing. | Explicit schedule creation. |
+| **Invoiced** | The invoice has been issued for this phase. | An authorized user chooses **Mark invoiced**. |
+
+Existing Planned/Won rows migrate to Pending invoicing without changing their amounts or invoice history. Ineligible legacy schedules remain stored but hidden until eligible; review the agreed amounts before invoicing.
 
 ---
 
@@ -124,7 +124,7 @@ Users with milestone-management permission can edit supported planning fields. A
 
 #### Understand the billing transition
 
-After billing, the supported manual status transition is **Won → Invoiced**. There is no reverse transition.
+After billing, the supported manual status transition is **Pending invoicing → Invoiced**. There is no reverse transition.
 
 {% endstep %}
 {% endstepper %}

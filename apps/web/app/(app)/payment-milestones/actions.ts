@@ -1,13 +1,13 @@
 "use server"
 
-import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
+import { milestoneReadScope } from "@/server/services/milestone-access"
+import { milestoneStatusForFunnel, milestoneContextForFunnel } from "@/server/services/milestone-status"
 
 import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
-import type { ServerContext } from "@/lib/server-context"
 import { PERMISSIONS } from "@/lib/permissions"
 import {
   paymentMilestones,
@@ -85,12 +85,13 @@ async function resolveMilestoneProduct(
  * quotation number for display, newest first.
  */
 export async function listPaymentMilestonePage(input: ServerTableQuery): Promise<{ rows: PaymentMilestoneListItem[]; total: number }> {
-  return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx) => {
+  return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx, ctx) => {
     const { limit, offset, query } = normalizeRecordListQuery(input,
       ["title", "amount", "quoteNumber", "status", "funnelName"], ["status"])
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const statuses = query.selections.status?.filter((value): value is (typeof paymentMilestoneStatus.enumValues)[number] => paymentMilestoneStatus.enumValues.includes(value as (typeof paymentMilestoneStatus.enumValues)[number]))
     const where = and(
+      await milestoneReadScope(tx, ctx),
       search ? or(ilike(paymentMilestones.title, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
       statuses?.length ? inArray(paymentMilestones.status, statuses) : undefined)
     const sortColumns = { title: paymentMilestones.title, amount: paymentMilestones.amount, quoteNumber: quotations.quoteNumber, status: paymentMilestones.status, funnelName: funnels.name }
@@ -127,11 +128,11 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
 export async function listFunnelMilestones(
   funnelId: string
 ): Promise<PaymentMilestoneRow[]> {
-  return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx) => {
+  return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx, ctx) => {
     return tx
       .select()
       .from(paymentMilestones)
-      .where(eq(paymentMilestones.funnelId, funnelId))
+      .where(and(eq(paymentMilestones.funnelId, funnelId), await milestoneReadScope(tx, ctx, false)))
       .orderBy(
         asc(paymentMilestones.sortOrder),
         asc(paymentMilestones.createdAt)
@@ -143,7 +144,7 @@ export async function listFunnelMilestones(
 export async function getPaymentMilestone(
   id: string
 ): Promise<PaymentMilestoneDetail | null> {
-  return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx) => {
+  return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx, ctx) => {
     const [row] = await tx
       .select({
         m: paymentMilestones,
@@ -153,7 +154,7 @@ export async function getPaymentMilestone(
       .from(paymentMilestones)
       .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
       .leftJoin(quotations, eq(paymentMilestones.quotationId, quotations.id))
-      .where(eq(paymentMilestones.id, id))
+      .where(and(eq(paymentMilestones.id, id), await milestoneReadScope(tx, ctx)))
       .limit(1)
     if (!row) return null
     const product = await resolveMilestoneProduct(tx, row.m.quotationId, row.m.title)
@@ -220,78 +221,6 @@ async function funnelAllocatedTotal(
   return Number(row?.total ?? 0)
 }
 
-/**
- * Auto-create ONE "Full Payment" milestone at the funnel's full net value,
- * but only when it currently has zero milestones — called right after a
- * quote becomes primary/synced ("itemised into the quotation by default").
- * Never fires destructively: once any milestone exists (manually added,
- * auto-created, or split), a quote re-sync never touches it again. No-op
- * when the funnel has no resolvable net value yet. Runs inside the caller's
- * own tenant transaction — assumes the caller already authorized the
- * funnel-level mutation (e.g. QUOTATION_UPDATE), so it does its own
- * permission check.
- */
-export async function seedDefaultFunnelMilestone(
-  tx: Tx,
-  ctx: ServerContext,
-  funnelId: string
-): Promise<void> {
-  const [existing] = await tx
-    .select({ id: paymentMilestones.id })
-    .from(paymentMilestones)
-    .where(eq(paymentMilestones.funnelId, funnelId))
-    .limit(1)
-  if (existing) return
-
-  const { value: netValue } = await opportunityNetValue(tx, funnelId)
-  const amount = Number(netValue) || 0
-  if (amount <= 0) return
-
-  const [funnel] = await tx
-    .select({
-      primaryQuotationId: funnels.primaryQuotationId,
-      quoteNumber: quotations.quoteNumber,
-      projectCode: opportunities.projectCode,
-    })
-    .from(funnels)
-    .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
-    .leftJoin(quotations, eq(funnels.primaryQuotationId, quotations.id))
-    .where(eq(funnels.id, funnelId))
-    .limit(1)
-  if (!funnel) return
-
-  const status = await milestoneStatusForFunnel(tx, funnelId)
-  const title = funnel.quoteNumber
-    ? `${funnel.quoteNumber} · Full payment`
-    : "Full Payment"
-  const [row] = await tx
-    .insert(paymentMilestones)
-    .values({
-      tenantId: ctx.tenantId,
-      funnelId,
-      quotationId: funnel.primaryQuotationId,
-      status,
-      title,
-      name: milestoneName(funnel.projectCode, title),
-      amount: netValue,
-      sortOrder: 0,
-    })
-    .returning({ id: paymentMilestones.id })
-
-  await logActivity(tx, ctx, {
-    entityType: "opportunity",
-    entityId: funnelId,
-    type: "system",
-    subject: `Milestone added: ${title}`,
-  })
-  await writeAudit(tx, ctx, {
-    action: "milestone.created",
-    entityType: "opportunity",
-    entityId: funnelId,
-    after: { milestoneId: row.id, title, amount: netValue },
-  })
-}
-
 export async function createFunnelMilestone(
   input: FunnelMilestoneCreateInput
 ): Promise<ActionResult<{ id: string }>> {
@@ -325,7 +254,8 @@ export async function createFunnelMilestone(
         const title = input.title.trim()
         if (!title) throw new Error("Title is required")
 
-        const { value: netValue } = await opportunityNetValue(tx, input.funnelId)
+        const milestoneContext = await milestoneContextForFunnel(tx, input.funnelId)
+        const netValue = milestoneContext.value
         const funnelValue = Number(netValue) || 0
         // Milestones are split by exact amount.
         const amount = input.amount != null && input.amount !== "" ? input.amount : "0"
@@ -353,13 +283,13 @@ export async function createFunnelMilestone(
           .from(paymentMilestones)
           .where(eq(paymentMilestones.funnelId, input.funnelId))
 
-        const status = await milestoneStatusForFunnel(tx, input.funnelId)
+        const status = milestoneContext.status
         const [row] = await tx
           .insert(paymentMilestones)
           .values({
             tenantId: ctx.tenantId,
             funnelId: input.funnelId,
-            quotationId: funnel.primaryQuotationId,
+            quotationId: milestoneContext.quotationId,
             status,
             title,
             name: milestoneName(funnel.projectCode, title),
@@ -424,7 +354,9 @@ export async function updateFunnelMilestone(
           throw new Error("FORBIDDEN: not permitted on this Funnel")
         }
 
-        const { value: netValue } = await opportunityNetValue(tx, existing.funnelId)
+        const { value: netValue } = existing.status === "invoiced"
+          ? await opportunityNetValue(tx, existing.funnelId)
+          : await milestoneContextForFunnel(tx, existing.funnelId)
         const funnelValue = Number(netValue) || 0
 
         // Milestones are split by exact amount; an untouched amount is preserved.
@@ -454,13 +386,15 @@ export async function updateFunnelMilestone(
         const nextStatus = isMilestoneStatus(input.status)
           ? input.status
           : existing.status
-        // Only Won → Invoiced is a user-controlled transition. Closed Won
-        // propagation is owned by the stage service and may set live rows Won.
+        // Invoicing is independent of the funnel closing Won.
         if (
           nextStatus !== existing.status &&
           !canTransitionPaymentMilestone(existing.status, nextStatus)
         ) {
-          throw new Error("Only won milestones can be marked invoiced. Planned milestones become won when the funnel reaches Closed Won.")
+          throw new Error("Only milestones pending invoicing can be marked invoiced.")
+        }
+        if (nextStatus === "invoiced" && existing.status !== "invoiced") {
+          await milestoneStatusForFunnel(tx, existing.funnelId)
         }
         const nextTitle =
           input.title === undefined
@@ -659,7 +593,8 @@ export async function splitFunnelMilestones(
         throw new Error("FORBIDDEN: not permitted on this Funnel")
       }
 
-      const { value: netValue } = await opportunityNetValue(tx, funnelId)
+      const milestoneContext = await milestoneContextForFunnel(tx, funnelId)
+      const netValue = milestoneContext.value
       const target = Number(netValue) || 0
       const sum = parts.reduce((n, p) => n + Number(p.amount || 0), 0)
       if (cents(sum) !== cents(target)) {
@@ -671,13 +606,13 @@ export async function splitFunnelMilestones(
       const [invoiced] = await tx.select({ id: paymentMilestones.id }).from(paymentMilestones)
         .where(and(eq(paymentMilestones.funnelId, funnelId), eq(paymentMilestones.status, "invoiced"))).limit(1)
       if (invoiced) throw new Error("Invoiced milestones cannot be split.")
-      const status = await milestoneStatusForFunnel(tx, funnelId)
+      const status = milestoneContext.status
       await tx.delete(paymentMilestones).where(eq(paymentMilestones.funnelId, funnelId))
 
       const rows = parts.map((p, i) => ({
         tenantId: ctx.tenantId,
         funnelId,
-        quotationId: funnel.primaryQuotationId,
+        quotationId: milestoneContext.quotationId,
         status,
         title: p.title.trim(),
         name: milestoneName(funnel.projectCode, p.title.trim()),

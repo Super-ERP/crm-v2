@@ -2,6 +2,7 @@
 
 import { findManagerApprover, requireManagerApprover } from "@/server/services/approval-routing"
 
+import { canSelectBillToAccount, resolveQuotationBillingAccount, type QuotationBillingSnapshot } from "@/lib/quotation-billing"
 import { and, asc, desc, eq, isNull, ne, notInArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
@@ -41,7 +42,6 @@ import { syncFunnelProductsFromQuote } from "@/server/services/quote-sync"
 import { nextQuoteNumber } from "@/server/services/numbering"
 import { logActivity } from "@/server/services/activity"
 import { writeAudit } from "@/server/audit"
-import { seedDefaultFunnelMilestone } from "@/app/(app)/payment-milestones/actions"
 import { toDateString } from "@/lib/dates"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import {
@@ -96,6 +96,7 @@ export type QuotationHeaderInput = {
   notes: string | null
   delivery?: string | null
   paymentTerm?: string | null
+  billToAccountId?: string | null
   attentionContactId?: string | null
   headerDiscount?: string | null
   /** Tenant project-nature code (tenant_settings.product_types[].code), editable. */
@@ -230,7 +231,8 @@ export async function getQuotationDocument(
     let account: QuotationDocument["account"] = null
     let contact: QuotationDocument["contact"] = null
     let accountQuotationTemplateCode: string | null = null
-    if (row.accountId) {
+    const documentAccountId = resolveQuotationBillingAccount(row.accountId, row.q.billToAccountId)
+    if (documentAccountId) {
       const [accountWithType] = await tx
         .select({
           name: accounts.name,
@@ -242,14 +244,14 @@ export async function getQuotationDocument(
           quotationTemplateCode: accounts.quotationTemplateCode,
         })
         .from(accounts)
-        .where(eq(accounts.id, row.accountId))
+        .where(and(eq(accounts.id, documentAccountId), eq(accounts.tenantId, ctx.tenantId)))
         .limit(1)
 
       const attentionAccountId =
-        accountWithType?.accountType === "reseller" &&
+        !row.q.billToAccountId && accountWithType?.accountType === "reseller" &&
         accountWithType?.endUserAccountId
           ? accountWithType.endUserAccountId
-          : row.accountId
+          : documentAccountId
 
       if (accountWithType) {
         accountQuotationTemplateCode = accountWithType.quotationTemplateCode
@@ -264,7 +266,7 @@ export async function getQuotationDocument(
         }
       }
 
-      const [savedContact] = row.q.attentionContactId
+      const [savedContact] = row.q.attentionContactId && !row.q.billingSnapshot
         ? await tx
             .select({
               accountId: persons.accountId,
@@ -303,6 +305,11 @@ export async function getQuotationDocument(
           }
         }
       }
+    }
+
+    if (row.q.billingSnapshot) {
+      account = row.q.billingSnapshot.account
+      contact = row.q.billingSnapshot.contact
     }
 
     const [org] = await tx
@@ -453,7 +460,7 @@ export type QuotationContactOption = {
  * quotation create form. Fetched on demand by the embeddable create dialog so
  * it can stand alone wherever it is triggered.
  */
-export async function getQuotationFormMeta(funnelId?: string | null): Promise<{
+export async function getQuotationFormMeta(funnelId?: string | null, billToAccountId?: string | null, quotationId?: string | null): Promise<{
   taxOptions: TaxOption[]
   taxInclusive: boolean
   projectNatures: { code: string; name: string }[]
@@ -461,6 +468,8 @@ export async function getQuotationFormMeta(funnelId?: string | null): Promise<{
   /** Prefill for "Valid until" (today + tenant quote_valid_days), or null. */
   defaultValidUntil: string | null
   currencies: string[]
+  billToAccounts: { id: string; name: string }[]
+  billingAccount: QuotationBillingSnapshot["account"] | null
   contacts: QuotationContactOption[]
   defaultAttentionContactId: string | null
   quoteDefaults: {
@@ -512,6 +521,8 @@ export async function getQuotationFormMeta(funnelId?: string | null): Promise<{
       .where(and(eq(products.isActive, true), isNull(products.deletedAt)))
       .orderBy(asc(products.name))
     let contacts: QuotationContactOption[] = []
+    let billToAccounts: { id: string; name: string }[] = []
+    let billingAccount: QuotationBillingSnapshot["account"] | null = null
     if (funnelId) {
       const visible = await visibleMemberIds(tx, ctx)
       const [funnel] = await tx
@@ -528,22 +539,25 @@ export async function getQuotationFormMeta(funnelId?: string | null): Promise<{
       if (!funnel || (!canManageAllRecords(ctx) && !ownsOrManages(visible, funnel.ownerMemberId))) {
         throw new Error("Funnel not found")
       }
-      let recipientAccountId = funnel.accountId
-      if (recipientAccountId) {
-        const [account] = await tx
-          .select({ accountType: accounts.accountType, endUserAccountId: accounts.endUserAccountId })
-          .from(accounts)
-          .where(
-            and(
-              eq(accounts.id, recipientAccountId),
-              eq(accounts.tenantId, ctx.tenantId),
-              isNull(accounts.deletedAt)
-            )
-          )
-          .limit(1)
-        if (account?.accountType === "reseller" && account.endUserAccountId) {
-          recipientAccountId = account.endUserAccountId
-        }
+      let existingBillToAccountId: string | null = null
+      if (quotationId) {
+        const [quote] = await tx.select({ billToAccountId: quotations.billToAccountId })
+          .from(quotations).where(and(eq(quotations.id, quotationId), eq(quotations.funnelId, funnelId),
+            eq(quotations.tenantId, ctx.tenantId), isNull(quotations.deletedAt))).limit(1)
+        if (!quote) throw new Error("Quotation not found")
+        existingBillToAccountId = quote.billToAccountId
+      }
+      const available = await tx.select({ id: accounts.id, name: accounts.name,
+        accountType: accounts.accountType, ownerMemberId: accounts.ownerMemberId, code: accounts.code, phone: accounts.phone, address: accounts.billingAddress })
+        .from(accounts).where(and(eq(accounts.tenantId, ctx.tenantId), isNull(accounts.deletedAt)))
+        .orderBy(asc(accounts.name))
+      billToAccounts = available.filter(account => account.id === funnel.accountId ||
+        canSelectBillToAccount(account, visible, existingBillToAccountId)).map(({ id, name }) => ({ id, name }))
+      const recipientAccountId = resolveQuotationBillingAccount(funnel.accountId, billToAccountId)
+      const selectedAccount = available.find(account => account.id === recipientAccountId)
+      if (selectedAccount) billingAccount = { name: selectedAccount.name, code: selectedAccount.code, phone: selectedAccount.phone, address: selectedAccount.address as QuotationBillingSnapshot["account"]["address"] }
+      if (recipientAccountId && !billToAccounts.some(account => account.id === recipientAccountId)) {
+        throw new Error("Bill To account not available")
       }
       if (recipientAccountId) {
         contacts = await tx
@@ -582,6 +596,8 @@ export async function getQuotationFormMeta(funnelId?: string | null): Promise<{
       products: productOptions,
       defaultValidUntil,
       currencies: settings?.currencies?.length ? settings.currencies : DEFAULT_CURRENCIES,
+      billToAccounts,
+      billingAccount,
       contacts,
       defaultAttentionContactId: contacts.find((contact) => contact.isPrimary)?.id ?? null,
       quoteDefaults: {
@@ -626,6 +642,7 @@ export async function createQuotation(input: {
   notes?: string | null
   delivery?: string | null
   paymentTerm?: string | null
+  billToAccountId?: string | null
   attentionContactId?: string | null
   headerDiscount?: string | null
   /** Optional override; defaults to the funnel's project nature when omitted. */
@@ -681,26 +698,9 @@ export async function createQuotation(input: {
       opp.currency,
     )
 
-    let recipientAccountId = opp.accountId
-    if (recipientAccountId) {
-      const [account] = await tx
-        .select({
-          accountType: accounts.accountType,
-          endUserAccountId: accounts.endUserAccountId,
-        })
-        .from(accounts)
-        .where(
-          and(
-            eq(accounts.id, recipientAccountId),
-            eq(accounts.tenantId, ctx.tenantId),
-            isNull(accounts.deletedAt)
-          )
-        )
-        .limit(1)
-      if (account?.accountType === "reseller" && account.endUserAccountId) {
-        recipientAccountId = account.endUserAccountId
-      }
-    }
+    const billToAccountId = resolveQuotationBillingAccount(opp.accountId, input.billToAccountId)
+    await assertBillToAccount(tx, ctx.tenantId, billToAccountId, visible, opp.accountId)
+    const recipientAccountId = billToAccountId
 
     let attentionContactId: string | null = input.attentionContactId ?? null
     if (input.attentionContactId === undefined && recipientAccountId) {
@@ -749,6 +749,8 @@ export async function createQuotation(input: {
       paymentTerm: settings?.quoteDefaultPaymentTerm ?? null,
     })
 
+    const billingSnapshot = await loadBillingSnapshot(tx, ctx.tenantId, billToAccountId, attentionContactId)
+
     const { quoteNumber, version } = await nextQuoteNumber(tx, ctx, input.funnelId)
 
     const [created] = await tx
@@ -772,6 +774,8 @@ export async function createQuotation(input: {
         notes: content.notes,
         delivery: content.delivery,
         paymentTerm: content.paymentTerm,
+        billToAccountId,
+        billingSnapshot,
         attentionContactId,
       })
       .returning()
@@ -793,9 +797,6 @@ export async function createQuotation(input: {
       // Synced quote -> opportunity products (Salesforce Quote Line Item ->
       // Opportunity Product behaviour).
       await syncFunnelProductsFromQuote(tx, ctx.tenantId, input.funnelId, created.id)
-      // Itemised into the quotation by default: a synced quote seeds exactly
-      // one "Full Payment" milestone, no-op once any milestone exists.
-      await seedDefaultFunnelMilestone(tx, ctx, input.funnelId)
     }
 
     await logActivity(tx, ctx, {
@@ -809,7 +810,7 @@ export async function createQuotation(input: {
       action: "quotation.created",
       entityType: "quotation",
       entityId: created.id,
-      after: quotationContentAuditSnapshot(created),
+      after: { billToAccountId: created.billToAccountId, billingSnapshot: created.billingSnapshot, ...quotationContentAuditSnapshot(created) },
     })
     return created
   })
@@ -872,49 +873,23 @@ export async function updateQuotation(
       taxInclusive,
     })
 
-    let attentionContactId = existing.attentionContactId
-    if (input.attentionContactId !== undefined) {
-      attentionContactId = input.attentionContactId
-      if (
-        attentionContactId &&
-        attentionContactChanged(existing.attentionContactId, attentionContactId)
-      ) {
-        const [contact] = await tx
-          .select({ accountId: persons.accountId })
-          .from(persons)
-          .where(
-            and(
-              eq(persons.id, attentionContactId),
-              eq(persons.tenantId, ctx.tenantId),
-              isNull(persons.deletedAt)
-            )
-          )
-          .limit(1)
-        if (!contact) throw new Error("Attention contact not found")
-
-        let recipientAccountId = opp?.accountId ?? null
-        if (recipientAccountId) {
-          const [account] = await tx
-            .select({
-              accountType: accounts.accountType,
-              endUserAccountId: accounts.endUserAccountId,
-            })
-            .from(accounts)
-            .where(
-              and(
-                eq(accounts.id, recipientAccountId),
-                eq(accounts.tenantId, ctx.tenantId),
-                isNull(accounts.deletedAt)
-              )
-            )
-            .limit(1)
-          if (account?.accountType === "reseller" && account.endUserAccountId) {
-            recipientAccountId = account.endUserAccountId
-          }
-        }
-        assertAttentionContactBelongsToAccount(contact.accountId, recipientAccountId)
-      }
+    const billToAccountId = input.billToAccountId === undefined
+      ? existing.billToAccountId
+      : resolveQuotationBillingAccount(opp?.accountId ?? null, input.billToAccountId)
+    const billingChanged = billToAccountId !== existing.billToAccountId
+    if (billingChanged) await assertBillToAccount(tx, ctx.tenantId, billToAccountId, visible, opp?.accountId ?? null)
+    const attentionContactId = input.attentionContactId === undefined
+      ? (billingChanged ? null : existing.attentionContactId) : input.attentionContactId
+    if (attentionContactId && (billingChanged || billToAccountId || attentionContactChanged(existing.attentionContactId, attentionContactId))) {
+      const [contact] = await tx.select({ accountId: persons.accountId }).from(persons)
+        .where(and(eq(persons.id, attentionContactId), eq(persons.tenantId, ctx.tenantId), isNull(persons.deletedAt))).limit(1)
+      if (!contact) throw new Error("Attention contact not found")
+      assertAttentionContactBelongsToAccount(contact.accountId,
+        resolveQuotationBillingAccount(opp?.accountId ?? null, billToAccountId))
     }
+    const billingSnapshot = billToAccountId
+      ? await loadBillingSnapshot(tx, ctx.tenantId, billToAccountId, attentionContactId)
+      : existing.billingSnapshot
     const content = resolveQuotationContent(input, {
       notes: existing.notes,
       delivery: existing.delivery,
@@ -936,6 +911,8 @@ export async function updateQuotation(
         notes: content.notes,
         delivery: content.delivery,
         paymentTerm: content.paymentTerm,
+        billToAccountId,
+        billingSnapshot,
         attentionContactId,
         updatedAt: new Date(),
       })
@@ -951,28 +928,24 @@ export async function updateQuotation(
     if (existing.isPrimary) {
       await syncOpportunityAmount(tx, ctx, existing.funnelId)
       await syncFunnelProductsFromQuote(tx, ctx.tenantId, existing.funnelId, id)
-      // Covers the common case of a quote auto-promoted to primary while
-      // still $0 (a brand-new draft), then given real value here — the
-      // "becomes primary" seed call already fired at net value 0 and no-op'd.
-      await seedDefaultFunnelMilestone(tx, ctx, existing.funnelId)
     }
 
     await writeAudit(tx, ctx, {
       action: "quotation.updated",
       entityType: "quotation",
       entityId: id,
-      before: quotationContentAuditSnapshot({
+      before: { billToAccountId: existing.billToAccountId, billingSnapshot: existing.billingSnapshot, ...quotationContentAuditSnapshot({
         attentionContactId: existing.attentionContactId,
         notes: existing.notes,
         delivery: existing.delivery,
         paymentTerm: existing.paymentTerm,
-      }),
-      after: quotationContentAuditSnapshot({
+      }) },
+      after: { billToAccountId, billingSnapshot, ...quotationContentAuditSnapshot({
         attentionContactId,
         notes: content.notes,
         delivery: content.delivery,
         paymentTerm: content.paymentTerm,
-      }),
+      }) },
     })
     return updated
   })
@@ -1034,8 +1007,17 @@ export async function canApproveQuotation(id: string): Promise<boolean> {
  * intentionally does not filter soft-deleted rows: a deleted quotation is
  * still tenant-owned history and may be revised by a user who can see it.
  */
-export async function createQuotationRevision(
-  sourceQuotationId: string
+export async function createQuotationRevision(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
+  return createQuotationCopy(sourceQuotationId, "revision")
+}
+
+export async function duplicateQuotation(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
+  return createQuotationCopy(sourceQuotationId, "duplicate")
+}
+
+async function createQuotationCopy(
+  sourceQuotationId: string,
+  mode: "revision" | "duplicate"
 ): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
   return runAction(async () => {
     let sourceFunnelId: string | null = null
@@ -1052,7 +1034,10 @@ export async function createQuotationRevision(
         .limit(1)
         .for("update")
       if (!source) throw new Error("Quotation not found")
-      if (!canCreateQuotationRevision(source.status, source.deletedAt)) {
+      if (mode === "duplicate" && source.deletedAt) {
+        throw new Error("Deleted quotations cannot be duplicated")
+      }
+      if (mode === "revision" && !canCreateQuotationRevision(source.status, source.deletedAt)) {
         throw new Error("Only eligible non-draft quotations can be revised")
       }
       sourceFunnelId = source.funnelId
@@ -1070,7 +1055,7 @@ export async function createQuotationRevision(
         .from(funnels)
         .where(eq(funnels.id, source.funnelId))
         .limit(1)
-      let recipientAccountId = funnel?.accountId ?? null
+      let recipientAccountId = resolveQuotationBillingAccount(funnel?.accountId ?? null, source.billToAccountId)
       if (recipientAccountId) {
         const [account] = await tx
           .select({
@@ -1086,7 +1071,7 @@ export async function createQuotationRevision(
             )
           )
           .limit(1)
-        if (account?.accountType === "reseller" && account.endUserAccountId) {
+        if (!source.billToAccountId && account?.accountType === "reseller" && account.endUserAccountId) {
           recipientAccountId = account.endUserAccountId
         }
       }
@@ -1120,7 +1105,7 @@ export async function createQuotationRevision(
         .values({
           tenantId: ctx.tenantId,
           funnelId: source.funnelId,
-          revisionOfId: source.id,
+          revisionOfId: mode === "revision" ? source.id : null,
           quoteNumber,
           version,
           isPrimary: false,
@@ -1135,11 +1120,13 @@ export async function createQuotationRevision(
           discountTotal: source.discountTotal,
           taxTotal: source.taxTotal,
           total: source.total,
-          quoteDate: source.quoteDate,
-          validUntil: source.validUntil,
+          quoteDate: mode === "duplicate" ? toDateString() : source.quoteDate,
+          validUntil: mode === "duplicate" ? null : source.validUntil,
           notes: source.notes,
           delivery: source.delivery,
           paymentTerm: source.paymentTerm,
+          billToAccountId: source.billToAccountId,
+          billingSnapshot: source.billingSnapshot,
           attentionContactId,
           approverMemberId: null,
           approvedAt: null,
@@ -1173,7 +1160,7 @@ export async function createQuotationRevision(
       }
 
       await writeAudit(tx, ctx, {
-        action: "quotation.revision_created",
+        action: mode === "duplicate" ? "quotation.duplicated" : "quotation.revision_created",
         entityType: "quotation",
         entityId: created.id,
         before: {
@@ -1182,7 +1169,7 @@ export async function createQuotationRevision(
           sourceStatus: source.status,
         },
         after: {
-          revisionOfId: source.id,
+          revisionOfId: mode === "revision" ? source.id : null,
           quoteNumber: created.quoteNumber,
           version,
           status: "draft",
@@ -1311,15 +1298,26 @@ export async function rejectQuotation(
   })
 }
 
-export async function returnApprovedQuotationToDraft(
-  id: string
+export async function returnApprovedQuotationToDraft(id: string): Promise<ActionResult<void>> {
+  return returnQuotationToDraft(id, "approved")
+}
+
+export async function recallQuotation(id: string): Promise<ActionResult<void>> {
+  return returnQuotationToDraft(id, "pending_approval")
+}
+
+async function returnQuotationToDraft(
+  id: string,
+  expectedStatus: "approved" | "pending_approval"
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
     await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
       const quotation = await getLockedQuotation(tx, id)
       await assertQuotationAccess(tx, ctx, quotation)
-      if (quotation.status !== "approved") {
-        throw new Error("Only approved quotations can be returned to Draft")
+      if (quotation.status !== expectedStatus) {
+        throw new Error(expectedStatus === "pending_approval"
+          ? "Only quotations pending approval can be recalled"
+          : "Only approved quotations can be returned to Draft")
       }
       assertQuotationTransition(quotation.status, "draft")
 
@@ -1334,7 +1332,7 @@ export async function returnApprovedQuotationToDraft(
         })
         .where(eq(quotations.id, id))
       await writeAudit(tx, ctx, {
-        action: "quotation.returned_to_draft",
+        action: expectedStatus === "pending_approval" ? "quotation.recalled" : "quotation.returned_to_draft",
         entityType: "quotation",
         entityId: id,
         before: { status: quotation.status },
@@ -1681,7 +1679,6 @@ async function reassignPrimaryAfterRemoval(
     // Synced quote -> opportunity products (Salesforce Quote Line Item ->
     // Opportunity Product behaviour).
     await syncFunnelProductsFromQuote(tx, ctx.tenantId, funnelId, candidate.id)
-    await seedDefaultFunnelMilestone(tx, ctx, funnelId)
   } else {
     // No live quote remains: clear the pointer AND reset the amount. Without
     // this, syncOpportunityAmount short-circuits on the null pointer and the
@@ -1753,9 +1750,6 @@ export async function setPrimaryQuotation(
     // Synced quote -> opportunity products (Salesforce Quote Line Item ->
     // Opportunity Product behaviour).
     await syncFunnelProductsFromQuote(tx, ctx.tenantId, q.funnelId, id)
-    // Itemised into the quotation by default: a synced quote seeds exactly
-    // one "Full Payment" milestone, no-op once any milestone exists.
-    await seedDefaultFunnelMilestone(tx, ctx, q.funnelId)
     await writeAudit(tx, ctx, {
       action: "quotation.set_primary",
       entityType: "quotation",
@@ -1820,4 +1814,23 @@ export async function deleteQuotation(id: string): Promise<ActionResult<void>> {
   })
   revalidatePath("/quotations")
   })
+}
+
+async function assertBillToAccount(tx: Tx, tenantId: string, accountId: string | null,
+  visible: string[] | null, existingAccountId: string | null) {
+  if (!accountId) throw new Error("Bill To account is required")
+  const [account] = await tx.select({ id: accounts.id, accountType: accounts.accountType, ownerMemberId: accounts.ownerMemberId })
+    .from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId), isNull(accounts.deletedAt))).limit(1)
+  if (!account || !canSelectBillToAccount(account, visible, existingAccountId)) throw new Error("Bill To account not available")
+}
+
+async function loadBillingSnapshot(tx: Tx, tenantId: string, accountId: string | null,
+  attentionContactId: string | null): Promise<QuotationBillingSnapshot | null> {
+  if (!accountId) return null
+  const [account] = await tx.select({ name: accounts.name, code: accounts.code, phone: accounts.phone, address: accounts.billingAddress })
+    .from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId), isNull(accounts.deletedAt))).limit(1)
+  if (!account) throw new Error("Bill To account not found")
+  const [person] = attentionContactId ? await tx.select({ firstName: persons.firstName, lastName: persons.lastName, email: persons.email, phone: persons.phone })
+    .from(persons).where(and(eq(persons.id, attentionContactId), eq(persons.accountId, accountId), eq(persons.tenantId, tenantId), isNull(persons.deletedAt))).limit(1) : []
+  return { account: { ...account, address: account.address as QuotationBillingSnapshot["account"]["address"] }, contact: person ? { name: [person.firstName, person.lastName].filter(Boolean).join(" "), email: person.email, phone: person.phone } : null }
 }

@@ -1,5 +1,6 @@
 import {
   pgTable,
+  jsonb,
   pgEnum,
   uuid,
   text,
@@ -18,7 +19,8 @@ import { sql } from "drizzle-orm"
 import { organization, member } from "./auth"
 import { funnels } from "./pipeline"
 import { products } from "./products"
-import { persons } from "./crm"
+import { persons, accounts } from "./crm"
+import type { QuotationBillingSnapshot } from "../../lib/quotation-billing"
 import { timestamps, softDelete } from "./_helpers"
 
 export const quotationStatus = pgEnum("quotation_status", [
@@ -108,7 +110,10 @@ export const quotations = pgTable(
     quoteDate: date("quote_date"),
     validUntil: date("valid_until"),
     notes: text("notes"),
-    /** Attention contact snapshot, constrained to the recipient account in actions. */
+    /** Quote-specific billing party; null retains legacy funnel-account behavior. */
+    billToAccountId: uuid("bill_to_account_id").references(() => accounts.id, { onDelete: "restrict" }),
+    billingSnapshot: jsonb("billing_snapshot").$type<QuotationBillingSnapshot>(),
+    /** Attention contact belongs to the quote bill-to account. */
     attentionContactId: uuid("attention_contact_id").references(() => persons.id, {
       onDelete: "set null",
     }),
@@ -122,6 +127,7 @@ export const quotations = pgTable(
   },
   (t) => [
     unique("quotations_number_uq").on(t.tenantId, t.quoteNumber),
+    index("quotations_bill_to_account_idx").on(t.tenantId, t.billToAccountId),
     index("quotations_revision_of_idx").on(t.revisionOfId),
     uniqueIndex("quotations_funnel_version_uq").on(t.funnelId, t.version),
     // DB-level backstops for the app-side guards in acceptQuotation /

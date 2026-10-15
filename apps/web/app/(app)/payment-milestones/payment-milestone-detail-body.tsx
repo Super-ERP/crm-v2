@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DetailAside,
@@ -25,8 +26,7 @@ import {
 
 const STATUS_ORDER = paymentMilestoneStatus.enumValues
 const STATUS_LABELS: Record<(typeof STATUS_ORDER)[number], string> = {
-  planned: "Planned",
-  won: "Won",
+  pending_invoicing: "Pending invoicing",
   invoiced: "Invoiced",
 }
 
@@ -41,6 +41,7 @@ export function PaymentMilestoneDetailBody({
   const saveField = useSaveField((patch: FunnelMilestoneUpdateInput) =>
     updateFunnelMilestone(milestone.id, patch)
   )
+  const [pending, startTransition] = React.useTransition()
   const canEditAmount = canManage && milestone.status !== "invoiced"
   const currentIndex = STATUS_ORDER.indexOf(milestone.status)
   const steps: PathStep[] = STATUS_ORDER.map((status, index) => ({
@@ -52,7 +53,7 @@ export function PaymentMilestoneDetailBody({
         : index === currentIndex
           ? "current"
           : "upcoming",
-    tone: status === "won" ? "won" : "default",
+    tone: "default",
   }))
 
   return (
@@ -140,6 +141,9 @@ export function PaymentMilestoneDetailBody({
           </CardHeader>
           <CardContent>
             <StagePathView steps={steps} />
+            {canManage && milestone.status === "pending_invoicing" ? (
+              <Button className="mt-4" disabled={pending} onClick={() => startTransition(async () => { await saveField({ status: "invoiced" }) })}>Mark invoiced</Button>
+            ) : null}
           </CardContent>
         </Card>
 

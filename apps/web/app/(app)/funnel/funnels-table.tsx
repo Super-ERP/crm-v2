@@ -93,6 +93,7 @@ export function OpportunitiesTable({
 }: {
   initialPage: { rows: OpportunityListRow[]; total: number }
   filterOptions: {
+    expectedCloseYears: Array<{ value: string; label: string }>;
     accounts: Array<{ value: string; label: string }>; opportunities: Array<{ value: string; label: string }>;
     funnels: Array<{ value: string; label: string }>; accountOwners: Array<{ value: string; label: string }>;
     owners: Array<{ value: string; label: string }>; stages: Array<{ value: string; label: string }>;
@@ -114,7 +115,7 @@ export function OpportunitiesTable({
       filters={[
         { type: "relation", columnId: "accountId", title: "Account", options: filterOptions.accounts },
         { type: "relation", columnId: "opportunityId", title: "Opportunity", options: filterOptions.opportunities },
-        { type: "relation", columnId: "id", title: "Funnel", options: filterOptions.funnels },
+        { type: "enum", columnId: "expectedCloseDate", title: "Expected close year", options: filterOptions.expectedCloseYears },
         { type: "relation", columnId: "accountOwnerMemberId", title: "Account owner", options: filterOptions.accountOwners },
         { type: "relation", columnId: "stageId", title: "Stage", options: filterOptions.stages },
         { type: "enum", columnId: "status", title: "Status", options: ["open", "won", "lost", "on_hold"].map((value) => ({ value, label: value })) },

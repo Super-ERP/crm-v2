@@ -51,6 +51,7 @@ import {
   approveQuotation,
   rejectQuotation,
   returnApprovedQuotationToDraft,
+  recallQuotation,
   sendQuotation,
   submitQuotationForApproval,
   rejectCustomerQuotation,
@@ -209,6 +210,29 @@ describe("quotation approval actions", () => {
       ctx,
       expect.objectContaining({ action: "quotation.approved" })
     )
+  })
+
+  it("recalls Pending Approval to an editable Draft without allocating a number", async () => {
+    const fixture = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "rep" }],
+    ])
+    currentTx = fixture.tx
+    expect(await recallQuotation("quote-1")).toMatchObject({ ok: true })
+    expect(fixture.updates[0]).toMatchObject({ status: "draft", approverMemberId: null, approvedAt: null })
+    expect(fixture.updates[0]).not.toHaveProperty("quoteNumber")
+    expect(mocks.writeAudit).toHaveBeenCalledWith(currentTx, ctx,
+      expect.objectContaining({ action: "quotation.recalled" }))
+  })
+
+  it("does not recall a quotation already sent to the customer", async () => {
+    const fixture = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "sent" }],
+      [{ ownerMemberId: "rep" }],
+    ])
+    currentTx = fixture.tx
+    expect(await recallQuotation("quote-1")).toMatchObject({ ok: false })
+    expect(fixture.updates).toHaveLength(0)
   })
 
   it("requires explicit reset before editing an Approved quotation", async () => {

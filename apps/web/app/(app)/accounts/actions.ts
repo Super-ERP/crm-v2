@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { and, asc, desc, eq, isNull, ne, sql } from "drizzle-orm"
+import { and, or, asc, desc, eq, isNull, ne, sql } from "drizzle-orm"
 import { withTenant } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
 import { accountsList, accountsGet, accountsFilterOptions } from "@/lib/api-readers"
@@ -113,9 +113,8 @@ async function tenantAccountCurrency(
 }
 
 /**
- * Resolve accountType + endUserAccountId for persistence. A reseller must name
- * an end-user account; a client is its own end user, so its endUserAccountId is
- * always cleared. Defaults to "client".
+ * Preserve the optional legacy default end user. Actual billing relationships
+ * are quote-specific and allow a reseller to serve multiple end users.
  */
 function resolveAccountType(input: AccountInput): {
   accountType: "client" | "reseller"
@@ -123,10 +122,7 @@ function resolveAccountType(input: AccountInput): {
 } {
   const accountType = input.accountType === "reseller" ? "reseller" : "client"
   if (accountType === "reseller") {
-    if (!input.endUserAccountId) {
-      throw new Error("End user is required for resellers")
-    }
-    return { accountType, endUserAccountId: input.endUserAccountId }
+    return { accountType, endUserAccountId: input.endUserAccountId || null }
   }
   return { accountType, endUserAccountId: null }
 }
@@ -273,7 +269,7 @@ export async function listAccountQuotations(
       .innerJoin(funnels, eq(quotations.funnelId, funnels.id))
       .where(
         and(
-          eq(funnels.accountId, accountId),
+          or(eq(funnels.accountId, accountId), eq(quotations.billToAccountId, accountId)),
           isNull(quotations.deletedAt),
           isNull(funnels.deletedAt),
           ownerScope(funnels.ownerMemberId, visible)

@@ -196,6 +196,8 @@ export type FunnelDetailData = {
   /** Payment milestones attached to this funnel (core, funnel-scoped). */
   milestones: PaymentMilestoneRow[]
   /** Gates the milestones panel's add/edit/reorder/delete affordances. */
+  milestoneValueCeiling: string | null
+  milestoneEligible: boolean
   canManageMilestones: boolean
 }
 
@@ -453,7 +455,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
     []
   )
 
-  const milestoneValueCeiling = quotedAmount ?? estimatedAmount ?? null
+  const milestoneValueCeiling = props.milestoneValueCeiling
 
   const [viewStage, setViewStage] = React.useState({
     sourceStageId: currentStageId,
@@ -1281,7 +1283,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
               : []),
             { kind: "quotation", label: "Quotations", count: quotations.length, onSelect: () => setTab("quotations") },
             { kind: "product", label: "Products", count: products.length, onSelect: () => setTab("products") },
-            { kind: "milestone", label: "Payment Milestones", count: milestones.length, onSelect: () => setTab("milestones") },
+            ...(props.milestoneEligible ? [{ kind: "milestone" as const, label: "Payment Milestones", count: milestones.length, onSelect: () => setTab("milestones") }] : []),
             ...(projectsEnabled
               ? [{ kind: "project" as const, label: "Projects", count: projects.length, onSelect: () => setTab("projects") }]
               : []),
@@ -1324,7 +1326,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
           </CardContent>
         </Card>
 
-        <TabsCard value={tab} onValueChange={setTab}>
+        <TabsCard value={tab === "milestones" && !props.milestoneEligible ? "activity" : tab} onValueChange={setTab}>
               <TabsList>
 
                 <CountTab value="activity">Activity</CountTab>
@@ -1334,9 +1336,9 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 <CountTab value="products" count={products.length}>
                   Products
                 </CountTab>
-                <CountTab value="milestones" count={milestones.length}>
-                  Payment Milestones
-                </CountTab>
+                {props.milestoneEligible ? (
+                  <CountTab value="milestones" count={milestones.length}>Payment Milestones</CountTab>
+                ) : null}
                 {projectsEnabled ? (
                   <CountTab value="projects" count={projects.length}>
                     Projects
@@ -1404,7 +1406,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 />
               </TabsContent>
 
-              <TabsContent value="milestones" className="mt-4">
+              {props.milestoneEligible ? <TabsContent value="milestones" className="mt-4">
                 <MilestonesPanel
                   milestones={milestones as MilestoneItemBase[]}
                   valueCeiling={milestoneValueCeiling}
@@ -1419,7 +1421,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                   onReorder={(order) => reorderFunnelMilestones(funnelId, order)}
                   onSplit={(parts) => splitFunnelMilestones(funnelId, parts)}
                 />
-              </TabsContent>
+              </TabsContent> : null}
 
               {projectsEnabled ? (
                 <TabsContent value="projects" className="mt-4">
