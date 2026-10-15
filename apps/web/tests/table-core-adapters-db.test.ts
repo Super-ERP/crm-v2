@@ -52,6 +52,11 @@ const url=process.env.TEST_DATABASE_ADMIN_URL
     ()=>quotationsList(tx,ctx,{limit:25,offset:0,query:{filterTree:tree('primary',true,'equals')}}),
    ]
    for(const run of cases){const result=await run();expect(result.total).toBe(1);expect(result.rows).toHaveLength(1)}
+   await client`update opportunities set total_estimated_funnel_amount=null,currency='EUR',estimated_totals_by_currency='[{"currency":"MYR","total":"100"},{"currency":"USD","total":"200"}]'::jsonb where id=${opp}`
+   const mixed=await opportunitiesList(tx,ctx,{limit:25,offset:0,query:{...query,filterTree:tree('totalEstimatedFunnelAmount',{currency:'MYR',amount:100},'equals')}})
+   expect(mixed.total).toBe(1)
+   const notEmpty=await opportunitiesList(tx,ctx,{limit:25,offset:0,query:{...query,filterTree:tree('totalEstimatedFunnelAmount',undefined,'empty')}})
+   expect(notEmpty.total).toBe(0)
    const input={pageIndex:0,pageSize:25,search:'',sorting:[],filters:[],filterTree:tree('name','No match')}
    // Execute every operational adapter with a real predicate, exercising count joins too.
    const operational=[
@@ -64,6 +69,12 @@ const url=process.env.TEST_DATABASE_ADMIN_URL
     ()=>listSalesOrderPage({...input,filterTree:tree('submittedByName','Representative')}),
    ]
    for(const run of operational){const result=await run();expect(result.total).toBe(0);expect(result.rows).toHaveLength(0)}
+   const legacyProject=randomUUID()
+   await client`insert into projects (id,tenant_id,name,owner_member_id,currency) values (${legacyProject},'qm','Historical delivery','rep','USD')`
+   await client`insert into payment_milestones (id,tenant_id,project_id,title,amount,status) values (${randomUUID()},'qm',${legacyProject},'Historical invoice',100,'invoiced')`
+   const historical=await listPaymentMilestonePage({...input,filterTree:tree('amount',{currency:'USD',amount:100},'equals')})
+   expect(historical.total).toBe(1)
+   expect(historical.rows[0].currency).toBe('USD')
 
   } finally {await client.unsafe(`drop schema if exists "${namespace}" cascade`);await client.end()}
  })

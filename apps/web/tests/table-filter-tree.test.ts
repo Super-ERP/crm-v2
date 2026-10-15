@@ -47,3 +47,10 @@ it('treats empty associations as empty and compares relation selections by ident
  const empty=validateFilterTree(group([rule('ownerName','empty')]),[relation])
  expect(evaluateFilterTree({ownerName:[null,'']},empty,[relation],context)).toBe(true)
 })
+it('rejects year zero and handles the last supported calendar day without overflow',()=>{
+ expect(()=>validateFilterTree(group([rule('expectedCloseDate','on','0000-01-01')]),fields)).toThrow()
+ const last=validateFilterTree(group([rule('expectedCloseDate','on','9999-12-31')]),fields)
+ expect(evaluateFilterTree({expectedCloseDate:'9999-12-31'},last,fields,context)).toBe(true)
+ const after=validateFilterTree(group([rule('expectedCloseDate','after','9999-12-31')]),fields)
+ expect(evaluateFilterTree({expectedCloseDate:'9999-12-31'},after,fields,context)).toBe(false)
+})

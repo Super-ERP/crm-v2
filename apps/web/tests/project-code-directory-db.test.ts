@@ -147,4 +147,23 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
     }
   })
 
+  it("keeps hidden account names and hidden parent contact relationships outside code filters",async()=>{
+    const hiddenContact=randomUUID()
+    try {
+      await client`update accounts set owner_member_id='other' where id=${account}`
+      const filtered=await getProjectCode(tx,ctx,'CROSS',0,false,{filterTree:{kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId:'account',operator:'contains',value:'End user'}]}})
+      expect(filtered?.total).toBe(0)
+      await client`insert into persons values (${hiddenContact},'qm','Hidden','Sponsor',${reseller},null,'secret@example.test',null)`
+      await client`update opportunities set owner_member_id='other',owner_contact_id=${hiddenContact} where id=${parent}`
+      const detail=await getProjectCode(tx,ctx,'CROSS',0,false)
+      expect(detail?.contacts.some(p=>p.id===hiddenContact)).toBe(false)
+      const contacts=await listProjectCodeRelatedRecords(tx,ctx,'CROSS','contacts')
+      expect(contacts.rows.some(p=>p.id===hiddenContact)).toBe(false)
+    }finally{
+      await client`update accounts set owner_member_id='rep' where id=${account}`
+      await client`update opportunities set owner_member_id='rep',owner_contact_id=null where id=${parent}`
+      await client`delete from persons where id=${hiddenContact}`
+    }
+  })
+
 })

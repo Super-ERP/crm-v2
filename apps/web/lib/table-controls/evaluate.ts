@@ -12,7 +12,7 @@ export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: read
     if(node.kind==='group')return !node.children.length|| (node.logic==='and'?node.children.every(match):node.children.some(match))
     const field=byId.get(node.fieldId);if(!field)throw new Error('Unavailable filter field')
     const raw=valueFor?valueFor(row,node.fieldId):(row as Record<string,unknown>)[node.fieldId]
-    const normalizedRaw=Array.isArray(raw)?raw.filter(x=>tableScalar(x)!=null&&tableScalar(x)!==''):raw
+    const normalizedRaw=Array.isArray(raw)?raw.filter(x=>x!=null&&x!==''):raw
     const value=tableScalar(normalizedRaw), empty=value==null||value===''||(Array.isArray(value)&&!value.length)
     const op=node.operator,v=node.value
     if(op==='empty')return empty
@@ -23,14 +23,20 @@ export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: read
       if(value instanceof Date || typeof value==='number' || String(value).includes('T') || String(value).includes(' ')){
         const d=new Date(value as string|number|Date);if(Number.isNaN(d.getTime()))return false
         const p=new Intl.DateTimeFormat('en-CA',{timeZone:context.timezone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d)
-        const get=(type:string)=>p.find(x=>x.type===type)!.value;date=`${get('year')}-${get('month')}-${get('day')}`
+        const get=(type:string)=>p.find(x=>x.type===type)!.value;date=`${get('year').padStart(4,'0')}-${get('month')}-${get('day')}`
       } else date=String(value).slice(0,10)
+      if(op==='year')return Number(date.split('-')[0])===Number(v)
+      if(op==='on')return date===String(v)
+      if(op==='before')return date<String(v)
+      if(op==='after')return date>String(v)
+      if(op==='between'){const [from,to]=v as string[];return date>=from&&date<=to}
       const [from,to]=filterDateRange(node,context);return (!from||date>=from)&&(!to||date<to)
     }
     if(field.type==='number'||field.type==='money'){
-      const n=Number(value);if(!Number.isFinite(n))return false
       const money=v as {currency:string;amount:number;min:number;max:number}
-      if(field.type==='money'&&String(field.currency??(row as Record<string,unknown>).currency??'')!==money.currency)return false
+      const bucket=Array.isArray(value)?value.find(entry=>entry&&typeof entry==='object'&&(entry as Record<string,unknown>).currency===money.currency) as {total:unknown}|undefined:undefined
+      const n=Number(Array.isArray(value)?bucket?.total??NaN:value);if(!Number.isFinite(n))return false
+      if(field.type==='money'&&!Array.isArray(value)&&String(field.currency??(row as Record<string,unknown>).currency??'')!==money.currency)return false
       const expected=field.type==='money'?money.amount:Number(v)
       if(op==='between'){const range=field.type==='money'?[money.min,money.max]:v as number[];return n>=range[0]&&n<=range[1]}
       if(op==='equals')return n===expected;if(op==='not-equals')return n!==expected

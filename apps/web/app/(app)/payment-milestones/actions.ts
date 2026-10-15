@@ -94,7 +94,8 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
       ["title", "amount", "quoteNumber", "status", "funnelName"], ["status"],getTableFields("payment-milestones"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const statuses = query.selections.status?.filter((value): value is (typeof paymentMilestoneStatus.enumValues)[number] => paymentMilestoneStatus.enumValues.includes(value as (typeof paymentMilestoneStatus.enumValues)[number]))
-    const where = and(recordFilter("payment-milestones",query.filterTree,{title:paymentMilestones.title,amount:paymentMilestones.amount,quoteNumber:quotations.quoteNumber,status:paymentMilestones.status,funnelName:funnels.name},{currency:quotations.currency}),
+    const milestoneCurrency=sql<string|null>`coalesce(${quotations.currency},${funnels.currency},(select projects.currency from projects where projects.id=${paymentMilestones.projectId} and projects.tenant_id=${paymentMilestones.tenantId}))`
+    const where = and(recordFilter("payment-milestones",query.filterTree,{title:paymentMilestones.title,amount:paymentMilestones.amount,quoteNumber:quotations.quoteNumber,status:paymentMilestones.status,funnelName:funnels.name},{currency:milestoneCurrency}),
       await milestoneReadScope(tx, ctx),
       search ? or(ilike(paymentMilestones.title, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
       statuses?.length ? inArray(paymentMilestones.status, statuses) : undefined)
@@ -104,7 +105,7 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
     const [rows, totalRows] = await Promise.all([tx
       .select({
         m: paymentMilestones,
-        currency: quotations.currency,
+        currency: milestoneCurrency,
         funnelName: funnels.name,
         quoteNumber: quotations.quoteNumber,
       })

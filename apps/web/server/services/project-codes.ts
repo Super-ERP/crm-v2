@@ -27,6 +27,10 @@ export type CodeDetail = {
   opportunities: RelatedRecord[]; quotations: RelatedRecord[]; accounts: RelatedRecord[]; contacts: RelatedRecord[]; projects: RelatedRecord[]
 }
 
+function parentContactScope(visible:string[]|null) {
+  return visible===null?sql`true`:visible.length?sql`o.owner_member_id IN (${sql.join(visible.map(id=>sql`${id}`),sql`, `)})`:sql`false`
+}
+
 function codeSource(ctx: ServerContext, visible: string[] | null): SQL {
   return sql`SELECT funnels.*, o.name AS opportunity_name, o.owner_member_id AS opportunity_owner,
       o.project_code AS crm_code, o.primary_person_id AS opportunity_person_id,
@@ -86,7 +90,7 @@ export async function getProjectCode(tx: Tx, ctx: ServerContext, code: string, p
       f.opportunity_id AS "opportunityId", f.opportunity_name AS "opportunityName", f.opportunity_owner AS "opportunityOwner",
       coalesce(f.project_code = ${code}, false) AS "primary", coalesce(f.cross_deal_project_code = ${code}, false) AS "crossDeal",
       coalesce(f.crm_code = ${code} AND ${crmScope}, false) AS "crm"
-    FROM eligible f WHERE ${match} AND ${recordFilter('project-code-funnels',options.filterTree,{name:sql`f.name`,stageName:sql`f.stage_name`,estimatedAmount:sql`f.estimated_amount`,expectedCloseDate:sql`f.expected_close_date`,status:sql`f.status`,ownerName:sql`(SELECT cu.name FROM member cm JOIN "user" cu ON cu.id=cm.user_id WHERE cm.id=f.owner_member_id AND cm.organization_id=f.tenant_id)`,account:sql`(SELECT name FROM accounts WHERE id=f.account_id AND tenant_id=f.tenant_id)`,opportunity:sql`CASE WHEN ${crmScope} THEN f.opportunity_name END`,relationship:sql`array_remove(ARRAY[CASE WHEN f.project_code=${code} THEN 'primary' END,CASE WHEN f.cross_deal_project_code=${code} THEN 'cross-deal' END,CASE WHEN f.crm_code=${code} AND ${crmScope} THEN 'crm' END],NULL)`},{currency:sql`f.currency`,dateOnly:['expectedCloseDate'],arrays:['relationship']})??sql`true`} AND ${search ? sql`f.name ILIKE ${like}` : sql`true`}
+    FROM eligible f WHERE ${match} AND ${recordFilter('project-code-funnels',options.filterTree,{name:sql`f.name`,stageName:sql`f.stage_name`,estimatedAmount:sql`f.estimated_amount`,expectedCloseDate:sql`f.expected_close_date`,status:sql`f.status`,ownerName:sql`(SELECT cu.name FROM member cm JOIN "user" cu ON cu.id=cm.user_id WHERE cm.id=f.owner_member_id AND cm.organization_id=f.tenant_id)`,...(ctx.can(PERMISSIONS.ACCOUNT_VIEW)?{account:sql`(SELECT accounts.name FROM accounts WHERE accounts.id=f.account_id AND accounts.tenant_id=f.tenant_id AND accounts.deleted_at IS NULL AND ${accountReadScope(visible)??sql`true`})`}:{}),opportunity:sql`CASE WHEN ${crmScope} THEN f.opportunity_name END`,relationship:sql`array_remove(ARRAY[CASE WHEN f.project_code=${code} THEN 'primary' END,CASE WHEN f.cross_deal_project_code=${code} THEN 'cross-deal' END,CASE WHEN f.crm_code=${code} AND ${crmScope} THEN 'crm' END],NULL)`},{currency:sql`f.currency`,dateOnly:['expectedCloseDate'],arrays:['relationship']})??sql`true`} AND ${search ? sql`f.name ILIKE ${like}` : sql`true`}
     ORDER BY ${sql.join(recordSort(options.sorting,sortColumns,sql`${sortColumn} ${direction}`),sql`, `)}, f.id LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}`)
   if (!rows.length) {
     if (!search && !options.filterTree?.children.length && pageIndex === 0) return null
@@ -116,9 +120,9 @@ export async function getProjectCode(tx: Tx, ctx: ServerContext, code: string, p
     WHERE persons.tenant_id = ${ctx.tenantId} AND persons.deleted_at IS NULL AND accounts.deleted_at IS NULL
       AND ${accountReadScope(visible) ?? sql`true`} AND persons.id IN (
         SELECT f.primary_person_id FROM funnels f WHERE f.id IN (${ids})
-        UNION SELECT o.primary_person_id FROM opportunities o JOIN funnels f ON f.opportunity_id = o.id WHERE f.id IN (${ids})
-        UNION SELECT o.owner_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id = o.id WHERE f.id IN (${ids})
-        UNION SELECT o.power_sponsor_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id = o.id WHERE f.id IN (${ids})
+        UNION SELECT o.primary_person_id FROM opportunities o JOIN funnels f ON f.opportunity_id = o.id WHERE f.id IN (${ids}) AND ${parentContactScope(visible)}
+        UNION SELECT o.owner_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id = o.id WHERE f.id IN (${ids}) AND ${parentContactScope(visible)}
+        UNION SELECT o.power_sponsor_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id = o.id WHERE f.id IN (${ids}) AND ${parentContactScope(visible)}
         UNION SELECT attention_contact_id FROM (${quoteSource}) q
       ) ORDER BY name, persons.id`) : []
   const deliveryProjects = projectsEnabled && ctx.can(PERMISSIONS.PROJECT_VIEW) ? await tx.execute<RelatedRecord>(sql`
@@ -162,7 +166,7 @@ export async function listProjectCodeRelatedRecords(tx:Tx,ctx:ServerContext,code
   fieldIds=['name','recordCode','status','role']
  }else if(kind==='contacts'){
   if(!ctx.can(PERMISSIONS.PERSON_VIEW))return empty
-  source=sql`SELECT persons.id,concat_ws(' ',persons.first_name,persons.last_name) AS name,'Contact'::text AS role,persons.email,persons.title FROM persons JOIN accounts ON accounts.id=persons.account_id AND accounts.tenant_id=persons.tenant_id WHERE persons.tenant_id=${ctx.tenantId} AND persons.deleted_at IS NULL AND accounts.deleted_at IS NULL AND ${accountReadScope(visible)??sql`true`} AND persons.id IN (SELECT f.primary_person_id FROM funnels f WHERE f.id IN (${ids}) UNION SELECT o.primary_person_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) UNION SELECT o.owner_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) UNION SELECT o.power_sponsor_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) UNION SELECT attention_contact_id FROM (${quoteSource}) q)`
+  source=sql`SELECT persons.id,concat_ws(' ',persons.first_name,persons.last_name) AS name,'Contact'::text AS role,persons.email,persons.title FROM persons JOIN accounts ON accounts.id=persons.account_id AND accounts.tenant_id=persons.tenant_id WHERE persons.tenant_id=${ctx.tenantId} AND persons.deleted_at IS NULL AND accounts.deleted_at IS NULL AND ${accountReadScope(visible)??sql`true`} AND persons.id IN (SELECT f.primary_person_id FROM funnels f WHERE f.id IN (${ids}) UNION SELECT o.primary_person_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) AND ${parentContactScope(visible)} UNION SELECT o.owner_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) AND ${parentContactScope(visible)} UNION SELECT o.power_sponsor_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) AND ${parentContactScope(visible)} UNION SELECT attention_contact_id FROM (${quoteSource}) q)`
   fieldIds=['name','email','title']
  }else if(kind==='projects'){
   if(!options.projectsEnabled||!ctx.can(PERMISSIONS.PROJECT_VIEW))return empty

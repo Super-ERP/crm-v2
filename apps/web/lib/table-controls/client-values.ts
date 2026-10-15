@@ -1,5 +1,6 @@
 /** Explicit computed column values used by complete client-side record lists. */
 export function computedTableValue(row:Record<string,unknown>,id:string):unknown {
+ if(id==='totalEstimatedFunnelAmount')return Array.isArray(row.estimatedTotalsByCurrency)&&row.estimatedTotalsByCurrency.length?row.estimatedTotalsByCurrency:row.totalEstimatedFunnelAmount
  if(id==='stage')return row.stageName
  if(id==='default')return row.isDefault
  if(id==='active')return row.isActive

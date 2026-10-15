@@ -7,6 +7,10 @@ describe("registered CRM table coverage", () => {
   it("covers every actual shared table source with explicit field metadata", () => {
     const actual = files(resolve('app')).filter(p => readFileSync(p, 'utf8').includes('<DataTable')).map(p => 'apps/web/' + p.slice(resolve('.').length + 1))
     expect(actual.filter(file => !TABLE_CATALOG.some(entry => entry.file === file))).toEqual([])
+    for(const file of actual) {
+      const source=readFileSync(resolve(file.replace(/^apps\/web\//,'')),'utf8')
+      for(const match of source.matchAll(/\btableId="([^"]+)"/g)) expect(()=>getTableFields(match[1])).not.toThrow()
+    }
     for (const entry of TABLE_CATALOG) for (const key of entry.keys) {
       expect(entry.adapters[key as keyof typeof entry.adapters]).toBeTruthy()
       const fields = getTableFields(key, entry.fields)

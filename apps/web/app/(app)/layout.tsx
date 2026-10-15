@@ -132,7 +132,7 @@ export default async function AppLayout({
           </StatusCallout>
         ) : null}
         <HeaderActionsProvider permissions={[...ctx.permissions]} modules={modules}>
-          <BusinessTimezoneProvider timezone={process.env.TZ || "UTC"}>{children}</BusinessTimezoneProvider>
+          <BusinessTimezoneProvider identity={`${ctx.tenantId}:${ctx.memberId}`} timezone={process.env.TZ || "UTC"}>{children}</BusinessTimezoneProvider>
         </HeaderActionsProvider>
       </SidebarInset>
     </SidebarProvider>

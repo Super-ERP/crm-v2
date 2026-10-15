@@ -304,6 +304,7 @@ export function SalesOrderDetailBody({
             columns={milestoneColumns}
             data={milestones}
             tableId="so-milestones"
+            fieldCurrencies={{amount:order.currency}}
             searchColumn="title"
             searchPlaceholder="Search milestones…"
             emptyMessage="No payment milestones on this project yet."

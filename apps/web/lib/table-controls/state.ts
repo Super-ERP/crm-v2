@@ -77,3 +77,9 @@ export function mergeQuickFilterTree(tree:FilterGroup,filters:Record<string,Data
   const reidentify=(node:import('./types').FilterNode):import('./types').FilterNode=>node.kind==='group'?{...node,id:`merged-${sequence++}`,children:node.children.map(reidentify)}:{...node,id:`merged-${sequence++}`}
   return validateFilterTree(reidentify({kind:'group',id:'combined',logic:'and',children:[...(tree.children.length?[tree]:[]),...nodes]}) as FilterGroup,fields)
 }
+
+/** Rendering callbacks and fetched row objects cannot change query metadata identity. */
+export function tableFieldSignature(columns:readonly unknown[],currencies:Record<string,string>={}) {
+ const ids=columns.map(column=>{const c=column as {id?:string;accessorKey?:string};return c.id??c.accessorKey}).filter((id):id is string=>!!id)
+ return JSON.stringify({ids,currencies:Object.fromEntries(Object.entries(currencies).sort(([a],[b])=>a.localeCompare(b)))})
+}

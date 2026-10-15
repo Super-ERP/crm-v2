@@ -39,7 +39,7 @@ export function PaymentMilestonesTable({
         ),
         cell: ({ row }) => (
           <span className="tabular-nums">
-            {formatMoney(row.original.amount)}
+            {formatMoney(row.original.amount,row.original.currency ?? undefined)}
           </span>
         ),
       },

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import Link from "next/link"
-import { useBusinessTimezone } from "@/components/table-controls/business-timezone"
+import { useBusinessTimezone, useTablePreferenceIdentity } from "@/components/table-controls/business-timezone"
 import { AdvancedFilterEditor } from "@/components/table-controls/advanced-filter-editor"
 import { computedTableValue } from "@/lib/table-controls/client-values"
 import { evaluateFilterTree } from "@/lib/table-controls/evaluate"
@@ -11,7 +11,7 @@ import { validateFilterTree } from "@/lib/table-controls/filter-tree"
 import { ColumnControls } from "@/components/table-controls/column-controls"
 import { readTablePreferences, saveTablePreferences } from "@/app/(app)/_shared/table-preference-actions"
 import { getTableFields, tableExists } from "@/lib/table-controls/registry"
-import { mergeQuickFilterTree, normalizeTableLayout, validateTableState } from "@/lib/table-controls/state"
+import { tableFieldSignature, mergeQuickFilterTree, normalizeTableLayout, validateTableState } from "@/lib/table-controls/state"
 import { EMPTY_FILTER_TREE, type TableLayout, type FilterGroup } from "@/lib/table-controls/types"
 import { usePathname, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
@@ -213,7 +213,14 @@ export function DataTable<TData, TValue>({
     [facets]
   )
 
-  const fieldDefinitions = React.useMemo(() => tableId && tableExists(tableId) ? getTableFields(tableId, columns.map(c=>(c as {id?:string;accessorKey?:string}).id ?? (c as {accessorKey?:string}).accessorKey).filter((id):id is string=>!!id)).map(field=>({...field,currency:fieldCurrencies?.[field.id]})) : [], [tableId, columns,fieldCurrencies])
+  const definitionSignature=tableFieldSignature(columns,fieldCurrencies)
+  const fieldDefinitions = React.useMemo(() => {
+    const metadata=JSON.parse(definitionSignature) as {ids:string[];currencies:Record<string,string>}
+    return tableId && tableExists(tableId) ? getTableFields(tableId,metadata.ids).map(field=>({...field,currency:metadata.currencies[field.id]})) : []
+  },[tableId,definitionSignature])
+  const preferenceIdentity=useTablePreferenceIdentity()
+  const currentFields=React.useRef(fieldDefinitions)
+  React.useEffect(()=>{currentFields.current=fieldDefinitions},[fieldDefinitions])
   const advancedEnabled = advancedFilters ?? (!!tableId && (!server && cap == null && tableId !== 'product-usage' || !!server && ['leads','accounts','persons','opportunities','funnel','quotations','products','projects','payment-milestones','sales-orders','finance-sale','finance-purchase','audit','intercompany-inbound','project-codes','project-code-funnels','product-usage','code-opportunities','code-quotations','code-accounts','code-contacts','code-projects'].includes(tableId)))
   const businessTimezone = useBusinessTimezone()
   // inject a faceted filterFn for facet columns so multi-select arrays work
@@ -491,10 +498,10 @@ export function DataTable<TData, TValue>({
   const tableData = React.useMemo(() => server ? serverRows : advancedEnabled && effectiveFilters.tree.children.length ? clientRows.filter(row=>evaluateFilterTree(row,effectiveFilters.tree,fieldDefinitions,{now:new Date(),timezone:businessTimezone},(record,id)=>{
       const column=columns.find(c=>((c as {id?:string}).id??(c as {accessorKey?:string}).accessorKey)===id)
       if(tableId==='settings-api-keys'&&id==='status'){const row=record as {revokedAt?:Date;expiresAt:Date};return row.revokedAt?'Revoked':new Date(row.expiresAt)<=new Date()?'Expired':'Active'}
-      if(['primary','converted','roles','lastActive','manager','relationship','stage','default','active','approval','forecast'].includes(id))return computedTableValue(record as Record<string,unknown>,id)
+      if(['totalEstimatedFunnelAmount','primary','converted','roles','lastActive','manager','relationship','stage','default','active','approval','forecast'].includes(id))return computedTableValue(record as Record<string,unknown>,id)
       if(column && 'accessorFn' in column && column.accessorFn)return column.accessorFn(record as TData,0)
       return (record as Record<string,unknown>)[id]
-    })) : clientRows, [server,serverRows,clientRows,advancedEnabled,filterTree,fieldDefinitions,businessTimezone,columns,effectiveFilters])
+    })) : clientRows, [server,serverRows,clientRows,advancedEnabled,fieldDefinitions,businessTimezone,columns,effectiveFilters,tableId])
   const table = useReactTable({
     data: tableData,
     columns: tableColumns,
@@ -548,19 +555,21 @@ export function DataTable<TData, TValue>({
   }, [])
   React.useEffect(() => {
     let cancelled=false
+    preferenceLoaded.current=false;layoutChanged.current=false;setPreferencesReady(false)
+    if (!hasInitialUrlState)applyLayout(normalizeTableLayout({},currentFields.current))
     if (!tableId || !tableExists(tableId)) {setPreferencesReady(true);return}
     void readTablePreferences(tableId).then(layout=>{
-      if (!cancelled && layout && !hasInitialUrlState && !layoutChanged.current) applyLayout(normalizeTableLayout(layout,fieldDefinitions))
+      if (!cancelled && layout && !hasInitialUrlState && !layoutChanged.current) applyLayout(normalizeTableLayout(layout,currentFields.current))
     }).catch(()=>{}).finally(()=>{if(!cancelled){preferenceLoaded.current=true;setPreferencesReady(true)}})
     return ()=>{cancelled=true}
-  }, [tableId, hasInitialUrlState, fieldDefinitions, applyLayout])
+  }, [tableId,preferenceIdentity,hasInitialUrlState,applyLayout])
   React.useEffect(() => {
     if (!tableId || !preferencesReady || !preferenceLoaded.current || !layoutChanged.current) return
     const timer=setTimeout(()=>{
       void saveTablePreferences(tableId,{visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}).then(result=>{if(!result.ok)toast.error(result.error)}).catch(()=>toast.error("Could not save table layout."))
     },700)
     return ()=>clearTimeout(timer)
-  },[tableId,preferencesReady,columnVisibility,columnOrder,columnSizing,columnPinning])
+  },[tableId,preferenceIdentity,preferencesReady,columnVisibility,columnOrder,columnSizing,columnPinning])
   function resetColumnLayout(){layoutChanged.current=true;applyLayout(normalizeTableLayout({},fieldDefinitions))}
   function columnStyle(column:Column<TData,unknown>):React.CSSProperties {
     const pin=isMobile?false:column.getIsPinned()
@@ -577,13 +586,13 @@ export function DataTable<TData, TValue>({
       ...(tableId && tableExists(tableId) ? {tableState:{version:2 as const,filterTree:effectiveFilters.tree,layout:{visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}}} : {}),
       filters: {
         ...(globalFilter ? { global: globalFilter } : {}),
-        columns: Object.fromEntries(columnFilters.filter(filter=>!advancedEnabled||!fieldDefinitions.some(field=>field.id===filter.id)).map((filter) => [filter.id, filter.value])) as SavedViewPayload["filters"]["columns"],
+        columns: Object.fromEntries(columnFilters.filter(filter=>!advancedEnabled||!!effectiveFilters.error||!fieldDefinitions.some(field=>field.id===filter.id)).map((filter) => [filter.id, filter.value])) as SavedViewPayload["filters"]["columns"],
       },
       sorting: sorting.map(({ id, desc }) => ({ id, desc })),
       visibility: columnVisibility,
       pageSize: pagination.pageSize,
     }),
-    [effectiveFilters,advancedEnabled,fieldDefinitions,filterTree,columnFilters, columnVisibility, columnOrder, columnSizing, columnPinning, tableId, globalFilter, pagination.pageSize, sorting]
+    [effectiveFilters,advancedEnabled,fieldDefinitions,columnFilters, columnVisibility, columnOrder, columnSizing, columnPinning, tableId, globalFilter, pagination.pageSize, sorting]
   )
 
   const applySavedView = React.useCallback(
@@ -698,8 +707,10 @@ export function DataTable<TData, TValue>({
           {toolbar}
           {tableId && savedViews && preferencesReady ? (
             <SavedViewMenu
+              key={`${preferenceIdentity}:${tableId}`}
               listKey={tableId}
               currentPayload={currentSavedPayload}
+              currentStateValid={!filterError&&!effectiveFilters.error}
               applyDefault={!hasInitialUrlState}
               onApply={applySavedView}
               onReset={resetToBaseView}

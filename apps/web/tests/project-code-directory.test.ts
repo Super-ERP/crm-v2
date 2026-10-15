@@ -44,7 +44,11 @@ it("omits related record categories the user cannot view, including Projects whe
   expect(result?.contacts).toEqual([])
   expect(result?.projects).toEqual([])
   expect(result?.funnels[0].opportunity).toBeNull()
-  expect(execute).toHaveBeenCalledTimes(1)
+  expect(result?.opportunities).toEqual([])
+  expect(execute).toHaveBeenCalledTimes(2)
+  const relatedQuery=new PgDialect().sqlToQuery(execute.mock.calls[1][0])
+  expect(relatedQuery.sql).toContain('o.owner_member_id IN')
+  expect(relatedQuery.params).toContain('rep')
 })
 
 it("uses the shared table's page size and sorting before limiting directory rows", async () => {
@@ -57,4 +61,8 @@ it("keeps an accessible code page available when its funnel search has no matche
   execute.mockResolvedValueOnce([]).mockResolvedValueOnce([{ present: 1 }])
   const result = await getProjectCode(tx, ctx, "CODE", 0, false, { search: "unmatched" })
   expect(result).toMatchObject({ code: "CODE", total: 0, funnels: [], quotations: [] })
+})
+it('rejects account-name predicates when account viewing is unavailable',async()=>{
+ const filterTree={kind:'group' as const,id:'root',logic:'and' as const,children:[{kind:'condition' as const,id:'c',fieldId:'account',operator:'contains' as const,value:'Secret customer'}]}
+ await expect(getProjectCode(tx,{...ctx,can:p=>p===PERMISSIONS.OPPORTUNITY_VIEW},'CODE',0,false,{filterTree})).rejects.toThrow('Unavailable')
 })
