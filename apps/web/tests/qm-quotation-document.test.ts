@@ -156,3 +156,33 @@ describe("QA/QM print footer", () => {
     expect(css).toContain(String.raw`\a `)
   })
 })
+
+
+describe.each(["qm", "qa"] as const)("%s line discounts", (template) => {
+  it("shows absolute discounts without subtracting them twice from imported net totals", () => {
+    const doc = documentWithTax("8.000", null)
+    Object.assign(doc.quotation, { subtotal: "20938.50", taxTotal: "1675.08", total: "22613.58" })
+    doc.lines = [
+      { id: "1", description: "Subsidiary setup", quantity: "11", uom: "Mandays", unitPrice: "1800", discountAmount: "1980", lineSubtotal: "17820" },
+      { id: "2", description: "Annual managed services", quantity: "1", uom: "Time", unitPrice: "3465", discountAmount: "346.50", lineSubtotal: "3118.50" },
+      { id: "3", description: "Included support", quantity: "1", unitPrice: "0", discountAmount: "0", lineSubtotal: "0" },
+    ] as QuotationDocument["lines"]
+    const html = renderToStaticMarkup(createElement(QmQuotationDocument, { doc, template }))
+    expect(html).toContain("qm-lines-discounted")
+    expect(html).toContain("<th>Discount</th>")
+    for (const value of ["MYR</span>-1,980.00", "MYR</span>-346.50", "MYR</span>17,820.00", "MYR</span>3,118.50", "MYR20,938.50", "MYR1,675.08", "MYR22,613.58"]) {
+      expect(html).toContain(value)
+    }
+    expect(html).not.toContain("<strong>Discount</strong>")
+    doc.quotation.discountTotal = "100.00"
+    const withHeader = renderToStaticMarkup(createElement(QmQuotationDocument, { doc, template }))
+    expect(withHeader).toContain("<strong>Discount</strong>")
+    expect(withHeader).toContain("MYR20,838.50")
+  })
+
+  it("keeps the six-column layout for quotations without line discounts", () => {
+    const html = renderToStaticMarkup(createElement(QmQuotationDocument, { doc: documentWithTax("8.000", null), template }))
+    expect(html).not.toContain("<th>Discount</th>")
+    expect(html).not.toContain("qm-lines-discounted")
+  })
+})

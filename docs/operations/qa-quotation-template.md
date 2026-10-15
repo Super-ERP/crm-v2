@@ -73,3 +73,13 @@ Install Chrome and Poppler (`pdftotext`), or set `CHROME_BIN` to the browser.
 Set `PAGINATION_OUTPUT_DIR` to preserve the rendered HTML/PDF fixtures. The
 checks cover both templates at page boundaries, long descriptions, notes and
 terms, intact sign-off rows, footer placement, and missing/duplicated text.
+
+## Absolute line discounts
+
+QA and QM show a seventh Discount column when any line has an absolute
+`discountAmount`. The currency sits above the amount and discounts print as
+negative amounts, matching the Q100235-01 reference. Undiscounted quotes retain
+the six-column layout. Imported line subtotals already include these discounts;
+they are displayed as stored and are not deducted again. Header adjustments
+remain separately visible in totals. This presentation change requires no data
+migration or Salesforce re-import.
