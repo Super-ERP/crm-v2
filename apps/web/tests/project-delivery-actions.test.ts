@@ -1,10 +1,12 @@
 import { beforeEach, expect, it, vi } from "vitest"
-const state = vi.hoisted(() => ({ enabled: true, tx: {} as any, next: vi.fn(async () => "GENERATED") }))
-vi.mock("@/lib/actions", () => ({ withModule: async (_module: string, _permission: string, work: any) => {
+type MockTx = Record<"select" | "insert" | "update", ReturnType<typeof vi.fn>>
+type MockQuery = Record<"from" | "where" | "limit" | "for" | "values" | "returning" | "set", ReturnType<typeof vi.fn>> & { then: Promise<unknown>["then"] }
+const state = vi.hoisted(() => ({ enabled: true, tx: {} as MockTx, next: vi.fn(async () => "GENERATED") }))
+vi.mock("@/lib/actions", () => ({ withModule: async (_module: string, _permission: string, work: (tx: MockTx, context: { tenantId: string; memberId: string; can: () => boolean }) => Promise<unknown>) => {
   if (!state.enabled) throw new Error("projects module unavailable")
   return work(state.tx, { tenantId: "tenant", memberId: "owner", can: () => true })
 } }))
-vi.mock("@/lib/action-result", () => ({ runAction: async (work: any) => { try { return { ok: true, data: await work() } } catch (e) { return { ok: false, error: (e as Error).message } } } }))
+vi.mock("@/lib/action-result", () => ({ runAction: async (work: () => Promise<unknown>) => { try { return { ok: true, data: await work() } } catch (e) { return { ok: false, error: (e as Error).message } } } }))
 vi.mock("@/lib/modules.server", () => ({ requireEntitledModule: vi.fn() }))
 vi.mock("@/lib/access-scope", () => ({ visibleMemberIds: async () => ["owner"], ownsOrManages: (visible: string[], owner: string) => visible.includes(owner), canManageAllRecords: () => false, ownerScope: vi.fn() }))
 vi.mock("@/server/services/numbering", () => ({ nextProjectCode: state.next, isDuplicateNumberError: () => false }))
@@ -15,8 +17,8 @@ vi.mock("@/server/services/tenant-currency", () => ({ tenantDefaultCurrency: asy
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 import { createProject, updateProject } from "@/app/(app)/projects/actions"
 function query(value: unknown) {
-  const q: any = { then: Promise.resolve(value).then.bind(Promise.resolve(value)) }
-  for (const name of ["from", "where", "limit", "for", "values", "returning", "set"]) q[name] = vi.fn(() => q)
+  const q = { then: Promise.resolve(value).then.bind(Promise.resolve(value)) } as MockQuery
+  for (const name of ["from", "where", "limit", "for", "values", "returning", "set"] as const) q[name] = vi.fn(() => q)
   return q
 }
 function fixture(project: unknown[] = [], sourceOverrides = {}) {
