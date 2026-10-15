@@ -17,4 +17,13 @@ describe("Salesforce account address history recovery", () => {
   it("ignores deleted history and unrelated fields", () => {
     expect(recoverAccountAddresses([{ ...row("a", "BillingStreet", "Deleted"), IsDeleted: "true" }, row("b", "Phone", "123")]).ready).toEqual([])
   })
+  it("recovers equivalent whitespace-only street history without treating different addresses as equal", () => {
+    const rows=[row("a","BillingStreet","12 Main Road\nLevel 2"),row("a","BillingStreet","12 Main Road Level 2")]
+    const result=recoverAccountAddresses(rows)
+    expect(result.review).toEqual([])
+    expect(result.ready[0].address.line1).toBe("12 Main Road\nLevel 2")
+    expect(recoverAccountAddresses([...rows].reverse()).ready[0].address).toEqual(result.ready[0].address)
+    expect(recoverAccountAddresses([row("b","BillingStreet","12 Road"),row("b","BillingStreet","1 2 Road")]).ready).toEqual([])
+  })
+
 })

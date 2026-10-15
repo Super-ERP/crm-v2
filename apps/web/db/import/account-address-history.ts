@@ -17,8 +17,10 @@ export function recoverAccountAddresses(history: Record<string, string>[]) {
     for (const [field, rows] of account) {
       const latestTime = Math.max(...rows.map(row => Date.parse(row.CreatedDate)))
       const latest = rows.filter(row => Date.parse(row.CreatedDate) === latestTime)
-      const values = [...new Set(latest.map(row => (row.NewValue ?? "").trim()))]
-      if (values.length !== 1) { conflicts.push(field); continue }
+      // Compare formatting only; keep an exact, deterministic source value.
+      const values = [...new Set(latest.map(row => (row.NewValue ?? "").trim()))].sort()
+      const distinct = new Set(values.map(value => value.replace(/\s+/g, " ")))
+      if (distinct.size !== 1) { conflicts.push(field); continue }
       if (values[0]) address[fields[field as keyof typeof fields]] = values[0]
       historyIds.push(...latest.map(row => row.Id))
     }
