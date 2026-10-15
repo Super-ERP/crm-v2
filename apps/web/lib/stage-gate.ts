@@ -12,7 +12,6 @@
  * doesn't care which kind a key is.
  */
 
-import { PERMISSIONS } from "@/lib/permissions"
 import type { PpvvcPatch } from "@/lib/ppvvc"
 
 /** Completeness of the preset system fields (derived from real funnel /
@@ -427,15 +426,6 @@ export function assertTransitionAllowed(
   if (from.id === to.id) throw new Error("This funnel is already in this stage")
   if (isTerminalKind(from.kind))
     throw new Error("This funnel is closed and cannot change its stage.")
-}
-
-/** Whether the actor may enter approval-gated stages without a request:
- *  superadmin, or a holder of the stage-approval permission. */
-export function canBypassApproval(ctx: {
-  isSuperadmin: boolean
-  can: (key: string) => boolean
-}): boolean {
-  return ctx.isSuperadmin || ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)
 }
 
 /** Terminal stages (Lost / KIV) need a written close reason ("close remarks"). */

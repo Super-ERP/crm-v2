@@ -33,7 +33,7 @@ DECLARE
     'roles', 'role_permissions', 'membership_profiles', 'member_roles',
     'leads', 'accounts', 'persons',
     'pipelines', 'pipeline_stages', 'opportunities', 'funnels', 'funnel_stage_history',
-    'stage_approval_requests', 'attachments',
+    'stage_approval_requests', 'lead_conversion_approval_requests', 'attachments',
     'tax_settings', 'quotations', 'quotation_line_items',
     'custom_field_defs', 'activities', 'projects', 'payment_milestones',
     'sales_orders', 'project_counters', 'products', 'deal_costs',

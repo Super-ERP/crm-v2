@@ -110,7 +110,7 @@ Confirm the disqualification. The typed reason is saved with the lead and record
 
 The lead detail page locks status controls for Disqualified and Converted records. There is no dedicated disqualification restore action. **Undo** in the Leads list’s deletion toast only reverses deletion, requires Delete leads permission and record access, and preserves the prior status. It does not restore a Disqualified lead to Contacted.
 
-**Current inconsistency:** the list’s **Edit** form still offers the full status selector, while detail-page status controls are locked. Do not use that selector to imitate conversion: setting Converted there does not run the linked-record conversion workflow. Ask your administrator or support contact to review a disqualified lead that needs renewed follow-up.
+**Converted** is set only by the approved conversion workflow. The edit/status actions cannot be used to bypass conversion approval. Ask your administrator or support contact to review a disqualified lead that needs renewed follow-up.
 
 {% endstep %}
 {% endstepper %}
@@ -119,12 +119,13 @@ The lead detail page locks status controls for Disqualified and Converted record
 
 ## Converting a lead
 
-Qualify the lead before converting as a team practice. The current Convert action is available for non-Converted leads and does not enforce Qualified status. When ready for a commercial proposal, convert it using the **Conversion Wizard**. Add a valid email to the lead before converting; the new contact requires one.
+Qualify the lead before converting as a team practice. Conversion is available for active, non-Converted leads and does not enforce Qualified status. Disqualified leads cannot be converted. When ready for a commercial proposal, convert it using the **Conversion Wizard**. Add a valid email to the lead before converting; the new contact requires one.
 
 ```mermaid
 flowchart TD
     L["Qualified lead"] --> R["Review conversion details"]
-    R --> A["Link or create an account"]
+    R --> P["Manager approval, or direct confirmation by an eligible top manager"]
+    P --> A["Link or create an account"]
     A --> C["Create the linked contact"]
     C --> O["Create an opportunity and funnel deal"]
     O --> D["Lead is marked Converted"]
@@ -138,6 +139,14 @@ flowchart TD
 <figure><img src="assets/lead-conversion.png" alt="Review a qualified lead, link or create an account, create the contact and sales pursuit, then mark the lead Converted."><figcaption><p>Lead conversion creates linked records; it is not a status change alone.</p></figcaption></figure>
 
 </details>
+
+### Approval before conversion
+
+The conversion form saves a request with the selected account and conversion details. No linked records are created while it is pending, and the lead remains unconverted. The eligible reporting manager reviews it under **Sales → Approvals → Incoming → Lead conversion approvals**. The requester can track or cancel it in **My requests**. Rejection requires a reason and leaves the lead available for correction and resubmission.
+
+A manager with **Approve lead conversions** permission and no manager above them can convert directly. A manager with a superior must request approval, just like other users. Missing reporting configuration is not an exemption. See [Shared manager approval policy](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals#shared-manager-approval-policy).
+
+Approval rechecks saved details, record access and current lead data. If the lead changes after submission, cancel and resubmit with the updated details. Duplicate pending requests and duplicate conversions are prevented.
 
 ### Step-by-step conversion
 
@@ -177,7 +186,7 @@ You will be redirected to the full-page conversion wizard:
 
 #### Convert the lead
 
-Click **Convert lead**.
+Submit the conversion for approval, or confirm direct conversion when eligible. Check **My requests** for the approval result.
 
 {% endstep %}
 {% endstepper %}

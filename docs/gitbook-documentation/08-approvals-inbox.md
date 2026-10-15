@@ -1,23 +1,36 @@
 ---
-description: Review stage requests routed to you and track the requests you have submitted.
+description: Review quotation, funnel-stage and lead-conversion requests routed to you and track your submissions.
 icon: stamp
 ---
 
-# Stage approvals
+# Approvals inbox
 
-Use **Sales → Approvals** to review requests to change a funnel stage. Quotation approval is handled on the quotation itself; see [Quotation approvals](05-quotations-and-revisions.md#the-quotation-lifecycle).
+Use **Sales → Approvals** to review quotation, funnel-stage and lead-conversion requests. Both **Incoming** and **My requests** contain separate, labelled sections for the three workflows.
 
 **New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#stage-gate).
 
 ## On this page
 
+* [What appears in each tab](#what-appears-in-each-tab)
 * [Find your requests](#find-your-requests)
 * [Review and decide](#review-and-decide)
 * [Follow up after a decision](#follow-up-after-a-decision)
 
 {% hint style="info" %}
-**Who can use this page?** People with stage-change or stage-approval permissions can participate. Requests route to the first active manager in the requester’s reporting line with stage-approval permission. Only the assigned manager who remains eligible can decide the request; requesters cannot approve their own request. Permissions from all assigned roles count. Platform superadmins retain an operational override.
+**Who can use this page?** People with stage-change, stage-approval, quotation-update, quotation-approval, lead-conversion or lead-conversion-approval permissions can participate. Quotation cards also require quotation-view permission and record access. Requests route to the first active manager in the requester’s reporting line with the matching permission: **Approve lead conversions**, **Approve quotations**, or **Approve stage advances**. The reviewer must remain eligible and have record access. Stage requests also require the stored approver assignment to match. Requesters cannot decide their own queued request. Permissions from all assigned roles count. Platform superadmins retain an operational override.
 {% endhint %}
+
+## What appears in each tab
+
+| Section | Incoming | My requests |
+| --- | --- | --- |
+| **Lead conversion approvals** | Pending conversions routed to you. Expand **Submitted conversion details**, use **View lead**, then **Approve** or **Reject**. | Your submitted requests and their status. Use **Cancel request** while pending. |
+| **Quotation approvals** | Pending quotations routed to you. Use **View quotation**, then **Approve** or **Reject**. | Your latest submission per quotation and its current status. Use **Recall to Draft** while pending when authorized. |
+| **Funnel-stage approvals** | Pending stage changes assigned to you. Review the stage change, reason and attachments, then **Approve** or **Reject**. | Your stage requests and their status. Use **Cancel request** while pending. |
+
+Managers see eligible requests within their record access, rather than every request in the organization. Each section has independent pagination. Approved, rejected and cancelled requests leave **Incoming**; follow your submissions in **My requests**. A rejected quotation returns to **Draft**, so its card shows the current quotation status and rejection reason.
+
+A member with the matching approval permission and no reporting manager can proceed directly. **Direct actions do not create a pending request in Incoming.** Managers with a superior must request approval. See [Managers' own actions](#managers-own-actions).
 
 ## Find your requests
 
@@ -47,7 +60,7 @@ Choose **My requests** to track requests you submitted.
 
 #### Navigate requests
 
-Use **Previous** and **Next** to navigate the selected tab’s 25-request pages. Use **Review quotations** to open the separate quotation list.
+Each section has its own **Previous** and **Next** controls, with 25 records per page. **Review quotations** opens the full quotation list.
 
 {% endstep %}
 {% endstepper %}
@@ -116,13 +129,27 @@ flowchart TD
 
 ## KIV reopen requests
 
-KIV-to-open moves use approval policy, but the current queued decision path treats the rollback as obsolete instead of applying it. An authorized stage approver can review and reopen directly. See [KIV reopening](04-opportunities-and-funnel.md#kiv-keep-in-view). A successful request submission does not mean reopening has happened.
+KIV-to-open moves use the same manager approval policy. Eligible top managers can reopen directly; other users submit a request. Approval applies the reopen only if the original transition is still current. See [KIV reopening](04-opportunities-and-funnel.md#kiv-keep-in-view).
 
 ## Quotation approvals
 
-Every quotation requires approval before sending. The eligible approver is the first active manager in the account owner’s reporting line with **Approve quotations** permission. Only that manager can approve or reject; a rejection requires a reason. These actions record audit events but do not send email notifications.
+Every quotation requires approval before sending. **Incoming → Quotation approvals** lists pending quotations routed to you as the currently eligible manager and within your record access. Quotation routing follows reporting-line and approval-permission changes, matching the checks performed when deciding. Cards show quotation number, funnel, end-user customer, Bill To, total, requester and submission date. Use **View quotation** to review the full details, then **Approve** or **Reject** here or on the quotation itself. Rejection requires a reason and returns the quotation to Draft.
+
+The eligible approver is the first active manager in the submitter's reporting line (the funnel owner is the fallback for legacy requests without submission audit data) with **Approve quotations** permission. The existing quotation actions recheck permissions, record access, current manager eligibility and status when deciding. These actions record audit events but do not send email notifications.
+
+**My requests → Quotation approvals** shows the latest submission for each quotation you submitted, using the actual submission audit actor rather than the account owner. Cards show the current quotation status and rejection reason where present. Pending quotations can be **Recalled to Draft** by eligible requesters. Recalled, rejected and approved quotations leave Incoming. This section is not a complete history of every resubmission. Legacy pending quotations without submission audit data can appear in Incoming with an unknown requester/date; they are not attributed to a guessed requester.
 
 See [Quotation lifecycle](05-quotations-and-revisions.md#the-quotation-lifecycle).
+
+## Lead conversion approvals
+
+Review lead name, company, requester and saved conversion details before deciding. **Approve** performs conversion and marks the request approved in one transaction. **Reject** requires a reason and leaves the lead unconverted. Requesters can cancel pending requests in **My requests**, correct the lead or conversion details, and submit again. The submitted details include the contact, existing or new account, company code, account type, billing address, opportunity, funnel and expected close date. No account, contact, opportunity or funnel is created while the conversion request is pending.
+
+## Managers' own actions
+
+Across all three workflows, a member with the matching approval permission can proceed directly only when they have no reporting manager above them. Managers with a superior require approval. Ordinary sales users never gain direct approval merely because their manager is missing. Missing/inactive reporting profiles and an ineligible upline block the action until configured. Platform superadmins retain their operational override.
+
+If your own request is already pending and you become eligible for direct action, cancel the lead/stage request or recall the quotation before submitting the direct action. A direct stage move also cancels older pending stage requests.
 
 ## Related document rules
 

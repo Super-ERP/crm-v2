@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
   assertTransitionAllowed,
-  canBypassApproval,
   buildStageGate,
   missingFromKeys,
   stagesEnteredBy,
@@ -21,7 +20,6 @@ import {
   stagePathActionLabel,
   stagePathInstruction,
 } from "@/app/(app)/funnel/stage-transitions"
-import { PERMISSIONS } from "@/lib/permissions"
 
 const stage = (id: string, kind: string, sortOrder: number) => ({
   id,
@@ -116,26 +114,6 @@ describe("assertTransitionAllowed — stage state machine", () => {
       .toBe("Click a stage to Move back.")
     expect(stagePathInstruction({ ...open2, name: "Qualified" }, [{ ...open1, name: "Prospect" }, parkedBeforeLadder]))
       .toBe("Click a stage to Move back or Advance.")
-  })
-})
-
-describe("canBypassApproval", () => {
-  const ctx = (isSuperadmin: boolean, held: string[]) => ({
-    isSuperadmin,
-    can: (k: string) => held.includes(k),
-  })
-
-  it("superadmin bypasses regardless of permissions", () => {
-    expect(canBypassApproval(ctx(true, []))).toBe(true)
-  })
-
-  it("stage-approval permission holders bypass", () => {
-    expect(canBypassApproval(ctx(false, [PERMISSIONS.STAGE_ADVANCE_APPROVE]))).toBe(true)
-  })
-
-  it("everyone else is gated — even with other stage permissions", () => {
-    expect(canBypassApproval(ctx(false, []))).toBe(false)
-    expect(canBypassApproval(ctx(false, [PERMISSIONS.STAGE_ADVANCE]))).toBe(false)
   })
 })
 

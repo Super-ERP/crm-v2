@@ -96,7 +96,7 @@ Check the exact missing field, not only the completion badge. Power Sponsor note
 
 ### A KIV reopen request became obsolete
 
-The current approval handler can close KIV-to-open requests as obsolete because it treats reopening as rollback. Ask an authorized stage approver to review and reopen directly. See [KIV](../04-opportunities-and-funnel.md#kiv-keep-in-view).
+KIV reopening follows manager approval policy. The assigned eligible reviewer can approve a pending reopen; eligible top managers can reopen directly. A request becomes obsolete if its original transition is no longer current. See [KIV](../04-opportunities-and-funnel.md#kiv-keep-in-view).
 
 ### A stage advances without the expected PPVVC fields
 

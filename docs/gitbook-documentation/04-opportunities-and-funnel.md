@@ -156,10 +156,10 @@ A pending request leaves the current stage unchanged. Check **Sales → Approval
 
 Use KIV for an open pursuit that needs later follow-up. Choose KIV, enter a meaningful reason, and save or request approval if your organization has enabled it. KIV records an **on-hold** outcome, not a lost or won deal. Plan the follow-up with your team; parking does not guarantee an automatic reminder.
 
-Reopening KIV to an open stage skips forward field gates but uses the approval policy even if that open stage's entry approval flag is off. A user with **Advance funnel stage** and **Approve stage advances** can reopen directly.
+Reopening KIV to an open stage skips forward field gates but uses the approval policy even if that open stage's entry approval flag is off. A user with **Advance funnel stage**, **Approve stage advances** and no reporting manager above them can reopen directly. Managers with a superior submit an approval request.
 
 {% hint style="warning" %}
-**Current reopen limitation:** a KIV-to-open request can be submitted, but the current reviewer path treats rollback transitions as obsolete and closes the request without reopening. If you encounter this result, ask an authorized stage approver to review and perform the direct reopen. Repeatedly submitting the same request does not resolve the limitation.
+A queued KIV-to-open approval now applies the reopen when the original transition remains current. If the funnel changes while approval is pending, the request can become obsolete. Direct moves cancel older pending requests so they do not remain actionable.
 {% endhint %}
 
 ---

@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
   writeAudit: vi.fn(),
   revalidatePath: vi.fn(),
   findManagerApprover: vi.fn(),
-  requireManagerApprover: vi.fn(),
+  resolveApprovalRoute: vi.fn(),
   syncOpportunityAmount: vi.fn(),
   syncFunnelProductsFromQuote: vi.fn(),
   seedDefaultFunnelMilestone: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("@/lib/access-scope", () => ({
   ownerScope: vi.fn(),
 }))
 vi.mock("@/server/audit", () => ({ writeAudit: mocks.writeAudit }))
-vi.mock("@/server/services/approval-routing", () => ({ findManagerApprover: mocks.findManagerApprover, requireManagerApprover: mocks.requireManagerApprover }))
+vi.mock("@/server/services/approval-routing", () => ({ findManagerApprover: mocks.findManagerApprover, resolveApprovalRoute: mocks.resolveApprovalRoute }))
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }))
 vi.mock("@/server/services/activity", () => ({ logActivity: vi.fn() }))
 vi.mock("@/server/services/value", () => ({
@@ -49,6 +49,7 @@ vi.mock("@/server/services/numbering", () => ({ nextQuoteNumber: vi.fn() }))
 import {
   acceptQuotation,
   approveQuotation,
+  canApproveQuotation,
   rejectQuotation,
   returnApprovedQuotationToDraft,
   recallQuotation,
@@ -93,6 +94,7 @@ function txWithSelects(values: unknown[]) {
   const queue = [...values]
   const updates: unknown[] = []
   const tx = {
+    execute: vi.fn(async () => []),
     select: vi.fn(() => chain(queue.shift() ?? [], updates)),
     update: vi.fn(() => chain([], updates)),
     insert: vi.fn(() => chain([], updates)),
@@ -104,13 +106,15 @@ const ctx = {
   tenantId: "tenant-1",
   memberId: "member-1",
   userId: "user-1",
+  isSuperadmin: false,
+  can: () => true,
 }
 
 describe("quotation approval actions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.findManagerApprover.mockResolvedValue("member-1")
-    mocks.requireManagerApprover.mockResolvedValue("manager-1")
+    mocks.resolveApprovalRoute.mockResolvedValue({ direct: false, approverMemberId: "manager-1" })
     mocks.withTenant.mockImplementation(async (_permission, work) => work(currentTx, ctx))
   })
 
@@ -135,7 +139,7 @@ describe("quotation approval actions", () => {
   })
 
   it("refuses submission instead of routing to unrelated people when no manager is eligible", async () => {
-    mocks.requireManagerApprover.mockRejectedValueOnce(new Error("No eligible manager"))
+    mocks.resolveApprovalRoute.mockRejectedValueOnce(new Error("No eligible manager"))
     const fixture = txWithSelects([
       [{ id: "account-1" }],
       [{ id: "quote-1", funnelId: "funnel-1", status: "draft" }],
@@ -170,6 +174,70 @@ describe("quotation approval actions", () => {
       ctx,
       expect.objectContaining({ action: "quotation.submitted_for_approval" })
     )
+  })
+
+  it("approves Draft directly for a top reporting manager", async () => {
+    mocks.resolveApprovalRoute.mockResolvedValue({ direct: true, approverMemberId: null })
+    const fixture = txWithSelects([
+      [{ id: "account-1" }],
+      [{ id: "quote-1", funnelId: "funnel-1", status: "draft" }],
+      [{ ownerMemberId: "rep" }],
+    ])
+    currentTx = fixture.tx
+    expect(await submitQuotationForApproval("quote-1")).toMatchObject({ ok: true })
+    expect(mocks.resolveApprovalRoute).toHaveBeenCalledWith(currentTx, ctx, "quotation.approve")
+    expect(fixture.updates[0]).toMatchObject({ status: "approved", approverMemberId: "member-1", approvedAt: expect.any(Date) })
+    expect(mocks.writeAudit).toHaveBeenCalledWith(currentTx, ctx, expect.objectContaining({ action: "quotation.approved" }))
+  })
+
+  it("routes decisions above the actual manager requester rather than the quote owner", async () => {
+    const fixture = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "rep" }],
+    ])
+    fixture.tx.execute.mockResolvedValue([{ memberId: "requesting-manager" }] as never)
+    currentTx = fixture.tx
+    expect(await approveQuotation("quote-1")).toMatchObject({ ok: true })
+    expect(mocks.findManagerApprover).toHaveBeenCalledWith(currentTx, "requesting-manager", "quotation.approve")
+  })
+
+  it("denies a top manager decision on their own legacy pending quotation", async () => {
+    mocks.resolveApprovalRoute.mockResolvedValue({ direct: true, approverMemberId: null })
+    const fixture = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "member-1" }],
+    ])
+    currentTx = fixture.tx
+    expect(await approveQuotation("quote-1")).toMatchObject({ ok: false })
+    expect(fixture.updates).toEqual([])
+    currentTx = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "member-1" }],
+    ]).tx
+    expect(await canApproveQuotation("quote-1")).toBe(false)
+  })
+
+  it("denies a superadmin decision on their own queued submission", async () => {
+    const fixture = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "rep" }],
+    ])
+    fixture.tx.execute.mockResolvedValue([{ memberId: "member-1", userId: "user-1" }] as never)
+    currentTx = fixture.tx
+    mocks.withTenant.mockImplementation(async (_permission, work) => work(currentTx, { ...ctx, isSuperadmin: true }))
+    expect(await approveQuotation("quote-1")).toMatchObject({ ok: false })
+    expect(fixture.updates).toEqual([])
+  })
+
+  it("does not allow a requesting lower manager to approve their own pending quote", async () => {
+    const fixture = txWithSelects([
+      [{ id: "quote-1", funnelId: "funnel-1", status: "pending_approval" }],
+      [{ ownerMemberId: "rep" }],
+    ])
+    fixture.tx.execute.mockResolvedValue([{ memberId: "member-1" }] as never)
+    currentTx = fixture.tx
+    expect(await approveQuotation("quote-1")).toMatchObject({ ok: false })
+    expect(fixture.updates).toEqual([])
   })
 
   it("rejects approval and records reason while returning quote to Draft", async () => {

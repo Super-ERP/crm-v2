@@ -92,7 +92,7 @@ Create a quotation, check items, currency, tax, and terms, then submit it for ap
 
 #### Open Incoming requests
 
-Open **Sales → Approvals → Incoming** for stage requests routed to you.
+Open **Sales → Approvals → Incoming** for quotation and funnel-stage requests routed to you. Quotation cards include **View quotation**, **Approve** and **Reject**; rejection requires a reason.
 
 {% endstep %}
 {% step %}

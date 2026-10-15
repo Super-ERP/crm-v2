@@ -7,28 +7,28 @@ import {
   listIncomingApprovals,
   listMyApprovals,
 } from "./actions"
+import { listLeadConversionApprovals } from "./lead-conversion-actions"
+import { listQuotationApprovals } from "./quotation-actions"
 import { ApprovalsClient } from "./approvals-client"
 
-export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string }> }) {
-  // The nav hides Approvals from roles that take no part in the gate, but the
-  // route itself is open (the actions only require a context, not a specific
-  // permission). Mirror the nav client-side so a Viewer who lands here by URL
-  // sees a friendly access-denied state rather than an empty approver workbench
-  // implying access they lack. Approvers and requesters (anyone who can advance
-  // a stage) still get the full page; the server actions remain the source of
-  // truth.
+export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ tab?: string; page?: string; quotationPage?: string; leadPage?: string }> }) {
+  // All three workflows share the inbox; each read and mutation enforces its own permissions.
   const ctx = await getServerContext()
   const canParticipate =
     !!ctx &&
     (ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) ||
-      ctx.can(PERMISSIONS.STAGE_ADVANCE))
+      ctx.can(PERMISSIONS.STAGE_ADVANCE) ||
+      ctx.can(PERMISSIONS.QUOTATION_APPROVE) ||
+      ctx.can(PERMISSIONS.QUOTATION_UPDATE) ||
+      ctx.can(PERMISSIONS.LEAD_CONVERT) ||
+      ctx.can(PERMISSIONS.LEAD_CONVERT_APPROVE))
 
   if (!canParticipate) {
     return (
       <>
         <SiteHeader title="Approvals" />
         <PageBody>
-          <Forbidden description="Approvals are handled by the approvers who sign off on stage advances and the people who request them. Your role doesn't take part in this workflow." />
+          <Forbidden description="Approvals are handled by people who request or approve funnel-stage changes, quotations and lead conversions. Your role doesn't take part in this workflow." />
         </PageBody>
       </>
     )
@@ -36,6 +36,8 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
 
   const params = await searchParams
   const tab = params.tab === "mine" ? "mine" : "incoming"
+  const leadApprovals = await listLeadConversionApprovals(tab, params.leadPage)
+  const quotationApprovals = await listQuotationApprovals(tab, params.quotationPage)
   const approvals = tab === "mine" ? await listMyApprovals(params.page) : await listIncomingApprovals(params.page)
 
   return (
@@ -45,6 +47,8 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
         <ApprovalsClient
           tab={tab}
           page={approvals}
+          quotationPage={quotationApprovals}
+          leadPage={leadApprovals}
         />
       </PageBody>
     </>

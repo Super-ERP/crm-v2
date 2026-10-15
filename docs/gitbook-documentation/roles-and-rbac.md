@@ -55,7 +55,7 @@ Create/edit includes leads, accounts, contacts, opportunities, and funnel detail
 | Rep | Yes | No | No |
 | Viewer | No | No | No |
 
-All default roles can view quotations within their record scope. Approval still requires the eligible manager in the Account owner's reporting line; approval permission alone is not sufficient. Customer acceptance/rejection uses the separate **Accept quotations** permission. Owner, Admin, Developer, and Manager also have **Delete quotations**, subject to deletion restrictions.
+All default roles can view quotations within their record scope. Approval follows the submitter's reporting line. A member with the matching approval permission and no superior can proceed directly; managers with a superior require approval. Customer acceptance/rejection uses the separate **Accept quotations** permission. Owner, Admin, Developer, and Manager also have **Delete quotations**, subject to deletion restrictions.
 
 {% endtab %}
 {% tab title="Stages & planning" %}
@@ -70,7 +70,7 @@ All default roles can view quotations within their record scope. Approval still 
 | Rep | Yes | No | Yes |
 | Viewer | No | No | No |
 
-Users without stage-approval permission submit requests when the transition requires approval. Eligible assigned reviewers decide requests in Incoming. Users with stage-approval permission can enter gated stages directly after satisfying stage requirements. Milestone-management permission does not add a status control that is absent from the interface.
+Users without stage-approval permission submit requests when the transition requires approval. Eligible assigned reviewers decide requests in Incoming. Users with stage-approval permission can enter gated stages directly only when they have no reporting manager above them, after satisfying stage requirements. Managers with a superior request approval. Milestone-management permission does not add a status control that is absent from the interface.
 
 {% endtab %}
 {% tab title="Catalog & administration" %}
@@ -141,7 +141,7 @@ In **Edit member**, choose the member's **Manager** and save. The manager must b
 
 #### Check the effective access
 
-Have the member open the relevant records and check the intended actions and scope. For quotation approval, verify the Account owner's reporting line. For stage approval, verify the requester's reporting line. Confirm both the eligible reviewer and the document/request status before deciding.
+Have the member open the relevant records and check the intended actions and scope. For quotation approval, verify the submitter's reporting line (or the funnel owner for legacy requests without submission audit data). For stage approval, verify the requester's reporting line. Confirm both the eligible reviewer and the document/request status before deciding.
 
 {% endstep %}
 {% endstepper %}
@@ -154,7 +154,7 @@ For a read-only member, assign **Viewer alone** if organization-wide reading is 
 
 ## Approval setup checklist
 
-* **Quotation reviewer:** active manager in the Account owner's reporting line with **Approve quotations** and quotation access.
+* **Quotation reviewer:** active eligible manager in the submitter's reporting line with **Approve quotations** and quotation access.
 * **Stage reviewer:** active manager in the requester's reporting line with **Approve stage advances**, assigned to the Pending request and still eligible at decision time.
 * **Sender:** **Send quotations** plus access to the Approved quotation.
 * **Customer decision recorder:** **Accept quotations** plus access to the Sent quotation and the acceptance requirements.

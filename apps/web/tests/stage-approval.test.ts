@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { ServerContext } from "@/lib/server-context"
 
 const runInTenant = vi.hoisted(() => vi.fn())
-const routing = vi.hoisted(() => ({ findManagerApprover: vi.fn(), requireManagerApprover: vi.fn() }))
+const routing = vi.hoisted(() => ({ findManagerApprover: vi.fn(), resolveApprovalRoute: vi.fn() }))
 vi.mock("@/server/services/approval-routing", () => routing)
 
 vi.mock("@/db", () => ({ runInTenant }))
@@ -139,6 +139,47 @@ describe("stage approval lifecycle hardening", () => {
   beforeEach(() => {
     runInTenant.mockReset()
     routing.findManagerApprover.mockReset().mockResolvedValue("approver-1")
+    routing.resolveApprovalRoute.mockReset().mockResolvedValue({ direct: true, approverMemberId: null })
+  })
+
+  it("queues a manager's gated transition through their superior", async () => {
+    const funnel = { ...baseFunnel, currentStageId: early.id, estimatedAmount: "100" }
+    const { tx } = makeTx([[funnel], [container], [early, later], [{ customFunnelFields: [] }], []])
+    tx.insert.mockImplementation(() => query([{ id: "request-new" }]))
+    routing.resolveApprovalRoute.mockResolvedValue({ direct: false, approverMemberId: "superior" })
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    const manager = { ...ctx, isSuperadmin: false }
+    await expect(requestStageAdvance(manager, { funnelId: funnel.id, targetStageId: later.id })).resolves.toEqual({ moved: false, approvalRequestId: "request-new" })
+    expect(routing.resolveApprovalRoute).toHaveBeenCalledWith(tx, manager, "stage.advance.approve")
+    expect(tx.update).not.toHaveBeenCalled()
+    expect(tx.insert.mock.results[0].value.values).toHaveBeenCalledWith(expect.objectContaining({ approverMemberId: "superior" }))
+  })
+
+  it("lets a root manager directly enter a gated stage", async () => {
+    const funnel = { ...baseFunnel, currentStageId: early.id, estimatedAmount: "100" }
+    const { tx, updateCalls } = makeTx([[funnel], [container], [early, later], [{ customFunnelFields: [] }], [{ id: "pending-old" }]], [[{ id: "pending-old" }]])
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    await expect(requestStageAdvance({ ...ctx, isSuperadmin: false }, { funnelId: funnel.id, targetStageId: later.id })).resolves.toEqual({ moved: true })
+    expect(updateCalls.some(({ values }) => (values as Record<string, unknown>).currentStageId === later.id)).toBe(true)
+    expect(updateCalls[0].values).toMatchObject({ status: "cancelled" })
+  })
+
+  it("does not bypass approval for an ordinary rep without a manager", async () => {
+    const funnel = { ...baseFunnel, currentStageId: early.id, estimatedAmount: "100" }
+    const { tx } = makeTx([[funnel], [container], [early, later], [{ customFunnelFields: [] }]])
+    routing.resolveApprovalRoute.mockRejectedValue(new Error("No eligible reporting manager"))
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    await expect(requestStageAdvance({ ...ctx, isSuperadmin: false }, { funnelId: funnel.id, targetStageId: later.id })).rejects.toThrow("No eligible reporting manager")
+    expect(tx.update).not.toHaveBeenCalled()
+    expect(tx.insert).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])("rejects self approval, including superadmin override (%s)", async (isSuperadmin) => {
+    const request = { id: "request-self", status: "pending", requesterMemberId: ctx.memberId, approverMemberId: ctx.memberId }
+    const { tx } = makeTx([[request]])
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    await expect(decideApproval({ ...ctx, isSuperadmin }, { requestId: request.id, decision: "approved" })).rejects.toThrow("Cannot approve your own request")
+    expect(tx.update).not.toHaveBeenCalled()
   })
 
   it("does not let an unrelated permission holder reject a manager's assigned request", async () => {
@@ -205,6 +246,16 @@ describe("stage approval lifecycle hardening", () => {
     expect(updateCalls.some(({ values }) =>
       (values as Record<string, unknown>).currentStageId === early.id
     )).toBe(true)
+  })
+
+  it("applies a still-valid queued KIV reopen", async () => {
+    const parked = { ...later, id: "stage-parked", kind: "PARKED", code: "kiv", requiredFields: [] }
+    const request = { id: "reopen-1", funnelId: baseFunnel.id, requesterMemberId: "rep", approverMemberId: "approver-1", fromStageId: parked.id, targetStageId: early.id, status: "pending", reason: "Resume work" }
+    const funnel = { ...baseFunnel, currentStageId: parked.id, status: "on_hold" }
+    const { tx, updateCalls } = makeTx([[request], [funnel], [request], [parked], [early], [container], [{ customFunnelFields: [] }], [early, parked]], [[{ id: request.id }]])
+    runInTenant.mockImplementation(async (_tenant: string, work: (tx: unknown) => Promise<unknown>) => work(tx))
+    await expect(decideApproval({ ...ctx, memberId: "approver-1", isSuperadmin: false }, { requestId: request.id, decision: "approved" })).resolves.toMatchObject({ status: "approved" })
+    expect(updateCalls.some(({ values }) => (values as Record<string, unknown>).currentStageId === early.id)).toBe(true)
   })
 
   it("invalidates approval when live entry requirements are no longer satisfied", async () => {

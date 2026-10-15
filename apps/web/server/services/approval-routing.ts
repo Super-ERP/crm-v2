@@ -1,5 +1,5 @@
 import "server-only"
-import { sql } from "drizzle-orm"
+import { sql, type SQL } from "drizzle-orm"
 import type { Tx } from "@/db"
 
 /**
@@ -7,8 +7,8 @@ import type { Tx } from "@/db"
  * RLS scopes every table to the caller's tenant. Match normal authorization:
  * union assigned roles; use the legacy primary role only when none are assigned.
  */
-export async function findManagerApprover(tx: Tx, memberId: string, permission: string): Promise<string | null> {
-  const rows = await tx.execute<{ memberId: string }>(sql`
+export function managerApproverQuery(memberId: string | SQL, permission: string): SQL {
+  return sql`
     WITH RECURSIVE reporting_line AS (
       SELECT p.manager_member_id AS member_id, 1 AS depth,
         ARRAY[p.member_id, p.manager_member_id]::text[] AS seen
@@ -37,7 +37,11 @@ export async function findManagerApprover(tx: Tx, memberId: string, permission: 
       )
     )
     ORDER BY line.depth LIMIT 1
-  `)
+  `
+}
+
+export async function findManagerApprover(tx: Tx, memberId: string, permission: string): Promise<string | null> {
+  const rows = await tx.execute<{ memberId: string }>(managerApproverQuery(memberId, permission))
   return rows[0]?.memberId ?? null
 }
 
@@ -45,4 +49,28 @@ export async function requireManagerApprover(tx: Tx, memberId: string, permissio
   const approver = await findManagerApprover(tx, memberId, permission)
   if (!approver) throw new Error("No eligible manager is available. Ask an administrator to configure your reporting manager and their approval permission.")
   return approver
+}
+
+/** Only active approvers at the top of their reporting line may act directly.
+ * A missing/ineligible superior is a configuration error, not a bypass.
+ * Platform superadmins retain the existing operational override.
+ */
+export async function resolveApprovalRoute(
+  tx: Tx,
+  ctx: { memberId: string | null; isSuperadmin: boolean; can: (permission: string) => boolean },
+  permission: string,
+): Promise<{ direct: boolean; approverMemberId: string | null }> {
+  if (ctx.isSuperadmin) return { direct: true, approverMemberId: null }
+  if (!ctx.memberId) throw new Error("No member context")
+  const [profile] = await tx.execute<{ managerMemberId: string | null; status: string }>(sql`
+    SELECT manager_member_id AS "managerMemberId", status FROM membership_profiles
+    WHERE member_id = ${ctx.memberId} LIMIT 1
+  `)
+  if (!profile || profile.status !== "active") {
+    throw new Error("An active reporting profile is required. Ask an administrator to configure your reporting line.")
+  }
+  if (ctx.can(permission) && profile.managerMemberId === null) {
+    return { direct: true, approverMemberId: null }
+  }
+  return { direct: false, approverMemberId: await requireManagerApprover(tx, ctx.memberId, permission) }
 }
