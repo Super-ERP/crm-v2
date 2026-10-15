@@ -1,6 +1,8 @@
 "use server"
 
-import { and, desc, eq, inArray, type SQL } from "drizzle-orm"
+import { approvalQueueSql } from "@/server/services/approval-queue-query"
+import type { ApprovalQueueRead, ApprovalQueueMeta } from "@/lib/approval-queue"
+import { sql, and, desc, eq, inArray, type SQL } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
 import { revalidatePath } from "next/cache"
 import { runInTenant } from "@/db"
@@ -18,7 +20,7 @@ import { runAction, type ActionResult } from "@/lib/action-result"
 import { APPROVAL_PAGE_SIZE, normalizeApprovalPage } from "@/lib/approval-pagination"
 import { decideApproval, type DecisionOutcome } from "@/server/services/stage"
 
-export type ApprovalRow = {
+export type ApprovalRow = ApprovalQueueMeta & {
   id: string
   funnelId: string
   opportunityName: string
@@ -33,7 +35,7 @@ export type ApprovalRow = {
   decidedAt: string | null
 }
 
-export type ApprovalPage = { rows: ApprovalRow[]; pageIndex: number; hasNextPage: boolean }
+export type ApprovalPage = { rows: ApprovalRow[]; pageIndex: number; hasNextPage: boolean; total?: number }
 
 const fromStage = alias(pipelineStages, "from_stage")
 const targetStage = alias(pipelineStages, "target_stage")
@@ -87,7 +89,7 @@ async function nameMap(
 }
 
 /** Pending stage requests assigned to this manager; platform superadmins retain an operational override. */
-export async function listIncomingApprovals(page: unknown = 0): Promise<ApprovalPage> {
+export async function listIncomingApprovals(page: unknown = 0, queue?: ApprovalQueueRead): Promise<ApprovalPage> {
   const pageIndex = normalizeApprovalPage(page)
   const ctx = await requireContext()
   return runInTenant(ctx.tenantId, async (tx) => {
@@ -96,6 +98,7 @@ export async function listIncomingApprovals(page: unknown = 0): Promise<Approval
       if (!ctx.memberId || !ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)) return { rows: [], pageIndex, hasNextPage: false }
       conditions.push(eq(stageApprovalRequests.approverMemberId, ctx.memberId))
     }
+    if(queue)return stageQueuePage(tx,and(...conditions),queue)
     const rows = await buildApprovalQuery(tx, and(...conditions)).limit(APPROVAL_PAGE_SIZE + 1).offset(pageIndex * APPROVAL_PAGE_SIZE)
     const names = await nameMap(tx, [...rows.map(r => r.requesterUserId), ...rows.map(r => r.approverMemberId)])
     return { rows: rows.slice(0, APPROVAL_PAGE_SIZE).map(r => shape(r, names)), pageIndex, hasNextPage: rows.length > APPROVAL_PAGE_SIZE }
@@ -103,11 +106,12 @@ export async function listIncomingApprovals(page: unknown = 0): Promise<Approval
 }
 
 /** Requests I raised. */
-export async function listMyApprovals(page: unknown = 0): Promise<ApprovalPage> {
+export async function listMyApprovals(page: unknown = 0, queue?: ApprovalQueueRead): Promise<ApprovalPage> {
   const pageIndex = normalizeApprovalPage(page)
   const ctx = await requireContext()
   return runInTenant(ctx.tenantId, async (tx) => {
     if (!ctx.memberId) return { rows: [], pageIndex, hasNextPage: false }
+    if(queue)return stageQueuePage(tx,eq(stageApprovalRequests.requesterMemberId,ctx.memberId),queue)
     const rows = await buildApprovalQuery(
       tx,
       eq(stageApprovalRequests.requesterMemberId, ctx.memberId)
@@ -118,6 +122,26 @@ export async function listMyApprovals(page: unknown = 0): Promise<ApprovalPage> 
     ])
     return { rows: rows.slice(0, APPROVAL_PAGE_SIZE).map(r => shape(r, names)), pageIndex, hasNextPage: rows.length > APPROVAL_PAGE_SIZE }
   })
+}
+
+
+/** Queue projection shares the exact routing conditions used by the existing inbox. */
+async function stageQueuePage(tx: Parameters<Parameters<typeof runInTenant>[1]>[0], where: SQL|undefined, queue:ApprovalQueueRead):Promise<ApprovalPage> {
+ const source=sql`SELECT ${stageApprovalRequests.id} AS id, ${stageApprovalRequests.funnelId} AS "funnelId",
+   ${funnels.name} AS "opportunityName", ${stageApprovalRequests.requesterMemberId} AS "requesterUserId",
+   ${stageApprovalRequests.approverMemberId} AS "approverMemberId", ${fromStage.name} AS "fromStageName", ${targetStage.name} AS "targetStageName",
+   ${stageApprovalRequests.reason} AS reason, ${stageApprovalRequests.status} AS status, ${stageApprovalRequests.decisionNote} AS "decisionNote",
+   ${stageApprovalRequests.requestedAt} AS "requestedAt", ${stageApprovalRequests.decidedAt} AS "decidedAt",
+   floor(extract(epoch from ${stageApprovalRequests.requestedAt})*1000000)::bigint::text AS "queueSortKey",
+   concat_ws(' ',${funnels.name},${stageApprovalRequests.reason},(SELECT u.name FROM member m JOIN "user" u ON u.id=m.user_id WHERE m.id=${stageApprovalRequests.requesterMemberId} AND m.organization_id=current_setting('app.current_tenant',true))) AS "queueSearch"
+ FROM ${stageApprovalRequests} JOIN ${funnels} ON ${funnels.id}=${stageApprovalRequests.funnelId}
+ LEFT JOIN ${pipelineStages} AS from_stage ON ${fromStage.id}=${stageApprovalRequests.fromStageId}
+ JOIN ${pipelineStages} AS target_stage ON ${targetStage.id}=${stageApprovalRequests.targetStageId}
+ WHERE ${where??sql`true`}`
+ const raw=await tx.execute<RawRow & {queueTotal?:number}>(approvalQueueSql(source,'stage',queue))
+ const rows=raw.filter(row=>row.id)
+ const names=await nameMap(tx,rows.flatMap(row=>[row.requesterUserId,row.approverMemberId]))
+ return {rows:rows.map(row=>shape(row,names)),pageIndex:0,hasNextPage:rows.length>APPROVAL_PAGE_SIZE,total:Number(raw[0]?.queueTotal??0)}
 }
 
 /**
@@ -147,7 +171,7 @@ export async function listFunnelApprovalHistory(
   })
 }
 
-type RawRow = {
+type RawRow = ApprovalQueueMeta & {
   id: string
   funnelId: string
   opportunityName: string
@@ -174,8 +198,9 @@ function shape(r: RawRow, names: Map<string, string>): ApprovalRow {
     reason: r.reason,
     status: r.status,
     decisionNote: r.decisionNote,
-    requestedAt: r.requestedAt.toISOString(),
-    decidedAt: r.decidedAt ? r.decidedAt.toISOString() : null,
+    queueSortKey:r.queueSortKey,
+    requestedAt: new Date(r.requestedAt).toISOString(),
+    decidedAt: r.decidedAt ? new Date(r.decidedAt).toISOString() : null,
   }
 }
 

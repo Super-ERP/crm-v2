@@ -51,6 +51,13 @@ describe.skipIf(!databaseUrl)("quotation approval inbox PostgreSQL boundary", ()
       const incoming = await listQuotationApprovals("incoming")
       expect(incoming.rows).toHaveLength(1)
       expect(incoming.rows[0]).toMatchObject({ id: quote, billToName: "Uniti", customerName: "MCMC", requesterName: "Shelly", canRecall: false })
+      const queued=await listQuotationApprovals("incoming",0,{order:"oldest",search:"Shelly"})
+      expect(queued.rows[0].id).toBe(quote)
+      expect(queued.total).toBe(1)
+      expect(queued.rows[0].queueSortKey).toMatch(/^\d+$/)
+      const exhausted=await listQuotationApprovals("incoming",0,{order:"oldest",cursor:{kind:"quotation",id:quote,queueSortKey:queued.rows[0].queueSortKey!}})
+      expect(exhausted.rows).toEqual([])
+      expect(exhausted.total).toBe(1)
       expect((await listQuotationApprovals("mine")).rows).toHaveLength(0)
       // Pending quotes follow the same current-manager eligibility as mutation actions,
       // even when their originally stored approver is stale.

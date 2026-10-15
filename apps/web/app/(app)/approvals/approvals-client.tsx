@@ -1,411 +1,96 @@
 "use client"
 
-import * as React from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Check, X, Ban, ChevronRight, Loader2, Info } from "lucide-react"
-import { toast } from "sonner"
-import { showActionError } from "@/lib/show-action-error"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { LeadConversionApprovalCard } from "./lead-conversion-cards"
-import type { LeadConversionApprovalPage } from "./lead-conversion-actions"
-import { QuotationApprovalCard } from "./quotation-cards"
-import type { QuotationApprovalPage } from "./quotation-actions"
-import { formatDate } from "@/lib/format"
-import { AttachmentList } from "@/components/attachments/attachment-upload"
-import {
-  listEntityAttachments,
-  type AttachmentRow,
-} from "@/app/(app)/_shared/attachment-actions"
-import { decideApprovalAction, type ApprovalRow, type ApprovalPage } from "./actions"
+import * as React from 'react'
+import {useRouter} from 'next/navigation'
+import {ArrowLeft,CheckCheck,HelpCircle,Inbox,Loader2,Search} from 'lucide-react'
+import {formatDistanceStrict} from 'date-fns'
+import {Button} from '@/components/ui/button'
+import {Input} from '@/components/ui/input'
+import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs'
+import {PageHeader} from '@/components/page-header'
+import {ObjectTile} from '@/components/object-tile'
+import {EmptyState} from '@/components/empty-state'
+import {formatDate,formatMoney} from '@/lib/format'
+import {cn} from '@/lib/utils'
+import {APPROVAL_TYPE_LABELS,approvalItemTitle,type ApprovalKind,type ApprovalOrder,type ApprovalQueuePage} from '@/lib/approval-queue'
+import {listApprovalQueue} from './queue-actions'
+import {QuotationApprovalCard} from './quotation-cards'
+import {LeadConversionApprovalCard} from './lead-conversion-cards'
+import {StageApprovalReview} from './stage-approval-review'
+import {ApprovalReviewStatus} from './approval-review-parts'
 
-const STATUS_VARIANT: Record<
-  ApprovalRow["status"],
-  "default" | "secondary" | "destructive" | "outline"
-> = {
-  pending: "secondary",
-  approved: "default",
-  rejected: "destructive",
-  cancelled: "outline",
+function RoutingHelp(){
+ return <details className="relative max-w-full text-sm"><summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-md px-2 text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring"><HelpCircle className="size-4"/>How approvals work</summary><div className="absolute right-0 z-20 mt-2 w-80 max-w-[calc(100vw-2rem)] space-y-3 rounded-md border bg-popover p-4 text-popover-foreground shadow-md"><p>Requests are routed through the reporting line to an eligible manager. Only the assigned approver can decide a request; you cannot approve your own request.</p><p>Managers with no reporting manager can proceed directly where the workflow permits. Managers with a superior need approval. Missing reporting configuration does not grant a bypass.</p><p>Review the submitted details before deciding. Quotation and lead-conversion rejections require a reason; the funnel-stage decision note is optional.</p></div></details>
 }
-
-function StatusBadge({ status }: { status: ApprovalRow["status"] }) {
-  return (
-    <Badge variant={STATUS_VARIANT[status]} className="capitalize">
-      {status}
-    </Badge>
-  )
-}
-
-function Attachments({ requestId }: { requestId: string }) {
-  const [open, setOpen] = React.useState(false)
-  const [items, setItems] = React.useState<AttachmentRow[] | null>(null)
-  const [loading, setLoading] = React.useState(false)
-  const [error, setError] = React.useState(false)
-
-  async function toggle() {
-    const next = !open
-    setOpen(next)
-    if (next && items === null && !loading) {
-      setError(false)
-      setLoading(true)
-      try {
-        const data = await listEntityAttachments("stage_approval_request", requestId)
-        setItems(data)
-      } catch {
-        setError(true)
-      } finally {
-        setLoading(false)
-      }
-    }
-  }
-
-  return (
-    <div className="mt-1">
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={loading}
-        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-      >
-        <ChevronRight
-          className={`size-3.5 transition-transform ${open ? "rotate-90" : ""}`}
-        />
-        Attachments
-      </button>
-      {open ? (
-        <div className="mt-2 pl-1">
-          {loading ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" /> Loading…
-            </span>
-          ) : error ? (
-            <span className="text-xs text-destructive">Attachments could not be loaded. Close and reopen to retry.</span>
-          ) : (
-            <AttachmentList items={items ?? []} />
-          )}
-        </div>
-      ) : null}
+export function ApprovalsClient({tab,initialPage}:{tab:'incoming'|'mine';initialPage:ApprovalQueuePage}){
+ const router=useRouter()
+ const [navigating,startNavigation]=React.useTransition()
+ const [search,setSearch]=React.useState('')
+ const [type,setType]=React.useState<'all'|ApprovalKind>('all')
+ const [order,setOrder]=React.useState<ApprovalOrder>('oldest')
+ const [trail,setTrail]=React.useState<Array<string|null>>([null])
+ const [selectedKey,setSelectedKey]=React.useState<string|null>(null)
+ const [mobileReview,setMobileReview]=React.useState(false)
+ const [retry,setRetry]=React.useState(0)
+ const input={tab,search:search.trim(),type,order,cursor:trail[trail.length-1]}
+ const queryKey=JSON.stringify(input)
+ const firstKey=React.useRef(queryKey)
+ const [loaded,setLoaded]=React.useState({source:initialPage,page:initialPage,key:queryKey})
+ const [loading,setLoading]=React.useState(false)
+ const [error,setError]=React.useState(false)
+ const first=React.useRef(true)
+ const queueRef=React.useRef<HTMLDivElement>(null)
+ const reviewBackRef=React.useRef<HTMLButtonElement>(null)
+ React.useEffect(()=>{if(mobileReview&&window.matchMedia("(max-width: 1023px)").matches)reviewBackRef.current?.focus()},[mobileReview,selectedKey])
+ React.useEffect(()=>{
+  if(first.current){first.current=false;if(queryKey===firstKey.current)return}
+  let cancelled=false
+  const timer=setTimeout(()=>{
+   setLoading(true);setError(false)
+   void listApprovalQueue(JSON.parse(queryKey)).then(page=>{
+    if(!cancelled){setLoaded({source:initialPage,page,key:queryKey});queueRef.current?.scrollTo({top:0})}
+   }).catch(()=>{if(!cancelled)setError(true)}).finally(()=>{if(!cancelled)setLoading(false)})
+  },180)
+  return ()=>{cancelled=true;clearTimeout(timer)}
+ },[queryKey,initialPage,retry])
+ const page=loaded.page
+ const stale=loaded.key!==queryKey||loaded.source!==initialPage
+ const busy=loading||(!error&&stale)||navigating
+ const selected=page.items.find(item=>`${item.kind}:${item.id}`===selectedKey)??page.items[0]
+ const total=Object.values(page.counts).reduce((sum,count)=>sum+count,0)
+ const filtered=!!search.trim()||type!=='all'
+ function resetPage(){setTrail([null]);setMobileReview(false)}
+ function backToQueue(){setMobileReview(false);setTimeout(()=>queueRef.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')?.focus(),0)}
+ return <div className="flex min-w-0 flex-col gap-4">
+  <div className={cn(mobileReview&&'hidden lg:block')}><PageHeader title="Review requests" description="Review the context, then make your decision."><RoutingHelp/></PageHeader></div>
+  <Tabs value={tab} onValueChange={value=>startNavigation(()=>router.push(`/approvals?tab=${value}`))} className={cn(mobileReview&&'hidden lg:block')}><TabsList variant="line"><TabsTrigger value="incoming" disabled={navigating}>Needs my review</TabsTrigger><TabsTrigger value="mine" disabled={navigating}>My requests</TabsTrigger></TabsList></Tabs>
+  <div className={cn('flex flex-wrap items-center gap-2',mobileReview&&'hidden lg:flex')}>
+   <div className="relative w-full sm:max-w-xs"><Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" aria-hidden/><Input aria-label="Search approval requests" placeholder="Search requests, customers or requesters…" className="pl-9" value={search} maxLength={200} onChange={event=>{setSearch(event.target.value);resetPage()}}/></div>
+   <label className="sr-only" htmlFor="approval-type">Request type</label><select id="approval-type" value={type} onChange={event=>{setType(event.target.value as typeof type);resetPage()}} className="h-9 max-w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring"><option value="all">All types</option><option value="quotation">Quotations</option><option value="stage">Funnel stages</option><option value="lead">Lead conversions</option></select>
+   <label className="sr-only" htmlFor="approval-order">Request order</label><select id="approval-order" value={order} onChange={event=>{setOrder(event.target.value as ApprovalOrder);resetPage()}} className="ml-auto h-9 max-w-full rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring"><option value="oldest">Oldest first</option><option value="newest">Newest first</option></select>
+  </div>
+  {mobileReview?<Button ref={reviewBackRef} variant="ghost" className="min-h-11 self-start lg:hidden" onClick={backToQueue}><ArrowLeft/>Back to requests</Button>:null}
+  {error?<div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border border-destructive/40 p-3 text-sm"><p>Could not load the current requests. Retry before making a decision.</p><Button variant="outline" onClick={()=>setRetry(value=>value+1)}>Retry</Button></div>:null}
+  <div aria-busy={busy} className={cn('min-w-0 overflow-hidden rounded-lg border lg:grid lg:h-[calc(100dvh-19rem)] lg:min-h-[26rem] lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.8fr)]',mobileReview&&'h-[calc(100dvh-9rem)]')}>
+   <div className={cn('flex h-full min-h-0 flex-col lg:border-r',mobileReview&&'hidden lg:flex')}>
+    <div role="status" aria-live="polite" className="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b px-4 py-3 text-xs text-muted-foreground"><span>{busy?'Loading requests…':`${total} ${total===1?'request':'requests'}${filtered?' matching filters':tab==='incoming'?' awaiting your review':''}`}</span>{busy?<Loader2 className="size-4 animate-spin" aria-hidden/>:null}</div>
+    <div ref={queueRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+     {page.items.length?<ul>{page.items.map(item=>{
+      const key=`${item.kind}:${item.id}`,active=selected?.kind===item.kind&&selected.id===item.id
+      const context=item.kind==='quotation'?item.row.customerName:item.kind==='lead'?item.row.companyName:`${item.row.fromStageName??'—'} → ${item.row.targetStageName}`
+      return <li key={key}><button aria-pressed={active} disabled={busy||error} onClick={()=>{setSelectedKey(key);setMobileReview(true)}} className={cn('flex w-full min-w-0 flex-col gap-1.5 border-b p-3 text-left transition-colors hover:bg-muted/50 focus-visible:relative focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-wait',active&&'bg-primary/5 ring-1 ring-inset ring-primary/30')}>
+       <span className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground"><span className="flex items-center gap-2"><ObjectTile kind={item.kind==='stage'?'funnel':item.kind==='lead'?'lead':'quotation'} className="size-5" iconClassName="size-3"/>{APPROVAL_TYPE_LABELS[item.kind]}</span><span title={item.row.requestedAt??undefined}>{item.row.requestedAt?(page.asOf?formatDistanceStrict(new Date(item.row.requestedAt),new Date(page.asOf),{addSuffix:true}):formatDate(item.row.requestedAt)):'Date unavailable'}</span></span>
+       <span className="flex w-full min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><span className="break-words text-sm font-semibold [overflow-wrap:anywhere]">{approvalItemTitle(item)}</span>{item.kind==='quotation'?<span className="text-xs tabular-nums">{formatMoney(item.row.total,item.row.currency)}</span>:null}</span>
+       <span className="break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">{context}</span>
+       <span className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span>{item.row.requesterName??'Unknown requester'}</span>{tab==='mine'?<ApprovalReviewStatus status={item.row.status}/>:null}</span>
+      </button></li>
+     })}</ul>:<EmptyState icon={filtered?Search:CheckCheck} title={filtered?'No matching requests':trail.length>1?'No requests on this page':tab==='incoming'?"You’re up to date":'No requests yet'} description={filtered?'Try another search or request type.':trail.length>1?'Use Previous to return to earlier requests.':tab==='incoming'?'Requests assigned to you will appear here.':'Your submitted approval requests will appear here.'}/>}
     </div>
-  )
-}
-
-function StagePath({ row }: { row: ApprovalRow }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-sm">
-      <span className="text-muted-foreground">{row.fromStageName ?? "—"}</span>
-      <ChevronRight className="size-3.5 text-muted-foreground" />
-      <span className="font-medium">{row.targetStageName}</span>
-    </span>
-  )
-}
-
-function DecisionDialog({
-  row,
-  decision,
-}: {
-  row: ApprovalRow
-  decision: "approved" | "rejected"
-}) {
-  const [open, setOpen] = React.useState(false)
-  const [note, setNote] = React.useState("")
-  const [pending, startTransition] = React.useTransition()
-  const approve = decision === "approved"
-
-  function submit() {
-    startTransition(async () => {
-      const res = await decideApprovalAction({
-        requestId: row.id,
-        decision,
-        note: note.trim() || undefined,
-      })
-      if (!res.ok) {
-        showActionError(res)
-        return
-      }
-      // An approve can resolve as "obsolete" when the funnel already moved past
-      // the requested stage — surface that neutrally rather than as a success.
-      if (res.data.status === "obsolete") {
-        toast.info(res.data.message)
-      } else {
-        toast.success(res.data.message)
-      }
-      setOpen(false)
-    })
-  }
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger
-        render={
-          <Button size="sm" variant={approve ? "default" : "outline"}>
-            {approve ? <Check className="size-4" /> : <X className="size-4" />}
-            {approve ? "Approve" : "Reject"}
-          </Button>
-        }
-      />
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {approve ? "Approve stage advance" : "Reject stage advance"}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {row.opportunityName} — moving to {row.targetStageName}.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="grid gap-2">
-          <Label htmlFor={`note-${row.id}-${decision}`}>Note (optional)</Label>
-          <Textarea
-            id={`note-${row.id}-${decision}`}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Add a decision note…"
-            rows={3}
-          />
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant={approve ? "default" : "destructive"}
-            disabled={pending}
-            onClick={(e) => {
-              e.preventDefault()
-              submit()
-            }}
-          >
-            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-            {approve ? "Approve" : "Reject"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
-
-function CancelDialog({ row }: { row: ApprovalRow }) {
-  const [open, setOpen] = React.useState(false)
-  const [pending, startTransition] = React.useTransition()
-
-  function submit() {
-    startTransition(async () => {
-      const res = await decideApprovalAction({
-        requestId: row.id,
-        decision: "cancelled",
-      })
-      if (!res.ok) {
-        showActionError(res)
-        return
-      }
-      toast.success(res.data.message)
-      setOpen(false)
-    })
-  }
-
-  return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger
-        render={
-          <Button size="sm" variant="outline">
-            <Ban className="size-4" />
-            Cancel
-          </Button>
-        }
-      />
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Cancel this request?</AlertDialogTitle>
-          <AlertDialogDescription>
-            {row.opportunityName} will stay in its current stage. This cannot be
-            undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Keep</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            disabled={pending}
-            onClick={(e) => {
-              e.preventDefault()
-              submit()
-            }}
-          >
-            {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Cancel request
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
-
-function IncomingCard({ row }: { row: ApprovalRow }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-1">
-            <span className="font-medium">{row.opportunityName}</span>
-            <StagePath row={row} />
-          </div>
-          <div className="flex gap-2"><Badge variant="outline">Funnel stage</Badge><StatusBadge status={row.status} /></div>
-        </div>
-        <p className="text-sm text-muted-foreground">{row.reason}</p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          <span>
-            Requested by{" "}
-            <span className="text-foreground">{row.requesterName ?? "Unknown"}</span>
-          </span>
-          <span>{formatDate(row.requestedAt)}</span>
-        </div>
-        <Attachments requestId={row.id} />
-        <Separator />
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">
-            Approve to let{" "}
-            <span className="font-medium text-foreground">
-              {row.opportunityName}
-            </span>{" "}
-            advance to {row.targetStageName}, or decline to keep it in place.
-          </span>
-          <div className="flex items-center gap-2">
-            <DecisionDialog row={row} decision="rejected" />
-            <DecisionDialog row={row} decision="approved" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function MineCard({ row }: { row: ApprovalRow }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="grid gap-1">
-            <span className="font-medium">{row.opportunityName}</span>
-            <StagePath row={row} />
-          </div>
-          <div className="flex gap-2"><Badge variant="outline">Funnel stage</Badge><StatusBadge status={row.status} /></div>
-        </div>
-        <p className="text-sm text-muted-foreground">{row.reason}</p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {row.approverName ? (
-            <span>
-              Approver{" "}
-              <span className="text-foreground">{row.approverName}</span>
-            </span>
-          ) : (
-            <span>Unrouted</span>
-          )}
-          <span>Requested {formatDate(row.requestedAt)}</span>
-          {row.decidedAt ? <span>Decided {formatDate(row.decidedAt)}</span> : null}
-        </div>
-        {row.decisionNote ? (
-          <p className="rounded-md bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground">
-            Note: {row.decisionNote}
-          </p>
-        ) : null}
-        <Attachments requestId={row.id} />
-        {row.status === "pending" ? (
-          <>
-            <Separator />
-            <div className="flex items-center justify-end">
-              <CancelDialog row={row} />
-            </div>
-          </>
-        ) : null}
-      </CardContent>
-    </Card>
-  )
-}
-
-function GateHelp() {
-  return (
-    <div className="flex items-start gap-2.5 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-      <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <p>
-        Gated funnel stages require approval from the first active manager in your reporting line
-        who has stage-approval permission. Permissions from all assigned roles count.
-        Only that assigned manager can decide your request; you cannot approve your own request.
-        Across funnel stages, quotations and lead conversion, approvers with no reporting manager can proceed directly. Managers with a superior must request approval. Missing reporting configuration does not grant a bypass. Review each request’s details before deciding.
-      </p>
-    </div>
-  )
-}
-
-export function ApprovalsClient({ tab, page, quotationPage, leadPage }: { tab: "incoming" | "mine"; page: ApprovalPage; quotationPage: QuotationApprovalPage; leadPage: LeadConversionApprovalPage }) {
-  const router = useRouter()
-  const [navigating, startTransition] = React.useTransition()
-  const href = (pageIndex: number) => `/approvals?tab=${tab}&page=${pageIndex}&quotationPage=${quotationPage.pageIndex}&leadPage=${leadPage.pageIndex}`
-
-  return (
-    <div className="flex flex-col gap-4">
-      <GateHelp />
-      <div className="flex justify-end"><Button variant="outline" size="sm" render={<Link href="/quotations" />}>Review quotations</Button></div>
-      <Tabs value={tab} onValueChange={value => startTransition(() => router.push(`/approvals?tab=${value}`))} className="w-full">
-        <TabsList>
-          <TabsTrigger value="incoming" disabled={navigating}>Incoming</TabsTrigger>
-          <TabsTrigger value="mine" disabled={navigating}>My requests</TabsTrigger>
-        </TabsList>
-        <TabsContent value={tab} className="mt-4" aria-busy={navigating}>
-          <h2 className="mb-3 text-base font-semibold">Lead conversion approvals</h2>
-          {leadPage.rows.length === 0 ? <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            {tab === "incoming" ? "No pending lead conversion approvals routed to you." : "No lead conversion requests on this page."}
-          </p> : <div className="grid gap-3">{leadPage.rows.map(row => <LeadConversionApprovalCard key={row.id} row={row} incoming={tab === "incoming"} />)}</div>}
-          <nav className="my-4 flex items-center justify-between gap-3" aria-label="Lead conversion approval pages">
-            <Button variant="outline" disabled={leadPage.pageIndex === 0 || navigating} render={<Link href={`/approvals?tab=${tab}&page=${page.pageIndex}&quotationPage=${quotationPage.pageIndex}&leadPage=${Math.max(0, leadPage.pageIndex - 1)}`} />}>Previous</Button>
-            <span className="text-sm text-muted-foreground">Page {leadPage.pageIndex + 1}</span>
-            <Button variant="outline" disabled={!leadPage.hasNextPage || navigating} render={<Link href={`/approvals?tab=${tab}&page=${page.pageIndex}&quotationPage=${quotationPage.pageIndex}&leadPage=${leadPage.pageIndex + 1}`} />}>Next</Button>
-          </nav>
-          <h2 className="mb-3 mt-6 text-base font-semibold">Quotation approvals</h2>
-          {quotationPage.rows.length === 0 ? <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-            {tab === "incoming" ? "No pending quotation approvals routed to you." : "No quotation requests on this page."}
-          </p> : <div className="grid gap-3">{quotationPage.rows.map(row => <QuotationApprovalCard key={row.id} row={row} incoming={tab === "incoming"} />)}</div>}
-          <nav className="my-4 flex items-center justify-between gap-3" aria-label="Quotation approval pages">
-            <Button variant="outline" disabled={quotationPage.pageIndex === 0 || navigating} render={<Link href={`/approvals?tab=${tab}&page=${page.pageIndex}&quotationPage=${Math.max(0, quotationPage.pageIndex - 1)}&leadPage=${leadPage.pageIndex}`} />}>Previous</Button>
-            <span className="text-sm text-muted-foreground">Page {quotationPage.pageIndex + 1}</span>
-            <Button variant="outline" disabled={!quotationPage.hasNextPage || navigating} render={<Link href={`/approvals?tab=${tab}&page=${page.pageIndex}&quotationPage=${quotationPage.pageIndex + 1}&leadPage=${leadPage.pageIndex}`} />}>Next</Button>
-          </nav>
-          <h2 className="mb-3 mt-6 text-base font-semibold">Funnel-stage approvals</h2>
-          {page.rows.length === 0 ? (
-            <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-              {page.pageIndex > 0 ? "No requests on this page. Use Previous to return to earlier pages." : tab === "incoming" ? "No pending approvals routed to you." : "You haven't requested any approvals."}
-            </p>
-          ) : (
-            <div className="grid gap-3">
-              {page.rows.map(row => tab === "incoming" ? <IncomingCard key={row.id} row={row} /> : <MineCard key={row.id} row={row} />)}
-            </div>
-          )}
-          <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Approval pages">
-            <Button variant="outline" disabled={page.pageIndex === 0 || navigating} render={<Link href={href(Math.max(0, page.pageIndex - 1))} />}>Previous</Button>
-            <span className="text-sm text-muted-foreground">Page {page.pageIndex + 1}</span>
-            <Button variant="outline" disabled={!page.hasNextPage || navigating} render={<Link href={href(page.pageIndex + 1)} />}>Next</Button>
-          </nav>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
+    <nav aria-label="Approval queue pages" className="flex shrink-0 items-center justify-between gap-2 border-t p-3"><Button size="sm" variant="outline" className="min-h-10" disabled={busy||trail.length===1} onClick={()=>{setTrail(current=>current.slice(0,-1));setMobileReview(false)}}>Previous</Button><span className="text-xs text-muted-foreground">Page {trail.length}</span><Button size="sm" variant="outline" className="min-h-10" disabled={busy||!page.hasNextPage} onClick={()=>{if(page.nextCursor)setTrail(current=>[...current,page.nextCursor]);setMobileReview(false)}}>Next</Button></nav>
+   </div>
+   <fieldset disabled={busy||error||stale} className={cn('h-full min-h-0 min-w-0 flex-col border-0 p-0 lg:flex',mobileReview?'flex':'hidden')}>
+    {selected?(selected.kind==='quotation'?<QuotationApprovalCard key={`${selected.kind}:${selected.id}`} row={selected.row} incoming={tab==='incoming'}/>:selected.kind==='lead'?<LeadConversionApprovalCard key={`${selected.kind}:${selected.id}`} row={selected.row} incoming={tab==='incoming'}/>:<StageApprovalReview key={`${selected.kind}:${selected.id}`} row={selected.row} incoming={tab==='incoming'}/>):<div className="flex h-full items-center justify-center"><EmptyState icon={Inbox} title="Select a request to review" description="Request details and decision controls appear here."/></div>}
+   </fieldset>
+  </div>
+ </div>
 }

@@ -1,5 +1,7 @@
 "use server"
 
+import { approvalQueueSql } from "@/server/services/approval-queue-query"
+import type { ApprovalQueueRead, ApprovalQueueMeta } from "@/lib/approval-queue"
 import { sql } from "drizzle-orm"
 import { runInTenant } from "@/db"
 import { requireContext } from "@/lib/server-context"
@@ -8,7 +10,7 @@ import { managerApproverQuery } from "@/server/services/approval-routing"
 import { PERMISSIONS } from "@/lib/permissions"
 import { APPROVAL_PAGE_SIZE, normalizeApprovalPage } from "@/lib/approval-pagination"
 
-export type QuotationApprovalRow = {
+export type QuotationApprovalRow = ApprovalQueueMeta & {
   id: string
   quoteNumber: string
   funnelName: string
@@ -24,10 +26,10 @@ export type QuotationApprovalRow = {
   rejectionReason: string | null
   canRecall: boolean
 }
-export type QuotationApprovalPage = { rows: QuotationApprovalRow[]; pageIndex: number; hasNextPage: boolean }
+export type QuotationApprovalPage = { rows: QuotationApprovalRow[]; pageIndex: number; hasNextPage: boolean; total?: number }
 
 /** Latest submission per quotation. Audit actors identify requesters independently of record ownership. */
-export async function listQuotationApprovals(tab: "incoming" | "mine", page: unknown = 0): Promise<QuotationApprovalPage> {
+export async function listQuotationApprovals(tab: "incoming" | "mine", page: unknown = 0, queue?: ApprovalQueueRead): Promise<QuotationApprovalPage> {
   const ctx = await requireContext()
   const pageIndex = normalizeApprovalPage(page)
   const empty = { rows: [], pageIndex, hasNextPage: false }
@@ -41,10 +43,9 @@ export async function listQuotationApprovals(tab: "incoming" | "mine", page: unk
     const filter = tab === "incoming"
       ? sql`q.status = 'pending_approval' AND ${ctx.isSuperadmin ? sql`true` : sql`current_approver."memberId" = ${ctx.memberId} AND coalesce(submission.actor_member_id, f.owner_member_id) <> ${ctx.memberId}`}`
       : sql`submission.actor_member_id = ${ctx.memberId}`
-    const rows = await tx.execute<Omit<QuotationApprovalRow, "requestedAt" | "decidedAt"> & {
-      requestedAt: Date | string | null; decidedAt: Date | string | null
-    }>(sql`
-      SELECT q.id, q.quote_number AS "quoteNumber", f.name AS "funnelName",
+    const source = sql`
+      SELECT floor(extract(epoch from coalesce(submission.created_at,q.updated_at))*1000000)::bigint::text AS "queueSortKey",
+        concat_ws(' ',q.quote_number,f.name,customer.name,bill_to.name,requester.name) AS "queueSearch", q.id, q.quote_number AS "quoteNumber", f.name AS "funnelName",
         customer.name AS "customerName",
         coalesce(q.billing_snapshot->'account'->>'name', bill_to.name, customer.name) AS "billToName",
         q.total, q.currency, q.status, requester.name AS "requesterName",
@@ -77,17 +78,20 @@ export async function listQuotationApprovals(tab: "incoming" | "mine", page: unk
       LEFT JOIN "user" approver ON approver.id = approver_member.user_id
       WHERE q.tenant_id = ${ctx.tenantId} AND q.deleted_at IS NULL AND f.deleted_at IS NULL
         AND customer.deleted_at IS NULL AND ${scope} AND ${filter}
-      ORDER BY coalesce(submission.created_at, q.updated_at) DESC, q.id DESC
-      LIMIT ${APPROVAL_PAGE_SIZE + 1} OFFSET ${pageIndex * APPROVAL_PAGE_SIZE}
-    `)
+    `
+    const rows = await tx.execute<Omit<QuotationApprovalRow, "requestedAt" | "decidedAt"> & {requestedAt: Date|string|null; decidedAt: Date|string|null; queueTotal?:number; queueSearch?:string}>(queue
+      ? approvalQueueSql(source,'quotation',queue)
+      : sql`${source} ORDER BY coalesce(submission.created_at, q.updated_at) DESC, q.id DESC LIMIT ${APPROVAL_PAGE_SIZE+1} OFFSET ${pageIndex*APPROVAL_PAGE_SIZE}`)
+    const records=rows.filter(row=>row.id)
     return {
-      rows: rows.slice(0, APPROVAL_PAGE_SIZE).map(row => ({
-        ...row,
+      rows: (queue ? records : records.slice(0, APPROVAL_PAGE_SIZE)).map(row => { const clean={...row};delete clean.queueSearch;delete clean.queueTotal;return ({
+        ...clean,
         requestedAt: row.requestedAt ? new Date(row.requestedAt).toISOString() : null,
         decidedAt: row.decidedAt ? new Date(row.decidedAt).toISOString() : null,
-      })),
+      })}),
       pageIndex,
-      hasNextPage: rows.length > APPROVAL_PAGE_SIZE,
+      hasNextPage: records.length > APPROVAL_PAGE_SIZE,
+      total: queue ? Number(rows[0]?.queueTotal ?? 0) : undefined,
     }
   })
 }

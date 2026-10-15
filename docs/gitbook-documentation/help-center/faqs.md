@@ -87,7 +87,7 @@ See [Managing revisions](../05-quotations-and-revisions.md#managing-revisions).
 <details>
 <summary>Where do I approve a quotation?</summary>
 
-The eligible reporting manager reviews quotation approval on the quotation itself. This is the first active eligible manager in the submitter’s reporting line with quotation approval permission. **Sales → Approvals** includes quotation, funnel-stage and lead-conversion requests in both **Incoming** and **My requests**. Managers can approve or reject quotation cards; eligible requesters can recall pending quotations.
+The eligible reporting manager reviews quotation approval on the quotation itself. This is the first active eligible manager in the submitter’s reporting line with quotation approval permission. **Sales → Approvals** includes quotation, funnel-stage and lead-conversion requests in both **Needs my review** and **My requests**. Managers can approve or reject quotation cards; eligible requesters can recall pending quotations.
 
 See [Quotations](../05-quotations-and-revisions.md) and [Stage approvals](../08-approvals-inbox.md).
 

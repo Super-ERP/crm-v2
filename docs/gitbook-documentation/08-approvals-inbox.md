@@ -5,7 +5,7 @@ icon: stamp
 
 # Approvals inbox
 
-Use **Sales → Approvals** to review quotation, funnel-stage and lead-conversion requests. Both **Incoming** and **My requests** contain separate, labelled sections for the three workflows.
+Use **Sales → Approvals** to review quotation, funnel-stage and lead-conversion requests. **Needs my review** contains pending requests routed to you; **My requests** tracks your submissions. Both use one queue with a selected-request review panel.
 
 **New to these terms?** Read the [terminology reference](https://jienweng.gitbook.io/q-app/reference/terminology#stage-gate).
 
@@ -22,15 +22,15 @@ Use **Sales → Approvals** to review quotation, funnel-stage and lead-conversio
 
 ## What appears in each tab
 
-| Section | Incoming | My requests |
+| Request type | Needs my review | My requests |
 | --- | --- | --- |
 | **Lead conversion approvals** | Pending conversions routed to you. Expand **Submitted conversion details**, use **View lead**, then **Approve** or **Reject**. | Your submitted requests and their status. Use **Cancel request** while pending. |
 | **Quotation approvals** | Pending quotations routed to you. Use **View quotation**, then **Approve** or **Reject**. | Your latest submission per quotation and its current status. Use **Recall to Draft** while pending when authorized. |
 | **Funnel-stage approvals** | Pending stage changes assigned to you. Review the stage change, reason and attachments, then **Approve** or **Reject**. | Your stage requests and their status. Use **Cancel request** while pending. |
 
-Quotation and lead-conversion sections show eligible requests within ownership/team access. The funnel-stage section shows pending requests assigned to the manager. These are not organization-wide queues for ordinary managers. Each section has independent pagination. Approved, rejected and cancelled requests leave **Incoming**; follow your submissions in **My requests**. A rejected quotation returns to **Draft**, so its card shows the current quotation status and rejection reason.
+Quotation and lead-conversion requests are shown within ownership/team access. Funnel-stage requests include pending requests assigned to the manager. These are not organization-wide queues for ordinary managers. The queue has one pagination control across all request types. Approved, rejected and cancelled requests leave **Needs my review**; follow your submissions in **My requests**. A rejected quotation returns to **Draft**, so its review panel shows the current quotation status and rejection reason.
 
-A member with the matching approval permission and no reporting manager can proceed directly. **Direct actions do not create a pending request in Incoming.** Managers with a superior must request approval. See [Managers' own actions](#managers-own-actions).
+A member with the matching approval permission and no reporting manager can proceed directly. **Direct actions do not create a pending request in Needs my review.** Managers with a superior must request approval. See [Managers' own actions](#managers-own-actions).
 
 ## Find your requests
 
@@ -44,9 +44,9 @@ Open **Sales → Approvals**.
 {% endstep %}
 {% step %}
 
-#### Review Incoming
+#### Review Needs my review
 
-Choose **Incoming** for pending requests routed to you.
+Choose **Needs my review** for pending requests routed to you.
 
 {% endstep %}
 {% step %}
@@ -60,12 +60,21 @@ Choose **My requests** to track requests you submitted.
 
 #### Navigate requests
 
-Each section has its own **Previous** and **Next** controls, with 25 records per page. **Review quotations** opens the full quotation list.
+Use **Previous** and **Next** to navigate one queue of 25 requests per page. Requests default to **Oldest first**, across all three types. Search request information or requester names, filter by type, or choose **Newest first**. Counts reflect accessible requests matching those filters.
 
 {% endstep %}
 {% endstepper %}
 
-An empty Incoming tab means no pending requests are currently routed to you; it does not show every request in the organization.
+An empty Needs my review tab means no pending requests are currently routed to you; it does not show every request in the organization.
+
+### Review layout and consistent controls
+
+On desktop, select a queue row to open its review panel beside the list. On smaller screens, the request opens in a full-width panel with **Back to requests**. The review explains **What approval does**, shows submitted business context, and keeps decision controls outside the scrolling details area. Record navigation appears on the left of the action bar and decisions on the right, wrapping when necessary on narrow screens.
+
+All pending workflows display **Awaiting approval** using the same warning colour. Approved and rejected states use the shared CRM status colours. Quotations continue to show their current document status; rejection or recall returns them to Draft. Confirmation dialogs retain each workflow's rules: quotation and lead-conversion rejection reasons are required, while a stage decision note remains optional. Use **How approvals work** for reporting-line guidance.
+
+Search applies to the request's available business information and requester. The queue's submission order preserves timestamp precision across types. Legacy pending quotations without submission audit data use their last update time for ordering only; their submission date remains unavailable rather than guessed. After a decision, the current filtered queue refreshes and the next available request is selected. If a queue read fails, retry before making a decision.
+
 
 ## Review and decide
 
@@ -88,7 +97,7 @@ Review the supporting context. Expand **Attachments** when supporting files are 
 
 #### Choose a decision
 
-Choose **Approve** or **Reject**.
+Choose the request-specific **Approve** action or **Reject**.
 
 {% endstep %}
 {% step %}
@@ -133,11 +142,11 @@ KIV-to-open moves use the same manager approval policy. Eligible top managers ca
 
 ## Quotation approvals
 
-Every quotation requires approval before sending. **Incoming → Quotation approvals** lists pending quotations routed to you as the currently eligible manager and within your record access. Quotation routing follows reporting-line and approval-permission changes, matching the checks performed when deciding. Cards show quotation number, funnel, end-user customer, Bill To, total, requester and submission date. Use **View quotation** to review the full details, then **Approve** or **Reject** here or on the quotation itself. Rejection requires a reason and returns the quotation to Draft.
+Every quotation requires approval before sending. **Needs my review**, filtered to **Quotations**, lists pending quotations routed to you as the currently eligible manager and within your record access. Quotation routing follows reporting-line and approval-permission changes, matching the checks performed when deciding. Review panels show quotation number, funnel, end-user customer, Bill To, total, requester and submission date. Use **View quotation** to review the full details, then **Approve** or **Reject** here or on the quotation itself. Rejection requires a reason and returns the quotation to Draft.
 
 The eligible approver is the first active manager in the submitter's reporting line (the funnel owner is the fallback for legacy requests without submission audit data) with **Approve quotations** permission. The existing quotation actions recheck permissions, record access, current manager eligibility and status when deciding. These actions record audit events but do not send email notifications.
 
-**My requests → Quotation approvals** shows the latest submission for each quotation you submitted, using the actual submission audit actor rather than the account owner. Cards show the current quotation status and rejection reason where present. Pending quotations can be **Recalled to Draft** by eligible requesters. Recalled, rejected and approved quotations leave Incoming. This section is not a complete history of every resubmission. Legacy pending quotations without submission audit data can appear in Incoming with an unknown requester/date; they are not attributed to a guessed requester.
+**My requests**, filtered to **Quotations**, shows the latest submission for each quotation you submitted, using the actual submission audit actor rather than the account owner. Review panels show the current quotation status and rejection reason where present. Pending quotations can be **Recalled to Draft** by eligible requesters. Recalled, rejected and approved quotations leave Needs my review. This view is not a complete history of every resubmission. Legacy pending quotations without submission audit data can appear in Needs my review with an unknown requester/date; they are not attributed to a guessed requester.
 
 See [Quotation lifecycle](05-quotations-and-revisions.md#the-quotation-lifecycle).
 
