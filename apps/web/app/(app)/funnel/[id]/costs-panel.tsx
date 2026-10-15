@@ -260,6 +260,7 @@ export function CostsPanel({
         columns={columns}
         data={costs}
         tableId="funnel-costs"
+        fieldCurrencies={{amountBase:currency}}
         searchColumn="supplierName"
         searchPlaceholder="Search costs…"
         emptyMessage="No cost lines yet."

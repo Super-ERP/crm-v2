@@ -1,5 +1,7 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+
 import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
 
 import { and, asc, desc, eq, isNull, or } from "drizzle-orm"
@@ -312,7 +314,7 @@ const FUNNEL_FILTERS = ["accountId", "opportunityId", "id", "accountOwnerMemberI
 
 export async function listFunnelPage(input: ServerTableQuery): Promise<{ rows: OpportunityListRow[]; total: number }> {
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsList(tx, ctx,
-    normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS)))
+    normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS, getTableFields("funnel"))))
 }
 
 export async function listFunnelStagePage(input: ServerTableQuery & { stageId: string }): Promise<{ rows: OpportunityListRow[]; total: number; valueTotal: string }> {
@@ -320,7 +322,7 @@ export async function listFunnelStagePage(input: ServerTableQuery & { stageId: s
     return { rows: [], total: 0, valueTotal: "0" }
   }
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsList(tx, ctx, {
-    ...normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS),
+    ...normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS, getTableFields("funnel")),
     stageId: input.stageId,
   }))
 }

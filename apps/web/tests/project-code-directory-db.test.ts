@@ -12,7 +12,7 @@ vi.mock("@/db", () => ({ runInTenant: async (_tenant: string, work: (tx: Tx) => 
 vi.mock("@/lib/server-context", () => ({ requireContext: async () => scope.ctx }))
 vi.mock("@/lib/access-scope", async original => ({ ...await original<typeof import("@/lib/access-scope")>(), visibleMemberIds: async () => scope.members }))
 import { listRelatedProjectCodes } from "@/app/(app)/_shared/project-code-actions"
-import { listProjectCodes, getProjectCode } from "@/server/services/project-codes"
+import { listProjectCodeRelatedRecords, listProjectCodes, getProjectCode } from "@/server/services/project-codes"
 const url = process.env.TEST_DATABASE_ADMIN_URL
 ;(url ? describe.sequential : describe.skip)("project code directory PostgreSQL boundary", () => {
   let admin: postgres.Sql, client: postgres.Sql, tx: Tx
@@ -125,4 +125,45 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
     await client`update funnels set current_stage_id = ${stage.commit}, pipeline_id = ${randomUUID()} where id = ${early}`
     expect(await getProjectCode(tx, ctx, "EARLY", 0, false)).toBeNull()
   })
+  it("keeps code relationships beyond the first funnel page and through an empty funnel filter",async()=>{
+    const extra=Array.from({length:26},()=>randomUUID()),extraQuote=randomUUID()
+    try {
+      for(const id of extra)await client`insert into funnels (id,tenant_id,name,opportunity_id,owner_member_id,account_id,current_stage_id,pipeline_id,status,project_code) select ${id},'qm',${'Extra '+id},${parent},'rep',${account},${stage.commit},pipeline_id,'open','CROSS' from funnels where id=${active}`
+      await client`insert into quotations (id,tenant_id,quote_number,funnel_id) values (${extraQuote},'qm','Last quote',${extra[25]!})`
+      const result=await getProjectCode(tx,ctx,'CROSS',0,false,{pageSize:25})
+      expect(result?.total).toBe(27)
+      expect(result?.quotations.some(q=>q.id===extraQuote)).toBe(true)
+      expect(result?.opportunities.map(o=>o.id)).toContain(parent)
+      const related=await listProjectCodeRelatedRecords(tx,ctx,'CROSS','quotations',{filterTree:{kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId:'name',operator:'equals',value:'Last quote'}]}})
+      expect(related.total).toBe(1)
+      expect(related.rows.map(q=>q.id)).toEqual([extraQuote])
+      for(const kind of ['accounts','contacts','opportunities','projects'] as const)await listProjectCodeRelatedRecords(tx,ctx,'CROSS',kind,{projectsEnabled:true})
+      const filtered=await getProjectCode(tx,ctx,'CROSS',0,false,{filterTree:{kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId:'name',operator:'equals',value:'No such funnel'}]}})
+      expect(filtered?.funnels).toHaveLength(0)
+      expect(filtered?.quotations.some(q=>q.id===extraQuote)).toBe(true)
+    }finally{
+      await client`delete from quotations where id=${extraQuote}`
+      for(const id of extra)await client`delete from funnels where id=${id}`
+    }
+  })
+
+  it("keeps hidden account names and hidden parent contact relationships outside code filters",async()=>{
+    const hiddenContact=randomUUID()
+    try {
+      await client`update accounts set owner_member_id='other' where id=${account}`
+      const filtered=await getProjectCode(tx,ctx,'CROSS',0,false,{filterTree:{kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId:'account',operator:'contains',value:'End user'}]}})
+      expect(filtered?.total).toBe(0)
+      await client`insert into persons values (${hiddenContact},'qm','Hidden','Sponsor',${reseller},null,'secret@example.test',null)`
+      await client`update opportunities set owner_member_id='other',owner_contact_id=${hiddenContact} where id=${parent}`
+      const detail=await getProjectCode(tx,ctx,'CROSS',0,false)
+      expect(detail?.contacts.some(p=>p.id===hiddenContact)).toBe(false)
+      const contacts=await listProjectCodeRelatedRecords(tx,ctx,'CROSS','contacts')
+      expect(contacts.rows.some(p=>p.id===hiddenContact)).toBe(false)
+    }finally{
+      await client`update accounts set owner_member_id='rep' where id=${account}`
+      await client`update opportunities set owner_member_id='rep',owner_contact_id=null where id=${parent}`
+      await client`delete from persons where id=${hiddenContact}`
+    }
+  })
+
 })

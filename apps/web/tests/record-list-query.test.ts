@@ -15,7 +15,7 @@ describe("normalizeRecordListQuery", () => {
 
     expect(normalized).toEqual({
       limit: 25, offset: 50,
-      query: { search: "Acme", sort: { id: "name", desc: true }, selections: { accountId: ["a", "b"], status: ["open"] } },
+      query: { search: "Acme", sorting: [{id:"name",desc:true}], sort: { id: "name", desc: true }, selections: { accountId: ["a", "b"], status: ["open"] } },
     })
   })
 
@@ -30,4 +30,9 @@ describe("normalizeRecordListQuery", () => {
     expect(normalized.query.selections.isActive).toEqual(["false"])
     expect(normalized.query.sort).toBeUndefined()
   })
+})
+
+it("rejects an advanced predicate when an adapter has not opted in",()=>{
+ const input={pageIndex:0,pageSize:25,search:"",sorting:[],filters:[],filterTree:{kind:"group" as const,id:"root",logic:"and" as const,children:[]}}
+ expect(()=>normalizeRecordListQuery(input,["name"],[])).toThrow("unavailable")
 })

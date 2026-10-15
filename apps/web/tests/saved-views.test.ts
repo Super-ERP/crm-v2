@@ -1,3 +1,5 @@
+import { validateTableState } from "@/lib/table-controls/state"
+import { getTableFields } from "@/lib/table-controls/registry"
 import { describe, expect, it } from "vitest"
 import { getTableConfig } from "drizzle-orm/pg-core"
 
@@ -196,4 +198,17 @@ describe("saved views", () => {
     expect(result.globalFilter).toBe("acme")
   })
 
+})
+
+it('round-trips and updates complete versioned state without changing another member view', async()=>{
+ const repository=new MemorySavedViewRepository()
+ const mine=createSavedViewService(repository,ownerA),other=createSavedViewService(repository,ownerB)
+ const tableState={version:2 as const,filterTree:{kind:'group' as const,id:'root',logic:'and' as const,children:[]},layout:{visibility:{name:true},order:['name'],widths:{name:240},pinning:{left:['name'],right:[]}}}
+ const statePayload={...servicePayload,tableState}
+ const saved=await mine.save({listKey:'accounts',name:'Layout',payload:statePayload})
+ expect(saved.tableState).toEqual(validateTableState(tableState,getTableFields("accounts")))
+ expect((await mine.duplicate(saved.id,'Copy')).tableState).toEqual(saved.tableState)
+ const changed={...statePayload,pageSize:100}
+ await expect(other.updatePayload(saved.id,changed)).rejects.toThrow('Saved view not found')
+ expect((await mine.updatePayload(saved.id,changed)).pageSize).toBe(100)
 })

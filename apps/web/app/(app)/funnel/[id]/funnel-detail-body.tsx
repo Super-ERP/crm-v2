@@ -944,9 +944,8 @@ export function FunnelDetailBody(props: FunnelDetailData) {
 
             {/* Salesforce "Funnel Info" section (SPEC §4). */}
             <h3 className="text-sm font-semibold">Funnel Info</h3>
-            <FieldRow label="Project code"><ProjectCodeLink code={props.projectCode} /></FieldRow>
-            <FieldRow label="Cross-deal project code"><ProjectCodeLink code={props.crossDealProjectCode} /></FieldRow>
-            <FieldRow label="CRM project code"><ProjectCodeLink code={props.crmProjectCode} /></FieldRow>
+            <FieldRow label="Project code"><ProjectCodeLink code={props.projectCode || props.crmProjectCode} /></FieldRow>
+            {props.crossDealProjectCode && props.crossDealProjectCode !== (props.projectCode || props.crmProjectCode) ? <FieldRow label="Cross-deal reference"><ProjectCodeLink code={props.crossDealProjectCode} /></FieldRow> : null}
             <FieldRow label="Funnel Name">
               {canEdit ? (
                 <InlineValue

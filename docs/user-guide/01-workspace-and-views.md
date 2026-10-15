@@ -62,7 +62,7 @@ Use the [role comparison and RBAC setup guide](https://jienweng.gitbook.io/q-app
 
 ## Managing List Views and Personal Saved Views
 
-Major record lists provide controls for finding records and adjusting your view. Available controls vary by module.
+Major record lists provide controls for finding records and adjusting your view. Record tables share advanced filters and column controls; document editors and approval cards keep their own controls.
 
 | Control | Use it to |
 | --- | --- |
@@ -94,10 +94,13 @@ Click the **Filter** button to open the filter builder:
 
 #### Customizing Table Columns
 
-Click the **Columns** dropdown:
+Click **Columns** to show or hide fields, move them up or down, set their width, and pin them to the left or right. You can also resize a header by dragging its edge; focus the resize handle and use the arrow keys for keyboard resizing. Required identifying and action columns remain visible.
 
-* Check or uncheck columns to show or hide fields.
-* Adjust column visibility to focus on the information relevant to your workflow.
+Your layout is personal and saved for that list and organization. **Reset column layout** restores the default columns without clearing filters. Pinning is temporarily suspended on narrow screens while your desktop preference is retained.
+
+Use **Advanced filters** to combine conditions with nested **All (AND)** and **Any (OR)** groups. Choose the field and operator, enter values, then **Apply filters**. Closing the editor keeps the applied filters unchanged. Quick filters are included when you open the advanced editor. Date controls include calendar year and relative periods, using the business timezone shown in the editor. Monetary comparisons require an explicit currency.
+
+Filters apply before pagination across the accessible result set. Hold **Shift** while clicking sortable headers to combine up to five sort fields.
 
 {% endstep %}
 {% step %}
@@ -115,10 +118,13 @@ Once you have configured your ideal filters, sorting, and column preferences, yo
 
 * Click the **Views** dropdown on the toolbar.
 * Select **Save current view** and give your view a memorable name (e.g., *"My High Priority Deals"*).
+* **Update with current settings** replaces the selected view’s filters, sorts, column order, widths, pinning, visibility and page size.
 * **Set as default**: Select a saved view, then use this action in Views to load it by default for that module.
 * Select a saved view to **Rename**, **Duplicate**, or **Delete** it from Views.
 
 {% hint style="info" %}
+Explicit URL settings take precedence over the default view and personal layout. If a saved filter refers to a removed field, the view needs updating before it can be applied. Large filter trees should be saved as a view rather than shared as a long URL.
+
 **Privacy of Saved Views**: Saved views are strictly personal to your account. Creating, modifying, or deleting a saved view will never impact your team members' lists.
 {% endhint %}
 

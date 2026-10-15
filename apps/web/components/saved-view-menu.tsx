@@ -10,6 +10,7 @@ import {
   renameView,
   saveView,
   setDefaultView,
+  updateView,
 } from "@/app/(app)/_shared/saved-view-actions"
 import type { SavedView, SavedViewPayload } from "@/lib/saved-views"
 import { showActionError } from "@/lib/show-action-error"
@@ -40,11 +41,13 @@ type DialogMode = "save" | "rename" | "duplicate"
 export function SavedViewMenu({
   listKey,
   currentPayload,
+  currentStateValid=true,
   applyDefault,
   onApply,
   onReset,
 }: {
   listKey: string
+  currentStateValid?: boolean
   currentPayload: SavedViewPayload
   applyDefault: boolean
   onApply: (payload: SavedViewPayload) => void
@@ -96,6 +99,7 @@ export function SavedViewMenu({
   async function submitDialog(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!dialogMode || !dialogName.trim()) return
+    if(dialogMode==="save"&&!currentStateValid){toast.error("Resolve the filter error before saving this view.");return}
     setBusy(true)
     try {
       const result =
@@ -126,6 +130,18 @@ export function SavedViewMenu({
     } finally {
       setBusy(false)
     }
+  }
+
+  async function updateSelected() {
+    if (!selected || !currentStateValid) return
+    setBusy(true)
+    try {
+      const result = await updateView(selected.id, currentPayload)
+      if (!result.ok) { showActionError(result); return }
+      setViews(current => current.map(view => view.id === result.data.id ? result.data : view))
+      toast.success("View updated")
+    } catch { toast.error("Could not update view. Please try again.") }
+    finally { setBusy(false) }
   }
 
   async function makeDefault() {
@@ -195,11 +211,14 @@ export function SavedViewMenu({
             ))}
           </DropdownMenuRadioGroup>
           {views.length ? <DropdownMenuSeparator /> : null}
-          <DropdownMenuItem onClick={() => openDialog("save")}>
+          <DropdownMenuItem disabled={!currentStateValid} onClick={() => openDialog("save")}>
             <Plus /> Save current view
           </DropdownMenuItem>
           {selected ? (
             <>
+              <DropdownMenuItem disabled={busy||!currentStateValid} onClick={() => void updateSelected()}>
+                <Bookmark /> Update with current settings
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openDialog("rename", selected)}>
                 <Pencil /> Rename
               </DropdownMenuItem>

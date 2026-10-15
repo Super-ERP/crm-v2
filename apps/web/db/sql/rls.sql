@@ -223,3 +223,12 @@ LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $$
 $$;
 REVOKE ALL ON FUNCTION verify_api_key(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION verify_api_key(text) TO crm_app;
+
+-- Personal table layouts: tenant isolation in RLS; member ownership in every action.
+ALTER TABLE table_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE table_preferences FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_isolation ON table_preferences;
+CREATE POLICY tenant_isolation ON table_preferences
+ USING (organization_id = current_setting('app.current_tenant', true))
+ WITH CHECK (organization_id = current_setting('app.current_tenant', true));
+GRANT SELECT, INSERT, UPDATE, DELETE ON table_preferences TO crm_app;

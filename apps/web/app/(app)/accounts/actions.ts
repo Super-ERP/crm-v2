@@ -1,5 +1,7 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+
 import { revalidatePath } from "next/cache"
 import { and, or, asc, desc, eq, isNull, ne, sql } from "drizzle-orm"
 import { withTenant } from "@/lib/actions"
@@ -151,7 +153,7 @@ function normalizeAccountInput(input: AccountInput): AccountInput {
  */
 export async function listAccountPage(input: ServerTableQuery): Promise<{ rows: AccountListItem[]; total: number }> {
   return withTenant(PERMISSIONS.ACCOUNT_VIEW, (tx, ctx) => accountsList(tx, ctx,
-    normalizeRecordListQuery(input, ["name", "code", "accountType", "industry", "ownerName", "createdAt"], ["accountType", "industry", "ownerName"])))
+    normalizeRecordListQuery(input, ["name", "code", "accountType", "industry", "ownerName", "createdAt"], ["accountType", "industry", "ownerName"], getTableFields("accounts"))))
 }
 
 export async function listAccountFilterOptions() {

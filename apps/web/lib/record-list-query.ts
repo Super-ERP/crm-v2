@@ -1,7 +1,11 @@
+import { validateFilterTree } from "@/lib/table-controls/filter-tree"
+import type { FilterGroup, TableFieldDefinition } from "@/lib/table-controls/types"
 import { validateFilterValue } from "@/lib/data-table-filters"
 import { normalizeTablePageSize, type ServerTableQuery } from "@/lib/table-pagination"
 
 export type RecordListQuery = {
+  filterTree?: FilterGroup
+  sorting?: { id: string; desc: boolean }[]
   search: string
   sort?: { id: string; desc: boolean }
   selections: Record<string, string[]>
@@ -11,8 +15,11 @@ export type RecordListQuery = {
 export function normalizeRecordListQuery(
   input: ServerTableQuery,
   allowedSorts: readonly string[],
-  allowedSelections: readonly string[]
+  allowedSelections: readonly string[],
+  fields?: readonly TableFieldDefinition[]
 ) {
+  if (input.filterTree && !fields) throw new Error("Advanced filters are unavailable for this list.")
+  const filterTree = input.filterTree ? validateFilterTree(input.filterTree, fields!) : undefined
   const limit = normalizeTablePageSize(input.pageSize)
   const pageIndex = Number.isSafeInteger(input.pageIndex)
     ? Math.max(0, Math.min(input.pageIndex, 100_000))
@@ -20,8 +27,11 @@ export function normalizeRecordListQuery(
   const query: RecordListQuery = {
     search: typeof input.search === "string" ? input.search.trim().slice(0, 100) : "",
     selections: {},
+    ...(filterTree ? { filterTree } : {}),
   }
-  const sort = Array.isArray(input.sorting) ? input.sorting[0] : undefined
+  if (Array.isArray(input.sorting) && input.sorting.length > 5) throw new Error("Use at most five sort fields.")
+  query.sorting = (Array.isArray(input.sorting) ? input.sorting : []).filter(sort => allowedSorts.includes(sort.id)).map(sort => ({ id: sort.id, desc: sort.desc === true }))
+  const sort = query.sorting[0]
   if (sort && allowedSorts.includes(sort.id)) query.sort = { id: sort.id, desc: sort.desc === true }
   for (const filter of Array.isArray(input.filters) ? input.filters : []) {
     if (!allowedSelections.includes(filter.id)) continue

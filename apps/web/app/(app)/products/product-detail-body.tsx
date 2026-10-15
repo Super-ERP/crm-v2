@@ -32,6 +32,7 @@ import { formatMoney } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { ProductCategory } from "@/app/(app)/settings/constants"
 import {
+  listProductUsagePage,
   updateProduct,
   type ProductInput,
   type ProductRow,
@@ -63,6 +64,7 @@ export function ProductDetailBody({
   /** Gates every inline editor (PRODUCT_UPDATE, resolved server-side). */
   canEdit: boolean
 }) {
+  const loadUsage = React.useCallback((query:import("@/lib/table-pagination").ServerTableQuery)=>listProductUsagePage(product.id,query),[product.id])
   const [tab, setTab] = React.useState("details")
 
   // updateProduct is full-replace; the product row carries every input field.
@@ -466,6 +468,7 @@ export function ProductDetailBody({
             columns={usageColumns}
             data={usage}
             tableId="product-usage"
+            server={{total:usage.length,loadPage:loadUsage}}
             searchColumn="quoteNumber"
             searchPlaceholder="Search quotes…"
             emptyMessage="This product isn't on any quotes yet."

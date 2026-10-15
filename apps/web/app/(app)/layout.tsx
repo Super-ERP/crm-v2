@@ -1,3 +1,4 @@
+import { BusinessTimezoneProvider } from "@/components/table-controls/business-timezone"
 import type { CSSProperties } from "react"
 import { redirect } from "next/navigation"
 import { eq } from "drizzle-orm"
@@ -131,7 +132,7 @@ export default async function AppLayout({
           </StatusCallout>
         ) : null}
         <HeaderActionsProvider permissions={[...ctx.permissions]} modules={modules}>
-          {children}
+          <BusinessTimezoneProvider identity={`${ctx.tenantId}:${ctx.memberId}`} timezone={process.env.TZ || "UTC"}>{children}</BusinessTimezoneProvider>
         </HeaderActionsProvider>
       </SidebarInset>
     </SidebarProvider>

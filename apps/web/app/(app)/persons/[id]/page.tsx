@@ -112,6 +112,8 @@ export default async function PersonDetailPage({
         </div>
 
         <PersonDetailBody
+          projectCodes={projectCodes ? <ProjectCodePanel kind="person" recordId={id} initialPage={projectCodes} /> : null}
+          projectCodeCount={projectCodes?.total}
           personId={id}
           sections={sections}
           record={record}
@@ -122,7 +124,6 @@ export default async function PersonDetailPage({
           activity={activity}
           documents={documents}
         />
-        {projectCodes ? <ProjectCodePanel kind="person" recordId={id} initialPage={projectCodes} /> : null}
       </PageBody>
     </>
   )

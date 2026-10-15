@@ -229,6 +229,8 @@ export default async function AccountDetailPage({
     <>
       <PageBody>
         <AccountDetailBody
+          projectCodes={projectCodes ? <ProjectCodePanel kind="account" recordId={id} initialPage={projectCodes} /> : null}
+          projectCodeCount={projectCodes?.total}
           accountId={account.id}
           sections={sections}
           record={record}
@@ -253,7 +255,6 @@ export default async function AccountDetailPage({
             modules.projects && ctx.can(PERMISSIONS.PROJECT_CREATE)
           }
         />
-        {projectCodes ? <ProjectCodePanel kind="account" recordId={id} initialPage={projectCodes} /> : null}
       </PageBody>
     </>
   )

@@ -127,3 +127,8 @@ See [Payment milestones](../06-payment-milestones.md).
 * [Troubleshooting](troubleshooting.md)
 * [Quick start by role](https://jienweng.gitbook.io/q-app/getting-started/quick-start)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+
+## Are table columns and filters saved for everyone?
+
+No. Personal layouts and named Views belong to your member account and organization. Views save filters, sorting, page size, column visibility, order, widths and pinning. Selecting a view never expands the records you are authorized to read. Table layouts do not change quotation PDFs or editable quotation line grids.

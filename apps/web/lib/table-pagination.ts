@@ -1,3 +1,4 @@
+import type { FilterGroup } from "@/lib/table-controls/types"
 import type { DataTableFilterValue } from "@/lib/data-table-filters"
 
 export const TABLE_PAGE_SIZES = [25, 50, 100] as const
@@ -9,6 +10,7 @@ export function normalizeTablePageSize(value: unknown): TablePageSize {
 }
 
 export type ServerTableQuery = {
+  filterTree?: FilterGroup
   pageIndex: number
   pageSize: number
   search: string

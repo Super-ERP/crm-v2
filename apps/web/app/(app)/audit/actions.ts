@@ -1,5 +1,8 @@
 "use server"
 
+import { getTableFields } from "@/lib/table-controls/registry"
+import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
@@ -24,9 +27,9 @@ export type AuditRow = {
 export async function listAuditPage(input: ServerTableQuery): Promise<{ rows: AuditRow[]; total: number }> {
   return withModule("audit", PERMISSIONS.AUDIT_VIEW, async (tx) => {
     const { limit, offset, query } = normalizeRecordListQuery(input,
-      ["action", "record", "actor", "createdAt"], ["action", "record"])
+      ["action", "record", "actor", "createdAt"], ["action", "record"],getTableFields("audit"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
-    const where = and(
+    const where = and(recordFilter("audit",query.filterTree,{action:auditLog.action,record:auditLog.entityType,entityId:auditLog.entityId,actor:user.name,actorName:user.name,createdAt:auditLog.createdAt},{}),
       search ? or(ilike(auditLog.action, search), ilike(auditLog.entityType, search), ilike(user.name, search)) : undefined,
       query.selections.action?.length ? inArray(auditLog.action, query.selections.action) : undefined,
       query.selections.record?.length ? inArray(auditLog.entityType, query.selections.record) : undefined,
@@ -48,7 +51,7 @@ export async function listAuditPage(input: ServerTableQuery): Promise<{ rows: Au
       .leftJoin(member, eq(auditLog.actorMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
       .where(where)
-      .orderBy(ordering, desc(auditLog.id))
+      .orderBy(...recordSort(query.sorting,sortColumns,ordering), desc(auditLog.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(auditLog)
         .leftJoin(member, eq(auditLog.actorMemberId, member.id))

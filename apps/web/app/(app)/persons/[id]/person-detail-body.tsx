@@ -57,6 +57,8 @@ export type PersonDetailSection = {
 }
 
 export type PersonDetailData = {
+  projectCodes?: React.ReactNode
+  projectCodeCount?: number
   personId: string
   sections: PersonDetailSection[]
   /** Raw field values — updatePerson is full-replace, so each inline save
@@ -76,6 +78,7 @@ export type PersonDetailData = {
  *  Funnels / Projects / Activity / Documents on the right (each top-5 + search). */
 export function PersonDetailBody({
   personId,
+  projectCodes,projectCodeCount,
   sections,
   record,
   canEdit,
@@ -242,6 +245,7 @@ export function PersonDetailBody({
           <CountTab value="projects" count={projects.length}>
             Projects
           </CountTab>
+          {projectCodes ? <CountTab value="project-codes" count={projectCodeCount}>Project codes</CountTab> : null}
           <CountTab value="activity">Activity</CountTab>
           <CountTab value="documents" count={documents.length}>
             Documents
@@ -275,6 +279,8 @@ export function PersonDetailBody({
             pageSize={5}
           />
         </TabsContent>
+
+        {projectCodes ? <TabsContent value="project-codes" className="mt-4">{projectCodes}</TabsContent> : null}
 
         <TabsContent value="activity" className="mt-4">
           <ActivityTimeline

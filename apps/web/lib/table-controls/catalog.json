@@ -1,0 +1,720 @@
+[
+  {
+    "file": "apps/web/app/(app)/accounts/[id]/account-contacts.tsx",
+    "keys": [
+      "account-contacts"
+    ],
+    "fields": [
+      "name",
+      "title",
+      "email",
+      "phone",
+      "primary",
+      "actions"
+    ],
+    "adapters": {
+      "account-contacts": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/accounts/[id]/account-detail-body.tsx",
+    "keys": [
+      "account-opportunities",
+      "account-pipelines",
+      "account-projects",
+      "account-quotations",
+      "account-children"
+    ],
+    "fields": [
+      "name",
+      "code",
+      "funnelCount",
+      "totalEstimatedFunnelAmount",
+      "stage",
+      "amount",
+      "projectCode",
+      "status",
+      "quoteNumber",
+      "total",
+      "accountType"
+    ],
+    "adapters": {
+      "account-opportunities": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-pipelines": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-projects": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-quotations": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-children": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/accounts/accounts-table.tsx",
+    "keys": [
+      "accounts"
+    ],
+    "fields": [
+      "name",
+      "ownerName",
+      "code",
+      "accountType",
+      "currency",
+      "industry",
+      "parentAccountName",
+      "createdAt",
+      "actions"
+    ],
+    "adapters": {
+      "accounts": {
+        "mode": "server",
+        "loader": "accountsList"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/audit/audit-table.tsx",
+    "keys": [
+      "audit"
+    ],
+    "fields": [
+      "action",
+      "record",
+      "entityId",
+      "actor",
+      "actorName",
+      "createdAt"
+    ],
+    "adapters": {
+      "audit": {
+        "mode": "server",
+        "loader": "listAuditPage"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/billing/finance-docs-table.tsx",
+    "keys": [
+      "finance-sale",
+      "finance-purchase"
+    ],
+    "fields": [
+      "number",
+      "kind",
+      "from",
+      "project",
+      "partyName",
+      "amount",
+      "docDate",
+      "status",
+      "actions"
+    ],
+    "adapters": {
+      "finance-sale": {
+        "mode": "server",
+        "loader": "listFinanceDocPage(sale)"
+      },
+      "finance-purchase": {
+        "mode": "server",
+        "loader": "listFinanceDocPage(purchase)"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/forecast/forecast-client.tsx",
+    "keys": [
+      "forecast"
+    ],
+    "fields": [
+      "opportunityName",
+      "source",
+      "stage",
+      "forecastMonth",
+      "opportunityValue",
+      "weightedValue",
+      "recognizedWeightedValue"
+    ],
+    "adapters": {
+      "forecast": {
+        "mode": "complete-client",
+        "loader": "getForecast"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/funnel/[id]/contract-panel.tsx",
+    "keys": [
+      "funnel-contract"
+    ],
+    "fields": [
+      "year",
+      "title",
+      "amount",
+      "status",
+      "actions"
+    ],
+    "adapters": {
+      "funnel-contract": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/funnel/[id]/costs-panel.tsx",
+    "keys": [
+      "funnel-costs"
+    ],
+    "fields": [
+      "supplierName",
+      "partyKind",
+      "category",
+      "amount",
+      "exchangeRate",
+      "amountBase",
+      "actions"
+    ],
+    "adapters": {
+      "funnel-costs": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/funnel/[id]/funnel-detail-body.tsx",
+    "keys": [
+      "funnel-quotes",
+      "funnel-products",
+      "funnel-projects"
+    ],
+    "fields": [
+      "quoteNumber",
+      "status",
+      "total",
+      "projectCode",
+      "name",
+      "productCode",
+      "uom",
+      "quoteCount"
+    ],
+    "adapters": {
+      "funnel-quotes": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      },
+      "funnel-products": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      },
+      "funnel-projects": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/funnel/funnels-table.tsx",
+    "keys": [
+      "funnel"
+    ],
+    "fields": [
+      "id",
+      "accountId",
+      "projectCode",
+      "crossDealProjectCode",
+      "opportunityId",
+      "accountOwnerMemberId",
+      "amount",
+      "expectedCloseDate",
+      "stageId",
+      "status"
+    ],
+    "adapters": {
+      "funnel": {
+        "mode": "server",
+        "loader": "funnelsList / listFunnelStagePage"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/intercompany/intercompany-table.tsx",
+    "keys": [
+      "intercompany-inbound"
+    ],
+    "fields": [
+      "name",
+      "originEntityName",
+      "status",
+      "response",
+      "dealValue",
+      "yourShare",
+      "project",
+      "expectedCloseDate",
+      "actions"
+    ],
+    "adapters": {
+      "intercompany-inbound": {
+        "mode": "server",
+        "loader": "listInboundIntercompanyDealPage"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/leads/leads-table.tsx",
+    "keys": [
+      "leads"
+    ],
+    "fields": [
+      "name",
+      "company",
+      "companyName",
+      "mobile",
+      "phone",
+      "email",
+      "status",
+      "ownerName",
+      "source",
+      "stage",
+      "converted",
+      "createdAt",
+      "actions"
+    ],
+    "adapters": {
+      "leads": {
+        "mode": "server",
+        "loader": "leadsList"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/opportunities/[id]/opportunity-detail-body.tsx",
+    "keys": [
+      "opp-funnels",
+      "opp-quotations",
+      "opp-products"
+    ],
+    "fields": [
+      "name",
+      "projectCode",
+      "crossDealProjectCode",
+      "stageName",
+      "estimatedAmount",
+      "quoteNumber",
+      "funnelName",
+      "status",
+      "total",
+      "description",
+      "productCategory",
+      "quantity",
+      "unitPrice"
+    ],
+    "adapters": {
+      "opp-funnels": {
+        "mode": "complete-client",
+        "loader": "opportunitiesGet"
+      },
+      "opp-quotations": {
+        "mode": "complete-client",
+        "loader": "opportunitiesGet"
+      },
+      "opp-products": {
+        "mode": "complete-client",
+        "loader": "opportunitiesGet"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/opportunities/opportunities-table.tsx",
+    "keys": [
+      "opportunities"
+    ],
+    "fields": [
+      "name",
+      "accountId",
+      "totalEstimatedFunnelAmount",
+      "projectCodes",
+      "crossDealProjectCodes",
+      "funnelCount",
+      "accountOwnerMemberId"
+    ],
+    "adapters": {
+      "opportunities": {
+        "mode": "server",
+        "loader": "opportunitiesList"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/payment-milestones/payment-milestones-table.tsx",
+    "keys": [
+      "payment-milestones"
+    ],
+    "fields": [
+      "title",
+      "amount",
+      "quoteNumber",
+      "status",
+      "funnelName"
+    ],
+    "adapters": {
+      "payment-milestones": {
+        "mode": "server",
+        "loader": "listPaymentMilestonePage"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/persons/[id]/person-detail-body.tsx",
+    "keys": [
+      "person-pipelines",
+      "person-projects"
+    ],
+    "fields": [
+      "name",
+      "stage",
+      "amount",
+      "projectCode",
+      "status"
+    ],
+    "adapters": {
+      "person-pipelines": {
+        "mode": "complete-client",
+        "loader": "personsGet"
+      },
+      "person-projects": {
+        "mode": "complete-client",
+        "loader": "personsGet"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/persons/persons-table.tsx",
+    "keys": [
+      "persons"
+    ],
+    "fields": [
+      "name",
+      "accountName",
+      "email",
+      "title",
+      "department",
+      "phone",
+      "primary",
+      "actions"
+    ],
+    "adapters": {
+      "persons": {
+        "mode": "server",
+        "loader": "personsList"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/products/product-detail-body.tsx",
+    "keys": [
+      "product-usage",
+      "product-deals"
+    ],
+    "fields": [
+      "opportunityName",
+      "funnelName",
+      "quantity",
+      "unitPrice",
+      "quoteNumber",
+      "status",
+      "total"
+    ],
+    "adapters": {
+      "product-usage": {
+        "mode": "server",
+        "loader": "listProductUsagePage"
+      },
+      "product-deals": {
+        "mode": "complete-client",
+        "loader": "listProductDeals"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/products/products-table.tsx",
+    "keys": [
+      "products"
+    ],
+    "fields": [
+      "name",
+      "description",
+      "productCode",
+      "subcategory",
+      "uom",
+      "standardPrice",
+      "isActive",
+      "actions"
+    ],
+    "adapters": {
+      "products": {
+        "mode": "server",
+        "loader": "listProductPage"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/project-codes/project-codes-table.tsx",
+    "keys": [
+      "project-codes"
+    ],
+    "fields": [
+      "code",
+      "relationship",
+      "funnelCount"
+    ],
+    "adapters": {
+      "project-codes": {
+        "mode": "server",
+        "loader": "listProjectCodes"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/project-codes/view/project-code-detail-body.tsx",
+    "keys": [
+      "project-code-funnels",
+      "code-opportunities",
+      "code-quotations",
+      "code-accounts",
+      "code-contacts",
+      "code-projects"
+    ],
+    "fields": [
+      "name",
+      "recordCode",
+      "role",
+      "status",
+      "amount",
+      "title",
+      "email",
+      "relationship",
+      "stageName",
+      "estimatedAmount",
+      "expectedCloseDate",
+      "account",
+      "opportunity",
+      "ownerName"
+    ],
+    "adapters": {
+      "project-code-funnels": {
+        "mode": "server",
+        "loader": "getProjectCode"
+      },
+      "code-opportunities": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-quotations": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-accounts": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-contacts": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-projects": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/projects/projects-table.tsx",
+    "keys": [
+      "projects"
+    ],
+    "fields": [
+      "projectCode",
+      "name",
+      "accountName",
+      "status",
+      "value",
+      "opportunityName"
+    ],
+    "adapters": {
+      "projects": {
+        "mode": "server",
+        "loader": "listProjectPage"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/quotations/quotations-table.tsx",
+    "keys": [
+      "quotations"
+    ],
+    "fields": [
+      "quoteNumber",
+      "accountId",
+      "projectCode",
+      "crossDealProjectCode",
+      "opportunityId",
+      "accountOwnerMemberId",
+      "funnelId",
+      "lineItemCount",
+      "subtotal",
+      "taxTotal",
+      "total",
+      "status",
+      "primary",
+      "validUntil"
+    ],
+    "adapters": {
+      "quotations": {
+        "mode": "server",
+        "loader": "quotationsList"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/sales-orders/[id]/sales-order-detail-body.tsx",
+    "keys": [
+      "so-milestones",
+      "so-finance-docs"
+    ],
+    "fields": [
+      "title",
+      "dueDate",
+      "status",
+      "amount",
+      "number",
+      "kind"
+    ],
+    "adapters": {
+      "so-milestones": {
+        "mode": "complete-client",
+        "loader": "getSalesOrder + scoped milestone/doc readers"
+      },
+      "so-finance-docs": {
+        "mode": "complete-client",
+        "loader": "getSalesOrder + scoped milestone/doc readers"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/sales-orders/sales-orders-table.tsx",
+    "keys": [
+      "sales-orders"
+    ],
+    "fields": [
+      "projectName",
+      "status",
+      "soNumber",
+      "submittedByName",
+      "submittedAt",
+      "document",
+      "actions"
+    ],
+    "adapters": {
+      "sales-orders": {
+        "mode": "server",
+        "loader": "listSalesOrderPage"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/settings/access/access-client.tsx",
+    "keys": [
+      "settings-api-keys"
+    ],
+    "fields": [
+      "name",
+      "keyPrefix",
+      "createdAt",
+      "expiresAt",
+      "lastUsedAt",
+      "status",
+      "actions"
+    ],
+    "adapters": {
+      "settings-api-keys": {
+        "mode": "complete-client",
+        "loader": "existing settings readers (complete authorized datasets)"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/settings/billing/tax/tax-client.tsx",
+    "keys": [
+      "settings-tax-rates"
+    ],
+    "fields": [
+      "name",
+      "ratePercent",
+      "default",
+      "active",
+      "actions"
+    ],
+    "adapters": {
+      "settings-tax-rates": {
+        "mode": "complete-client",
+        "loader": "existing settings readers (complete authorized datasets)"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/settings/taxonomy/funnel-stages/funnel-stages-client.tsx",
+    "keys": [
+      "settings-funnel-stages"
+    ],
+    "fields": [
+      "order",
+      "name",
+      "kind",
+      "probability",
+      "approval",
+      "forecast",
+      "actions"
+    ],
+    "adapters": {
+      "settings-funnel-stages": {
+        "mode": "complete-client",
+        "loader": "existing settings readers (complete authorized datasets)"
+      }
+    }
+  },
+  {
+    "file": "apps/web/app/(app)/team/team-client.tsx",
+    "keys": [
+      "team-members"
+    ],
+    "fields": [
+      "name",
+      "roles",
+      "manager",
+      "lastActive",
+      "actions"
+    ],
+    "adapters": {
+      "team-members": {
+        "mode": "complete-client",
+        "loader": "listTeamMembers"
+      }
+    }
+  }
+]

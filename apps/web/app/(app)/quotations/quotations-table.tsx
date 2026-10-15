@@ -1,6 +1,6 @@
 "use client"
 
-import { ProjectCodeLink } from "@/components/project-code-link"
+import { ProjectCodeLink, ProjectCodeSummary } from "@/components/project-code-link"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -52,13 +52,13 @@ export function QuotationsTable({
       accessorKey: "projectCode",
       header: "Project code",
       enableSorting: false,
-      cell: ({ row }) => <ProjectCodeLink code={row.original.projectCode} />,
+      cell: ({ row }) => <ProjectCodeSummary code={row.original.projectCode} crossDealCode={row.original.crossDealProjectCode} />,
     },
     {
       accessorKey: "crossDealProjectCode",
-      header: "Cross-deal project code",
+      header: "Cross-deal reference",
       enableSorting: false,
-      cell: ({ row }) => <ProjectCodeLink code={row.original.crossDealProjectCode} />,
+      cell: ({ row }) => <ProjectCodeLink code={row.original.crossDealProjectCode !== row.original.projectCode ? row.original.crossDealProjectCode : null} />,
     },
     {
       id: "opportunityId",

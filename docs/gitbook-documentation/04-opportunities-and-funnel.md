@@ -176,7 +176,7 @@ A queued KIV-to-open approval now applies the reopen when the original transitio
 
 **Project Codes** is a core CRM page in the **Sales** navigation. It works even when the optional **Projects** module is disabled. Search the directory by all or part of a code, or use global search and choose a result in **Project Codes**. The directory uses the same search, sorting, column controls and 25/50/100-row page sizes as other CRM lists. The Funnel page's search continues to match funnel names only.
 
-Click a code in the directory, a Funnel, Opportunity, Quotation, Account or Contact to open its central page. The page groups accessible funnels using that exact code and labels **Primary**, **Cross-deal** and **CRM** relationships separately. It also links to accessible Opportunities, Quotations, end-user and bill-to Accounts, and explicitly linked Contacts. Delivery Projects appear when the Projects module is enabled and you can view them. The central page uses the same highlights, Related quick links and tabbed tables as Opportunity details. Funnel rows include their stage, estimated amount, expected close date, account, Opportunity and owner where accessible; quotation tables show status and amount. Funnel results are paginated; related records correspond to the funnels on the current page.
+Click a code in the directory, a Funnel, Opportunity, Quotation, Account or Contact to open its central page. The page groups accessible funnels using that exact code and labels **Primary**, **Cross-deal** and **CRM** relationships separately. It also links to accessible Opportunities, Quotations, end-user and bill-to Accounts, and explicitly linked Contacts. Delivery Projects appear when the Projects module is enabled and you can view them. The central page uses the same highlights, Related quick links and tabbed tables as Opportunity details. Funnel rows include their stage, estimated amount, expected close date, account, Opportunity and owner where accessible; quotation tables show status and amount. Funnel results are paginated; related-record lists use the full accessible code relationship, independently of the current funnel page.
 
 ### Available from Commit (4A)
 
@@ -184,7 +184,7 @@ Codes are active only for funnels at **Commit (4A)** or **Closed Won**, with an 
 
 Moving a funnel below 4A hides its stored identifiers; it does not delete them. Returning to an eligible stage exposes the same codes again. Historical Salesforce codes already imported against earlier-stage funnels remain stored for this purpose. Viewing a code never grants access to another user's records: sales representatives see their own records, and managers see their permitted team scope.
 
-Salesforce `Opportunity.Project_Code__c` maps to the funnel's **Project code**; `Project_Code_For_Cross_Deal__c` remains its separate **Cross-deal project code**. Historical text and punctuation are preserved. The generated Opportunity **CRM project code** is a separate identifier, allocated on the first entry to 4A or Won without creating a delivery Project. Multiple distinct child-funnel codes are not collapsed into one parent code.
+Salesforce `Opportunity.Project_Code__c` maps to the funnel's **Project code**; `Project_Code_For_Cross_Deal__c` is preserved separately in storage. Sales lists and related tabs show one main **Project code**, with a clickable **Cross-deal reference** beneath it only when it differs. The separate reference column is hidden by default, remains available under Columns, and retains its filters and saved layout choices. Historical text and punctuation are preserved. The generated Opportunity **CRM project code** remains a separate internal identifier, allocated on the first entry to 4A or Won without creating a delivery Project. It is not shown as an additional code in the normal Funnel or Account/Contact display; those details use it as the main code when an original code is absent. Multiple distinct child-funnel codes are not collapsed into one parent code.
 
 When Projects is enabled, creating or relinking a delivery Project to a funnel requires the source funnel to be at 4A or Won. A coded source reuses its code. An accessible existing delivery Project with that code and account is reused; conflicting links are rejected. If an eligible uncoded funnel creates a delivery Project, its chosen code is saved back to the funnel. Enabling Projects alone does not create any Project records.
 
@@ -193,3 +193,12 @@ When Projects is enabled, creating or relinking a delivery Project to a funnel r
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+
+## Advanced list controls
+
+**Advanced filters** combines conditions in nested AND/OR groups and applies them before pagination. Funnel name search and Expected close year remain available as shortcuts. The same effective filter applies to the Funnel board and list; access scope and stage eligibility are always enforced separately.
+
+**Columns** supports show/hide, keyboard reordering, resizing and left/right pinning. Personal layouts are saved by user and list. Named **Views** include the complete filter and column configuration; select **Update with current settings** to replace an existing view. See [Workspace and personal views](../user-guide/01-workspace-and-views.md).
+
+On Account and Contact details, **Project codes** is a tab in the existing right-hand related block. Its compact list links to the central code page. Central code related lists cover the whole accessible code relationship, independently of the current funnel page.
