@@ -23,3 +23,4 @@ export * from "./saved-views"
 export * from "./operator-alerts"
 
 export * from "./lead-conversion-approvals"
+export * from "./table-preferences"

@@ -25,6 +25,7 @@ export const savedViews = pgTable(
       .references(() => member.id, { onDelete: "cascade" }),
     listKey: text("list_key").notNull(),
     name: text("name").notNull(),
+    tableState: jsonb("table_state"),
     filters: jsonb("filters").notNull(),
     sorting: jsonb("sorting").notNull(),
     visibility: jsonb("visibility").notNull(),

@@ -2,6 +2,11 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { ColumnControls } from "@/components/table-controls/column-controls"
+import { readTablePreferences, saveTablePreferences } from "@/app/(app)/_shared/table-preference-actions"
+import { getTableFields, tableExists } from "@/lib/table-controls/registry"
+import { normalizeTableLayout, validateTableState } from "@/lib/table-controls/state"
+import { EMPTY_FILTER_TREE, type TableLayout } from "@/lib/table-controls/types"
 import { usePathname, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { formatMoney } from "@/lib/format"
@@ -198,6 +203,7 @@ export function DataTable<TData, TValue>({
     [facets]
   )
 
+  const fieldDefinitions = React.useMemo(() => tableId && tableExists(tableId) ? getTableFields(tableId, columns.map(c=>(c as {id?:string;accessorKey?:string}).id ?? (c as {accessorKey?:string}).accessorKey).filter((id):id is string=>!!id)) : [], [tableId, columns])
   // inject a faceted filterFn for facet columns so multi-select arrays work
   const tableColumns = React.useMemo(
     () =>
@@ -205,10 +211,11 @@ export function DataTable<TData, TValue>({
         const id =
           (c as { id?: string; accessorKey?: string }).id ??
           (c as { accessorKey?: string }).accessorKey
-        if (id && filterIds.has(id)) return { ...c, filterFn: typedFilterFn }
-        return id && facetIds.has(id) ? { ...c, filterFn: facetFilterFn } : c
+        const configured = { ...c, enableHiding: fieldDefinitions.find(field=>field.id===id)?.required ? false : c.enableHiding }
+        if (id && filterIds.has(id)) return { ...configured, filterFn: typedFilterFn }
+        return id && facetIds.has(id) ? { ...configured, filterFn: facetFilterFn } : configured
       }),
-    [columns, facetIds, filterIds]
+    [columns, facetIds, filterIds, fieldDefinitions]
   )
 
   // --- URL-persisted table state (bookmarkable / shareable / survives nav) ---
@@ -263,7 +270,12 @@ export function DataTable<TData, TValue>({
       ? requestedSize
       : pageSize
 
+    let layout:TableLayout|undefined
+    let layoutError=false
+    const encoded=searchParams.get(key("layout_v2"))
+    if(encoded)try {layout=normalizeTableLayout(JSON.parse(encoded),fieldDefinitions)}catch{layoutError=true}
     return {
+      layout,layoutError,
       sorting,
       columnFilters,
       globalFilter,
@@ -282,8 +294,14 @@ export function DataTable<TData, TValue>({
     initial.globalFilter
   )
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(
-    initial.columnVisibility
+    initial.layout?.visibility ?? initial.columnVisibility
   )
+  const [columnOrder, setColumnOrder] = React.useState<string[]>(initial.layout?.order ?? [])
+  const [columnSizing, setColumnSizing] = React.useState<Record<string, number>>(initial.layout?.widths ?? {})
+  const [columnPinning, setColumnPinning] = React.useState<{left:string[];right:string[]}>(initial.layout?.pinning ?? {left:[],right:[]})
+  const [preferencesReady, setPreferencesReady] = React.useState(false)
+  const layoutChanged = React.useRef(false)
+  const preferenceLoaded = React.useRef(false)
   const [pagination, setPagination] = React.useState<PaginationState>(
     initial.pagination
   )
@@ -297,6 +315,7 @@ export function DataTable<TData, TValue>({
   const serverInitialTotal = server?.total
 
   const hasInitialUrlState =
+    !!initial.layout || initial.layoutError ||
     initial.sorting.length > 0 ||
     initial.columnFilters.length > 0 ||
     initial.globalFilter.length > 0 ||
@@ -362,6 +381,9 @@ export function DataTable<TData, TValue>({
   // `data` stable and avoiding a server round-trip (instant, smooth).
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    if(columnOrder.length || Object.keys(columnSizing).length || columnPinning.left.length || columnPinning.right.length)
+      params.set(key("layout_v2"),JSON.stringify({visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}))
+    else params.delete(key("layout_v2"))
 
     if (sorting.length)
       params.set(
@@ -426,6 +448,7 @@ export function DataTable<TData, TValue>({
     columnFilters,
     globalFilter,
     columnVisibility,
+    columnOrder,columnSizing,columnPinning,
     pagination,
     facets,
     filters,
@@ -443,6 +466,7 @@ export function DataTable<TData, TValue>({
       columnFilters,
       globalFilter,
       columnVisibility,
+      columnOrder, columnSizing, columnPinning,
       pagination,
       rowSelection,
     },
@@ -459,7 +483,13 @@ export function DataTable<TData, TValue>({
       setPagination((current) => ({ ...current, pageIndex: 0 }))
     },
     globalFilterFn,
-    onColumnVisibilityChange: setColumnVisibility,
+    onColumnVisibilityChange: updater => { layoutChanged.current=true; setColumnVisibility(updater) },
+    onColumnOrderChange: updater => { layoutChanged.current=true; setColumnOrder(updater) },
+    onColumnSizingChange: updater => { layoutChanged.current=true; setColumnSizing(updater) },
+    onColumnPinningChange: updater => { layoutChanged.current=true; setColumnPinning(updater) },
+    columnResizeMode: "onChange",
+    defaultColumn: { minSize:48, maxSize:800, size:160 },
+    maxMultiSortColCount: 5,
     onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
@@ -474,6 +504,32 @@ export function DataTable<TData, TValue>({
     rowCount: server ? serverTotal : undefined,
   })
 
+
+  const applyLayout = React.useCallback((layout:TableLayout) => {
+    setColumnVisibility(layout.visibility); setColumnOrder(layout.order)
+    setColumnSizing(layout.widths); setColumnPinning(layout.pinning)
+  }, [])
+  React.useEffect(() => {
+    let cancelled=false
+    if (!tableId || !tableExists(tableId)) {setPreferencesReady(true);return}
+    void readTablePreferences(tableId).then(layout=>{
+      if (!cancelled && layout && !hasInitialUrlState && !layoutChanged.current) applyLayout(normalizeTableLayout(layout,fieldDefinitions))
+    }).catch(()=>{}).finally(()=>{if(!cancelled){preferenceLoaded.current=true;setPreferencesReady(true)}})
+    return ()=>{cancelled=true}
+  }, [tableId, hasInitialUrlState, fieldDefinitions, applyLayout])
+  React.useEffect(() => {
+    if (!tableId || !preferencesReady || !preferenceLoaded.current || !layoutChanged.current) return
+    const timer=setTimeout(()=>{
+      void saveTablePreferences(tableId,{visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}).then(result=>{if(!result.ok)toast.error(result.error)}).catch(()=>toast.error("Could not save table layout."))
+    },700)
+    return ()=>clearTimeout(timer)
+  },[tableId,preferencesReady,columnVisibility,columnOrder,columnSizing,columnPinning])
+  function resetColumnLayout(){layoutChanged.current=true;applyLayout(normalizeTableLayout({},fieldDefinitions))}
+  function columnStyle(column:Column<TData,unknown>):React.CSSProperties {
+    const pin=column.getIsPinned()
+    return {width:column.getSize(),minWidth:column.getSize(),maxWidth:column.getSize(),position:pin?'sticky':undefined,left:pin==='left'?column.getStart('left'):undefined,right:pin==='right'?column.getAfter('right'):undefined,zIndex:pin?1:undefined,background:pin?'var(--background)':undefined}
+  }
+
   // Search is shown whenever a caller opts in via `searchColumn` (kept as the
   // enable flag) — but it now filters ACROSS ALL columns, not just that one.
   const showSearch = !!searchColumn
@@ -481,6 +537,7 @@ export function DataTable<TData, TValue>({
 
   const currentSavedPayload = React.useMemo<SavedViewPayload>(
     () => ({
+      ...(tableId && tableExists(tableId) ? {tableState:{version:2 as const,filterTree:EMPTY_FILTER_TREE,layout:{visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}}} : {}),
       filters: {
         ...(globalFilter ? { global: globalFilter } : {}),
         columns: Object.fromEntries(columnFilters.map((filter) => [filter.id, filter.value])) as SavedViewPayload["filters"]["columns"],
@@ -489,11 +546,14 @@ export function DataTable<TData, TValue>({
       visibility: columnVisibility,
       pageSize: pagination.pageSize,
     }),
-    [columnFilters, columnVisibility, globalFilter, pagination.pageSize, sorting]
+    [columnFilters, columnVisibility, columnOrder, columnSizing, columnPinning, tableId, globalFilter, pagination.pageSize, sorting]
   )
 
   const applySavedView = React.useCallback(
     (payload: SavedViewPayload) => {
+      let state
+      try { state=payload.tableState ? validateTableState(payload.tableState,fieldDefinitions) : null }
+      catch { toast.error("This view uses a filter that is no longer available. Update the view before applying it."); return }
       const result = applySavedViewPayload(
         payload,
         columns.map(
@@ -504,21 +564,24 @@ export function DataTable<TData, TValue>({
         filters ?? [],
         (facets ?? []).map((facet) => facet.columnId)
       )
+      if(result.invalidFilters){toast.error("This view uses filters that are no longer available. Update the view before applying it.");return}
+      if(state?.filterTree.children.length){toast.error("Advanced filters are not available for this list yet.");return}
+      if(state)applyLayout(state.layout)
       setSorting(result.sorting)
       setColumnFilters(result.columnFilters)
       setGlobalFilter(payload.filters.global ?? "")
-      setColumnVisibility(result.columnVisibility)
+      if(!state)setColumnVisibility(result.columnVisibility)
       setPagination({ pageIndex: 0, pageSize: server ? normalizeTablePageSize(result.pageSize) : result.pageSize })
       if (result.stale) toast.warning("Some saved view columns are no longer available.")
     },
-    [columns, facets, filters, server]
+    [columns, facets, filters, server, fieldDefinitions, applyLayout]
   )
 
   const resetToBaseView = React.useCallback(() => {
     setSorting([])
     setColumnFilters([])
     setGlobalFilter("")
-    setColumnVisibility({})
+    setColumnVisibility({});setColumnOrder([]);setColumnSizing({});setColumnPinning({left:[],right:[]})
     setPagination({ pageIndex: 0, pageSize })
   }, [pageSize])
 
@@ -592,7 +655,7 @@ export function DataTable<TData, TValue>({
 
         <div className={cn("ml-auto flex flex-wrap items-center justify-end gap-2", renderFilteredView && "order-2 shrink-0")}>
           {toolbar}
-          {tableId && savedViews ? (
+          {tableId && savedViews && preferencesReady ? (
             <SavedViewMenu
               listKey={tableId}
               currentPayload={currentSavedPayload}
@@ -601,33 +664,7 @@ export function DataTable<TData, TValue>({
               onReset={resetToBaseView}
             />
           ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="outline" size="sm" aria-label="Toggle columns">
-                  <SlidersHorizontal className="size-4" />
-                  <span className="hidden sm:inline">Columns</span>
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuGroup>
-                {table
-                  .getAllColumns()
-                  .filter((c) => c.getCanHide())
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    >
-                      {column.id.replace(/_/g, " ")}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ColumnControls table={table} onReset={resetColumnLayout} />
         </div>
       </div>
 
@@ -648,15 +685,16 @@ export function DataTable<TData, TValue>({
         pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, search: globalFilter,
         sorting, filters: columnFilters as ServerTableQuery["filters"],
       }) : <div className="overflow-hidden rounded-lg border">
-        <Table>
+        <Table style={{tableLayout:"fixed",width:table.getTotalSize(),minWidth:"100%"}}> 
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                {[...headerGroup.headers].sort((a,b)=>{const rank=(c:Column<TData,unknown>)=>c.getIsPinned()==='left'?0:c.getIsPinned()==='right'?2:1;return rank(a.column)-rank(b.column)}).map((header) => (
+                  <TableHead key={header.id} style={columnStyle(header.column)} className="relative">
                     {header.isPlaceholder
                       ? null
                       : flexRender(header.column.columnDef.header, header.getContext())}
+                    <div role="separator" aria-orientation="vertical" aria-label={`Resize ${header.column.id}`} tabIndex={0} onMouseDown={header.getResizeHandler()} onTouchStart={header.getResizeHandler()} onDoubleClick={()=>header.column.resetSize()} onKeyDown={event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();layoutChanged.current=true;setColumnSizing(current=>({...current,[header.column.id]:Math.max(48,Math.min(800,header.column.getSize()+(event.key==='ArrowRight'?8:-8)))}))}}} className="absolute right-0 top-0 h-full w-1 cursor-col-resize touch-none bg-border opacity-0 hover:opacity-100 focus:opacity-100" />
                   </TableHead>
                 ))}
               </TableRow>
@@ -669,7 +707,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} style={columnStyle(cell.column)}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

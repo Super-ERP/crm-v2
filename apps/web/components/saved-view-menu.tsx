@@ -10,6 +10,7 @@ import {
   renameView,
   saveView,
   setDefaultView,
+  updateView,
 } from "@/app/(app)/_shared/saved-view-actions"
 import type { SavedView, SavedViewPayload } from "@/lib/saved-views"
 import { showActionError } from "@/lib/show-action-error"
@@ -128,6 +129,18 @@ export function SavedViewMenu({
     }
   }
 
+  async function updateSelected() {
+    if (!selected) return
+    setBusy(true)
+    try {
+      const result = await updateView(selected.id, currentPayload)
+      if (!result.ok) { showActionError(result); return }
+      setViews(current => current.map(view => view.id === result.data.id ? result.data : view))
+      toast.success("View updated")
+    } catch { toast.error("Could not update view. Please try again.") }
+    finally { setBusy(false) }
+  }
+
   async function makeDefault() {
     if (!selected) return
     setBusy(true)
@@ -200,6 +213,9 @@ export function SavedViewMenu({
           </DropdownMenuItem>
           {selected ? (
             <>
+              <DropdownMenuItem disabled={busy} onClick={() => void updateSelected()}>
+                <Bookmark /> Update with current settings
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => openDialog("rename", selected)}>
                 <Pencil /> Rename
               </DropdownMenuItem>

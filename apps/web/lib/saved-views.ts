@@ -1,3 +1,6 @@
+import { tableLayoutSchema, validateTableState } from "@/lib/table-controls/state"
+import { getTableFields } from "@/lib/table-controls/registry"
+import type { TableStateV2 } from "@/lib/table-controls/types"
 import { z } from "zod"
 import type { SavedViewRow } from "@/db/schema"
 import { validateFilterValue, type DataTableFilterValue } from "@/lib/data-table-filters"
@@ -8,6 +11,7 @@ export type SavedViewFilters = {
 }
 
 export type SavedViewPayload = {
+  tableState?: TableStateV2
   filters: SavedViewFilters
   sorting: { id: string; desc: boolean }[]
   visibility: Record<string, boolean>
@@ -42,6 +46,7 @@ const filterColumnsSchema = z.record(z.string().min(1).max(100), z.unknown()).su
 
 export const savedViewPayloadSchema = z
   .object({
+    tableState: z.object({version:z.literal(2), filterTree:z.unknown(), layout:tableLayoutSchema}).strict().optional(),
     filters: z
       .object({
         global: z.string().max(500).optional(),
@@ -96,6 +101,7 @@ export type SavedViewRepositoryInsert = Pick<
   | "visibility"
   | "pageSize"
   | "isDefault"
+  | "tableState"
 >
 
 export interface SavedViewRepository {
@@ -149,17 +155,28 @@ export function createSavedViewService(
     },
     async save(input: SavedViewInput) {
       const parsed = savedViewInputSchema.parse(input)
+      const tableState = parsed.payload.tableState ? validateTableState(parsed.payload.tableState, getTableFields(parsed.listKey)) : null
       return repository.insert({
         organizationId: owner.tenantId,
         memberId: owner.memberId,
         listKey: parsed.listKey,
         name: parsed.name,
+        tableState,
         filters: parsed.payload.filters,
         sorting: parsed.payload.sorting,
         visibility: parsed.payload.visibility,
         pageSize: parsed.payload.pageSize,
         isDefault: false,
       })
+    },
+    async updatePayload(id: string, input: SavedViewPayload) {
+      const row = assertOwned(await repository.get(savedViewIdSchema.parse(id)), owner)
+      const payload = savedViewPayloadSchema.parse(input)
+      const tableState = payload.tableState ? validateTableState(payload.tableState, getTableFields(row.listKey)) : null
+      return assertOwned(await repository.update(row.id, {
+        filters: payload.filters, sorting: payload.sorting, visibility: payload.visibility,
+        pageSize: payload.pageSize, tableState, updatedAt: new Date(),
+      }), owner)
     },
     async rename(id: string, name: string) {
       const row = assertOwned(await repository.get(savedViewIdSchema.parse(id)), owner)
@@ -177,6 +194,7 @@ export function createSavedViewService(
         memberId: owner.memberId,
         listKey: source.listKey,
         name: parsedName,
+        tableState: source.tableState,
         filters: source.filters,
         sorting: source.sorting,
         visibility: source.visibility,

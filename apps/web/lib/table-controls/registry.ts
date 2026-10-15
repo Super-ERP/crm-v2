@@ -19,6 +19,6 @@ export function getTableFields(listKey: string, columnIds?: readonly string[]): 
     const type = FIELD_TYPES[id]
     if (!entry.fields.includes(id) || !type) throw new Error(`Unavailable table field: ${id}`)
     return { id, label: id.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase()), type, operators: FIELD_OPERATORS[type],
-      sortable: type !== "action", defaultVisible: true, minWidth: 48, defaultWidth: type === "action" ? 80 : 160 }
+      required: id === entry.fields[0] || type === "action", sortable: type !== "action", defaultVisible: true, minWidth: 48, defaultWidth: type === "action" ? 80 : 160 }
   })
 }

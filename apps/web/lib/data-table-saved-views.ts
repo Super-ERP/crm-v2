@@ -15,6 +15,7 @@ export type SavedViewApplicationResult = {
   globalFilter: string
   columnVisibility: VisibilityState
   pageSize: number
+  invalidFilters: boolean
   stale: boolean
 }
 
@@ -26,6 +27,7 @@ export function applySavedViewPayload(
 ): SavedViewApplicationResult {
   const knownColumnIds = new Set(columnIds)
   let stale = false
+  let invalidFilters = false
   const sorting = payload.sorting.filter((sort) => {
     const valid = knownColumnIds.has(sort.id)
     stale ||= !valid
@@ -42,6 +44,7 @@ export function applySavedViewPayload(
   for (const [id, value] of Object.entries(payload.filters.columns)) {
     if (!knownColumnIds.has(id)) {
       stale = true
+      invalidFilters = true
       continue
     }
     const definition = filters.find((filter) => filter.columnId === id)
@@ -49,12 +52,14 @@ export function applySavedViewPayload(
       const validation = validateFilterValue(value)
       if (!validation.success || validation.value.type !== definition.type) {
         stale = true
+        invalidFilters = true
         continue
       }
       columnFilters.push({ id, value: validation.value })
     } else if (facetColumnIds.includes(id) && Array.isArray(value) && value.every((item) => typeof item === "string")) {
       columnFilters.push({ id, value })
     } else {
+      invalidFilters = true
       stale = true
     }
   }
@@ -66,5 +71,6 @@ export function applySavedViewPayload(
     columnVisibility,
     pageSize: payload.pageSize,
     stale,
+    invalidFilters,
   }
 }

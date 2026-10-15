@@ -18,13 +18,14 @@ import {
   type SavedViewRepositoryRow,
 } from "@/lib/saved-views"
 
-function createSqlSavedViewRepository(tx: Tx): SavedViewRepository {
+function createSqlSavedViewRepository(tx: Tx, owner: {tenantId:string;memberId:string}): SavedViewRepository {
+  const scope = and(eq(savedViews.organizationId,owner.tenantId),eq(savedViews.memberId,owner.memberId))
   return {
     async list(listKey) {
-      return tx.select().from(savedViews).where(eq(savedViews.listKey, listKey))
+      return tx.select().from(savedViews).where(and(scope,eq(savedViews.listKey, listKey)))
     },
     async get(id) {
-      const [row] = await tx.select().from(savedViews).where(eq(savedViews.id, id)).limit(1)
+      const [row] = await tx.select().from(savedViews).where(and(scope,eq(savedViews.id, id))).limit(1)
       return row
     },
     async insert(input) {
@@ -35,12 +36,12 @@ function createSqlSavedViewRepository(tx: Tx): SavedViewRepository {
       const [row] = await tx
         .update(savedViews)
         .set({ ...patch, updatedAt: patch.updatedAt ?? new Date() })
-        .where(eq(savedViews.id, id))
+        .where(and(scope,eq(savedViews.id, id)))
         .returning()
       return row
     },
     async delete(id) {
-      const rows = await tx.delete(savedViews).where(eq(savedViews.id, id)).returning({ id: savedViews.id })
+      const rows = await tx.delete(savedViews).where(and(scope,eq(savedViews.id, id))).returning({ id: savedViews.id })
       return rows.length > 0
     },
     async clearDefaults(listKey, owner) {
@@ -70,6 +71,7 @@ function toSavedView(row: SavedViewRepositoryRow): SavedView {
     listKey: row.listKey,
     name: row.name,
     payload: {
+      ...(row.tableState ? { tableState: row.tableState as SavedViewPayload["tableState"] } : {}),
       filters: row.filters as SavedViewPayload["filters"],
       sorting: row.sorting as SavedViewPayload["sorting"],
       visibility: row.visibility as SavedViewPayload["visibility"],
@@ -84,7 +86,7 @@ function toSavedView(row: SavedViewRepositoryRow): SavedView {
 export async function listSavedViews(listKey: string): Promise<SavedView[]> {
   const ctx = requireMember(await requireContext())
   return runInTenant(ctx.tenantId, async (tx) => {
-    const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
+    const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
     return (await service.list(listKey)).map(toSavedView)
   })
 }
@@ -96,7 +98,7 @@ export async function saveView(
     const parsed = savedViewInputSchema.parse(input)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
-      const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
+      const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
       return toSavedView(await service.save(parsed))
     })
   })
@@ -111,7 +113,7 @@ export async function renameView(
     const parsedName = savedViewNameSchema.parse(name)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
-      const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
+      const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
       return toSavedView(await service.rename(parsedId, parsedName))
     })
   })
@@ -126,7 +128,7 @@ export async function duplicateView(
     const parsedName = savedViewNameSchema.parse(name)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
-      const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
+      const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
       return toSavedView(await service.duplicate(parsedId, parsedName))
     })
   })
@@ -137,7 +139,7 @@ export async function setDefaultView(id: string): Promise<ActionResult<SavedView
     const parsedId = savedViewIdSchema.parse(id)
     const ctx = requireMember(await requireContext())
     return runInTenant(ctx.tenantId, async (tx) => {
-      const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
+      const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
       return toSavedView(await service.setDefault(parsedId))
     })
   })
@@ -148,8 +150,18 @@ export async function deleteView(id: string): Promise<ActionResult<void>> {
     const parsedId = savedViewIdSchema.parse(id)
     const ctx = requireMember(await requireContext())
     await runInTenant(ctx.tenantId, async (tx) => {
-      const service = createSavedViewService(createSqlSavedViewRepository(tx), ctx)
+      const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
       await service.delete(parsedId)
+    })
+  })
+}
+
+export async function updateView(id: string, payload: SavedViewPayload): Promise<ActionResult<SavedView>> {
+  return runAction(async () => {
+    const ctx = requireMember(await requireContext())
+    return runInTenant(ctx.tenantId, async tx => {
+      const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
+      return toSavedView(await service.updatePayload(id, payload))
     })
   })
 }
