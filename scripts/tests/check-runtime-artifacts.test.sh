@@ -52,11 +52,13 @@ mkdir -p "$base_runtime/app" \
   "$base_runtime/usr/local/lib/node_modules/npm/docs" \
   "$base_runtime/usr/local/lib/node_modules/npm/node_modules/glob/dist/commonjs" \
   "$base_runtime/usr/local/lib/node_modules/pnpm" \
+  "$base_runtime/usr/local/share/doc/node" \
   "$base_runtime/opt/yarn-v1.22.22" \
   "$base_runtime/root/.npm" \
   "$base_runtime/tmp/node-compile-cache/v22"
 mv "$fixture/apps" "$fixture/node_modules" "$fixture/packages" "$base_runtime/app/"
-touch "$base_runtime/usr/bin/test" \
+touch "$base_runtime/usr/local/share/doc/node/lldb_commands.py" \
+  "$base_runtime/usr/bin/test" \
   "$base_runtime/usr/local/bin/corepack" \
   "$base_runtime/usr/local/bin/npm" \
   "$base_runtime/usr/local/bin/npx" \
@@ -77,6 +79,7 @@ scripts/strip-runtime-package-managers.sh "$base_runtime"
 scripts/check-runtime-artifacts.sh "$base_runtime"
 
 for manager_path in \
+  usr/local/share/doc/node \
   usr/local/bin/corepack \
   usr/local/bin/npm \
   usr/local/bin/npx \
