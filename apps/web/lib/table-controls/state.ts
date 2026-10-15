@@ -48,3 +48,32 @@ export function validateTableState(input: unknown, fields: readonly TableFieldDe
   const parsed = z.object({version:z.literal(2),filterTree:z.unknown(),layout:tableLayoutSchema}).strict().parse(input)
   return {version:2,filterTree:validateFilterTree(parsed.filterTree,fields),layout:normalizeTableLayout(parsed.layout,fields)}
 }
+
+/** Quick controls and legacy views become conditions in the same nested model. */
+export function mergeQuickFilterTree(tree:FilterGroup,filters:Record<string,DataTableFilterValue|readonly string[]>,fields:readonly TableFieldDefinition[]):FilterGroup {
+  let sequence=0
+  const nodes:import('./types').FilterNode[]=[]
+  const condition=(fieldId:string,operator:import('./types').FilterOperator,value:unknown):import('./types').FilterCondition=>({kind:'condition',id:`quick-condition-${sequence++}`,fieldId,operator,value})
+  for(const [fieldId,raw] of Object.entries(filters)) {
+    const field=fields.find(f=>f.id===fieldId)
+    if(!field)continue // Unregistered legacy shortcuts retain their separate server predicate.
+    const source=legacyFiltersToTree({[fieldId]:raw}).children[0]
+    if(!source||source.kind!=='condition')continue
+    const value=source.value
+    const choices=Array.isArray(value)?value:[]
+    if(source.operator==='any-of'&&field.type==='date') {
+      nodes.push({kind:'group',id:`quick-group-${sequence++}`,logic:'or',children:choices.map(year=>condition(fieldId,'year',Number(year)))})
+    }else if(source.operator==='any-of'&&field.type==='boolean') {
+      nodes.push({kind:'group',id:`quick-group-${sequence++}`,logic:'or',children:choices.map(choice=>condition(fieldId,'equals',choice==='true'||choice==='Primary'||choice==='Yes'))})
+    }else if(source.operator==='any-of'&&field.type==='text') {
+      nodes.push({kind:'group',id:`quick-group-${sequence++}`,logic:'or',children:choices.map(choice=>condition(fieldId,'equals',choice))})
+    }else if(field.type==='money') {
+      if(!field.currency)throw new Error(`Choose an explicit currency for the ${field.label} filter in Advanced filters.`)
+      nodes.push(condition(fieldId,source.operator,source.operator==='between'?{currency:field.currency,min:choices[0],max:choices[1]}:{currency:field.currency,amount:value}))
+    }else nodes.push(condition(fieldId,source.operator,value))
+  }
+  if(!nodes.length)return tree
+  // IDs are internal identifiers only; preserve structure while avoiding collisions with saved IDs.
+  const reidentify=(node:import('./types').FilterNode):import('./types').FilterNode=>node.kind==='group'?{...node,id:`merged-${sequence++}`,children:node.children.map(reidentify)}:{...node,id:`merged-${sequence++}`}
+  return validateFilterTree(reidentify({kind:'group',id:'combined',logic:'and',children:[...(tree.children.length?[tree]:[]),...nodes]}) as FilterGroup,fields)
+}

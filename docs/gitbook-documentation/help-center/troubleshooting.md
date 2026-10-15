@@ -241,3 +241,8 @@ Send your administrator or support contact the module name, record identifier, e
 * If the reporting line changes, lead-conversion and quotation review follows the current eligible manager. Stage requests also require their stored assigned reviewer, so cancel and resubmit a stale stage request.
 * A manager with a superior still needs approval. If no superior is eligible, correct the reporting configuration; missing approval permission does not enable a direct action.
 * Conversion and the decision are one transaction. A failed conversion leaves the request pending without partial linked records; resolve the error or cancel and resubmit.
+
+
+## A Saved View no longer applies
+
+A filter may refer to a field that was removed or is no longer available. The table keeps the current filters and asks you to update the view. Rebuild the unavailable condition, then choose **Views → Update with current settings**. Resetting the column layout changes columns only. If the layout cannot be saved, reading and filtering records remain available; check your write access before retrying.

@@ -12,7 +12,12 @@
       "primary",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "account-contacts": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/accounts/[id]/account-detail-body.tsx",
@@ -36,7 +41,28 @@
       "total",
       "accountType"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "account-opportunities": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-pipelines": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-projects": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-quotations": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      },
+      "account-children": {
+        "mode": "complete-client",
+        "loader": "accountsGet + listAccountOpportunities/listAccountProjects/listAccountQuotations"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/accounts/accounts-table.tsx",
@@ -54,7 +80,12 @@
       "createdAt",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "accounts": {
+        "mode": "server",
+        "loader": "accountsList"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/audit/audit-table.tsx",
@@ -69,7 +100,12 @@
       "actorName",
       "createdAt"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "audit": {
+        "mode": "server",
+        "loader": "listAuditPage"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/billing/finance-docs-table.tsx",
@@ -88,7 +124,16 @@
       "status",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "finance-sale": {
+        "mode": "server",
+        "loader": "listFinanceDocPage(sale)"
+      },
+      "finance-purchase": {
+        "mode": "server",
+        "loader": "listFinanceDocPage(purchase)"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/forecast/forecast-client.tsx",
@@ -104,7 +149,12 @@
       "weightedValue",
       "recognizedWeightedValue"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "forecast": {
+        "mode": "complete-client",
+        "loader": "getForecast"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/funnel/[id]/contract-panel.tsx",
@@ -118,7 +168,12 @@
       "status",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "funnel-contract": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/funnel/[id]/costs-panel.tsx",
@@ -134,7 +189,12 @@
       "amountBase",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "funnel-costs": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/funnel/[id]/funnel-detail-body.tsx",
@@ -153,7 +213,20 @@
       "uom",
       "quoteCount"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "funnel-quotes": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      },
+      "funnel-products": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      },
+      "funnel-projects": {
+        "mode": "complete-client",
+        "loader": "getOpportunity + scoped cost/contract readers"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/funnel/funnels-table.tsx",
@@ -172,7 +245,12 @@
       "stageId",
       "status"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "funnel": {
+        "mode": "server",
+        "loader": "funnelsList / listFunnelStagePage"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/intercompany/intercompany-table.tsx",
@@ -190,7 +268,12 @@
       "expectedCloseDate",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "intercompany-inbound": {
+        "mode": "server",
+        "loader": "listInboundIntercompanyDealPage"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/leads/leads-table.tsx",
@@ -212,7 +295,12 @@
       "createdAt",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "leads": {
+        "mode": "server",
+        "loader": "leadsList"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/opportunities/[id]/opportunity-detail-body.tsx",
@@ -236,7 +324,20 @@
       "quantity",
       "unitPrice"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "opp-funnels": {
+        "mode": "complete-client",
+        "loader": "opportunitiesGet"
+      },
+      "opp-quotations": {
+        "mode": "complete-client",
+        "loader": "opportunitiesGet"
+      },
+      "opp-products": {
+        "mode": "complete-client",
+        "loader": "opportunitiesGet"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/opportunities/opportunities-table.tsx",
@@ -252,7 +353,12 @@
       "funnelCount",
       "accountOwnerMemberId"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "opportunities": {
+        "mode": "server",
+        "loader": "opportunitiesList"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/payment-milestones/payment-milestones-table.tsx",
@@ -266,7 +372,12 @@
       "status",
       "funnelName"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "payment-milestones": {
+        "mode": "server",
+        "loader": "listPaymentMilestonePage"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/persons/[id]/person-detail-body.tsx",
@@ -281,7 +392,16 @@
       "projectCode",
       "status"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "person-pipelines": {
+        "mode": "complete-client",
+        "loader": "personsGet"
+      },
+      "person-projects": {
+        "mode": "complete-client",
+        "loader": "personsGet"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/persons/persons-table.tsx",
@@ -298,7 +418,12 @@
       "primary",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "persons": {
+        "mode": "server",
+        "loader": "personsList"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/products/product-detail-body.tsx",
@@ -315,7 +440,16 @@
       "status",
       "total"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "product-usage": {
+        "mode": "server",
+        "loader": "listProductUsagePage"
+      },
+      "product-deals": {
+        "mode": "complete-client",
+        "loader": "listProductDeals"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/products/products-table.tsx",
@@ -332,7 +466,12 @@
       "isActive",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "products": {
+        "mode": "server",
+        "loader": "listProductPage"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/project-codes/project-codes-table.tsx",
@@ -344,7 +483,12 @@
       "relationship",
       "funnelCount"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "project-codes": {
+        "mode": "server",
+        "loader": "listProjectCodes"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/project-codes/view/project-code-detail-body.tsx",
@@ -372,7 +516,32 @@
       "opportunity",
       "ownerName"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "project-code-funnels": {
+        "mode": "server",
+        "loader": "getProjectCode"
+      },
+      "code-opportunities": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-quotations": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-accounts": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-contacts": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      },
+      "code-projects": {
+        "mode": "server",
+        "loader": "listProjectCodeRelatedRecords"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/projects/projects-table.tsx",
@@ -387,7 +556,12 @@
       "value",
       "opportunityName"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "projects": {
+        "mode": "server",
+        "loader": "listProjectPage"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/quotations/quotations-table.tsx",
@@ -410,7 +584,12 @@
       "primary",
       "validUntil"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "quotations": {
+        "mode": "server",
+        "loader": "quotationsList"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/sales-orders/[id]/sales-order-detail-body.tsx",
@@ -426,7 +605,16 @@
       "number",
       "kind"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "so-milestones": {
+        "mode": "complete-client",
+        "loader": "getSalesOrder + scoped milestone/doc readers"
+      },
+      "so-finance-docs": {
+        "mode": "complete-client",
+        "loader": "getSalesOrder + scoped milestone/doc readers"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/sales-orders/sales-orders-table.tsx",
@@ -442,7 +630,12 @@
       "document",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "sales-orders": {
+        "mode": "server",
+        "loader": "listSalesOrderPage"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/settings/access/access-client.tsx",
@@ -458,7 +651,12 @@
       "status",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "settings-api-keys": {
+        "mode": "complete-client",
+        "loader": "existing settings readers (complete authorized datasets)"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/settings/billing/tax/tax-client.tsx",
@@ -472,7 +670,12 @@
       "active",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "settings-tax-rates": {
+        "mode": "complete-client",
+        "loader": "existing settings readers (complete authorized datasets)"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/settings/taxonomy/funnel-stages/funnel-stages-client.tsx",
@@ -488,7 +691,12 @@
       "forecast",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "settings-funnel-stages": {
+        "mode": "complete-client",
+        "loader": "existing settings readers (complete authorized datasets)"
+      }
+    }
   },
   {
     "file": "apps/web/app/(app)/team/team-client.tsx",
@@ -502,6 +710,11 @@
       "lastActive",
       "actions"
     ],
-    "mode": "pending-adapter-audit"
+    "adapters": {
+      "team-members": {
+        "mode": "complete-client",
+        "loader": "listTeamMembers"
+      }
+    }
   }
 ]

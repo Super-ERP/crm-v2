@@ -40,3 +40,10 @@ it('resolves relative dates at evaluation time and excludes null from negative m
   expect(evaluateFilterTree({name:null},negative,fields,context)).toBe(false)
 })
 it('handles empty root groups as no user restriction', () => expect(validateFilterTree(group([]), fields).children).toEqual([]))
+it('treats empty associations as empty and compares relation selections by identity',()=>{
+ const relation={...getTableFields('accounts',['ownerName'])[0],id:'ownerName'}
+ const tree=validateFilterTree(group([rule('ownerName','any-of',['member-a'])]),[relation])
+ expect(evaluateFilterTree({ownerName:{id:'member-a',label:'Alex'}},tree,[relation],context)).toBe(true)
+ const empty=validateFilterTree(group([rule('ownerName','empty')]),[relation])
+ expect(evaluateFilterTree({ownerName:[null,'']},empty,[relation],context)).toBe(true)
+})

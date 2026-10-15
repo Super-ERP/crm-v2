@@ -135,3 +135,43 @@ export async function getProjectCode(tx: Tx, ctx: ServerContext, code: string, p
     opportunities:[...relatedOpportunities],quotations: [...quotations], accounts: [...relatedAccounts], contacts: [...contacts], projects: [...deliveryProjects],
   }
 }
+
+export type CodeRelatedKind = 'opportunities'|'quotations'|'accounts'|'contacts'|'projects'
+/** A bounded reader over the entire active code relationship, independent of funnel paging. */
+export async function listProjectCodeRelatedRecords(tx:Tx,ctx:ServerContext,code:string,kind:CodeRelatedKind,options:CodeTableOptions & {page?:unknown;projectsEnabled?:boolean}={}) {
+ const pageIndex=normalizeApprovalPage(options.page),pageSize=normalizeTablePageSize(options.pageSize)
+ const empty={rows:[] as CodeRelatedRecord[],total:0}
+ if(!ctx.can(PERMISSIONS.OPPORTUNITY_VIEW)||!code.trim()||code.length>1000)return empty
+ const visible=await visibleMemberIds(tx,ctx)
+ if(visible?.length===0)return empty
+ const crmScope=visible===null?sql`true`:sql`f.opportunity_owner IN (${sql.join(visible.map(id=>sql`${id}`),sql`, `)})`
+ const ids=sql`WITH eligible AS (${codeSource(ctx,visible)}) SELECT f.id FROM eligible f WHERE f.project_code=${code} OR f.cross_deal_project_code=${code} OR (f.crm_code=${code} AND ${crmScope})`
+ const quoteSource=ctx.can(PERMISSIONS.QUOTATION_VIEW)?sql`SELECT q.* FROM quotations q WHERE q.tenant_id=${ctx.tenantId} AND q.deleted_at IS NULL AND q.funnel_id IN (${ids})`:sql`SELECT * FROM quotations WHERE false`
+ let source:SQL
+ let fieldIds:string[]
+ if(kind==='opportunities'){
+  source=sql`SELECT opportunities.id,opportunities.name FROM opportunities WHERE opportunities.tenant_id=${ctx.tenantId} AND opportunities.deleted_at IS NULL AND ${visible===null?sql`true`:sql`opportunities.owner_member_id IN (${sql.join(visible.map(id=>sql`${id}`),sql`, `)})`} AND opportunities.id IN (SELECT opportunity_id FROM funnels WHERE id IN (${ids}))`
+  fieldIds=['name']
+ }else if(kind==='quotations'){
+  if(!ctx.can(PERMISSIONS.QUOTATION_VIEW))return empty
+  source=sql`SELECT q.id,q.quote_number AS name,'Quotation'::text AS role,q.status,q.total AS amount,q.currency FROM (${quoteSource}) q`
+  fieldIds=['name','status','amount']
+ }else if(kind==='accounts'){
+  if(!ctx.can(PERMISSIONS.ACCOUNT_VIEW))return empty
+  source=sql`SELECT accounts.id,accounts.name,accounts.code AS "recordCode",accounts.account_type AS status,CASE WHEN accounts.id IN (SELECT account_id FROM funnels WHERE id IN (${ids})) THEN 'End user' ELSE 'Bill to' END AS role FROM accounts WHERE accounts.tenant_id=${ctx.tenantId} AND accounts.deleted_at IS NULL AND ${accountReadScope(visible)??sql`true`} AND (accounts.id IN (SELECT account_id FROM funnels WHERE id IN (${ids})) OR accounts.id IN (SELECT bill_to_account_id FROM (${quoteSource}) q))`
+  fieldIds=['name','recordCode','status','role']
+ }else if(kind==='contacts'){
+  if(!ctx.can(PERMISSIONS.PERSON_VIEW))return empty
+  source=sql`SELECT persons.id,concat_ws(' ',persons.first_name,persons.last_name) AS name,'Contact'::text AS role,persons.email,persons.title FROM persons JOIN accounts ON accounts.id=persons.account_id AND accounts.tenant_id=persons.tenant_id WHERE persons.tenant_id=${ctx.tenantId} AND persons.deleted_at IS NULL AND accounts.deleted_at IS NULL AND ${accountReadScope(visible)??sql`true`} AND persons.id IN (SELECT f.primary_person_id FROM funnels f WHERE f.id IN (${ids}) UNION SELECT o.primary_person_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) UNION SELECT o.owner_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) UNION SELECT o.power_sponsor_contact_id FROM opportunities o JOIN funnels f ON f.opportunity_id=o.id WHERE f.id IN (${ids}) UNION SELECT attention_contact_id FROM (${quoteSource}) q)`
+  fieldIds=['name','email','title']
+ }else if(kind==='projects'){
+  if(!options.projectsEnabled||!ctx.can(PERMISSIONS.PROJECT_VIEW))return empty
+  source=sql`SELECT projects.id,projects.name,projects.project_code AS "recordCode",projects.status,projects.value AS amount,projects.currency FROM projects WHERE projects.tenant_id=${ctx.tenantId} AND projects.deleted_at IS NULL AND ${ownerScope(projects.ownerMemberId,visible)??sql`true`} AND (projects.funnel_id IN (${ids}) OR (projects.project_code=${code} AND projects.account_id IN (SELECT account_id FROM funnels WHERE id IN (${ids}))))`
+  fieldIds=['name','recordCode','status','amount']
+ }else throw new Error('Unknown project code relationship')
+ const expressions=Object.fromEntries(fieldIds.map(id=>[id,sql`${sql.identifier('records')}.${sql.identifier(id)}`]))
+ const search=(options.search??'').trim().slice(0,300)
+ const pattern=`%${search.replace(/[\\%_]/g,'\\$&')}%`
+ const rows=await tx.execute<CodeRelatedRecord & {total:number}>(sql`SELECT records.*,(count(*) OVER ())::int AS total FROM (${source}) records WHERE ${search?sql`records.name ILIKE ${pattern}`:sql`true`} AND ${recordFilter(`code-${kind}`,options.filterTree,expressions,{currency:sql`records.currency`})??sql`true`} ORDER BY ${sql.join(recordSort(options.sorting,expressions,sql`records.name ASC`),sql`, `)},records.id LIMIT ${pageSize} OFFSET ${pageIndex*pageSize}`)
+ return {rows:rows.map(({total:_total,...row})=>row),total:rows[0]?.total??0}
+}

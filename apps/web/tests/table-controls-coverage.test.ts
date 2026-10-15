@@ -8,6 +8,7 @@ describe("registered CRM table coverage", () => {
     const actual = files(resolve('app')).filter(p => readFileSync(p, 'utf8').includes('<DataTable')).map(p => 'apps/web/' + p.slice(resolve('.').length + 1))
     expect(actual.filter(file => !TABLE_CATALOG.some(entry => entry.file === file))).toEqual([])
     for (const entry of TABLE_CATALOG) for (const key of entry.keys) {
+      expect(entry.adapters[key as keyof typeof entry.adapters]).toBeTruthy()
       const fields = getTableFields(key, entry.fields)
       expect(fields.map(f => f.id)).toEqual(entry.fields)
       expect(fields.every(f => f.label && f.type)).toBe(true)

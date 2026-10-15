@@ -549,7 +549,7 @@ export async function opportunitiesList(
     query?.selections.accountId?.length ? inArray(opportunities.accountId, query.selections.accountId) : undefined,
     query?.selections.accountOwnerMemberId?.length ? inArray(accounts.ownerMemberId, query.selections.accountOwnerMemberId) : undefined
   )
-  const funnelCount = sql<number>`(select count(*) from ${funnels} where ${funnels.opportunityId} = ${opportunities.id} and ${funnels.deletedAt} is null)`
+  const funnelCount = sql<number>`(select count(*) from ${funnels} where ${funnels.opportunityId} = ${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible)??sql`true`})`
   const sortColumns = {
     name: opportunities.name,
     accountId: accounts.name,

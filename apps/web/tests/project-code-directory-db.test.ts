@@ -12,7 +12,7 @@ vi.mock("@/db", () => ({ runInTenant: async (_tenant: string, work: (tx: Tx) => 
 vi.mock("@/lib/server-context", () => ({ requireContext: async () => scope.ctx }))
 vi.mock("@/lib/access-scope", async original => ({ ...await original<typeof import("@/lib/access-scope")>(), visibleMemberIds: async () => scope.members }))
 import { listRelatedProjectCodes } from "@/app/(app)/_shared/project-code-actions"
-import { listProjectCodes, getProjectCode } from "@/server/services/project-codes"
+import { listProjectCodeRelatedRecords, listProjectCodes, getProjectCode } from "@/server/services/project-codes"
 const url = process.env.TEST_DATABASE_ADMIN_URL
 ;(url ? describe.sequential : describe.skip)("project code directory PostgreSQL boundary", () => {
   let admin: postgres.Sql, client: postgres.Sql, tx: Tx
@@ -134,6 +134,10 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
       expect(result?.total).toBe(27)
       expect(result?.quotations.some(q=>q.id===extraQuote)).toBe(true)
       expect(result?.opportunities.map(o=>o.id)).toContain(parent)
+      const related=await listProjectCodeRelatedRecords(tx,ctx,'CROSS','quotations',{filterTree:{kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId:'name',operator:'equals',value:'Last quote'}]}})
+      expect(related.total).toBe(1)
+      expect(related.rows.map(q=>q.id)).toEqual([extraQuote])
+      for(const kind of ['accounts','contacts','opportunities','projects'] as const)await listProjectCodeRelatedRecords(tx,ctx,'CROSS',kind,{projectsEnabled:true})
       const filtered=await getProjectCode(tx,ctx,'CROSS',0,false,{filterTree:{kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId:'name',operator:'equals',value:'No such funnel'}]}})
       expect(filtered?.funnels).toHaveLength(0)
       expect(filtered?.quotations.some(q=>q.id===extraQuote)).toBe(true)

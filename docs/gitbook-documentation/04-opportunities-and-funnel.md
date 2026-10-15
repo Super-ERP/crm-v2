@@ -193,3 +193,12 @@ When Projects is enabled, creating or relinking a delivery Project to a funnel r
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+
+## Advanced list controls
+
+**Advanced filters** combines conditions in nested AND/OR groups and applies them before pagination. Funnel name search and Expected close year remain available as shortcuts. The same effective filter applies to the Funnel board and list; access scope and stage eligibility are always enforced separately.
+
+**Columns** supports show/hide, keyboard reordering, resizing and left/right pinning. Personal layouts are saved by user and list. Named **Views** include the complete filter and column configuration; select **Update with current settings** to replace an existing view. See [Workspace and personal views](../user-guide/01-workspace-and-views.md).
+
+On Account and Contact details, **Project codes** is a tab in the existing right-hand related block. Its compact list links to the central code page. Central code related lists cover the whole accessible code relationship, independently of the current funnel page.

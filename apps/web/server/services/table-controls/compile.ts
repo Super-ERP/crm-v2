@@ -16,7 +16,7 @@ export function compileFilterTree(input: unknown, registry: SqlFieldRegistry, co
     const e = f.searchExpression && ["contains","not-contains","starts-with","ends-with"].includes(op) ? f.searchExpression : f.expression
     const text=sql`${e}::text`
     const notEmpty=f.field.type==='text'||f.field.type==='enum'||f.field.type==='relation'
-      ? f.array?sql`coalesce(cardinality(${e}),0)>0`:sql`nullif(${text},'') IS NOT NULL`:sql`${e} IS NOT NULL`
+      ? f.array?sql`EXISTS (SELECT 1 FROM unnest(${e}) filter_value WHERE filter_value IS NOT NULL AND filter_value::text <> '')`:sql`nullif(${text},'') IS NOT NULL`:sql`${e} IS NOT NULL`
     if(op==='empty')return sql`NOT (${notEmpty})`
     if(op==='not-empty')return notEmpty
     let predicate:SQL
@@ -43,7 +43,7 @@ export function compileFilterTree(input: unknown, registry: SqlFieldRegistry, co
     } else if(f.field.type==='boolean')predicate=sql`${e}=${v}`
     else {
       if(f.array){
-        const arrayExpression=sql`ARRAY(SELECT lower(filter_value::text) FROM unnest(${e}) filter_value)`
+        const arrayExpression=sql`ARRAY(SELECT lower(filter_value::text) FROM unnest(${e}) filter_value WHERE filter_value IS NOT NULL AND filter_value::text <> '')`
         const choices=op==='any-of'||op==='none-of'?v as string[]:[String(v)]
         if(['any-of','none-of','equals','not-equals'].includes(op)){
           const items=sql.join(choices.map(x=>sql`${x.toLocaleLowerCase()}`),sql`, `)

@@ -12,7 +12,8 @@ export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: read
     if(node.kind==='group')return !node.children.length|| (node.logic==='and'?node.children.every(match):node.children.some(match))
     const field=byId.get(node.fieldId);if(!field)throw new Error('Unavailable filter field')
     const raw=valueFor?valueFor(row,node.fieldId):(row as Record<string,unknown>)[node.fieldId]
-    const value=tableScalar(raw), empty=value==null||value===''||(Array.isArray(value)&&!value.length)
+    const normalizedRaw=Array.isArray(raw)?raw.filter(x=>tableScalar(x)!=null&&tableScalar(x)!==''):raw
+    const value=tableScalar(normalizedRaw), empty=value==null||value===''||(Array.isArray(value)&&!value.length)
     const op=node.operator,v=node.value
     if(op==='empty')return empty
     if(op==='not-empty')return !empty
@@ -38,7 +39,7 @@ export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: read
     }
     if(field.type==='boolean')return value===v
     const selecting=['any-of','none-of','equals','not-equals'].includes(op)
-    const values=(Array.isArray(raw)?raw:[raw]).map(x=>String(selecting&&x&&typeof x==='object'&&!Array.isArray(x)?((x as Record<string,unknown>).value??(x as Record<string,unknown>).id??tableScalar(x)):tableScalar(x)).toLowerCase())
+    const values=(Array.isArray(normalizedRaw)?normalizedRaw:[normalizedRaw]).map(x=>String(selecting&&x&&typeof x==='object'&&!Array.isArray(x)?((x as Record<string,unknown>).value??(x as Record<string,unknown>).id??tableScalar(x)):tableScalar(x)).toLowerCase())
     const target=String(v).toLocaleLowerCase()
     if(op==='any-of'||op==='none-of'){
       const choices=(v as string[]).map(x=>x.toLocaleLowerCase())

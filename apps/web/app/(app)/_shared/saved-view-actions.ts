@@ -1,5 +1,6 @@
 "use server"
 
+import { requireTableAccess } from "@/server/services/table-controls/access"
 import { and, eq } from "drizzle-orm"
 import { runInTenant, type Tx } from "@/db"
 import { savedViews } from "@/db/schema"
@@ -84,7 +85,9 @@ function toSavedView(row: SavedViewRepositoryRow): SavedView {
 }
 
 export async function listSavedViews(listKey: string): Promise<SavedView[]> {
-  const ctx = requireMember(await requireContext())
+  const context = await requireContext()
+  await requireTableAccess(context,listKey)
+  const ctx = requireMember(context)
   return runInTenant(ctx.tenantId, async (tx) => {
     const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
     return (await service.list(listKey)).map(toSavedView)
@@ -96,7 +99,9 @@ export async function saveView(
 ): Promise<ActionResult<SavedView>> {
   return runAction(async () => {
     const parsed = savedViewInputSchema.parse(input)
-    const ctx = requireMember(await requireContext())
+    const context = await requireContext()
+    await requireTableAccess(context,parsed.listKey)
+    const ctx = requireMember(context)
     return runInTenant(ctx.tenantId, async (tx) => {
       const service = createSavedViewService(createSqlSavedViewRepository(tx, ctx), ctx)
       return toSavedView(await service.save(parsed))

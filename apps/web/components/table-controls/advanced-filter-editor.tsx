@@ -49,6 +49,7 @@ export function AdvancedFilterEditor({fields,value,onApply,timezone}:{fields:rea
    let v=node.value
    if(op==='empty'||op==='not-empty')return {...node,value:undefined}
    if(op==='any-of'||op==='none-of')v=Array.isArray(v)?v:String(v??'').split(',').map(s=>s.trim()).filter(Boolean)
+   else if(field?.type==='boolean'&&typeof v!=='boolean')v=true
    else if(field?.type==='number'||op==='year')v=Array.isArray(v)?v.map(number):number(v)
    else if(field?.type==='money'&&v&&typeof v==='object'){const m=v as Record<string,unknown>;v=op==='between'?{currency:m.currency,min:number(m.min),max:number(m.max)}:{currency:m.currency,amount:number(m.amount)}}
    return {...node,value:v}
