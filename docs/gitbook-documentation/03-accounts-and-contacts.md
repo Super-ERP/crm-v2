@@ -139,7 +139,7 @@ Account and Contact details include a **Project codes** panel, independently of 
 
 Accounts show codes from their end-user funnels and, when you can view quotations, funnels whose quotations bill that account. Contacts show explicit funnel/opportunity contact relationships and, when quotation viewing is permitted, quotation attention-contact links. Merely sharing a company does not assign all its project codes to a contact.
 
-The panel lists active original Project codes, Cross-deal project codes, the separate CRM project code, and links to the central code page, Funnel and Opportunity. Only funnels at Commit (4A) or Closed Won contribute codes. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
+The **Project codes** tab in the existing related-record block shows one main clickable Project code per funnel, with a quieter **Cross-deal reference** only when the Salesforce reference differs. The internal CRM code is used as the main code only when no original Project code exists. Funnel and Opportunity links remain available. Only funnels at Commit (4A) or Closed Won contribute codes. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
 
 ## Continue
 

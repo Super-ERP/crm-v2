@@ -266,7 +266,7 @@ Open **Preview** on the quotation:
 
 ## Project-code context
 
-Quotation lists and details show clickable **Project code** and **Cross-deal project code** values from the linked funnel when it is at Commit (4A) or Closed Won. This information is available without the Projects module. Duplicating a quotation within the same funnel keeps that relationship; it does not allocate a different project identity. The code fields are CRM context, not a change to the quotation's running number or PDF template.
+When the linked funnel is at Commit (4A) or Closed Won, quotation lists and details show its clickable **Project code**, plus a **Cross-deal reference** only when the Salesforce reference differs. This information is available without the Projects module. Duplicating a quotation within the same funnel keeps that relationship; it does not allocate a different project identity. The code fields are CRM context, not a change to the quotation's running number or PDF template.
 
 If Projects is enabled, the linked delivery project can be found through its explicit quotation/funnel relationship or matching funnel code, subject to matching account and project-view access. Creating a project reuses the existing funnel code; it does not silently replace it with a newly generated number.
 

@@ -1455,7 +1455,7 @@ export function QuotationForm({
 
         <div className="grid gap-1 text-sm">
           <p><span className="text-muted-foreground">Project code: </span><ProjectCodeLink code={detail.projectCode} /></p>
-          <p><span className="text-muted-foreground">Cross-deal project code: </span><ProjectCodeLink code={detail.crossDealProjectCode} /></p>
+          {detail.crossDealProjectCode && detail.crossDealProjectCode !== detail.projectCode ? <p><span className="text-muted-foreground">Cross-deal reference: </span><ProjectCodeLink code={detail.crossDealProjectCode} /></p> : null}
         </div>
         {/* PDF-style A4 document floating on a desk background. */}
         <div className="flex justify-center rounded-lg bg-muted/40 p-4 sm:p-6">

@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, HashIcon, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { EmptyState } from "@/components/empty-state"
-import { ProjectCodeLink } from "@/components/project-code-link"
+import { ProjectCodeSummary } from "@/components/project-code-link"
 import { listRelatedProjectCodes, type RelatedProjectCodePage } from "./project-code-actions"
 
 /** Compact content for the existing account/contact related-record tabs. */
@@ -35,9 +35,7 @@ export function ProjectCodePanel({ kind, recordId, initialPage }: { kind: "accou
     <div aria-busy={loading} className={loading?'opacity-60':undefined}>
       {page.rows.length?<ul className="divide-y">{page.rows.map(row=><li key={row.funnelId} className="space-y-2 py-4 first:pt-0">
         <Link href={`/funnel/${row.funnelId}`} className="link text-sm font-medium">{row.funnelName}</Link>
-        <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">{[
-          ['Project code',row.projectCode],['Cross-deal code',row.crossDealProjectCode],['CRM code',row.crmProjectCode],
-        ].filter(([,code])=>code).map(([label,code])=><div key={label} className="space-y-0.5"><dt className="text-xs text-muted-foreground">{label}</dt><dd><ProjectCodeLink code={code}/></dd></div>)}</dl>
+        <ProjectCodeSummary code={row.projectCode || row.crmProjectCode} crossDealCode={row.crossDealProjectCode} />
         {row.opportunityId?<p className="text-xs text-muted-foreground">Opportunity: <Link className="link" href={`/opportunities/${row.opportunityId}`}>{row.opportunityName}</Link></p>:null}
       </li>)}</ul>:<EmptyState icon={HashIcon} title="No active project codes" description="Project codes appear for accessible funnels at Commit (4A) or Closed Won."/>}
     </div>

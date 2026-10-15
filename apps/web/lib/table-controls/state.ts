@@ -37,7 +37,7 @@ export function normalizeTableLayout(input: unknown, fields: readonly TableField
   for (const field of fields) if (!order.includes(field.id)) order.push(field.id)
   const left = uniqueKnown(parsed.pinning.left)
   return {
-    visibility: Object.fromEntries(Object.entries(parsed.visibility).filter(([id])=>known.has(id)).map(([id,visible])=>[id,fields.find(f=>f.id===id)?.required ? true : visible])),
+    visibility: Object.fromEntries(Object.entries({...Object.fromEntries(fields.filter(field=>field.defaultVisible===false&&!field.required).map(field=>[field.id,false])),...parsed.visibility}).filter(([id])=>known.has(id)).map(([id,visible])=>[id,fields.find(f=>f.id===id)?.required ? true : visible])),
     order,
     widths: Object.fromEntries(Object.entries(parsed.widths).filter(([id])=>known.has(id)).map(([id,width])=>[id,Math.max(48,Math.min(800,width))])),
     pinning: {left,right:uniqueKnown(parsed.pinning.right).filter(id=>!left.includes(id))},
