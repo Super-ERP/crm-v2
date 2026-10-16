@@ -38,7 +38,7 @@ When you log in to the CRM, you are presented with the main application workspac
 * **Left Sidebar**:
    The sidebar groups all business modules logically:
    * **CRM**: Leads, Accounts, Contacts.
-   * **Sales**: Opportunities, Funnel, Quotations, Products, Payment Milestones, Approvals.
+   * **Sales**: Opportunities, Funnel, Quotations, Products, Payment Milestones, Approvals and Project Codes, subject to permissions. Project Codes works without the optional Projects module.
    * **Admin**: Team & Roles, Settings.
 
 ---
@@ -56,7 +56,7 @@ The system is strictly multi-tenant. Every tenant's data (leads, opportunities, 
 
 The seven default roles are **Owner, Admin, Developer, Manager, Senior Rep, Rep, and Viewer**. System roles are fixed templates; Advanced Roles lets administrators create custom roles and assign multiple roles to a member. Permissions combine across assigned roles. Role tiers do not grant approval authority.
 
-Use the [role comparison and RBAC setup guide](https://jienweng.gitbook.io/q-app/docs/administration/roles-and-rbac) to compare capabilities and record scope. Viewer is read-only across the organization; Manager, Senior Rep, and Rep normally use their own/reporting-subtree scope.
+Use the [role comparison and RBAC setup guide](https://jienweng.gitbook.io/q-app/docs/administration/roles-and-rbac) to compare capabilities and record scope. Viewer is read-only across the organization. Manager sees their own records and their reporting subtree; Senior Rep and Rep see only their own sales records by default. Reseller accounts and contacts are shared master data within the entity; their sales transactions retain ownership scope.
 
 ---
 
@@ -84,10 +84,11 @@ Type keywords into the search box. Searchable fields vary by module. Funnel sear
 
 #### Applying Structured Filters
 
-Click the **Filter** button to open the filter builder:
+Click a filterable **column header** to open its sort-and-filter menu. The first condition uses that column. Choose an operator and value, then **Apply filters**. Active filter chips below the toolbar let you edit or remove applied rules.
 
-* Add one or multiple filter conditions (e.g., `Status equals Qualified`, `Owner equals Me`).
-* Filters can be cleared individually or reset all at once.
+Use **Add condition** for another rule and **Add group** for nested rules. **Match all (AND)** requires every condition in that group; **Match any (OR)** requires at least one. For example: `(Stage is 4A OR Closed Won) AND Expected close year is 2026`. A header opens the whole applied filter tree, so rules for other columns stay visible. **Clear filters** clears the draft tree; click **Apply filters** to apply that change. **Cancel** leaves applied filters unchanged.
+
+On Funnel, the **Expected close year** quick filter is also available for selecting calendar years. Board view keeps its own filter controls because it has no column headers.
 
 {% endstep %}
 {% step %}
@@ -98,9 +99,9 @@ Click **Columns** to show or hide fields, move them up or down, set their width,
 
 Your layout is personal and saved for that list and organization. **Reset column layout** restores the default columns without clearing filters. Pinning is temporarily suspended on narrow screens while your desktop preference is retained.
 
-Use **Advanced filters** to combine conditions with nested **All (AND)** and **Any (OR)** groups. Choose the field and operator, enter values, then **Apply filters**. Closing the editor keeps the applied filters unchanged. Quick filters are included when you open the advanced editor. Date controls include calendar year and relative periods, using the business timezone shown in the editor. Monetary comparisons require an explicit currency.
+The column-header filter editor supports nested AND/OR groups, calendar-year and relative-date conditions. Dates use the business timezone shown in the editor. Monetary comparisons require an explicit currency. Applied quick filters are included in the same filter tree.
 
-Filters apply before pagination across the accessible result set. Hold **Shift** while clicking sortable headers to combine up to five sort fields.
+Filters apply before pagination across the accessible result set. Use **Ascending**, **Descending** or **Clear sort** in a column header menu where offered. Tables support up to five sort fields; sortable headers without a menu also support Shift-click sorting.
 
 {% endstep %}
 {% step %}
@@ -141,4 +142,4 @@ Explicit URL settings take precedence over the default view and personal layout.
 
 Long cell values wrap within their own columns instead of overlapping neighbouring records. Names, descriptions, product codes and subcategories have wider defaults, while units, status and action columns stay compact. Existing explicitly saved widths take precedence; use **Columns → Reset column layout** to adopt the current defaults.
 
-The Project Code detail Funnel tab starts with the funnel, stage, amount, expected close date and owner. Account, Opportunity and Relationship remain available under **Columns** and in advanced filters; related records also have their own tabs.
+The Project Code detail Funnel tab starts with the funnel, stage, amount, expected close date and owner. Account, Opportunity and Relationship remain available under **Columns** and in column-header filters; related records also have their own tabs.

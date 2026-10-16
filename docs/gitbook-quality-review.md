@@ -254,3 +254,12 @@ own deployment-specific guides if they become part of this Base documentation.
 
 Historical review entries above describe earlier snapshots. Where they conflict
 with this inventory, the current content and this entry supersede them.
+
+
+## Published-site and user-understanding follow-up — October 16
+
+Compared the public site with source `994d65b` and current quotation billing, access-scope, approval routing/queue, stage detail and header-filter code. Public pages still displayed October 1–2 guidance, including automatic Planned/Won milestones, stage-only approvals and Rep/Senior Rep team scope. Source changes alone have not established publication.
+
+Corrected remaining source references to Incoming/separate approval sections, outdated filter toolbar actions, ambiguous sales scope and the navigation label. Added practical reseller/end-user quotation steps, billing-account contact/address snapshots, missing-Won and missing-address troubleshooting, unavailable-reviewer guidance, cross-entity import limitations, free-text Contract versus hidden Contract tracker, and expanded team Q&A. Consolidated the Funnel guide's appended duplicate queue/filter instructions and corrected related-page navigation.
+
+The dated [October 16 audit](operations/gitbook-audits/2026-10-16-live-vs-implementation.md) tracks source corrections separately from publication and operational data follow-up. GitBook administration requires sign-in in the available browser; public publication remains pending verification. No current customer address or ownership was changed by this documentation follow-up.

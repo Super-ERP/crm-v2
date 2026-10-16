@@ -160,6 +160,10 @@ Across all three workflows, a member with the matching approval permission can p
 
 If your own request is already pending and you become eligible for direct action, cancel the lead-conversion request or recall the quotation before taking its direct action. A direct stage move automatically cancels older pending stage requests; a separate cancellation is not required.
 
+## When the usual reviewer is unavailable
+
+There is no delegated or proxy-approval button. The eligible reviewer must act with their own account; sending a PDF to someone for advice does not change who can approve in the CRM. Ask an administrator to review reporting lines and permissions if a reviewer cannot act. A member who submits a quotation for a colleague becomes its submitter for routing purposes. See [Approval routing](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals#can-someone-approve-on-behalf-of-another-manager).
+
 ## Related document rules
 
 See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/reference/documents-and-actions) for the difference between stage approval, quotation approval, customer acceptance, and supporting attachments.

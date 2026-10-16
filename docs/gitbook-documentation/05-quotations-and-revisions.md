@@ -54,6 +54,10 @@ The Bill To picker includes accounts you can access and shared reseller accounts
 
 Saving a new quotation or its Draft captures the billing company, address, phone and selected contact. Issued quotations use that saved snapshot in the PDF. To correct an issued quotation, follow the available return-to-Draft or revision workflow. Duplicating or revising a quotation copies its billing snapshot into the new Draft for review.
 
+For five resellers pursuing the same end-user deal, keep one Funnel and prepare a quotation for each reseller. Select Bill To first; changing it clears the old Attention choice and loads contacts for the new company. Shared reseller access is limited to the current entity.
+
+**Address check:** there is no separate quotation-address field. Correct the selected Bill To account address before saving the Draft, then check Preview. A blank address is not automatically filled from another company or from the end user. Issued quotations retain their billing snapshot; use the appropriate Draft or revision workflow for corrections.
+
 ### Check defaults before sending
 
 Review payment terms, delivery notes, the recipient contact, currency, and tax before submitting the quote. Defaults help you prepare a draft; do not assume that every default becomes immutable at creation.
@@ -195,6 +199,10 @@ Use **Duplicate quotation** on a live quotation with **Create quotations** permi
 * Duplication creates an independent quotation; **Create revision** additionally links the new Draft to its source as a revision.
 * Deleted quotations cannot be duplicated. Eligible deleted non-Draft history can still be used to create a revision.
 
+### Copying between entities
+
+Cross-entity quotation import is not currently available. **Duplicate quotation** cannot copy a QM quotation into QA or into another Funnel. Create the destination quotation in its own entity and Funnel until an import workflow is released.
+
 ## Delete quotations and preserve numbering
 
 **Issued quotation numbers are never reused after deletion, even for a Draft.** Deletion hides the quotation through a soft delete while retaining its original number and audit history. It does not reset a counter, renumber remaining quotations, or fill gaps.
@@ -270,12 +278,12 @@ When the linked funnel is at Commit (4A) or Closed Won, quotation lists and deta
 
 If Projects is enabled, the linked delivery project can be found through its explicit quotation/funnel relationship or matching funnel code, subject to matching account and project-view access. Creating a project reuses the existing funnel code; it does not silently replace it with a newly generated number.
 
+### Open a project code
+
+Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
+
 ## Continue
 
 * [Payment milestones](06-payment-milestones.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
-
-### Open a project code
-
-Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
