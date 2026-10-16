@@ -69,12 +69,23 @@ export async function register() {
   if (microsoftConfigured) {
     try {
       const { parseMicrosoftDirectories } = await import("@/lib/microsoft-directories")
-      parseMicrosoftDirectories(process.env.MICROSOFT_TENANT_ID ?? "", process.env.MICROSOFT_EXTERNAL_DIRECTORIES ?? "")
+      const directories = parseMicrosoftDirectories(process.env.MICROSOFT_TENANT_ID ?? "", process.env.MICROSOFT_EXTERNAL_DIRECTORIES ?? "")
+      const { parseMicrosoftCredentials } = await import("@/lib/microsoft-credentials")
+      parseMicrosoftCredentials(process.env.MICROSOFT_EXTERNAL_CREDENTIALS ?? "", directories)
     } catch (error) {
       errors.push(error instanceof Error ? error.message : "Invalid Microsoft directory configuration.")
     }
-  } else if (process.env.MICROSOFT_EXTERNAL_DIRECTORIES?.trim()) {
-    errors.push("External Microsoft directories require MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET.")
+  } else {
+    try {
+      const directories: unknown = JSON.parse(process.env.MICROSOFT_EXTERNAL_DIRECTORIES?.trim() || "[]")
+      const { parseMicrosoftCredentials } = await import("@/lib/microsoft-credentials")
+      parseMicrosoftCredentials(process.env.MICROSOFT_EXTERNAL_CREDENTIALS ?? "", [])
+      if (!Array.isArray(directories) || directories.length > 0) {
+        errors.push("External Microsoft directories require the primary Microsoft configuration.")
+      }
+    } catch {
+      errors.push("Invalid external Microsoft configuration while Microsoft sign-in is disabled.")
+    }
   }
 
   // 2. the app DB role must not bypass RLS

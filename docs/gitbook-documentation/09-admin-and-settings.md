@@ -99,7 +99,7 @@ A required checkbox must be checked; budget presets require positive amounts. Re
 
 ## Microsoft accounts from another directory
 
-A different email suffix does not require a different CRM account system. For QAR/CC users in a separate Microsoft directory, the deployment operator must explicitly configure that directory and its email domains, and the Microsoft administrator must configure the app and consent before users can sign in. This is deployment configuration, not a tenant Settings control.
+A different email suffix does not require a different CRM account system. For QAR/CC users in a separate Microsoft directory, the deployment operator must explicitly configure that directory and its email domains, and that directory’s Microsoft administrator must create its own single-tenant Web app registration, securely provide its Client ID and Client Secret value/expiry, and configure its callback and consent before users can sign in. This is deployment configuration, not a tenant Settings control.
 
 When multiple directories are configured, enter your invited **work email** on the sign-in page, then choose **Continue with Microsoft**. CRM opens the configured organisation's Microsoft sign-in. If Microsoft sign-in fails, ask the administrator to check the directory, domain, app consent/assignment and exact invited email; do not create a duplicate CRM user or transfer account ownership as a workaround.
 

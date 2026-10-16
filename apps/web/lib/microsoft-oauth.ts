@@ -1,6 +1,7 @@
 import { microsoftEntraId } from "better-auth/plugins/generic-oauth"
 import { createRemoteJWKSet, jwtVerify } from "jose"
 import { microsoftEmailDomain, type MicrosoftDirectory } from "./microsoft-directories"
+import type { MicrosoftAppCredentials } from "./microsoft-credentials"
 
 type Provider = ReturnType<typeof microsoftEntraId>
 type KeySet = Parameters<typeof jwtVerify>[1]
@@ -10,6 +11,7 @@ export function createMicrosoftProviders(options: {
   directories: MicrosoftDirectory[]
   clientId: string
   clientSecret: string
+  externalCredentials?: Record<string, MicrosoftAppCredentials>
   baseURL: string
   /** Test seams; production always uses Microsoft's JWKS and userinfo endpoint. */
   keySet?: (tenantId: string) => KeySet
@@ -17,9 +19,15 @@ export function createMicrosoftProviders(options: {
 }): Provider[] {
   const externalDomains = new Set(options.directories.slice(1).flatMap((directory) => directory.domains))
   return options.directories.map((directory) => {
+    const credentials = directory.providerId === "microsoft-entra-id"
+      ? { clientId: options.clientId, clientSecret: options.clientSecret }
+      : options.externalCredentials?.[directory.tenantId]
+    if (!credentials?.clientId || !credentials.clientSecret) {
+      throw new Error("External Microsoft directories require their own app credentials.")
+    }
     const provider = microsoftEntraId({
-      clientId: options.clientId,
-      clientSecret: options.clientSecret,
+      clientId: credentials.clientId,
+      clientSecret: credentials.clientSecret,
       tenantId: directory.tenantId,
       pkce: true,
       redirectURI: `${options.baseURL.replace(/\/$/, "")}/api/auth/oauth2/callback/${directory.providerId}`,
@@ -36,7 +44,7 @@ export function createMicrosoftProviders(options: {
         try {
           const { payload } = await jwtVerify(tokens.idToken, keys, {
             issuer: `https://login.microsoftonline.com/${directory.tenantId}/v2.0`,
-            audience: options.clientId,
+            audience: credentials.clientId,
             algorithms: ["RS256"],
             requiredClaims: ["exp", "iat", "sub", "tid"],
           })

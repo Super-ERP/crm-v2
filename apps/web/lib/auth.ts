@@ -13,6 +13,7 @@ import { ROLE_TEMPLATES } from "@/lib/permissions"
 import { env, microsoftConfigured, isProd } from "@/lib/env"
 import { parseMicrosoftDirectories } from "@/lib/microsoft-directories"
 import { createMicrosoftProviders } from "@/lib/microsoft-oauth"
+import { parseMicrosoftCredentials } from "@/lib/microsoft-credentials"
 import { canUsePasswordLogin } from "@/lib/password-login-policy"
 import {
   autoJoinMembership,
@@ -166,6 +167,7 @@ const microsoftProviders = createMicrosoftProviders({
   clientId: env.MICROSOFT_CLIENT_ID,
   clientSecret: env.MICROSOFT_CLIENT_SECRET,
   baseURL: env.BETTER_AUTH_URL,
+  externalCredentials: parseMicrosoftCredentials(process.env.MICROSOFT_EXTERNAL_CREDENTIALS ?? "", microsoftDirectories),
 })
 
 // Optional allow-list of email domains for OAuth sign-ups (comma-separated).
