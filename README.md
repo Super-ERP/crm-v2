@@ -171,8 +171,9 @@ upgrading an existing deployment should review them before applying migrations.
   default of `false`, now that the flag is actually enforced at sign-in. SSO-only stays
   opt-in: a tenant can turn password login back off afterward.
 - **`MICROSOFT_TENANT_ID` must be a real directory GUID.** The multi-tenant value
-  `common` is no longer accepted (single-tenant hardening); in production the app refuses
-  to boot if Entra is configured with `common`. Set your Entra directory (tenant) GUID.
+  `common` and `organizations` are not accepted as authorities. Set your primary Entra
+  directory GUID. Additional directories require explicit GUID/domain mappings; see
+  [external Microsoft directory setup](./docs/operations/microsoft-external-directories.md).
 - **The Entra redirect URI changed.** It is now
   `${BETTER_AUTH_URL}/api/auth/oauth2/callback/microsoft-entra-id`; the old `/callback/`
   rewrite was removed. **Re-register this exact URI in the Azure app registration** or

@@ -9,6 +9,7 @@ For step-by-step help with a blocked action, open [Troubleshooting](troubleshoot
 
 ## On this page
 
+* [Microsoft sign-in across companies](#microsoft-sign-in-across-companies)
 * [Leads and customer records](#leads-and-customer-records)
 * [Sales stages](#sales-stages)
 * [Quotations and approvals](#quotations-and-approvals)
@@ -273,3 +274,19 @@ No. Personal layouts and named Views belong to your member account and organizat
 * [Troubleshooting](troubleshooting.md)
 * [Quick start by role](https://jienweng.gitbook.io/q-app/getting-started/quick-start)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+## Microsoft sign-in across companies
+
+<details>
+<summary>Can I sign in using my q-armour.com Microsoft account?</summary>
+
+Yes, once your Microsoft directory is explicitly configured for this CRM deployment and your administrators have completed app consent and CRM membership setup. If the sign-in page asks for a work email, use the exact email invited to CRM, then continue with Microsoft. Being in a different directory does not require changing your email address. Contact your administrator if your account cannot sign in or the expected entity is missing.
+
+</details>
+
+<details>
+<summary>Does Microsoft sign-in let me see every company's records?</summary>
+
+No. CRM entity memberships, roles and record-visibility rules still determine access. Signing in with an approved Microsoft directory does not add membership to every entity. Ask your CRM administrator to review the intended membership rather than sharing another user's login.
+
+</details>

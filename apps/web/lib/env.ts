@@ -33,7 +33,7 @@ export const env = {
   APPLICATION_VERSION: read("APPLICATION_VERSION"),
   MIGRATION_VERSION: read("MIGRATION_VERSION"),
 
-  // Microsoft Entra (single-tenant app registration)
+  // Microsoft Entra (primary directory; explicitly approved external directories are optional)
   MICROSOFT_CLIENT_ID: read("MICROSOFT_CLIENT_ID"),
   MICROSOFT_CLIENT_SECRET: read("MICROSOFT_CLIENT_SECRET"),
   MICROSOFT_TENANT_ID: read("MICROSOFT_TENANT_ID"),

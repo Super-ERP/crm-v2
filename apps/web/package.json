@@ -44,6 +44,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "drizzle-orm": "0.45.2",
+    "jose": "6.2.3",
     "lucide-react": "^1.21.0",
     "markdown-it": "^15.0.2",
     "markdown-it-ins": "^4.0.0",
