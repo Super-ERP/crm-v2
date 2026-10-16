@@ -154,7 +154,7 @@ The public Approvals page was opened again and still showed the old Stage approv
 Validation: 26 mapped Markdown pages and 233 link references checked for local paths and resolvable source anchors, balanced GitBook blocks/details/code fences, and one H1. `git diff --check` passed. Application behavior was read from source; no customer records or settings were changed.
 
 
-### Remaining business-policy questions
+### Current implementation recorded before future changes
 
 The guide describes these current implementation limits explicitly; documentation cannot define a different result without a product change:
 
@@ -163,3 +163,5 @@ The guide describes these current implementation limits explicitly; documentatio
 - Stage completeness: Board and detail workflows use different qualification shortcuts; Won's own outcome fields are not enforced on entry. A consistent gate policy remains a product decision.
 
 Final wording clarification: defined “live quotation” as non-deleted, “eligible top manager” by active membership/approval permission/reporting configuration, and milestone net value as the Accepted quotation’s value after discounts excluding tax.
+
+User direction: document current behavior first. The three limitations above are now stated explicitly in the quotation guide, stage guide and FAQ. No supersession, financial reapproval or stage-validation behavior has been implemented by this documentation change.

@@ -132,6 +132,27 @@ See [Payment milestones](../06-payment-milestones.md).
 
 </details>
 
+<details>
+<summary>Can an Accepted quotation be replaced by its revision?</summary>
+
+You can prepare a separate Draft revision, but the original stays Accepted. The server blocks accepting another quotation in the same Funnel while the original remains Accepted. There is no supersede/cancel-acceptance action, and an Accepted quotation cannot be returned to Draft or deleted. Sending or accepting a quotation is also blocked once the Funnel is Won. Contact support to review the case.
+
+</details>
+
+<details>
+<summary>Can tax or totals change after manager approval?</summary>
+
+Yes. At Send, the server uses the current tax rate and tax-inclusive setting to recalculate and save the totals. It does not request fresh approval when those calculated figures differ from the approved figures. Review the final PDF before sharing, particularly if tax settings changed during review.
+
+</details>
+
+<details>
+<summary>Does approval of a Won stage guarantee its Contract, PO and Award Date are complete?</summary>
+
+No. Forward validation checks fields configured on stages before the destination. The standard Award Date, Purchase Order Number and Contract fields belong to Won itself, so they are not enforced before entering Won. Board moves also skip certain PPVVC checks; a queued approval rechecks without retaining that Board shortcut. Complete saved fields using the detail-page workflow and review outcome information separately.
+
+</details>
+
 ## Reseller quotations and addresses
 
 <details>

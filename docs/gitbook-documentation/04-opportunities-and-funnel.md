@@ -117,12 +117,14 @@ The table shows the standard database-seeded configuration. Administrators can c
 | **Closed Lost** | No standard PPVVC gate. | Written **Lost reason (close remarks)**. | Reason is required before closing; earlier open-stage field gates are skipped. |
 | **KIV — Keep In View** | Preserve the qualification gathered so far. | Written **KIV reason (close remarks)**. | Reason is required before parking; earlier open-stage field gates are skipped. |
 
+**Won outcome fields:** Award Date, Purchase Order Number and Contract are configured on Won itself in the standard seed. Because forward validation checks only earlier stages and Won is terminal, those Won fields are not required to enter Won. A manager's stage approval therefore does not confirm that these fields have been filled. Record and review them separately.
+
 **Control** describes your understanding of the buying process. It has no required stage in the standard seeded configuration. Your administrator can add it as a required field. A quotation, primary contact, funnel estimate, and other preset or custom fields can also be required by a customized configuration; a quotation is not a universal standard gate.
 
 **Where to fill the fields:** use the opportunity's qualification/analysis fields for PPVVC, sponsor contact/budget, Opportunity Owner Contact, estimated budget, and estimated close date. Use the funnel detail's stage field sections for procurement, negotiation, invoice month/year, and outcome information. Opportunity **Estimated Close Date** and funnel **Expected close date** are different fields; filling one does not necessarily satisfy a requirement for the other. **Opportunity Owner Contact** is a customer stakeholder, not your internal salesperson or the Owner role.
 
 {% hint style="warning" %}
-**Current differences between workflows:** the Kanban board skips the Vision, Pain, Value, and Power Sponsor preset checks. It still checks other required fields and approval permissions. A queued approval rechecks current saved information and does not preserve that board shortcut, so a board request can later be closed as obsolete for missing qualification. Use the detail-page workflow and complete saved fields for a consistent review.
+**Current differences between workflows:** the Kanban board skips the Vision, Pain, Value, and Power Sponsor preset checks. It still checks other required fields and approval permissions. A queued approval rechecks current saved information and does not preserve that board shortcut, so a board request can later be closed as obsolete for missing qualification. An eligible direct Board move can succeed with that shortcut, while the same move submitted for approval can later fail revalidation. Use the detail-page workflow and complete saved fields for a consistent review.
 {% endhint %}
 
 ### Change a stage with the detail-page workflow
