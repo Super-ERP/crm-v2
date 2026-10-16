@@ -90,9 +90,9 @@ Create a quotation, check items, currency, tax, and terms, then submit it for ap
 {% stepper %}
 {% step %}
 
-#### Open Incoming requests
+#### Open requests needing your review
 
-Open **Sales → Approvals → Incoming** for lead-conversion, quotation and funnel-stage requests routed to you. Quotation cards include **View quotation**, **Approve** and **Reject**; rejection requires a reason.
+Open **Sales → Approvals → Needs my review** for lead-conversion, quotation and funnel-stage requests routed to you. Select a quotation request to open its review panel, which includes **View quotation**, **Approve** and **Reject**; rejection requires a reason.
 
 {% endstep %}
 {% step %}
@@ -106,7 +106,7 @@ Check the requested stage, supporting context, and attachments. Approve or rejec
 
 #### Review quotation approvals
 
-Review quotation requests in **Incoming → Quotation approvals** or on the quotation itself. Use **View quotation** to check pricing and terms before approving or rejecting. Review saved lead-conversion details in the **Lead conversion approvals** section. Lead-conversion and quotation rejection require a reason.
+In **Needs my review**, filter to **Quotations** and select a request, or open the quotation itself. Use **View quotation** to check pricing, Bill To, contact, address and terms before deciding. Filter to **Lead conversions** to review their submitted details. Lead-conversion and quotation rejection require a reason. Requests default to oldest first across all types.
 
 {% endstep %}
 {% step %}
@@ -120,7 +120,7 @@ Review **Sales → Funnel** for deals that need follow-up.
 
 **You are done when:** requests have a clear decision and the requester knows what to change or do next.
 
-Continue with [Stage approvals](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox) or [Quotation approvals](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#the-quotation-lifecycle).
+Continue with [Approvals inbox](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox) or [Quotation approvals](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions#the-quotation-lifecycle).
 
 {% endtab %}
 {% tab title="Administrators" %}

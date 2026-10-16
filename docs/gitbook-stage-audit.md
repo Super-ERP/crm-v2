@@ -1,6 +1,6 @@
 # GitBook workflow audit — 2026-10-02
 
-Scope: Base modules and Advanced Roles, against main 845193f. Public guide changes are documentation only; implementation findings below remain open.
+Scope: Base modules and Advanced Roles, against main 845193f. This is a historical October 2 snapshot. The KIV queued-reopen defect and lead-status conversion bypass described below were subsequently corrected; payment milestones now use explicit setup and Pending invoicing/Invoiced. Do not treat all findings below as currently open. See the October 16 audit in `operations/gitbook-audits/2026-10-16-live-vs-implementation.md` and the maintained task guides for current behavior. Tenant-stage defaults, gate timing and board/detail policy still require separate follow-up as described by the current guides.
 
 ## Corrected public guidance
 

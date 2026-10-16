@@ -26,9 +26,9 @@ A saved record is not necessarily approved. A manager's quotation approval does 
 
 | Decision | Required capability | Routing and place to act |
 | --- | --- | --- |
-| Approve or reject lead conversion | **Approve lead conversions**, access to the lead and destination account, and current eligible-manager status | First active eligible manager in the requester's reporting line; act in **Sales → Approvals → Incoming → Lead conversion approvals** or the lead detail request card. |
-| Approve or reject quotation approval | **Approve quotations**, access to the quotation, and current eligible-manager status | First active manager in the **submitter's** reporting line (legacy requests without submission audit data use the funnel owner) with that permission; act in **Sales → Approvals → Incoming → Quotation approvals** or on the Pending Approval quotation. |
-| Approve or reject a stage request | **Approve stage advances**, assignment to that pending request, and current eligible-manager status | First active manager in the **requester's** reporting line with that permission; act in **Sales → Approvals → Incoming**. |
+| Approve or reject lead conversion | **Approve lead conversions**, access to the lead and destination account, and current eligible-manager status | First active eligible manager in the requester's reporting line; act in **Sales → Approvals → Needs my review**, filtered to **Lead conversions** or the lead detail request card. |
+| Approve or reject quotation approval | **Approve quotations**, access to the quotation, and current eligible-manager status | First active manager in the **submitter's** reporting line (legacy requests without submission audit data use the funnel owner) with that permission; act in **Sales → Approvals → Needs my review**, filtered to **Quotations** or on the Pending Approval quotation. |
+| Approve or reject a stage request | **Approve stage advances**, assignment to that pending request, and current eligible-manager status | First active manager in the **requester's** reporting line with that permission; act in **Sales → Approvals → Needs my review**. |
 | Record customer acceptance or rejection | **Accept quotations** and access to the quotation | Act on the **Sent** quotation after the customer responds. This records the customer's decision; it is not manager approval. |
 | Record sending | **Send quotations** and access to the quotation | Act on an **Approved** quotation whose funnel remains open and whose validity date has not passed. |
 
@@ -92,4 +92,4 @@ Verify the updated record status. Lead conversion and its approval commit togeth
 
 * [Permissions and approval routing](permissions-and-approvals.md)
 * [Quotations and revisions](https://jienweng.gitbook.io/q-app/docs/sales/05-quotations-and-revisions)
-* [Stage approvals](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox)
+* [Approvals inbox](https://jienweng.gitbook.io/q-app/docs/sales/08-approvals-inbox)

@@ -10,6 +10,7 @@ Start with the problem that matches what you see. Keep the exact error message; 
 ## Find your problem
 
 * [A module, button, or record is missing](#a-module-button-or-record-is-missing)
+* [An account or quotation address is missing](#an-account-or-quotation-address-is-missing)
 * [A funnel stage change is blocked](#a-funnel-stage-change-is-blocked)
 * [A quotation cannot be edited](#a-quotation-cannot-be-edited)
 * [Account creation needs a currency](#account-creation-needs-a-currency)
@@ -53,6 +54,27 @@ For a particular record, provide its name or identifier so your administrator ca
 
 See [Workspace & personal views](https://jienweng.gitbook.io/q-app/getting-started/01-workspace-and-views) and [Administration & settings](../09-admin-and-settings.md).
 
+### A Won Funnel or reseller deal is missing
+
+Check the active entity, clear saved filters and search, and select the Won status/stage filter. Funnel search matches **Funnel names only**; typing a reseller or end-user account name will not find every related Funnel. Use the Account filter for the end user. A reseller is normally selected as Bill To on the quotation, while the Funnel stays under the end user.
+
+Sales users see their own sales records; managers with team visibility can also see their reporting subtree. Seeing a shared reseller account does not reveal its other salespeople's deals. Give your administrator the exact Funnel/Opportunity/quotation number and expected salesperson to check ownership and entity. Salesforce Account and Quote owners can differ; a similar company name is not enough to identify a missing Won case.
+
+Before transferring an Account, review the related-record impact: active child records change owner, pending stage requests are cancelled and pending quotations return to Draft. Correct ownership only after identifying the intended records.
+
+### What to include when reporting a missing record
+
+Include the active entity, module, exact record link or number, expected salesperson, current search/filters, and what you expected to see. For a reseller deal, provide both the end-user and reseller names. Support should compare the exact source and CRM records before changing ownership or recreating the deal.
+
+## An account or quotation address is missing
+
+* Open the quotation and check **Bill To**. For a reseller sale, inspect the reseller's account address, not only the end user's.
+* Ask a user with account-edit access to complete the Billing Address. Shared reseller visibility alone does not grant permission to edit it. An optional Default end user is not required just to maintain a reseller address.
+* Save an editable quotation Draft again, then inspect Preview. An issued quotation keeps its saved billing snapshot; use Recall/Return to Draft or an eligible revision according to its status.
+* If the address is unknown, ask support to inspect the available Salesforce exports. Contract billing text and account history may contain recoverable values even when Account.csv has no billing-address columns. Conflicting or unverified text needs review; preserve manually entered addresses.
+
+The current forms do not require a complete billing address before saving a quotation. A quote can therefore contain a blank address; review the business requirements and PDF before sharing it. There is no separate quotation-address input.
+
 ## A funnel stage change is blocked
 
 {% stepper %}
@@ -88,7 +110,7 @@ If the deal is Closed Won or Closed Lost, it cannot change stages. For a new sal
 
 **Expected result:** an eligible change succeeds, or a pending request clearly identifies the next approver.
 
-See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules) and [Stage approvals](../08-approvals-inbox.md).
+See [Stage movement](../04-opportunities-and-funnel.md#stage-advancement-and-rollback-rules) and [Approvals inbox](../08-approvals-inbox.md).
 
 ### PPVVC looks complete but the move is blocked
 
@@ -234,7 +256,7 @@ Send your administrator or support contact the module name, record identifier, e
 
 ## A lead-conversion request cannot be approved
 
-* Check **Sales → Approvals → My requests → Lead conversion approvals** and the lead detail request card.
+* Check **Sales → Approvals → My requests**, filtered to **Lead conversions** and the lead detail request card.
 * If the lead changed after submission, cancel the pending request and submit the current details again. The reviewer cannot approve the stale snapshot.
 * Check that the requester remains active, has **Convert leads**, and can still access the lead and selected existing account. The reviewer needs **Approve lead conversions** and access to those records.
 * A deleted, converted or disqualified lead cannot be converted through an old request. A new account code that has since been used must be corrected through a new submission.

@@ -17,7 +17,7 @@ Use **Sales → Approvals** to review quotation, funnel-stage and lead-conversio
 * [Follow up after a decision](#follow-up-after-a-decision)
 
 {% hint style="info" %}
-**Who can use this page?** People with stage-change, stage-approval, quotation-update, quotation-approval, lead-conversion or lead-conversion-approval permissions can participate. Quotation and lead-conversion cards also require their record-view permissions and ownership/team access. Requests route to the first active manager in the requester’s reporting line with the matching permission: **Approve lead conversions**, **Approve quotations**, or **Approve stage advances**. Quotation and lead-conversion reviewers must remain eligible and have record access. Stage requests are listed by stored approver assignment; decisions require that assignment and current manager eligibility to match. Requesters cannot approve or reject their own queued request; they can cancel or recall it where authorized. Permissions from all assigned roles count. Platform superadmins retain an operational override.
+**Who can use this page?** People with stage-change, stage-approval, quotation-update, quotation-approval, lead-conversion or lead-conversion-approval permissions can participate. Quotation and lead-conversion requests also require their record-view permissions and ownership/team access. Requests route to the first active manager in the requester’s reporting line with the matching permission: **Approve lead conversions**, **Approve quotations**, or **Approve stage advances**. Quotation and lead-conversion reviewers must remain eligible and have record access. Stage requests are listed by stored approver assignment; decisions require that assignment and current manager eligibility to match. Requesters cannot approve or reject their own queued request; they can cancel or recall it where authorized. Permissions from all assigned roles count. Platform superadmins retain an operational override.
 {% endhint %}
 
 ## What appears in each tab
@@ -81,16 +81,16 @@ Search applies to the request's available business information and requester. Th
 {% stepper %}
 {% step %}
 
-#### Check the stage request
+#### Check the request type and identity
 
-Find the request and check the funnel name, requester, current stage, and requested target stage. Approval authorizes that exact transition, not a quotation or a supporting file.
+Select the request and check its type, requester and linked record. For a quotation, check its number/version, Bill To, total and terms. For a lead conversion, review the saved account/contact and sales-pursuit details. For a stage request, check the current and requested stages. **What approval does** explains the effect for that request.
 
 {% endstep %}
 {% step %}
 
 #### Review supporting context
 
-Review the supporting context. Expand **Attachments** when supporting files are available.
+Read the submitted context and open the linked record when needed. For stage requests, expand **Attachments** when supporting files are available. A PDF or attachment alone is not an approval decision.
 
 {% endstep %}
 {% step %}
@@ -104,7 +104,7 @@ Choose the request-specific **Approve** action or **Reject**.
 
 #### Add a decision note
 
-Add a decision note. The stage-approval dialog makes this optional, but a clear reason helps the requester follow up.
+Quotation and lead-conversion rejection require a reason. Stage decision notes are optional; explain what the requester should correct when rejecting.
 
 {% endstep %}
 {% step %}
@@ -115,6 +115,8 @@ Confirm the decision and read the result message.
 
 {% endstep %}
 {% endstepper %}
+
+**Example — a stage request:**
 
 ```mermaid
 flowchart TD
@@ -129,11 +131,13 @@ flowchart TD
 
 ## Follow up after a decision
 
-* **Approved:** open the funnel and verify the resulting stage. Read any message about an obsolete request before assuming the stage changed.
+* **Quotation approved:** verify the quotation is Approved. Sending and customer acceptance are separate actions.
+* **Lead conversion approved:** open the lead and verify its Converted status and linked records.
+* **Stage request approved:** open the Funnel and verify the resulting stage. An obsolete request does not move the stage.
 * **Rejected:** review the decision note, resolve the issue, and submit a new request if needed.
 * **No longer needed:** requesters can cancel their pending request where the action is available.
-* **Reporting manager changed:** cancel and resubmit a stale pending request so it routes to the current eligible manager.
-* **Account owner changed:** the pending request is cancelled automatically; the new owner can submit a new request.
+* **Reporting manager changed:** quotation and lead-conversion review follows the current eligible manager. A stale stage request needs cancellation and resubmission because its stored reviewer assignment must also match.
+* **Account owner changed:** pending stage requests are cancelled and pending quotations return to Draft. The new owner can resubmit them. This is not a general cancellation rule for every lead-conversion request.
 * **No eligible manager:** ask your administrator to configure the reporting line and approval permissions. Submission does not route to an unrelated approver.
 
 ## KIV reopen requests
@@ -159,6 +163,10 @@ Review lead name, company, requester and saved conversion details before decidin
 Across all three workflows, a member with the matching approval permission can proceed directly only when they have no reporting manager above them. Managers with a superior require approval. Ordinary sales users never gain direct approval merely because their manager is missing. Missing/inactive reporting profiles and an ineligible upline block the action until configured. Platform superadmins retain their operational override.
 
 If your own request is already pending and you become eligible for direct action, cancel the lead-conversion request or recall the quotation before taking its direct action. A direct stage move automatically cancels older pending stage requests; a separate cancellation is not required.
+
+## When the usual reviewer is unavailable
+
+There is no delegated or proxy-approval button. The eligible reviewer must act with their own account; sending a PDF to someone for advice does not change who can approve in the CRM. Ask an administrator to review reporting lines and permissions if a reviewer cannot act. A member who submits a quotation for a colleague becomes its submitter for routing purposes. See [Approval routing](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals#can-someone-approve-on-behalf-of-another-manager).
 
 ## Related document rules
 

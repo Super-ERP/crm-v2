@@ -16,6 +16,8 @@ Qualify a customer need and keep each sales pursuit at the right stage.
 * [Park or reopen with KIV](#kiv-keep-in-view)
 * [Understand stages](#funnel-stages-and-lifecycle)
 * [Change a stage](#stage-advancement-and-rollback-rules)
+* [Find Contract information](#contract-information)
+* [Find Project codes](#project-codes-across-sales-records)
 
 ---
 
@@ -24,6 +26,8 @@ Qualify a customer need and keep each sales pursuit at the right stage.
 On **Funnel**, use **Expected close year** to select one or more calendar years. The same filter applies to both **Board** and **List** views, including stage counts and amount totals. It combines with Account, Opportunity, Account owner, Stage, Status and search filters.
 
 Year options come from Expected Close Dates on the records you can access. Selecting 2026 includes dates from 1 January through 31 December 2026. Funnels with no Expected Close Date are excluded while a year is selected; clear the filter to include them again. This filter uses **Expected Close Date**, rather than project year or creation date.
+
+In List view, you can also click the **Expected close date** header, choose a year condition, enter a year and apply it. Column-header filters support nested AND/OR groups and are saved with Views.
 
 The redundant Funnel selector has been removed from the Funnel page. Use search to find a specific funnel by its name. Funnel search matches only the funnel name; account names, opportunity names, owners and other columns are not searched. Relation filter search inputs narrow their own available options.
 
@@ -79,6 +83,8 @@ flowchart TD
 
 **Read the diagram:** the arrows show a typical progression. Available targets and required fields are shown in the stage-change dialog; the workflow does not require every deal to move one stage at a time.
 
+Sales-stage badges show **0e, 1d, 2c, 3b, 4a**, or **Won/Lost/KIV**. Hover for the full stage name and probability.
+
 ### Stage Definitions
 
 * **`0e` Identified**: Initial scoping after lead conversion or new pursuit creation.
@@ -111,12 +117,14 @@ The table shows the standard database-seeded configuration. Administrators can c
 | **Closed Lost** | No standard PPVVC gate. | Written **Lost reason (close remarks)**. | Reason is required before closing; earlier open-stage field gates are skipped. |
 | **KIV — Keep In View** | Preserve the qualification gathered so far. | Written **KIV reason (close remarks)**. | Reason is required before parking; earlier open-stage field gates are skipped. |
 
+**Won outcome fields:** Award Date, Purchase Order Number and Contract are configured on Won itself in the standard seed. Because forward validation checks only earlier stages and Won is terminal, those Won fields are not required to enter Won. A manager's stage approval therefore does not confirm that these fields have been filled. Record and review them separately.
+
 **Control** describes your understanding of the buying process. It has no required stage in the standard seeded configuration. Your administrator can add it as a required field. A quotation, primary contact, funnel estimate, and other preset or custom fields can also be required by a customized configuration; a quotation is not a universal standard gate.
 
 **Where to fill the fields:** use the opportunity's qualification/analysis fields for PPVVC, sponsor contact/budget, Opportunity Owner Contact, estimated budget, and estimated close date. Use the funnel detail's stage field sections for procurement, negotiation, invoice month/year, and outcome information. Opportunity **Estimated Close Date** and funnel **Expected close date** are different fields; filling one does not necessarily satisfy a requirement for the other. **Opportunity Owner Contact** is a customer stakeholder, not your internal salesperson or the Owner role.
 
 {% hint style="warning" %}
-**Current differences between workflows:** the Kanban board skips the Vision, Pain, Value, and Power Sponsor preset checks. It still checks other required fields and approval permissions. A queued approval rechecks current saved information and does not preserve that board shortcut, so a board request can later be closed as obsolete for missing qualification. Use the detail-page workflow and complete saved fields for a consistent review.
+**Current differences between workflows:** the Kanban board skips the Vision, Pain, Value, and Power Sponsor preset checks. It still checks other required fields and approval permissions. A queued approval rechecks current saved information and does not preserve that board shortcut, so a board request can later be closed as obsolete for missing qualification. An eligible direct Board move can succeed with that shortcut, while the same move submitted for approval can later fail revalidation. Use the detail-page workflow and complete saved fields for a consistent review.
 {% endhint %}
 
 ### Change a stage with the detail-page workflow
@@ -172,6 +180,12 @@ A queued KIV-to-open approval now applies the reopen when the original transitio
 
 ---
 
+## Contract information
+
+Open a Funnel and select **Closed Won** on its stage path to inspect that stage's configured fields. In the standard configuration, **Contract** is a free-text outcome field beside Award Date and Purchase Order Number. It is a note/reference, not a separate contract document or approval. Stage field visibility follows the organization's configured requirements. Viewing a stage on the path does not move the Funnel to that stage.
+
+There is currently no central Contract directory or visible multi-year Contract tab in this rollout. Use the Funnel's **Documents** tab for supporting files where your permissions allow. The Contract field does not create a delivery Project or allocate a project code.
+
 ## Project codes across sales records
 
 **Project Codes** is a core CRM page in the **Sales** navigation. It works even when the optional **Projects** module is disabled. Search the directory by all or part of a code, or use global search and choose a result in **Project Codes**. The directory uses the same search, sorting, column controls and 25/50/100-row page sizes as other CRM lists. The Funnel page's search continues to match funnel names only.
@@ -193,26 +207,3 @@ When Projects is enabled, creating or relinking a delivery Project to a funnel r
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
-
-
-## Advanced list controls
-
-Click a column header to sort or filter that field. Use **Match all (AND)** or **Match any (OR)** and add nested groups when needed. Active filters appear as editable chips above the table; remove a chip to remove that condition or group. Date filters include **Year** for expected-close-year filtering. In Board view, use **Filters** because there are no table headers. Filters apply before pagination. Funnel name search remains available. The same effective filter applies to the Funnel board and list; access scope and stage eligibility are always enforced separately.
-
-**Columns** supports show/hide, keyboard reordering, resizing and left/right pinning. Personal layouts are saved by user and list. Named **Views** include the complete filter and column configuration; select **Update with current settings** to replace an existing view. See [Workspace and personal views](../user-guide/01-workspace-and-views.md).
-
-On Account and Contact details, **Project codes** is a tab in the existing right-hand related block. Its compact list links to the central code page. Central code related lists cover the whole accessible code relationship, independently of the current funnel page.
-
-### Review requests in Approvals
-
-**Sales → Approvals → Needs my review** is one queue for assigned pending funnel-stage, quotation and lead-conversion requests. **My requests** shows requests you submitted. Request visibility and decision permissions follow the existing reporting and record-access rules.
-
-The default order is **Oldest first**, across all three request types. Search request information or requester names, filter by request type, or choose **Newest first**. There is one 25-request pagination control. Counts reflect the accessible requests matching the current search and type; requests are not grouped into three separately paginated sections.
-
-Select a request to review its submitted context and what approval does. On desktop, the queue sits beside the review panel. On smaller screens, selecting a request opens a full-width review; **Back to requests** returns to the queue. Decision controls stay outside the scrolling evidence area. **How approvals work** contains routing guidance.
-
-Statuses and action placement are shared: pending requests show **Awaiting approval**, approved states use the success colour, rejected states use the rejection colour, and record navigation appears alongside a consistently placed decision group. Quotation history displays the quotation's current status: rejection or recall returns it to **Draft**, rather than inventing a separate persistent Rejected quotation status.
-
-Confirmation dialogs and each workflow's validation remain in force. Quotation and lead-conversion rejections require a reason. A funnel-stage decision note remains optional. Eligible requesters can recall a quotation or cancel a stage/conversion request from **My requests**. After a decision, the queue refreshes using its current filters; a request that leaves the queue is replaced by the next available selection. Requests already changed by another reviewer are still validated by the server.
-
-Sales-stage badges show compact codes (0e, 1d, 2c, 3b, 4a), or Won/Lost/KIV. Hover for the full stage name and probability. Saved Views retain the same filter and column state.

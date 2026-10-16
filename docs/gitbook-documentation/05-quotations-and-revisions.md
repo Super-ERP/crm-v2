@@ -54,6 +54,10 @@ The Bill To picker includes accounts you can access and shared reseller accounts
 
 Saving a new quotation or its Draft captures the billing company, address, phone and selected contact. Issued quotations use that saved snapshot in the PDF. To correct an issued quotation, follow the available return-to-Draft or revision workflow. Duplicating or revising a quotation copies its billing snapshot into the new Draft for review.
 
+For five resellers pursuing the same end-user deal, keep one Funnel and prepare a quotation for each reseller. Select Bill To first; changing it clears the old Attention choice and loads contacts for the new company. Shared reseller access is limited to the current entity.
+
+**Address check:** there is no separate quotation-address field. Correct the selected Bill To account address before saving the Draft, then check Preview. A blank address is not automatically filled from another company or from the end user. Issued quotations retain their billing snapshot; use the appropriate Draft or revision workflow for corrections.
+
 ### Check defaults before sending
 
 Review payment terms, delivery notes, the recipient contact, currency, and tax before submitting the quote. Defaults help you prepare a draft; do not assume that every default becomes immutable at creation.
@@ -163,6 +167,8 @@ Once delivered to the customer via email or formal meeting, use **Send** to reco
 
 ## Actions by status
 
+In this guide, **live quotation** means a quotation that has not been deleted; it does not mean Sent or Accepted. An **eligible top manager** means an active member with the matching approval permission and no reporting manager above them, rather than a particular job title.
+
 Each action also requires record access and its permission. **Edit quotations** allows editing Drafts, submitting them, recalling Pending Approval quotations, and returning Approved quotations to Draft. **Create quotations** allows duplicating live quotations and creating eligible revisions. **Approve quotations** is limited to the current eligible reviewer. **Send quotations** and **Accept quotations** are separate permissions.
 
 | Current status | Available lifecycle actions | Editing and revision |
@@ -176,11 +182,11 @@ Each action also requires record access and its permission. **Edit quotations** 
 
 **Send checks:** the funnel must still be open and the quotation must not be past **Valid until**. If an Approved quotation has lapsed, return it to Draft, update its validity, and obtain approval again. **Send** records sending; deliver the document to the customer through your usual channel.
 
-**Acceptance checks:** only a Sent quotation on an open funnel can be accepted, and its validity date must not have passed. Only one live quotation per funnel can be Accepted. Creating a revision of an Accepted quote does not replace that acceptance; the current workflow blocks accepting another quote while the earlier live quote remains Accepted. Ask your administrator or support contact to review the case rather than treating the revision as accepted.
+**Acceptance checks:** only a Sent quotation on an open funnel can be accepted, and its validity date must not have passed. Only one live quotation per funnel can be Accepted. Creating a revision of an Accepted quote does not replace that acceptance; the current workflow blocks accepting another quote while the earlier live quote remains Accepted. There is currently no supersede or cancel-acceptance action. The original Accepted quotation cannot be returned to Draft or deleted. A revision can therefore be prepared, but its acceptance cannot be completed through the current workflow while the original remains Accepted. Sending and acceptance are also blocked once the Funnel is Won. Ask support to review the case; do not treat a prepared revision as accepted.
 
 **Other actions:** **Set Primary** is shown for non-primary Sent or Accepted quotations with Edit quotations permission. It selects the quotation used for linked funnel values; it does not approve it. Deletion requires **Delete quotations**, is subject to record/reference checks, and is blocked for Accepted quotations. Deletion is not a customer-rejection or approval-rejection decision.
 
-**PDF checks:** Preview and exporting do not approve or send the quotation. Sending captures the tax rate and recomputes stored totals using the current tax configuration. Review the final PDF's tax and totals before sharing, especially if settings changed during review.
+**PDF checks:** Preview and exporting do not approve or send the quotation. Sending captures the tax rate and recomputes stored totals using the current tax configuration. The Send action reads the current tax rate and tax-inclusive setting, recalculates header and line totals, and stores that snapshot. It does not compare the recalculated figures with the approved figures or request fresh approval if they differ. For example, if the configured tax rate changes between approval and sending, the Sent quotation can have different tax and total amounts. Review the final PDF's tax and totals before sharing.
 
 See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/reference/documents-and-actions) for version-specific examples.
 
@@ -194,6 +200,10 @@ Use **Duplicate quotation** on a live quotation with **Create quotations** permi
 * The quotation date resets to today and **Valid until** is cleared. Review dates, contacts, pricing and tax before submitting the copy for its own approval.
 * Duplication creates an independent quotation; **Create revision** additionally links the new Draft to its source as a revision.
 * Deleted quotations cannot be duplicated. Eligible deleted non-Draft history can still be used to create a revision.
+
+### Copying between entities
+
+Cross-entity quotation import is not currently available. **Duplicate quotation** cannot copy a QM quotation into QA or into another Funnel. Create the destination quotation in its own entity and Funnel until an import workflow is released.
 
 ## Delete quotations and preserve numbering
 
@@ -270,12 +280,12 @@ When the linked funnel is at Commit (4A) or Closed Won, quotation lists and deta
 
 If Projects is enabled, the linked delivery project can be found through its explicit quotation/funnel relationship or matching funnel code, subject to matching account and project-view access. Creating a project reuses the existing funnel code; it does not silently replace it with a newly generated number.
 
+### Open a project code
+
+Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
+
 ## Continue
 
 * [Payment milestones](06-payment-milestones.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
-
-### Open a project code
-
-Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).

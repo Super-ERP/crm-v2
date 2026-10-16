@@ -7,7 +7,17 @@ icon: book-open
 
 ## 2026
 
+### October 16
+
+* Aligned quick starts and references with the unified Approvals queue, current tab names, oldest-first ordering and review panel.
+* Added practical reseller/end-user, Bill To/contact, address-snapshot and missing-Won-record guidance.
+* Added Q&A for unavailable reviewers, quotation recall, numbering, cross-entity import limitations, Contract information and Project codes without Projects.
+* Updated column-header filtering, nested AND/OR rules, expected-close-year filtering and saved-view instructions.
+* Clarified historical Salesforce address recovery and preserved manual address corrections.
+
 ### October 2
+
+These entries describe the guide at that date. The October 16 guidance supersedes the former automatic milestone and KIV-review limitations.
 
 * Removed the unimplemented lead Restore to Contacted action and corrected disqualification and create-form instructions.
 

@@ -82,6 +82,14 @@ A reseller can serve several end users, and an end user can receive quotations t
 
 Keep the Funnel under the end user and retain the responsible salesperson's ownership. See [quotation billing](05-quotations-and-revisions.md#bill-to-when-quoting-through-a-reseller).
 
+### Billing addresses and quotation snapshots
+
+Maintain the billing address on the account that will receive the quotation. For a reseller sale, this is the **Bill To reseller**, even though the Funnel stays under the end user. A blank address does not require a new Funnel or account-owner transfer. There is no separate quotation-address input.
+
+Saving a new quotation or an editable Draft captures the selected billing account and contact. Updating the account alone does not rewrite an issued quotation. For a Draft, save it again and check Preview; for Pending Approval or Approved, use Recall to Draft or Return to Draft where permitted, then save and obtain approval again. For a Sent quotation, use an eligible revision. Always inspect the PDF before sharing.
+
+Some imported accounts have blank addresses. A blank CRM field does not prove the old Salesforce record had no address: available exports may hold billing text in Contract or account-history records. Support can review those sources and report conflicts. Keep manually corrected addresses; do not overwrite them with an unverified historical address. See [Missing account or quotation address](help-center/troubleshooting.md#an-account-or-quotation-address-is-missing).
+
 ### Changing the account owner
 
 Edit **Account owner** on the account detail page to transfer responsibility. Active contacts, Opportunities, and Funnels under the account receive the new owner in the same transaction. Quotations and payment milestones inherit access through their Funnel.
@@ -130,7 +138,7 @@ Click **Create contact**.
 ### Using Contacts in Sales Workflows
 When generating quotations or advancing sales stages:
 
-* The primary contact's details are automatically copied into the quotation's **Attention** field.
+* The quotation's **Attention** choices belong to its selected **Bill To** company. An available primary contact may supply the default; check it before saving. Changing Bill To clears the old selection and loads that company's contacts.
 * Contacts can be assigned as the **Power Sponsor** during opportunity qualification.
 
 ## Project codes
@@ -141,12 +149,12 @@ Accounts show codes from their end-user funnels and, when you can view quotation
 
 The **Project codes** tab in the existing related-record block shows one main clickable Project code per funnel, with a quieter **Cross-deal reference** only when the Salesforce reference differs. The internal CRM code is used as the main code only when no original Project code exists. Funnel and Opportunity links remain available. Only funnels at Commit (4A) or Closed Won contribute codes. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
 
+### Open a project code
+
+Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
+
 ## Continue
 
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
-
-### Open a project code
-
-Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).

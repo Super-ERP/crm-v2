@@ -34,11 +34,17 @@ Approving a subordinate's request does not create another approval request for t
 
 ## Review requests
 
-Use **Sales → Approvals → Incoming** for quotation, funnel-stage and lead-conversion requests routed to you. **My requests** tracks your submissions. Each workflow has its own labelled section and pagination.
+Use **Sales → Approvals → Needs my review** for quotation, funnel-stage and lead-conversion requests routed to you. **My requests** tracks your submissions. Both tabs use one queue and a selected-request review panel. Requests default to oldest first; use the type filter to focus on Quotations, Lead conversions or Funnel stages. One pagination control covers the combined queue.
 
 Quotation routing follows the actual submitter's reporting line, with the funnel owner as the fallback for legacy requests without submission audit data. Stage and lead-conversion requests follow the requester's reporting line. Decisions recheck eligibility, permissions and status. Quotation and lead-conversion inboxes and actions also enforce record ownership/team scope; stage requests are listed by their assigned approver and decisions additionally verify that the stored assignment remains current. A queued request cannot be self-approved or self-rejected; eligible top managers use the direct action instead.
 
 Quotation rejection requires a reason and returns the quote to Draft. Lead-conversion rejection leaves the lead unconverted, allowing correction and a new submission. Lead conversion creates no account, contact, opportunity or funnel until the conversion is approved or an eligible top manager confirms the direct conversion.
+
+## Can someone approve on behalf of another manager?
+
+There is no proxy or delegated-approval action. The eligible reviewer decides using their own account, and the audit records that person. Sharing a PDF for advice does not transfer approval authority. If the intended reviewer is unavailable, ask an administrator to review the reporting line and permissions. Do not share logins.
+
+Quotation requests follow the member who submits them. If a colleague with access submits a quotation, it follows that colleague's reporting line. Approving a subordinate's request does not require another approval for the reviewer.
 
 ## Routing examples
 

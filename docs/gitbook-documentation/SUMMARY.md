@@ -12,7 +12,7 @@
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Payment milestones](06-payment-milestones.md)
-* [Stage approvals](08-approvals-inbox.md)
+* [Approvals inbox](08-approvals-inbox.md)
 
 ## Administration
 
