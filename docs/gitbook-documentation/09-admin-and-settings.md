@@ -97,6 +97,16 @@ A required checkbox must be checked; budget presets require positive amounts. Re
 
 **New-organization check:** the organization-creation path seeds stage names and approval flags but currently leaves required-field lists empty. The standard database seed adds field lists separately. Do not assume a newly created organization has the matrix's gates enabled; inspect and save the intended requirements here. Won's own field list is currently not enforced on entry, and KIV reopening follows the manager approval policy described in the same guide.
 
+## Microsoft accounts from another directory
+
+A different email suffix does not require a different CRM account system. For QAR/CC users in a separate Microsoft directory, the deployment operator must explicitly configure that directory and its email domains, and that directory’s Microsoft administrator must create its own single-tenant Web app registration, securely provide its Client ID and Client Secret value/expiry, and configure its callback and consent before users can sign in. This is deployment configuration, not a tenant Settings control.
+
+When multiple directories are configured, enter your invited **work email** on the sign-in page, then choose **Continue with Microsoft**. CRM opens the configured organisation's Microsoft sign-in. If Microsoft sign-in fails, ask the administrator to check the directory, domain, app consent/assignment and exact invited email; do not create a duplicate CRM user or transfer account ownership as a workaround.
+
+Signing in does not grant entity access by itself. Invite each user to the appropriate QAR/CC entity with the intended role and reporting manager, and confirm licence capacity. A user working in both entities needs membership in both. For the pilot, use exact-email invitations rather than domain auto-join.
+
+The November 2026 QAR/CC rollout and two-month test period remain subject to configuration and UAT; full implementation in 2027 needs a separate go-live decision. Documentation of this feature does not confirm production activation.
+
 ## Continue
 
 * [Troubleshooting](help-center/troubleshooting.md)

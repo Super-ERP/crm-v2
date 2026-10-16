@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { organization, twoFactor } from "better-auth/plugins"
-import { genericOAuth, microsoftEntraId } from "better-auth/plugins/generic-oauth"
+import { genericOAuth } from "better-auth/plugins/generic-oauth"
 import { nextCookies } from "better-auth/next-js"
 import { APIError, createAuthMiddleware } from "better-auth/api"
 import { and, eq, sql } from "drizzle-orm"
@@ -11,6 +11,9 @@ import * as schema from "@/db/schema"
 import { writeAuthAudit } from "@/server/audit"
 import { ROLE_TEMPLATES } from "@/lib/permissions"
 import { env, microsoftConfigured, isProd } from "@/lib/env"
+import { parseMicrosoftDirectories } from "@/lib/microsoft-directories"
+import { createMicrosoftProviders } from "@/lib/microsoft-oauth"
+import { parseMicrosoftCredentials } from "@/lib/microsoft-credentials"
 import { canUsePasswordLogin } from "@/lib/password-login-policy"
 import {
   autoJoinMembership,
@@ -155,16 +158,17 @@ async function passwordLoginAllowed(email: string): Promise<boolean> {
   })
 }
 
-// A real directory (tenant) GUID is required when Microsoft sign-in is
-// configured — we never silently fall back to the multi-tenant "common"
-// endpoint, which would accept any Azure AD / personal account. The boot guard
-// in instrumentation.ts rejects an unset/"common" tenant in production; here we
-// simply refuse to register the provider without a real tenant id.
-const microsoftTenantId =
-  env.MICROSOFT_TENANT_ID && env.MICROSOFT_TENANT_ID !== "common"
-    ? env.MICROSOFT_TENANT_ID
-    : ""
-const entraEnabled = microsoftConfigured && microsoftTenantId.length > 0
+// Keep the original provider ID stable; additional providers have fixed tenant GUIDs.
+const microsoftDirectories = microsoftConfigured
+  ? parseMicrosoftDirectories(env.MICROSOFT_TENANT_ID, process.env.MICROSOFT_EXTERNAL_DIRECTORIES ?? "")
+  : []
+const microsoftProviders = createMicrosoftProviders({
+  directories: microsoftDirectories,
+  clientId: env.MICROSOFT_CLIENT_ID,
+  clientSecret: env.MICROSOFT_CLIENT_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
+  externalCredentials: parseMicrosoftCredentials(process.env.MICROSOFT_EXTERNAL_CREDENTIALS ?? "", microsoftDirectories),
+})
 
 // Optional allow-list of email domains for OAuth sign-ups (comma-separated).
 // When set, a new user whose email domain isn't listed is rejected at create.
@@ -333,11 +337,12 @@ export const auth = betterAuth({
   },
   account: {
     accountLinking: {
-      // Microsoft Entra is single-tenant and the callback still requires an
+      // Each Microsoft provider validates its fixed directory and exclusive domain.
+      // The callback still requires an
       // exact email match. This permits pre-provisioned users (for example,
       // automation identities) whose local record has not been email-verified
       // to link their verified Entra account on first sign-in.
-      trustedProviders: ["microsoft-entra-id"],
+      trustedProviders: microsoftDirectories.map((directory) => directory.providerId),
       requireLocalEmailVerified: false,
     },
   },
@@ -353,22 +358,8 @@ export const auth = betterAuth({
       organizationHooks: licensedOrganizationHooks,
     }),
     twoFactor({ issuer: "Quandatics CRM" }),
-    ...(entraEnabled
-      ? [
-          genericOAuth({
-            config: [
-              microsoftEntraId({
-                clientId: env.MICROSOFT_CLIENT_ID,
-                clientSecret: env.MICROSOFT_CLIENT_SECRET,
-                tenantId: microsoftTenantId,
-                // The generic-oauth plugin's callback handler lives at
-                // /api/auth/oauth2/callback/<id>. Register this EXACT URI in the
-                // Azure app registration — no Next rewrite is involved.
-                redirectURI: `${env.BETTER_AUTH_URL}/api/auth/oauth2/callback/microsoft-entra-id`,
-              }),
-            ],
-          }),
-        ]
+    ...(microsoftProviders.length
+      ? [genericOAuth({ config: microsoftProviders })]
       : []),
     nextCookies(),
   ],

@@ -10,8 +10,8 @@
  *      Postgres FORCE ROW LEVEL SECURITY is silently bypassed and tenant
  *      isolation is gone. We connect with DATABASE_URL and inspect pg_roles.
  *   3. If Microsoft Entra is configured, MICROSOFT_TENANT_ID must be a real
- *      directory GUID (not unset and not "common"), so we don't accept any
- *      Azure AD / personal account.
+ *      directory GUID; optional external directories also require explicit GUID/domain
+ *      mappings. No unrestricted Microsoft authority is accepted.
  *   4. Machine-only deployment identity, secret, and release versions must be
  *      canonical before any internal control endpoint can be served.
  */
@@ -62,16 +62,29 @@ export async function register() {
     )
   }
 
-  // 3. if Microsoft Entra is configured, lock it to a single directory
+  // 3. Every Microsoft authority is explicitly configured, never common/organizations.
   const microsoftConfigured = Boolean(
     process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET
   )
   if (microsoftConfigured) {
-    const tenantId = process.env.MICROSOFT_TENANT_ID
-    if (!tenantId || tenantId === "common") {
-      errors.push(
-        'MICROSOFT_TENANT_ID must be your directory (tenant) GUID — not unset and not "common" — when Microsoft sign-in is configured.'
-      )
+    try {
+      const { parseMicrosoftDirectories } = await import("@/lib/microsoft-directories")
+      const directories = parseMicrosoftDirectories(process.env.MICROSOFT_TENANT_ID ?? "", process.env.MICROSOFT_EXTERNAL_DIRECTORIES ?? "")
+      const { parseMicrosoftCredentials } = await import("@/lib/microsoft-credentials")
+      parseMicrosoftCredentials(process.env.MICROSOFT_EXTERNAL_CREDENTIALS ?? "", directories)
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : "Invalid Microsoft directory configuration.")
+    }
+  } else {
+    try {
+      const directories: unknown = JSON.parse(process.env.MICROSOFT_EXTERNAL_DIRECTORIES?.trim() || "[]")
+      const { parseMicrosoftCredentials } = await import("@/lib/microsoft-credentials")
+      parseMicrosoftCredentials(process.env.MICROSOFT_EXTERNAL_CREDENTIALS ?? "", [])
+      if (!Array.isArray(directories) || directories.length > 0) {
+        errors.push("External Microsoft directories require the primary Microsoft configuration.")
+      }
+    } catch {
+      errors.push("Invalid external Microsoft configuration while Microsoft sign-in is disabled.")
     }
   }
 
