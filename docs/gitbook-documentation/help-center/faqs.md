@@ -7,6 +7,16 @@ icon: circle-question
 
 For step-by-step help with a blocked action, open [Troubleshooting](troubleshooting.md).
 
+## On this page
+
+* [Leads and customer records](#leads-and-customer-records)
+* [Sales stages](#sales-stages)
+* [Quotations and approvals](#quotations-and-approvals)
+* [Payment milestones](#payment-milestones)
+* [Reseller quotations and addresses](#reseller-quotations-and-addresses)
+* [Approval and quotation follow-up](#approval-and-quotation-follow-up)
+* [Contracts, Project codes and list controls](#contracts-project-codes-and-list-controls)
+
 ## Leads and customer records
 
 <details>

@@ -31,6 +31,10 @@ The action that, after reporting-manager approval or an eligible top manager's d
 
 The company or organization you work with, such as Acme. It holds customer context and links to contacts and commercial records. The account currency supplies a default for related commercial work; review the currency on each sales record.
 
+### End user, reseller, and Bill To
+
+The **end user** is the customer using the solution; keep the Opportunity and Funnel under that account. A **reseller** sells the goods or services onward. **Bill To** is the account receiving and paying a particular quotation. For a reseller sale, choose the reseller as Bill To and select its contact as Attention. Different quotations in one Funnel can bill different resellers.
+
 ### Contact and person
 
 An individual stakeholder associated with an account, such as Acme's procurement manager. The sidebar calls these records **Contacts**; some identifiers and routes use **person**. See [Accounts and contacts](https://jienweng.gitbook.io/q-app/docs/customer-records/03-accounts-and-contacts).
@@ -48,6 +52,14 @@ The particular sales pursuit you track through stages, with quotations and an ex
 ### Pipeline and funnel
 
 The configured stages used to track sales pursuits. The **Funnel** module shows deals within that process. Stage names, probabilities, and required fields can depend on your organization.
+
+### Project code and Cross-deal reference
+
+A code grouping connected sales records in **Sales → Project Codes**, available without the Projects module for accessible Funnels at 4A or Closed Won. The original Salesforce Project code is the main display value when present. A different Salesforce Cross-deal reference remains separate; identical values are not repeated in the normal display. The CRM-generated code is a separate identifier and supplies a fallback when the original code is absent. A code does not itself create a delivery Project.
+
+### Contract
+
+In this rollout, the Funnel’s standard Closed Won stage has a free-text **Contract** field for outcome information. There is no visible central Contract directory or multi-year Contract tab. Supporting files belong in Documents where permitted.
 
 ### Stage gate
 
@@ -135,7 +147,7 @@ A **role** groups access capabilities. A **permission** allows a particular acti
 
 ### Saved view
 
-Your personal set of list filters, sorting, and visible columns. It changes how you view a list, not the underlying records or colleagues' views.
+Your personal set of list filters, sorting, page size and column layout, including visibility, order, widths and pinning. It changes how you view a list without changing the underlying records or colleagues' views.
 
 ## Continue
 

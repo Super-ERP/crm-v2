@@ -34,23 +34,23 @@ Milestones are configured explicitly within the Funnel after its quotation is cu
 {% stepper %}
 {% step %}
 
-#### Open the deal or quotation
+#### Open the eligible Funnel
 
-Open the target Funnel or Quotation.
+Open **Sales → Funnel**, select the deal, then open its **Payment Milestones** tab. The quotation page records customer acceptance; schedule editing takes place on the Funnel. You need milestone-management permission to add or edit rows.
 
 {% endstep %}
 {% step %}
 
 #### Add a milestone
 
-In the **Payment Milestones** section, click **+ Add Milestone**.
+In the **Payment Milestones** tab, click **Add milestone**. This immediately saves a row named **New milestone** with amount 0 and no due date.
 
 {% endstep %}
 {% step %}
 
-#### Enter billing-plan details
+#### Edit the new row
 
-Specify:
+Select each editable value in the row and enter:
 
 * **Milestone Title**: e.g., *"1st Payment: 30% Advance Deposit upon PO"*.
 * **Amount**: A currency amount. Calculate a percentage into an amount before entering it; the shared schedule does not offer a percentage field.
@@ -60,9 +60,9 @@ Specify:
 {% endstep %}
 {% step %}
 
-#### Save the milestone
+#### Verify the saved schedule
 
-The shared schedule adds a row named **New milestone**; edit its title, description, due date, and amount inline and save each change.
+Save each inline change and check the resulting title, amount and due date. Adding a blank row does not allocate the remaining deal value automatically. Review the allocated total against the accepted quotation’s net value before recording billing.
 
 {% endstep %}
 {% endstepper %}

@@ -62,6 +62,10 @@ Sales users see their own sales records; managers with team visibility can also 
 
 Before transferring an Account, review the related-record impact: active child records change owner, pending stage requests are cancelled and pending quotations return to Draft. Correct ownership only after identifying the intended records.
 
+### What to include when reporting a missing record
+
+Include the active entity, module, exact record link or number, expected salesperson, current search/filters, and what you expected to see. For a reseller deal, provide both the end-user and reseller names. Support should compare the exact source and CRM records before changing ownership or recreating the deal.
+
 ## An account or quotation address is missing
 
 * Open the quotation and check **Bill To**. For a reseller sale, inspect the reseller's account address, not only the end user's.

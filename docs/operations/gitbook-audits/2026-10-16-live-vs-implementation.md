@@ -136,3 +136,19 @@ GitBook administration opened to **Sign in to GitBook** in the available browser
 - [Roles & RBAC](https://jienweng.gitbook.io/q-app/docs/administration/roles-and-rbac)
 - [Frequently asked questions](https://jienweng.gitbook.io/q-app/docs/help/faqs)
 - [Workspace & personal views](https://jienweng.gitbook.io/q-app/getting-started/01-workspace-and-views)
+
+
+## Second review — October 16
+
+Rechecked PR #272 after its first quality check passed. Additional source corrections:
+
+- [x] Remove the non-existent quotation-page milestone editor from the procedure; use the eligible Funnel tab and exact Add milestone control. Explain that it creates a zero-amount row immediately and each field saves inline.
+- [x] Correct the overview diagram: customer acceptance plus 4A/Won permits explicit schedule creation; recording the Funnel outcome is separate.
+- [x] Make the unified approval-review procedure cover quotation and lead conversion as well as stage requests.
+- [x] Distinguish approved outcomes, dynamic quotation/lead reviewer routing, stored stage assignment, and account-owner changes.
+- [x] Add glossary entries for end user/reseller/Bill To, Project codes/Cross-deal references and Contract; expand Saved view to include the complete layout.
+- [x] Add a concrete missing-record support checklist to improve handover and avoid speculative ownership changes.
+
+The public Approvals page was opened again and still showed the old Stage approvals title. Publication remains a separate outstanding step. This second review does not certify every tenant’s configuration or claim that the unidentified Uniti/MCMC record has been resolved.
+
+Validation: 26 mapped Markdown pages and 233 link references checked for local paths and resolvable source anchors, balanced GitBook blocks/details/code fences, and one H1. `git diff --check` passed. Application behavior was read from source; no customer records or settings were changed.
