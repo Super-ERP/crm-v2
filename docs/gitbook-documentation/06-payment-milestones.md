@@ -71,7 +71,7 @@ Save each inline change and check the resulting title, amount and due date. Addi
 
 ## Creating a schedule and splitting
 
-Stage changes, quotation changes, project creation and sales-order approval do not create milestones automatically. Eligible funnels without a schedule show **Payment schedule not configured**. Use **Create payment schedule** to enter at least two titled amounts totaling the full net quotation value, or add a single milestone directly. Set due dates after setup.
+Stage changes, quotation changes, project creation and sales-order approval do not create milestones automatically. Eligible funnels without a schedule show **Payment schedule not configured**. Use **Create payment schedule** to enter at least two titled amounts totaling the full net value of the Accepted quotation (after discounts, excluding tax), or add a single milestone directly. Set due dates after setup.
 
 **Split payment** is available for one uninvoiced milestone matching the full current value. Invoiced milestones cannot be split.
 

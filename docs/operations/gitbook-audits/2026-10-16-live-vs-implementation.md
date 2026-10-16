@@ -152,3 +152,14 @@ Rechecked PR #272 after its first quality check passed. Additional source correc
 The public Approvals page was opened again and still showed the old Stage approvals title. Publication remains a separate outstanding step. This second review does not certify every tenant’s configuration or claim that the unidentified Uniti/MCMC record has been resolved.
 
 Validation: 26 mapped Markdown pages and 233 link references checked for local paths and resolvable source anchors, balanced GitBook blocks/details/code fences, and one H1. `git diff --check` passed. Application behavior was read from source; no customer records or settings were changed.
+
+
+### Remaining business-policy questions
+
+The guide describes these current implementation limits explicitly; documentation cannot define a different result without a product change:
+
+- Replacing an Accepted quotation: a revision can be prepared, but cannot be accepted while another non-deleted quotation remains Accepted. A supersession/cancellation policy is needed.
+- Tax changes after approval: sending captures the current tax configuration and recomputes totals. Decide whether changed totals should invalidate approval or whether approval freezes the reviewed tax/totals.
+- Stage completeness: Board and detail workflows use different qualification shortcuts; Won's own outcome fields are not enforced on entry. A consistent gate policy remains a product decision.
+
+Final wording clarification: defined “live quotation” as non-deleted, “eligible top manager” by active membership/approval permission/reporting configuration, and milestone net value as the Accepted quotation’s value after discounts excluding tax.

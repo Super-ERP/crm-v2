@@ -167,6 +167,8 @@ Once delivered to the customer via email or formal meeting, use **Send** to reco
 
 ## Actions by status
 
+In this guide, **live quotation** means a quotation that has not been deleted; it does not mean Sent or Accepted. An **eligible top manager** means an active member with the matching approval permission and no reporting manager above them, rather than a particular job title.
+
 Each action also requires record access and its permission. **Edit quotations** allows editing Drafts, submitting them, recalling Pending Approval quotations, and returning Approved quotations to Draft. **Create quotations** allows duplicating live quotations and creating eligible revisions. **Approve quotations** is limited to the current eligible reviewer. **Send quotations** and **Accept quotations** are separate permissions.
 
 | Current status | Available lifecycle actions | Editing and revision |
