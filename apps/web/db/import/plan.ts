@@ -1,4 +1,4 @@
-import { recoverAccountAddresses } from "./account-address-history"
+import { recoverAccountAddressSources } from "./account-address-history"
 import { resolveSourceBillTo } from "./quotation-billing"
 import { projectQuoteProduct } from "../../server/services/quote-sync-projection"
 import { createHash } from "node:crypto"
@@ -253,12 +253,12 @@ export function planMigration(data: Dataset, options: PlanOptions) {
 
   // Standard address columns are absent in some exports; use only unambiguous
   // latest field-history values, preserving explicit source address snapshots.
-  const recoveredAddresses = recoverAccountAddresses(data.AccountHistory?.rows ?? [])
+  const recoveredAddresses = recoverAccountAddressSources(data.AccountHistory?.rows ?? [], data.Contract?.rows ?? [])
   for (const recovered of recoveredAddresses.ready) {
     const account = byId.get(ctx.detId("Account", recovered.sourceAccountId))
     if (account && !account.values.billing_address) {
       account.values.billing_address = recovered.address
-      note(account, "AccountHistory.Billing*", "Recovered latest unambiguous NewValue per address field; original street retained without parsing")
+      note(account, recovered.contractIds?.length ? "Contract.Bill_To__c" : "AccountHistory.Billing*", "Recovered unambiguous account-linked address from field history or Contract Bill To; exact source text retained without parsing")
     }
   }
   for (const unresolved of recoveredAddresses.review) {
