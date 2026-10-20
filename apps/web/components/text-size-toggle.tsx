@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import { ALargeSmall } from "lucide-react"
 
 import { Button } from "@/components/ui/button"

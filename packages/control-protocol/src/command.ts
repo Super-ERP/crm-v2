@@ -12,17 +12,6 @@ const IsoTimestampSchema = z.iso.datetime({ offset: true })
 const DeploymentIdSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
 const CommandIdSchema = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
 const VendorKeyIdSchema = z.string().regex(/^[A-Za-z0-9._-]{1,128}$/)
-const CommandKindSchema = z.enum([
-  "echo",
-  "environment_update",
-  "diagnostics",
-  "trigger_backup",
-  "verify_restore",
-  "restart_web",
-  "restart_gateway",
-  "log_stream",
-])
-
 const CommandPayloadEchoSchema = z.object({
   message: z.string().min(1).max(1024),
 }).strict()

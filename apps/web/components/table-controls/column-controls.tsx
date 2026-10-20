@@ -1,5 +1,4 @@
 "use client"
-import * as React from 'react'
 import type { Table as TableInstance } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
