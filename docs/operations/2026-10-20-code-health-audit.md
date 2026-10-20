@@ -62,6 +62,23 @@ not claimed to have zero unused exports.
 - Final test counts, build outcomes and merge-base/conflict check are recorded in
   the delivery response. Skipped database suites are not claimed as validated.
 
+## Conflict and review checks
+
+- The branch is based on current main at f44f633; a non-mutating merge-tree check
+  found no conflict with main or the active address-recovery branch (PR #271).
+- The older PR #273 assumed QAR used a separate Microsoft directory and overlapped
+  auth/deployment configuration. It was closed as superseded after the shared-tenant
+  confirmation. Its source branch was retained; none of its code was merged here.
+- Independent review found three concrete recovery problems (cached sessions,
+  ambiguous environment assignments and the derived database URL placeholder).
+  Each was fixed and regression-tested. Final review found no actionable defects.
+- Web suite: 909 passed, 94 skipped. Eight PostgreSQL recovery tests were separately
+  executed successfully. Agent: 44 passed. Control plane: 266 passed. Shared protocol:
+  59 passed. Source-free container recovery and deployment-bundle tests passed.
+- Whole-workspace scan: zero unresolved imports, zero unused production
+  dependencies; 13 retained special-entrypoint candidates, 124 export candidates
+  and 71 type candidates. Those retained reports are not claimed as zero dead code.
+
 ## Remaining external checks
 
 - [ ] Din registers the existing app's exact **Web** callback:
@@ -74,7 +91,8 @@ not claimed to have zero unused exports.
 - [ ] Confirm Daltos' directory separately; do not assume it shares this tenant.
 - [ ] Control-plane audit access is needed to establish the original 17 October
   rejection trigger. A disabled deployment can cause it, but that trigger was not
-  verified for this incident. The stuck-recovery behavior was reproduced and fixed.
+  verified for this incident. Local Wrangler is not authenticated to read that audit.
+  The stuck-recovery behavior was reproduced and fixed.
 
 ## Rollout notes
 
