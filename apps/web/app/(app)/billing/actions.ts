@@ -75,11 +75,6 @@ export type FinanceDocRow = {
   createdAt: Date
 }
 
-/** Whether signed runtime entitlement includes finance. */
-export async function isFinanceEnabled(): Promise<boolean> {
-  return (await getEntitledModuleMap()).finance
-}
-
 async function readFinanceDocPage(tx: Tx, direction: "sale" | "purchase", limit: number, offset: number, query?: RecordListQuery) {
     const parent = alias(financeDocs, "parent_doc")
     const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null

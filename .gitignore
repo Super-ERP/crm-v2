@@ -58,3 +58,6 @@ _*.mjs
 
 # CodeGraph local index (per-developer tooling)
 /.codegraph
+
+# Generated source-free release artifacts
+/dist/

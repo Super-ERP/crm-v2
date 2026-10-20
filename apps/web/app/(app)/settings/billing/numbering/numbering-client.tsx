@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 import { showActionError } from "@/lib/show-action-error"
-import { Plus, X } from "lucide-react"
 
 import {
   Card,
@@ -26,10 +25,8 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { cn } from "@/lib/utils"
 import {
   updateNumbering,
-  updateMilestoneTemplate,
   type TenantSettingsView,
 } from "@/app/(app)/settings/actions"
 
@@ -367,134 +364,6 @@ function NumberingForm({ settings }: { settings: TenantSettingsView }) {
         </div>
       </form>
     </Form>
-  )
-}
-
-/**
- * Payment-milestone template: title + percent rows auto-seeded onto any new
- * project that starts with a value. Percents must sum to ≤ 100; the last
- * milestone absorbs cent rounding when the template allocates the full 100%.
- */
-// Kept for compatibility with existing saved templates; the setting is
-// intentionally hidden until the milestone workflow is ready for use.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function MilestoneTemplateCard({
-  template,
-}: {
-  template: { title: string; percent: number }[]
-}) {
-  const [rows, setRows] = React.useState(
-    template.map((t) => ({ title: t.title, percent: String(t.percent) }))
-  )
-  const [baseline, setBaseline] = React.useState(JSON.stringify(template))
-  const [isPending, startTransition] = React.useTransition()
-
-  const parsed = rows.map((r) => ({
-    title: r.title.trim(),
-    percent: Number(r.percent),
-  }))
-  const sum = parsed.reduce(
-    (n, r) => n + (Number.isFinite(r.percent) ? r.percent : 0),
-    0
-  )
-  const dirty = JSON.stringify(parsed) !== baseline
-
-  function set(i: number, key: "title" | "percent", value: string) {
-    setRows((prev) =>
-      prev.map((r, j) => (j === i ? { ...r, [key]: value } : r))
-    )
-  }
-
-  function save() {
-    startTransition(async () => {
-      const res = await updateMilestoneTemplate(parsed)
-      if (!res.ok) {
-        showActionError(res)
-        return
-      }
-      setBaseline(JSON.stringify(res.data.milestoneTemplate))
-      setRows(
-        res.data.milestoneTemplate.map((t) => ({
-          title: t.title,
-          percent: String(t.percent),
-        }))
-      )
-      toast.success("Milestone template saved")
-    })
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Payment milestone template</CardTitle>
-        <CardDescription>
-          Auto-seeded onto every new project that has a value — e.g. 50%
-          advance / 40% delivery / 10% acceptance. Leave empty to keep
-          milestones fully manual.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3">
-        {rows.map((r, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input
-              value={r.title}
-              onChange={(e) => set(i, "title", e.target.value)}
-              placeholder={`Milestone ${i + 1} (e.g. Advance payment)`}
-            />
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              className="w-24 text-right tabular-nums"
-              value={r.percent}
-              onChange={(e) => set(i, "percent", e.target.value)}
-              aria-label="Percent of project value"
-            />
-            <span className="text-sm text-muted-foreground">%</span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setRows((p) => p.filter((_, j) => j !== i))}
-              aria-label="Remove milestone"
-            >
-              <X className="size-4" />
-            </Button>
-          </div>
-        ))}
-        <div className="flex items-center justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setRows((p) => [...p, { title: "", percent: "" }])
-            }
-          >
-            <Plus className="size-4" />
-            Add milestone
-          </Button>
-          <span
-            className={cn(
-              "text-sm tabular-nums",
-              sum > 100 ? "text-destructive" : "text-muted-foreground"
-            )}
-          >
-            Total {sum}%
-          </span>
-        </div>
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            onClick={save}
-            disabled={isPending || !dirty || sum > 100}
-          >
-            {isPending ? "Saving…" : "Save template"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
   )
 }
 

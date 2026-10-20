@@ -109,6 +109,7 @@ export function createDeploymentAgent(input: {
   let applyTail: Promise<void> = Promise.resolve()
   let stopped = false
   let repairRequired = false
+  let recoveryProbeAt = 0
 
   async function attempt<T>(
     operation: (signal: AbortSignal) => Promise<T>,
@@ -123,6 +124,7 @@ export function createDeploymentAgent(input: {
         } catch (error) {
           if (error instanceof AgentRequestError && error.repairRequired) {
             repairRequired = true
+            recoveryProbeAt = now().getTime() + RETRY_CAP_MS
             throw error
           }
           if (
@@ -357,11 +359,18 @@ export function createDeploymentAgent(input: {
   }
 
   async function runOnce(options: AttemptOptions = {}): Promise<void> {
-    if (repairRequired) throw new Error("Agent requires operator repair")
+    if (repairRequired && now().getTime() < recoveryProbeAt) {
+      throw new Error("Agent requires operator repair; recovery probe is cooling down")
+    }
     try {
-      await withApplyLock(() => {
+      await withApplyLock(async () => {
+        if (repairRequired && now().getTime() < recoveryProbeAt) {
+          throw new Error("Agent requires operator repair; recovery probe is cooling down")
+        }
         if (stopped) throw new DOMException("Aborted", "AbortError")
-        return attempt(cycle, options)
+        await attempt(cycle, options)
+        repairRequired = false
+        recoveryProbeAt = 0
       })
       logger.info("deployment_heartbeat_succeeded")
     } catch (error) {
@@ -406,7 +415,7 @@ export function createDeploymentAgent(input: {
         currentWork = null
         schedule()
       })
-    }, heartbeatDelayMs(random))
+    }, repairRequired ? RETRY_CAP_MS : heartbeatDelayMs(random))
   }
 
   function schedulePoll(): void {

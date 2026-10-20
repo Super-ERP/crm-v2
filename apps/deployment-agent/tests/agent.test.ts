@@ -651,6 +651,72 @@ describe("deployment agent flow", () => {
     expect(fetch).toHaveBeenCalledTimes(calls)
   })
 
+  it.each([401, 403])("recovers after control %s without restarting or replacing identity", async (rejection) => {
+    const store = await createStateStore(await stateDirectory())
+    const identity = await generateIdentity(config(), store)
+    await store.markRegistered(identity)
+    let time = new Date("2026-10-20T00:00:00Z")
+    let denied = true
+    const fetch = vi.fn<typeof globalThis.fetch>(async (url) => {
+      if (String(url).includes("/internal/")) return Response.json(status("2"))
+      if (denied) return new Response(null, { status: rejection })
+      return Response.json({ accepted: true, entitlement: { version: 2 } }, { status: 202 })
+    })
+    const agent = createDeploymentAgent({ config: config(), store, fetch, now: () => time, random: () => 0 })
+    await agent.initialize()
+    await expect(agent.runOnce({ maxAttempts: 1 })).rejects.toThrow()
+    expect(agent.repairRequired).toBe(true)
+    const calls = fetch.mock.calls.length
+    await expect(agent.runOnce({ maxAttempts: 1 })).rejects.toThrow("repair")
+    await expect(agent.pollOnce({ maxAttempts: 1 })).rejects.toThrow("repair")
+    expect(fetch).toHaveBeenCalledTimes(calls)
+    time = new Date(time.getTime() + 5 * 60_000)
+    await expect(agent.runOnce({ maxAttempts: 1 })).rejects.toThrow("identity_rejected")
+    const rejectedProbeCalls = fetch.mock.calls.length
+    await expect(agent.runOnce({ maxAttempts: 1 })).rejects.toThrow("repair")
+    expect(fetch).toHaveBeenCalledTimes(rejectedProbeCalls)
+    expect((await store.loadRuntime()).lastAppliedEntitlementVersion).toBe(2)
+    denied = false
+    time = new Date(time.getTime() + 5 * 60_000)
+    await agent.runOnce({ maxAttempts: 1 })
+    expect(agent.repairRequired).toBe(false)
+    expect((await store.loadRuntime()).lastErrorCode).toBeNull()
+    expect((await store.loadRuntime()).lastHeartbeatSucceededAt).toBe(time.toISOString())
+    expect(await store.loadIdentity()).toEqual(identity)
+    expect(fetch.mock.calls.some(([url]) => String(url).includes("/register"))).toBe(false)
+  })
+
+  it("automatically probes a re-enabled deployment on the recovery timer", async () => {
+    const store = await createStateStore(await stateDirectory())
+    const identity = await generateIdentity(config(), store)
+    await store.markRegistered(identity)
+    let runtime = await store.loadRuntime()
+    vi.spyOn(store, "isRegistered").mockResolvedValue(true)
+    vi.spyOn(store, "loadRuntime").mockImplementation(async () => runtime)
+    vi.spyOn(store, "saveRuntime").mockImplementation(async value => { runtime = value })
+    let denied = true
+    const agent = createDeploymentAgent({
+      config: config(), store, random: () => 0, logger: { info() {}, error() {} },
+      fetch: async url => String(url).includes("/internal/") ? Response.json(status("2"))
+        : denied ? new Response(null, { status: 403 })
+        : Response.json({ accepted: true, entitlement: { version: 2 } }, { status: 202 }),
+    })
+    await agent.initialize()
+    vi.useFakeTimers()
+    try {
+      agent.start()
+      await vi.waitFor(() => expect(agent.repairRequired).toBe(true))
+      denied = false
+      await vi.advanceTimersByTimeAsync(5 * 60_000)
+      await vi.waitFor(() => expect(agent.repairRequired).toBe(false))
+      expect(runtime.lastHeartbeatSucceededAt).not.toBeNull()
+      expect(runtime.lastErrorCode).toBeNull()
+    } finally {
+      await agent.stop()
+      vi.useRealTimers()
+    }
+  })
+
   it("does not advance runtime when web rejects an entitlement application", async () => {
     const directory = await stateDirectory()
     const store = await createStateStore(directory)

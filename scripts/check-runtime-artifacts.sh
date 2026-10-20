@@ -98,6 +98,7 @@ if [ -f "$payload_root/migrate.mjs" ]; then
   unexpected=$(find "$payload_root" -mindepth 1 -maxdepth 1 \
     ! -name migrate.mjs \
     ! -name seed.mjs \
+    ! -name reset-master.mjs \
     ! -name db \
     ! -name node_modules \
     ! -name package.json \

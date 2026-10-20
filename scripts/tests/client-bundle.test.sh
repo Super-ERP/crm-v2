@@ -209,6 +209,9 @@ for argument do
   last_argument=$argument
 done
 [ -n "${TEST_COSIGN_FAIL_IMAGE:-}" ] && [ "$last_argument" = "$TEST_COSIGN_FAIL_IMAGE" ] && exit 43
+case "$*" in
+  *"@refs/tags/"*) [ "${TEST_COSIGN_REJECT_TAGS:-0}" != 1 ] || exit 44 ;;
+esac
 exit 0
 EOF
 
@@ -326,6 +329,7 @@ BETTER_AUTH_URL=https://crm.example.test
 APP_URL=https://crm.example.test
 PLATFORM_MASTER_EMAIL=owner@example.test
 PLATFORM_MASTER_PASSWORD=test-platform-master-password
+MICROSOFT_ALLOWED_DOMAINS=quandatics.com,q-armour.com
 BOOTSTRAP_OWNER_EMAIL=owner@example.test
 DEPLOYMENT_ID=$deployment_id
 STORAGE_ID=storage-test
@@ -860,6 +864,7 @@ for image in "$web_image" "$migrator_image" "$backup_image" "$agent_image"; do
 done
 assert_contains "$record_file" 'RECORD_VERSION=3' "atomic record schema"
 assert_contains "$record_file" 'RELEASE_TAG=v1.2.3' "atomic record release"
+assert_contains "$record_file" 'MICROSOFT_ALLOWED_DOMAINS=quandatics.com,q-armour.com' "OAuth allowlist survives deployment recording"
 assert_contains "$record_file" "SOURCE_COMMIT_SHA=$source_sha" "atomic record provenance"
 assert_contains "$record_file" "WEB_IMAGE=$web_image" "atomic record web digest"
 assert_contains "$record_file" "AGENT_IMAGE=$agent_image" "atomic record agent digest"
@@ -875,11 +880,23 @@ for leaked_secret in \
   done
 done
 
+fallback_cosign_log="$test_root/cosign-main.log"
+if ! PATH="$fake_bin:/usr/bin:/bin" TEST_COSIGN_LOG="$fallback_cosign_log" TEST_COSIGN_REJECT_TAGS=1 \
+  RELEASE_TAG=v1.2.3 WEB_IMAGE="$web_image" MIGRATOR_IMAGE="$migrator_image" \
+  BACKUP_IMAGE="$backup_image" AGENT_IMAGE="$agent_image" "$bundle_dir/verify-images.sh"; then
+  record_failure "exact main-branch signing identity fallback failed"
+fi
+[ "$(wc -l <"$fallback_cosign_log" | tr -d ' ')" -eq 8 ] || record_failure "signing fallback did not try both exact identities"
+for image in "$web_image" "$migrator_image" "$backup_image" "$agent_image"; do
+  assert_contains "$fallback_cosign_log" "verify --certificate-identity https://github.com/Super-ERP/crm-v2/.github/workflows/release-images.yml@refs/heads/main --certificate-oidc-issuer $issuer $image" "exact main signing identity"
+done
+
 compose_json="$test_root/compose.json"
 if ! docker compose --file "$compose_file" --env-file "$bundle_dir/.env.example" --profile deploy config --format json >"$compose_json"; then
   record_failure "Compose config with example environment failed"
 else
   jq -e '.services.gateway.networks | keys == ["frontend"]' "$compose_json" >/dev/null || record_failure "gateway is not frontend-only"
+  jq -e '.services.web.environment.MICROSOFT_ALLOWED_DOMAINS == ""' "$compose_json" >/dev/null || record_failure "web OAuth allowlist is not wired into Compose"
   jq -e '.services.web.networks | keys | sort == ["agent-web", "backend", "frontend"]' "$compose_json" >/dev/null || record_failure "web does not bridge frontend/backend/agent-web"
   jq -e '.services.db.networks | keys == ["backend"]' "$compose_json" >/dev/null || record_failure "database is reachable outside backend"
   jq -e '.services.backup.networks | keys | sort == ["backend", "egress"]' "$compose_json" >/dev/null || record_failure "backup lacks isolated backend plus outbound transport"
@@ -887,8 +904,8 @@ else
   jq -e '.services.agent.image | startswith("ghcr.io/super-erp/crm-deployment-agent@sha256:")' "$compose_json" >/dev/null || record_failure "agent image is not digest-only"
   jq -e '.services.agent.networks | keys | sort == ["agent-egress", "agent-web"]' "$compose_json" >/dev/null || record_failure "agent network boundary is not isolated"
   jq -e '.networks["agent-web"].internal == true' "$compose_json" >/dev/null || record_failure "agent-web network is not internal"
-  jq -e '(.services.agent.environment | keys | sort) == ["AGENT_VERSION", "AGENT_WEB_SECRET", "APPLICATION_VERSION", "CONTROL_PLANE_URL", "DEPLOYMENT_ENV", "DEPLOYMENT_ID", "IMAGE_DIGEST", "INSTALLATION_TOKEN", "MIGRATION_VERSION", "WEB_INTERNAL_URL"]' "$compose_json" >/dev/null || record_failure "agent environment exceeds allowlist"
-  jq -e '[.services.agent.volumes[].target] == ["/var/lib/crm-agent"]' "$compose_json" >/dev/null || record_failure "agent mount boundary is not private state only"
+  jq -e '(.services.agent.environment | keys | sort) == ["AGENT_VERSION", "AGENT_WEB_SECRET", "APPLICATION_VERSION", "BACKUP_STATUS_FILE", "CONTROL_PLANE_URL", "DEPLOYMENT_ENV", "DEPLOYMENT_ID", "ENV_FILE_PATH", "IMAGE_DIGEST", "INSTALLATION_TOKEN", "MIGRATION_VERSION", "WEB_INTERNAL_URL"]' "$compose_json" >/dev/null || record_failure "agent environment exceeds allowlist"
+  jq -e '([.services.agent.volumes[].target] | sort) == ["/etc/quandatics-client/.env", "/var/lib/crm-agent", "/var/lib/crm-backup"] and (.services.agent.volumes[] | select(.target == "/var/lib/crm-backup") | .read_only == true)' "$compose_json" >/dev/null || record_failure "agent mounts exceed the environment/state/read-only-backup boundary"
   jq -e '.services.agent.read_only == true and .services.agent.cap_drop == ["ALL"] and .services.agent.pids_limit > 0 and (.services.agent.security_opt | index("no-new-privileges:true")) != null' "$compose_json" >/dev/null || record_failure "agent container hardening is incomplete"
   jq -e '(.services.agent.ports // []) == [] and (.services.agent.volumes | map(.source) | index("/var/run/docker.sock")) == null' "$compose_json" >/dev/null || record_failure "agent exposes a port or Docker socket"
   jq -e '.networks.backend.internal == true' "$compose_json" >/dev/null || record_failure "backend network is not internal"

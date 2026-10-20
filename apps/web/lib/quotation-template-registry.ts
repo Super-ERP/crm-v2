@@ -1,19 +1,9 @@
-import { and, asc, eq } from "drizzle-orm"
-import { runInTenant } from "@/db"
-import { requireContext } from "@/lib/actions"
+import { and, eq } from "drizzle-orm"
 import type { Tx } from "@/lib/actions"
 import { quotationTemplates } from "@/db/schema"
 import { normalizeQuotationPdfTemplateCode } from "@/lib/quotation-pdf-template"
 
 export type QuotationTemplateRenderMode = "builtin" | "html" | string
-
-export type QuotationTemplateOption = {
-  code: string
-  label: string
-  isActive: boolean
-  legacyTemplateCode: string | null
-  renderMode: string
-}
 
 export type QuotationTemplateSpec = {
   code: string
@@ -50,28 +40,6 @@ export async function getActiveQuotationTemplateByCode(
     )
     .limit(1)
   return row ?? null
-}
-
-export async function listActiveQuotationTemplateOptions(): Promise<QuotationTemplateOption[]> {
-  const ctx = await requireContext()
-  return runInTenant(ctx.tenantId, (tx) =>
-    tx
-      .select({
-        code: quotationTemplates.code,
-        label: quotationTemplates.label,
-        isActive: quotationTemplates.isActive,
-        legacyTemplateCode: quotationTemplates.legacyTemplateCode,
-        renderMode: quotationTemplates.renderMode,
-      })
-      .from(quotationTemplates)
-      .where(
-        and(
-          eq(quotationTemplates.organizationId, ctx.tenantId),
-          eq(quotationTemplates.isActive, true)
-        )
-      )
-      .orderBy(asc(quotationTemplates.label))
-  )
 }
 
 export async function listActiveQuotationTemplateCodes(
