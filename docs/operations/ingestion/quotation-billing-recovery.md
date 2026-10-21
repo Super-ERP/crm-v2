@@ -148,3 +148,9 @@ update, and rolls back all updates if any account changed since planning.
 The normal Salesforce import now applies the same field-history fallback when
 explicit source address columns are absent. Existing imported production rows
 must use the focused recovery instead of rerunning the full import.
+
+## Follow-up address audit (2026-10-16)
+
+See [the complete re-audit](account-address-audit-20261016.md). One whitespace-only history conflict was safely resolved and Quandatics Omnitech restored, bringing the total recovered to nine accounts. Five substantive street conflicts and the country-only case remain. The imported entity still has 292 completely blank addresses because the available Account export omits billing-address columns. A fresh authoritative address export is required to complete restoration.
+
+**Further correction:** a full CSV-content scan found billing addresses in `Contract.Bill_To__c`, linked by AccountId. The earlier history-only recovery limit is superseded. See the full-content scan section of the re-audit for the conservative contract fallback and additional recovery results.
