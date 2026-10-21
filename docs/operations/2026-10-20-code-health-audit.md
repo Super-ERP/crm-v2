@@ -79,6 +79,29 @@ not claimed to have zero unused exports.
   dependencies; 13 retained special-entrypoint candidates, 124 export candidates
   and 71 type candidates. Those retained reports are not claimed as zero dead code.
 
+## Pending-invite sign-in correction — 21 October 2026
+
+Production logs confirmed first-user and session catch-up hooks both failed while
+querying valid pending invites: postgres-js rejected a raw Date parameter with
+ERR_INVALID_ARG_TYPE. Authentication completed, but membership creation never ran.
+Adding the person again after their login worked because Add member then used the
+existing-user activation path rather than the failing pending-invite lookup.
+
+The shared lookup now uses Drizzle's typed `gt(expiresAt, now)` comparison, which
+runs the timestamp column encoder. Exact-email matching, tenant RLS, strict expiry,
+seat enforcement and invited role/tier assignment remain unchanged. Both sign-in
+hooks call this lookup, so returning accounts can consume their still-valid invite
+on the next sign-in after deployment without an administrator adding them again.
+Expired, revoked or mismatched-email invitations still do not grant access.
+
+The real-driver regression reproduced the production error before the fix. Three
+PostgreSQL lookup tests passed after the fix, including RLS isolation and expiry
+boundaries. The full deployment-seat fixture passed 21 tests, including new and
+existing login identities consuming the invite with its Owner role/tier and
+idempotent retries. Forty-four related unit tests, strict typecheck and lint passed.
+Independent review found no actionable defect. Real Microsoft sign-in UAT remains
+pending; the PR remains unmerged and this correction has not been deployed.
+
 ## Remaining external checks
 
 - [ ] Din registers the existing app's exact **Web** callback:

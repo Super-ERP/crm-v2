@@ -11,6 +11,7 @@ import * as schema from "@/db/schema"
 import { writeAuthAudit } from "@/server/audit"
 import { ROLE_TEMPLATES } from "@/lib/permissions"
 import { env, microsoftConfigured, isProd } from "@/lib/env"
+import { findSignInInvitations } from "@/lib/auth-invitation-query"
 import { authSessionPolicy } from "@/lib/session-policy"
 import { canUsePasswordLogin } from "@/lib/password-login-policy"
 import {
@@ -42,13 +43,8 @@ async function consumePendingInvites(user: {
   const organizations = await db.select({ id: schema.organization.id }).from(schema.organization)
   const invites: Array<{ id: string; tenantId: string }> = []
   for (const organization of organizations) {
-    const rows = await runInTenant(organization.id, (tx) => tx
-      .select({ id: schema.pendingInvites.id, tenantId: schema.pendingInvites.tenantId })
-      .from(schema.pendingInvites)
-      .where(and(
-        eq(schema.pendingInvites.normalizedEmail, email),
-        sql`${schema.pendingInvites.expiresAt} > ${now}`,
-      )))
+    const rows = await runInTenant(organization.id, (tx) =>
+      findSignInInvitations(tx, email, now))
     invites.push(...rows)
   }
   if (invites.length === 0) return null
