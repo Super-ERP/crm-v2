@@ -19,7 +19,7 @@ export function CodeRoles({ primary, crossDeal, crm }: { primary: boolean; cross
 
 export function ProjectCodesTable({ initialPage }: { initialPage: CodeDirectory }) {
   const columns = React.useMemo<ColumnDef<CodeSummary>[]>(() => [
-    { accessorKey: "code", header: ({ column }) => <SortableHeader column={column} title="Project code" />, cell: ({ row }) => <ProjectCodeLink code={row.original.code} /> },
+    { accessorKey: "code", header: ({ column }) => <SortableHeader column={column} title="Project code" />, cell: ({ row }) => <ProjectCodeLink code={row.original.code} className="text-sm font-medium" /> },
     { id: "relationship", header: "Used as", enableSorting: false, cell: ({ row }) => <CodeRoles primary={row.original.primaryCount > 0} crossDeal={row.original.crossDealCount > 0} crm={row.original.crmCount > 0} /> },
     { accessorKey: "funnelCount", header: ({ column }) => <SortableHeader column={column} title="Linked funnels" />, cell: ({ row }) => <Badge variant="secondary" className="tabular-nums">{row.original.funnelCount}</Badge> },
   ], [])
