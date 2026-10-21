@@ -4,6 +4,7 @@ import { access, readdir } from "node:fs/promises"
 
 await access("dist/migrator/migrate.mjs")
 await access("dist/migrator/seed.mjs")
+await access("dist/migrator/reset-master.mjs")
 await access("dist/migrator/db/migrations/meta/_journal.json")
 await access("dist/migrator/db/sql/rls.sql")
 await access("dist/migrator/db/sql/views.sql")
@@ -55,3 +56,9 @@ for (const [entrypoint, reachedApplication] of entrypoints) {
     `${entrypoint} depends on a missing module or source file`,
   )
 }
+
+const recoveryHelp = spawnSync(process.execPath, ["reset-master.mjs", "--help"], {
+  cwd: "dist/migrator", encoding: "utf8", timeout: 10_000,
+})
+assert.equal(recoveryHelp.status, 0, "source-free password recovery must start without TypeScript or package managers")
+assert.match(recoveryHelp.stdout, /--env-file.*--output-file/)

@@ -1,4 +1,7 @@
 import postgres, { type Sql } from "postgres"
+import { drizzle } from "drizzle-orm/postgres-js"
+import { sql as query } from "drizzle-orm"
+import { findSignInInvitations } from "@/lib/auth-invitation-query"
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 
 const adminUrl = process.env.TEST_DATABASE_ADMIN_URL
@@ -196,6 +199,39 @@ integration("deployment seat PostgreSQL boundary", () => {
       ${`${prefix}cross-actor@example.com`}, null, 0, ${actor.memberId},
       ${otherActor.userId}, ${actor.memberId}, '2026-08-18', '2026-08-11'
     )`).rejects.toThrow(/authenticated active Owner or Admin/)
+  })
+
+  it.each([false, true])("sign-in accepts the pending invite and preserves its Owner role (existing login: %s)", async existingLogin => {
+    const tenantId = `${prefix}org`
+    const email = `${prefix}signin@example.com`
+    const userId = `${prefix}signin-user`
+    const memberId = `${prefix}signin-member`
+    const invitationId = crypto.randomUUID()
+    const roleId = crypto.randomUUID()
+    await admin`update deployment_control_state set seat_limit = 5 where singleton = 1`
+    await admin`INSERT INTO roles (id, tenant_id, name, is_system, default_tier_level) VALUES (${roleId}, ${tenantId}, 'Owner', true, 1000)`
+    const createUser = () => admin`INSERT INTO "user" (id, name, email, email_verified) VALUES (${userId}, 'Invited user', ${email}, true)`
+    if (existingLogin) await createUser()
+    expect((await app`SELECT * FROM reserve_deployment_invitation(
+      ${invitationId}::uuid, ${tenantId}, ${email}, ${roleId}::uuid, 1000, ${defaultActor.memberId},
+      ${defaultActor.userId}, ${defaultActor.memberId}, '2026-08-18', '2026-08-11'
+    )`)[0].allowed).toBe(true)
+    if (!existingLogin) await createUser()
+    const pending = await drizzle(app).transaction(async tx => {
+      await tx.execute(query`SELECT set_config('app.current_tenant', ${tenantId}, true)`)
+      return findSignInInvitations(tx, email, new Date("2026-08-11T01:00:00Z"))
+    })
+    expect(pending).toEqual([{ id: invitationId, tenantId }])
+    expect((await app`SELECT * FROM consume_deployment_invitation(
+      ${tenantId}, ${pending[0].id}::uuid, ${userId}, ${memberId}, '2026-08-11T01:00:00Z'
+    )`)[0].allowed).toBe(true)
+    expect((await admin`SELECT role_id, tier_level, status FROM membership_profiles WHERE member_id = ${memberId}`)[0])
+      .toMatchObject({ role_id: roleId, tier_level: 1000, status: "active" })
+    expect((await admin`SELECT count(*)::int AS n FROM member_roles WHERE member_id = ${memberId} AND role_id = ${roleId}`)[0].n).toBe(1)
+    expect((await admin`SELECT count(*)::int AS n FROM pending_invites WHERE id = ${invitationId}`)[0].n).toBe(0)
+    expect((await app`SELECT * FROM consume_deployment_invitation(
+      ${tenantId}, ${invitationId}::uuid, ${userId}, ${memberId}, '2026-08-11T01:00:00Z'
+    )`)[0].reason).toBe("idempotent")
   })
 
   it("limits self-service consumption to the live invite's exact user email", async () => {

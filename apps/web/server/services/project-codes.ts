@@ -11,7 +11,12 @@ import { normalizeApprovalPage } from "@/lib/approval-pagination"
 import { activeProjectCodeFunnel } from "./project-code-visibility"
 
 type CodeTableOptions = { filterTree?:FilterGroup; sorting?:{id:string;desc:boolean}[]; pageSize?: unknown; search?: string; sort?: { id: string; desc: boolean } }
-export type CodeSummary = { code: string; funnelCount: number; primaryCount: number; crossDealCount: number; crmCount: number }
+export type CodeSummary = { code: string; funnelCount: number; primaryCount: number; crossDealCount: number; crmCount: number
+  accountName: string[]; funnelName: string[]; ownerName: string[]; stageName: string[]
+  linkedAccounts: { id: string; name: string }[]; linkedFunnels: { id: string; name: string }[]
+  stages: { name: string; kind: string }[]
+  estimatedTotalsByCurrency: { currency: string; total: string }[]; expectedCloseDate: string | null
+}
 export type CodeDirectory = { rows: CodeSummary[]; pageIndex: number; hasNextPage: boolean; total: number }
 export type CodeRelatedRecord = { id: string; name: string; role?: string; status?: string | null; amount?: string | null; currency?: string | null; email?: string | null; title?: string | null; recordCode?: string | null }
 type RelatedRecord = CodeRelatedRecord
@@ -54,18 +59,40 @@ export async function listProjectCodes(tx: Tx, ctx: ServerContext, input: CodeTa
   const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`
   const sortColumn = input.sort?.id === "funnelCount" ? sql`"funnelCount"` : sql`code`
   const direction = input.sort?.desc ? sql`DESC` : sql`ASC`
-  const rows = await tx.execute<CodeSummary & { total: number }>(sql`WITH eligible AS (${codeSource(ctx, visible)}), grouped AS (
-    SELECT codes.code, count(DISTINCT f.id)::int AS "funnelCount",
-      count(DISTINCT f.id) FILTER (WHERE codes.role = 'primary')::int AS "primaryCount",
-      count(DISTINCT f.id) FILTER (WHERE codes.role = 'cross-deal')::int AS "crossDealCount",
-      count(DISTINCT f.id) FILTER (WHERE codes.role = 'crm')::int AS "crmCount"
+  const accountName = ctx.can(PERMISSIONS.ACCOUNT_VIEW)
+    ? sql`(SELECT accounts.name FROM accounts WHERE accounts.id=f.account_id AND accounts.tenant_id=f.tenant_id AND accounts.deleted_at IS NULL AND ${accountReadScope(visible) ?? sql`true`})`
+    : sql`NULL::text`
+  const rows = await tx.execute<CodeSummary & { total: number }>(sql`WITH eligible AS (${codeSource(ctx, visible)}), code_rows AS (
+    SELECT codes.code, codes.role, f.*, ${accountName} AS account_name,
+      (SELECT cu.name FROM member cm JOIN "user" cu ON cu.id=cm.user_id WHERE cm.id=f.owner_member_id AND cm.organization_id=f.tenant_id) AS owner_name
     FROM eligible f CROSS JOIN LATERAL (VALUES (f.project_code, 'primary'), (f.cross_deal_project_code, 'cross-deal'),
       (CASE WHEN ${visible === null ? sql`true` : sql`f.opportunity_owner IN (${sql.join(visible.map(id => sql`${id}`), sql`, `)})`} THEN f.crm_code END, 'crm')) codes(code, role)
     WHERE nullif(trim(codes.code), '') IS NOT NULL AND ${q ? sql`codes.code ILIKE ${like}` : sql`true`}
-    GROUP BY codes.code)
-    SELECT grouped.*, (count(*) OVER ())::int AS total FROM grouped
-    WHERE ${recordFilter('project-codes',input.filterTree,{code:sql`code`,funnelCount:sql`"funnelCount"`,relationship:sql`array_remove(ARRAY[CASE WHEN "primaryCount">0 THEN 'primary' END,CASE WHEN "crossDealCount">0 THEN 'cross-deal' END,CASE WHEN "crmCount">0 THEN 'crm' END],NULL)`},{arrays:['relationship']})??sql`true`}
-    ORDER BY ${sql.join(recordSort(input.sorting,{code:sql`code`,funnelCount:sql`"funnelCount"`},sql`${sortColumn} ${direction}`),sql`, `)}, code LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}`)
+  ), grouped AS (
+    SELECT f.code, count(DISTINCT f.id)::int AS "funnelCount",
+      count(DISTINCT f.id) FILTER (WHERE f.role = 'primary')::int AS "primaryCount",
+      count(DISTINCT f.id) FILTER (WHERE f.role = 'cross-deal')::int AS "crossDealCount",
+      count(DISTINCT f.id) FILTER (WHERE f.role = 'crm')::int AS "crmCount",
+      coalesce(array_agg(DISTINCT f.account_name ORDER BY f.account_name) FILTER (WHERE f.account_name IS NOT NULL), ARRAY[]::text[]) AS "accountName",
+      array_agg(DISTINCT f.name ORDER BY f.name) AS "funnelName",
+      coalesce(array_agg(DISTINCT f.owner_name ORDER BY f.owner_name) FILTER (WHERE f.owner_name IS NOT NULL), ARRAY[]::text[]) AS "ownerName",
+      array_agg(DISTINCT f.stage_name ORDER BY f.stage_name) AS "stageName",
+      coalesce(jsonb_agg(DISTINCT jsonb_build_object('id',f.account_id,'name',f.account_name)) FILTER (WHERE f.account_name IS NOT NULL),'[]'::jsonb) AS "linkedAccounts",
+      jsonb_agg(DISTINCT jsonb_build_object('id',f.id,'name',f.name)) AS "linkedFunnels",
+      jsonb_agg(DISTINCT jsonb_build_object('name',f.stage_name,'kind',f.stage_kind)) AS stages,
+      min(f.expected_close_date)::text AS "expectedCloseDate"
+    FROM code_rows f GROUP BY f.code
+  ), currency_totals AS (
+    SELECT code, currency, sum(estimated_amount)::text AS total
+    FROM (SELECT DISTINCT code, id, currency, estimated_amount FROM code_rows) f
+    WHERE estimated_amount IS NOT NULL GROUP BY code, currency
+  ), summaries AS (
+    SELECT grouped.*, coalesce((SELECT jsonb_agg(jsonb_build_object('currency',currency,'total',total) ORDER BY currency)
+      FROM currency_totals t WHERE t.code=grouped.code),'[]'::jsonb) AS "estimatedTotalsByCurrency" FROM grouped
+  )
+    SELECT summaries.*, (count(*) OVER ())::int AS total FROM summaries
+    WHERE ${recordFilter('project-codes',input.filterTree,{code:sql`code`,funnelCount:sql`"funnelCount"`,accountName:sql`"accountName"`,funnelName:sql`"funnelName"`,ownerName:sql`"ownerName"`,stageName:sql`"stageName"`,expectedCloseDate:sql`"expectedCloseDate"::date`,totalEstimatedFunnelAmount:sql`NULL::numeric`,relationship:sql`array_remove(ARRAY[CASE WHEN "primaryCount">0 THEN 'primary' END,CASE WHEN "crossDealCount">0 THEN 'cross-deal' END,CASE WHEN "crmCount">0 THEN 'crm' END],NULL)`},{currency:sql`NULL::text`,arrays:['relationship','accountName','funnelName','ownerName','stageName'],dateOnly:['expectedCloseDate'],moneyBuckets:{totalEstimatedFunnelAmount:sql`"estimatedTotalsByCurrency"`}})??sql`true`}
+    ORDER BY ${sql.join(recordSort(input.sorting,{code:sql`code`,funnelCount:sql`"funnelCount"`,accountName:sql`"accountName"`,funnelName:sql`"funnelName"`,ownerName:sql`"ownerName"`,stageName:sql`"stageName"`,expectedCloseDate:sql`"expectedCloseDate"::date`},sql`${sortColumn} ${direction}`),sql`, `)}, code LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}`)
   return { rows: rows.slice(0, pageSize).map(({ total: _total, ...row }) => row), pageIndex, hasNextPage: rows.length > pageSize, total: rows[0]?.total ?? 0 }
 }
 

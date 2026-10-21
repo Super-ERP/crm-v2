@@ -53,14 +53,17 @@ fi
 
 certificate_identity_tags="https://github.com/$SIGNING_REPOSITORY/.github/workflows/$SIGNING_WORKFLOW@refs/tags/$RELEASE_TAG"
 certificate_identity_head="https://github.com/$SIGNING_REPOSITORY/.github/workflows/$SIGNING_WORKFLOW@refs/heads/main"
-certificate_identity="$certificate_identity_tags"
 
 for image_reference in "$WEB_IMAGE" "$MIGRATOR_IMAGE" "$BACKUP_IMAGE" "$AGENT_IMAGE"; do
-  # Accept both refs/tags/$RELEASE_TAG (ideal) and refs/heads/main (GitHub Actions OIDC default)
+  # Accept only the exact tagged workflow or its main-branch identity.
   if ! cosign verify \
-    --certificate-identity-regexp "https://github.com/$SIGNING_REPOSITORY/.github/workflows/$SIGNING_WORKFLOW@(refs/tags/$RELEASE_TAG|refs/heads/main)" \
+    --certificate-identity "$certificate_identity_tags" \
     --certificate-oidc-issuer "$OIDC_ISSUER" \
-    "$image_reference" >/dev/null; then
+    "$image_reference" >/dev/null 2>&1 && \
+    ! cosign verify \
+      --certificate-identity "$certificate_identity_head" \
+      --certificate-oidc-issuer "$OIDC_ISSUER" \
+      "$image_reference" >/dev/null; then
     fail "signature verification failed for $image_reference"
   fi
 done

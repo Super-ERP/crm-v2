@@ -213,6 +213,7 @@ new_fixture
 mkdir -p "$fixture/app/db/migrations/meta" "$fixture/app/db/sql"
 touch "$fixture/app/migrate.mjs" \
   "$fixture/app/seed.mjs" \
+  "$fixture/app/reset-master.mjs" \
   "$fixture/app/db/migrations/0000_init.sql" \
   "$fixture/app/db/migrations/meta/_journal.json" \
   "$fixture/app/db/sql/rls.sql"

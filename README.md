@@ -166,10 +166,10 @@ completed `release-images` runs append to the [release log](./docs/operations/re
 The following are **intentional** behavior changes from this hardening pass. Operators
 upgrading an existing deployment should review them before applying migrations.
 
-- **Existing tenants are not locked out of password login.** Migration `0015` backfills
-  `tenant_settings.allow_password_login = true` for every tenant that still had the old
-  default of `false`, now that the flag is actually enforced at sign-in. SSO-only stays
-  opt-in: a tenant can turn password login back off afterward.
+- **Production password login is restricted to recovery accounts.** The configured
+  `PLATFORM_MASTER_EMAIL` must belong to the superadmin. Other password accounts
+  require both the break-glass flag and two-factor authentication. The historical
+  `allow_password_login` tenant setting does not grant production password access.
 - **`MICROSOFT_TENANT_ID` must be a real directory GUID.** The multi-tenant value
   `common` is no longer accepted (single-tenant hardening); in production the app refuses
   to boot if Entra is configured with `common`. Set your Entra directory (tenant) GUID.

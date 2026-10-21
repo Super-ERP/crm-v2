@@ -34,3 +34,30 @@ describe('project code presentation', () => {
     expect(fields.find(f => f.id === 'crossDealProjectCode')?.operators).toContain('equals')
   })
 })
+
+
+describe('project code column controls', () => {
+  it('uses matching business labels throughout the shared table controls', () => {
+    expect(getTableFields('project-codes').map(({ id, label }) => [id, label])).toEqual([
+      ['code', 'Project code'], ['relationship', 'Used as'], ['funnelCount', 'Linked funnels'],
+      ['accountName', 'Account'], ['funnelName', 'Funnel'], ['ownerName', 'Owner'], ['stageName', 'Stage'],
+      ['totalEstimatedFunnelAmount', 'Est. amount'], ['expectedCloseDate', 'Earliest expected close date'],
+    ])
+    expect(getTableFields('project-code-funnels', ['name', 'stageName', 'estimatedAmount']).map(f => f.label))
+      .toEqual(['Funnel', 'Stage', 'Est. amount'])
+    expect(getTableFields('code-contacts', ['name', 'title']).map(f => f.label)).toEqual(['Contact', 'Designation'])
+  })
+  it('preserves selectable column preferences while keeping the code identifier visible', () => {
+    const fields = getTableFields('project-codes')
+    const layout = normalizeTableLayout({
+      visibility: { code: false, relationship: false, funnelCount: true },
+      order: ['funnelCount', 'code', 'relationship'],
+      widths: { funnelCount: 120 },
+      pinning: { left: ['code'], right: [] },
+    }, fields)
+    expect(layout.visibility).toEqual({ code: true, relationship: false, funnelCount: true })
+    expect(layout.order).toEqual(['funnelCount', 'code', 'relationship', 'accountName', 'funnelName', 'ownerName', 'stageName', 'totalEstimatedFunnelAmount', 'expectedCloseDate'])
+    expect(layout.widths.funnelCount).toBe(120)
+    expect(layout.pinning.left).toEqual(['code'])
+  })
+})
