@@ -82,7 +82,7 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
     { tab: "contacts", label: "Contacts", kind: "contact", count: detail.contacts.length },
     ...(detail.projects.length ? [{ tab: "projects" as const, label: "Projects", kind: "project" as const, count: detail.projects.length }] : []),
   ]
-  return <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+  return <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
     <DetailAside>
       <Card><DetailCardHeader kind="projectCode" eyebrow="Project code" /><CardContent className="grid gap-3 text-sm">
         <FieldRow inline label="Code"><span className="break-all font-mono font-medium">{detail.code}</span></FieldRow>
