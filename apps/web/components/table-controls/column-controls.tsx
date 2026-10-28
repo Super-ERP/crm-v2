@@ -26,8 +26,8 @@ export function ColumnControls<T>({table,onReset,labels,onExport,exporting}:{tab
      <select className="h-8 rounded-md border bg-background px-2 text-sm" aria-label={`${title} pinned position`} value={column.getIsPinned()||'none'} onChange={event=>column.pin(event.target.value==='none'?false:event.target.value as 'left'|'right')}><option value="none">Unpinned</option><option value="left">Pin left</option><option value="right">Pin right</option></select>
     </div>
    })}</div>
-   <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={onReset}>Reset column layout</Button>{onExport?<Button variant="outline" disabled={exporting} onClick={onExport}><Download/>{exporting?'Exporting…':'Export matching rows (CSV)'}</Button>:null}</div>
-   {onExport?<p className="text-xs text-muted-foreground">Export includes all matching records and visible data columns, using your current filters and sorting. CSV opens in Excel.</p>:null}
+   <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={onReset}>Reset column layout</Button>{onExport?<Button variant="outline" disabled={exporting} onClick={onExport}><Download/>{exporting?'Exporting…':'Export current view'}</Button>:null}</div>
+   {onExport?<p className="text-xs text-muted-foreground">Export includes all matching records and visible data columns, using your current filters and sorting. Choose Excel (.xlsx) or CSV.</p>:null}
   </DialogContent>
  </Dialog>
 }

@@ -151,6 +151,6 @@ The Project Code detail Funnel tab starts with the funnel, stage, amount, expect
 
 ## Export a table
 
-Open **Columns → Export matching rows (CSV)**. The file opens in Excel and includes all matching records, using your current filters, sorting and visible column order. Money fields include a separate currency column. Your normal record permissions still apply.
+Open **Views → Export current view** or **Columns → Export current view**, then choose **Excel (.xlsx)** or **CSV (.csv)**. In the filter panel, **Apply & export** validates and applies the draft conditions before opening the same format chooser. Both formats include all matching records across every page, using your current filters, sorting and visible column order. The page size (for example, 25 rows) does not cap the download. Clear search and filters first to export all records you can access. Money fields include a separate currency column. Excel files include a frozen header and worksheet filters, keep ordinary amounts numeric and preserve high-precision values as text. Your normal record permissions still apply.
 
 Server lists load all matching pages, up to 100,000 records. Add filters for larger exports. If the record count changes, duplicate records are detected, or loading stops early, export fails visibly so you can retry. Export is not a database snapshot; avoid changing records while exporting. Panels whose source is truncated cannot export a complete result.
