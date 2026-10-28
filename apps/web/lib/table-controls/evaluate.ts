@@ -1,4 +1,4 @@
-import type { FilterContext, FilterGroup, FilterNode, TableFieldDefinition } from "./types"
+import type { FilterContext, FilterGroup, FilterNode, TableFieldDefinition, FilterCondition } from "./types"
 import { filterDateRange } from "./date-range"
 export function tableScalar(value: unknown): unknown {
   if (value && typeof value==='object' && !(value instanceof Date) && !Array.isArray(value)) {
@@ -6,12 +6,22 @@ export function tableScalar(value: unknown): unknown {
   }
   return value
 }
-export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: readonly TableFieldDefinition[], context: FilterContext, valueFor?: (row:unknown,field:string)=>unknown): boolean {
+export function evaluateFilterTree(row: unknown, tree: FilterGroup, fields: readonly TableFieldDefinition[], context: FilterContext, valueFor?: (row:unknown,field:string,condition?:FilterCondition)=>unknown): boolean {
   const byId=new Map(fields.map(f=>[f.id,f]))
   function match(node:FilterNode):boolean {
     if(node.kind==='group')return !node.children.length|| (node.logic==='and'?node.children.every(match):node.children.some(match))
     const field=byId.get(node.fieldId);if(!field)throw new Error('Unavailable filter field')
-    const raw=valueFor?valueFor(row,node.fieldId):(row as Record<string,unknown>)[node.fieldId]
+    const raw=valueFor?valueFor(row,node.fieldId,node):(row as Record<string,unknown>)[node.fieldId]
+    if(field.type==='collection'){
+      if(typeof raw==='boolean')return raw // Authorized SQL predicate result for complete-client panels.
+      if(!Array.isArray(raw))throw new Error('Related records have not been loaded')
+      if(node.operator==='empty')return raw.length===0
+      if(node.operator==='not-empty')return raw.length>0
+      const matches=(child:unknown)=>evaluateFilterTree(child,node.value as FilterGroup,field.relationship!.fields,context)
+      if(node.operator==='some')return raw.some(matches)
+      if(node.operator==='none')return !raw.some(matches)
+      return raw.length>0&&raw.every(matches)
+    }
     const normalizedRaw=Array.isArray(raw)?raw.filter(x=>x!=null&&x!==''):raw
     const value=tableScalar(normalizedRaw), empty=value==null||value===''||(Array.isArray(value)&&!value.length)
     const op=node.operator,v=node.value

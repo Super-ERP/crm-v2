@@ -19,7 +19,8 @@ export function formatTableField(value:unknown,field:TableFieldDefinition,timezo
   if(value==null||value==='')return ''
   if(Array.isArray(value))return value.map(item=>{
     if(item&&typeof item==='object'&&'currency' in item&&'total' in item)return `${String(item.currency)} ${String(item.total)}`
-    return String(tableScalar(item)??'')
+    const value=String(tableScalar(item)??'')
+    return field.options?.find(option=>option.value===value)?.label??value
   }).join('; ')
   if(field.type==='boolean')return value===true?'Yes':value===false?'No':String(value)
   if(field.type==='date'){

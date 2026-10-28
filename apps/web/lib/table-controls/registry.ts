@@ -1,3 +1,4 @@
+import {tableRelationshipFields} from "./relationships"
 import catalog from "./catalog.json"
 import { OPTIONAL_TABLE_FIELDS, tableFieldOptions } from "./fields"
 import { FIELD_TYPES } from "./field-types"
@@ -7,6 +8,7 @@ const REQUIRED_IDENTIFIERS:Record<string,string>={'account-quotations':'quoteNum
 const FIELD_LABELS:Record<string,string>={accountId:'Account',accountOwnerMemberId:'Account owner',opportunityId:'Opportunity',funnelId:'Funnel',ownerName:'Owner',primary:'Primary',totalEstimatedFunnelAmount:'Estimated funnel amount',recordCode:'Code',crmProjectCode:'CRM code',crossDealProjectCode:'Cross-deal reference',crossDealProjectCodes:'Cross-deal references',relationship:'Relationship',from:'From',amountBase:'Amount in base currency'}
 const empty: FilterOperator[] = ["empty", "not-empty"]
 export const FIELD_OPERATORS: Record<TableFieldType, readonly FilterOperator[]> = {
+  collection: ["some","none","every","empty","not-empty"],
   text: ["contains", "not-contains", "equals", "not-equals", "starts-with", "ends-with", ...empty],
   number: ["equals", "not-equals", "greater-than", "greater-or-equal", "less-than", "less-or-equal", "between", ...empty],
   money: ["equals", "not-equals", "greater-than", "greater-or-equal", "less-than", "less-or-equal", "between", ...empty],
@@ -18,8 +20,11 @@ export function getTableFields(listKey: string, columnIds?: readonly string[]): 
   const entry = catalog.find(entry => entry.keys.includes(listKey))
   if (!entry) throw new Error("Unknown table")
   const extras = OPTIONAL_TABLE_FIELDS[listKey] ?? []
-  const ids = columnIds ?? [...new Set([...entry.fields, ...extras.map(field => field.id)])]
+  const related = tableRelationshipFields(listKey)
+  const ids = columnIds ?? [...new Set([...entry.fields, ...extras.map(field => field.id),...related.map(field=>field.id)])]
   return ids.map(id => {
+    const relationship=related.find(field=>field.id===id)
+    if(relationship)return relationship
     const extra = extras.find(field => field.id === id)
     const type = extra?.type ?? FIELD_TYPES[id]
     if ((!entry.fields.includes(id) && !extra) || !type) throw new Error(`Unavailable table field: ${id}`)
@@ -30,7 +35,7 @@ export function getTableFields(listKey: string, columnIds?: readonly string[]): 
 
 /** Include approved additions without exposing unrelated union-catalogue fields. */
 export function getAvailableTableFields(listKey: string, columnIds: readonly string[]) {
-  return getTableFields(listKey, [...new Set([...columnIds, ...(OPTIONAL_TABLE_FIELDS[listKey] ?? []).map(field => field.id)])]).map(field => columnIds.includes(field.id) ? field : {...field,optional:true,defaultVisible:false})
+  return getTableFields(listKey, [...new Set([...columnIds, ...(OPTIONAL_TABLE_FIELDS[listKey] ?? []).map(field => field.id),...tableRelationshipFields(listKey).map(field=>field.id)])]).map(field => columnIds.includes(field.id) ? field : {...field,optional:true,defaultVisible:false})
 }
 export function tableSupportsAdvancedFilters(listKey: string) {
   const entry = catalog.find(entry => entry.keys.includes(listKey))

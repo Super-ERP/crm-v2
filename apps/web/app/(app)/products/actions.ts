@@ -1,9 +1,10 @@
 "use server"
+import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
 
 import { getTableFields } from "@/lib/table-controls/registry"
-import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 
 import { revalidatePath } from "next/cache"
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
@@ -63,12 +64,13 @@ export async function listProductPage(input: ServerTableQuery): Promise<{ rows: 
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const active = query.selections.isActive?.includes("true") && !query.selections.isActive.includes("false")
       ? true : query.selections.isActive?.includes("false") && !query.selections.isActive.includes("true") ? false : undefined
-    const tableFieldColumns = {name:products.name,description:products.description,productCode:products.productCode,subcategory:products.subcategory,uom:products.uom,standardPrice:products.standardPrice,isActive:products.isActive}
-    const where = and(recordFilter("products",query.filterTree,tableFieldColumns,{currency:products.currency}),eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt),
+    const relatedFields=await relatedQueryRegistry(tx,ctx,"products",query.filterTree,query.sorting)
+  const tableFieldColumns = {name:products.name,description:products.description,productCode:products.productCode,subcategory:products.subcategory,uom:products.uom,standardPrice:products.standardPrice,isActive:products.isActive}
+    const where = and(recordFilterRelated("products",query.filterTree,tableFieldColumns,relatedFields,{currency:products.currency}),eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt),
       search ? or(ilike(products.name, search), ilike(products.productCode, search), ilike(products.subcategory, search), ilike(products.description, search)) : undefined,
       query.selections.productCode?.length ? inArray(products.productCode, query.selections.productCode) : undefined,
       active === undefined ? undefined : eq(products.isActive, active))
-    const sortColumns = { ...tableFieldColumns,  name: products.name, productCode: products.productCode, subcategory: products.subcategory, uom: products.uom, standardPrice: products.standardPrice, isActive: products.isActive }
+    const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  name: products.name, productCode: products.productCode, subcategory: products.subcategory, uom: products.uom, standardPrice: products.standardPrice, isActive: products.isActive }
     const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
     const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : asc(products.name)
     const [rows, totalRows] = await Promise.all([tx
@@ -363,13 +365,14 @@ export async function listProductUsagePage(productId:string,input:ServerTableQue
   const visible=await visibleMemberIds(tx,ctx)
   const {limit,offset,query}=normalizeRecordListQuery(input,['quoteNumber','funnelName','status','total','createdAt'],[],getTableFields('product-usage'))
   const pattern=query.search?`%${query.search.replace(/[\\%_]/g,'\\$&')}%`:null
+  const relatedFields=await relatedQueryRegistry(tx,ctx,'product-usage',query.filterTree,query.sorting)
   const fields={quoteNumber:quotations.quoteNumber,funnelName:funnels.name,status:quotations.status,total:quotations.total,createdAt:quotations.createdAt}
   const where=and(isNull(quotations.deletedAt),isNull(funnels.deletedAt),ownerScope(funnels.ownerMemberId,visible),
    sql`exists(select 1 from ${quotationLineItems} where ${quotationLineItems.quotationId}=${quotations.id} and ${quotationLineItems.productId}=${productId})`,
    pattern?or(ilike(quotations.quoteNumber,pattern),ilike(funnels.name,pattern)):undefined,
-   recordFilter('product-usage',query.filterTree,fields,{currency:quotations.currency}))
+   recordFilterRelated('product-usage',query.filterTree,fields,relatedFields,{currency:quotations.currency}))
   const [rows,count]=await Promise.all([
-   tx.select({quotationId:quotations.id,quoteNumber:quotations.quoteNumber,status:quotations.status,total:quotations.total,currency:quotations.currency,createdAt:quotations.createdAt,funnelId:funnels.id,funnelName:funnels.name}).from(quotations).innerJoin(funnels,eq(quotations.funnelId,funnels.id)).where(where).orderBy(...recordSort(query.sorting,fields,desc(quotations.createdAt)),desc(quotations.id)).limit(limit).offset(offset),
+   tx.select({quotationId:quotations.id,quoteNumber:quotations.quoteNumber,status:quotations.status,total:quotations.total,currency:quotations.currency,createdAt:quotations.createdAt,funnelId:funnels.id,funnelName:funnels.name}).from(quotations).innerJoin(funnels,eq(quotations.funnelId,funnels.id)).where(where).orderBy(...recordSort(query.sorting,{...fields,...relationshipSortColumns(relatedFields)},desc(quotations.createdAt)),desc(quotations.id)).limit(limit).offset(offset),
    tx.select({count:sql<number>`count(*)::int`}).from(quotations).innerJoin(funnels,eq(quotations.funnelId,funnels.id)).where(where),
   ])
   return {rows:rows.map(row=>({...row,createdAt:row.createdAt.toISOString()})),total:count[0]?.count??0}

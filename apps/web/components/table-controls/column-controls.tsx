@@ -14,6 +14,7 @@ export function ColumnControls<T>({table,onReset,labels,onExport,exporting}:{tab
   <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
    <DialogHeader><DialogTitle>Table columns</DialogTitle><DialogDescription>Choose visible columns, their order, width and pinned position. Changes are saved to your layout.</DialogDescription></DialogHeader>
    <Input aria-label="Search table columns" placeholder="Search columns…" value={search} onChange={event=>setSearch(event.target.value)}/>
+   {columns.some(column=>column.id.startsWith('related.'))?<p className="text-xs text-muted-foreground">Related summaries include all accessible linked records. Relationship filters select parent rows; they do not narrow the summaries. Money totals stay separate by currency.</p>:null}
    <div className="space-y-2">{ordered.map((column,index)=>{
     const title=labels[column.id] ?? (typeof column.columnDef.header==='string'?column.columnDef.header:column.id.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' '))
     if(search&&!title.toLowerCase().includes(search.toLowerCase()))return null

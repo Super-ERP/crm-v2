@@ -3,7 +3,7 @@ import { and, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm'
 import { validateFilterTree } from '@/lib/table-controls/filter-tree'
 import { filterDateRange } from '@/lib/table-controls/date-range'
 import type { FilterContext, FilterNode, TableFieldDefinition } from '@/lib/table-controls/types'
-export type SqlTableField = { field: TableFieldDefinition; expression: SQLWrapper; searchExpression?: SQLWrapper; currency?: SQLWrapper; moneyBuckets?: SQLWrapper; dateOnly?: boolean; array?: boolean }
+export type SqlTableField = { field: TableFieldDefinition; expression: SQLWrapper; searchExpression?: SQLWrapper; currency?: SQLWrapper; moneyBuckets?: SQLWrapper; dateOnly?: boolean; array?: boolean; related?: {from:SQL;where:SQL;fields:SqlFieldRegistry} }
 export type SqlFieldRegistry = Record<string, SqlTableField>
 export function compileFilterTree(input: unknown, registry: SqlFieldRegistry, context: FilterContext): SQL {
   const tree=validateFilterTree(input,Object.values(registry).map(v=>v.field))
@@ -13,6 +13,17 @@ export function compileFilterTree(input: unknown, registry: SqlFieldRegistry, co
       return (node.logic==='and'?and(...node.children.map(compile)):or(...node.children.map(compile)))!
     }
     const f=registry[node.fieldId], op=node.operator, v=node.value
+    if(f.field.type==='collection'){
+      if(!f.related)throw new Error('Related filter is unavailable')
+      const any=sql`exists(select 1 from ${f.related.from} where ${f.related.where})`
+      if(op==='empty')return sql`not (${any})`
+      if(op==='not-empty')return any
+      const predicate=compileFilterTree(v,f.related.fields,context)
+      const matching=sql`exists(select 1 from ${f.related.from} where ${f.related.where} and ${predicate})`
+      if(op==='some')return matching
+      if(op==='none')return sql`not (${matching})`
+      return sql`${any} and not exists(select 1 from ${f.related.from} where ${f.related.where} and not coalesce((${predicate}),false))`
+    }
     const e = f.searchExpression && ["contains","not-contains","starts-with","ends-with"].includes(op) ? f.searchExpression : f.expression
     const text=sql`${e}::text`
     const notEmpty=f.moneyBuckets?sql`(${e} IS NOT NULL OR jsonb_array_length(coalesce(${f.moneyBuckets},'[]'::jsonb))>0)`:f.field.type==='text'||f.field.type==='enum'||f.field.type==='relation'

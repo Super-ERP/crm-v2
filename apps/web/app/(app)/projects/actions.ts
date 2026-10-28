@@ -1,9 +1,10 @@
 "use server"
+import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
 
 import { getTableFields } from "@/lib/table-controls/registry"
-import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 
 import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
 import { resolveDeliveryCode, validateDeliverySource, reusableDeliveryProject } from "@/lib/project-delivery-code"
@@ -125,11 +126,12 @@ export async function listProjectPage(input: ServerTableQuery): Promise<{ rows: 
       ["projectCode", "name", "accountName", "status", "value", "opportunityName"], ["status"],getTableFields("projects"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const statuses = query.selections.status?.filter((value): value is (typeof projectStatus.enumValues)[number] => projectStatus.enumValues.includes(value as (typeof projectStatus.enumValues)[number]))
-    const tableFieldColumns = {projectCode:projects.projectCode,name:projects.name,accountName:accounts.name,status:projects.status,value:projects.value,opportunityName:funnels.name}
-    const where = and(recordFilter("projects",query.filterTree,tableFieldColumns,{currency:projects.currency}),isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
+    const relatedFields=await relatedQueryRegistry(tx,ctx,"projects",query.filterTree,query.sorting)
+  const tableFieldColumns = {projectCode:projects.projectCode,name:projects.name,accountName:accounts.name,status:projects.status,value:projects.value,opportunityName:funnels.name}
+    const where = and(recordFilterRelated("projects",query.filterTree,tableFieldColumns,relatedFields,{currency:projects.currency}),isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
       search ? or(ilike(projects.projectCode, search), ilike(projects.name, search), ilike(accounts.name, search), ilike(funnels.name, search)) : undefined,
       statuses?.length ? inArray(projects.status, statuses) : undefined)
-    const sortColumns = { ...tableFieldColumns,  projectCode: projects.projectCode, name: projects.name, accountName: accounts.name, status: projects.status, value: projects.value, opportunityName: funnels.name }
+    const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  projectCode: projects.projectCode, name: projects.name, accountName: accounts.name, status: projects.status, value: projects.value, opportunityName: funnels.name }
     const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
     const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(projects.createdAt)
     const [rows, totalRows] = await Promise.all([tx

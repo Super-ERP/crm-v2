@@ -154,3 +154,20 @@ The Project Code detail Funnel tab starts with the funnel, stage, amount, expect
 Open **Views → Export current view** or **Columns → Export current view**, then choose **Excel (.xlsx)** or **CSV (.csv)**. In the filter panel, **Apply & export** validates and applies the draft conditions before opening the same format chooser. Both formats include all matching records across every page, using your current filters, sorting and visible column order. The page size (for example, 25 rows) does not cap the download. Clear search and filters first to export all records you can access. Money fields include a separate currency column. Excel files include a frozen header and worksheet filters, keep ordinary amounts numeric and preserve high-precision values as text. Your normal record permissions still apply.
 
 Server lists load all matching pages, up to 100,000 records. Add filters for larger exports. If the record count changes, duplicate records are detected, or loading stops early, export fails visibly so you can retry. Export is not a database snapshot; avoid changing records while exporting. Panels whose source is truncated cannot export a complete result.
+
+## Related records in table views
+
+Existing columns and saved layouts stay in place. In **Columns**, search for a relationship such as **Milestones**, **Quotations**, **Account** or **Products**. Single related records offer their supported fields; collections offer a count, distinct values, earliest/latest dates and supported numeric totals. Money totals stay grouped by currency. These summaries include all accessible linked records; a filter that selects parent records does not implicitly narrow their summaries to the matching children.
+
+To find accounts with a pending milestone due in 2026:
+
+1. Open a column's filter menu and select **Milestones** as the filter field.
+2. Choose **has a matching record**, then open **Milestones: matching conditions**.
+3. Add **Status → any of → Pending invoicing** and **Due date → year → 2026**, using **Match all (AND)**.
+4. Apply the inner conditions, then apply the parent filter (or **Apply & export**).
+
+All conditions inside the relationship must match the same milestone. **Has no matching record** also includes accounts with no accessible milestones. **All records match (at least one)** requires a nonempty accessible collection. Use **empty/not empty** to test whether any accessible linked records exist.
+
+Parent rows remain one per record; bridge-table relationships count a target once even if several linking rows exist. Related filters run before server pagination and counting. Complete-client panels fetch authorized related summaries for their full source arrays. Related columns are included in Excel/CSV exports with the current view.
+
+Only registered business relationships/fields are offered. Target permissions and module entitlements apply independently from access to the parent. Nested relationship conditions support two relationship steps within the existing five group levels, 50-condition and 32 KiB limits. Individual child-row reports should start from that child's table; a parent summary export does not flatten children into duplicate parent rows.

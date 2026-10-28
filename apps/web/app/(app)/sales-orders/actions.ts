@@ -1,9 +1,10 @@
 "use server"
+import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
 
 import { getTableFields } from "@/lib/table-controls/registry"
-import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery, type RecordListQuery } from "@/lib/record-list-query"
@@ -134,8 +135,9 @@ async function fetchRows(
   const visible = await visibleMemberIds(tx, ctx)
   const search = paging?.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const statuses = paging?.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
+  const relatedFields=await relatedQueryRegistry(tx,ctx,"sales-orders",paging?.query.filterTree,paging?.query.sorting)
   const tableFieldColumns = {projectName:projects.name,status:salesOrders.status,soNumber:salesOrders.soNumber,submittedAt:salesOrders.submittedAt,submittedByName:sql`(select so_user.name from member so_member join "user" so_user on so_user.id=so_member.user_id where so_member.id=${salesOrders.submittedByMemberId})`}
-    const where = and(recordFilter("sales-orders",paging?.query.filterTree,tableFieldColumns),
+    const where = and(recordFilterRelated("sales-orders",paging?.query.filterTree,tableFieldColumns,relatedFields),
     isNull(projects.deletedAt),
     projectId ? eq(salesOrders.projectId, projectId) : undefined,
     salesOrderId ? eq(salesOrders.id, salesOrderId) : undefined,
@@ -143,7 +145,7 @@ async function fetchRows(
     statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
     search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
   )
-  const sortColumns = { ...tableFieldColumns,  projectName: projects.name, status: salesOrders.status, submittedAt: salesOrders.submittedAt }
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  projectName: projects.name, status: salesOrders.status, submittedAt: salesOrders.submittedAt }
   const sortColumn = paging?.query.sort?.id ? sortColumns[paging.query.sort.id as keyof typeof sortColumns] : undefined
   const ordering = sortColumn ? paging?.query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(salesOrders.submittedAt)
   const rows = (await tx
@@ -645,8 +647,9 @@ export async function listSalesOrderPage(input: ServerTableQuery): Promise<{ row
     const visible = await visibleMemberIds(tx, ctx)
     const statuses = paging.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
     const search = paging.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
-    const tableFieldColumns = {projectName:projects.name,status:salesOrders.status,soNumber:salesOrders.soNumber,submittedAt:salesOrders.submittedAt,submittedByName:sql`(select so_user.name from member so_member join "user" so_user on so_user.id=so_member.user_id where so_member.id=${salesOrders.submittedByMemberId})`}
-    const where = and(recordFilter("sales-orders",paging.query.filterTree,tableFieldColumns),isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
+    const relatedFields=await relatedQueryRegistry(tx,ctx,"sales-orders",paging.query.filterTree,paging.query.sorting)
+  const tableFieldColumns = {projectName:projects.name,status:salesOrders.status,soNumber:salesOrders.soNumber,submittedAt:salesOrders.submittedAt,submittedByName:sql`(select so_user.name from member so_member join "user" so_user on so_user.id=so_member.user_id where so_member.id=${salesOrders.submittedByMemberId})`}
+    const where = and(recordFilterRelated("sales-orders",paging.query.filterTree,tableFieldColumns,relatedFields),isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
       statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
       search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined)
     const [rows, countRows] = await Promise.all([

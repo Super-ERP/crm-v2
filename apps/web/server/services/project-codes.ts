@@ -1,4 +1,5 @@
-import { recordFilter, recordSort } from "./table-controls/record-filter"
+import {relatedQueryRegistry,relationshipSortColumns} from "./table-controls/relationships"
+import { recordFilterRelated, recordSort } from "./table-controls/record-filter"
 import type { FilterGroup } from "@/lib/table-controls/types"
 import "server-only"
 import { sql, type SQL } from "drizzle-orm"
@@ -54,6 +55,7 @@ export async function listProjectCodes(tx: Tx, ctx: ServerContext, input: CodeTa
   const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`
   const sortColumn = input.sort?.id === "funnelCount" ? sql`"funnelCount"` : sql`code`
   const direction = input.sort?.desc ? sql`DESC` : sql`ASC`
+  const relatedFields=await relatedQueryRegistry(tx,ctx,'project-codes',input.filterTree,input.sorting,sql`grouped.code`)
   const tableFieldColumns = {code:sql`code`,funnelCount:sql`"funnelCount"`,relationship:sql`array_remove(ARRAY[CASE WHEN "primaryCount">0 THEN 'primary' END,CASE WHEN "crossDealCount">0 THEN 'cross-deal' END,CASE WHEN "crmCount">0 THEN 'crm' END],NULL)`}
   const rows = await tx.execute<CodeSummary & { total: number }>(sql`WITH eligible AS (${codeSource(ctx, visible)}), grouped AS (
     SELECT codes.code, count(DISTINCT f.id)::int AS "funnelCount",
@@ -65,8 +67,8 @@ export async function listProjectCodes(tx: Tx, ctx: ServerContext, input: CodeTa
     WHERE nullif(trim(codes.code), '') IS NOT NULL AND ${q ? sql`codes.code ILIKE ${like}` : sql`true`}
     GROUP BY codes.code)
     SELECT grouped.*, (count(*) OVER ())::int AS total FROM grouped
-    WHERE ${recordFilter('project-codes',input.filterTree,tableFieldColumns,{arrays:['relationship']})??sql`true`}
-    ORDER BY ${sql.join(recordSort(input.sorting,{...tableFieldColumns,...{code:sql`code`,funnelCount:sql`"funnelCount"`}},sql`${sortColumn} ${direction}`),sql`, `)}, code LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}`)
+    WHERE ${recordFilterRelated('project-codes',input.filterTree,tableFieldColumns,relatedFields,{arrays:['relationship']})??sql`true`}
+    ORDER BY ${sql.join(recordSort(input.sorting,{...relationshipSortColumns(relatedFields),...tableFieldColumns,...{code:sql`code`,funnelCount:sql`"funnelCount"`}},sql`${sortColumn} ${direction}`),sql`, `)}, code LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}`)
   return { rows: rows.slice(0, pageSize).map(({ total: _total, ...row }) => row), pageIndex, hasNextPage: rows.length > pageSize, total: rows[0]?.total ?? 0 }
 }
 
@@ -84,6 +86,7 @@ export async function getProjectCode(tx: Tx, ctx: ServerContext, code: string, p
   const direction = options.sort?.desc ? sql`DESC` : sql`ASC`
   const crmScope = visible === null ? sql`true` : sql`f.opportunity_owner IN (${sql.join(visible.map(id => sql`${id}`), sql`, `)})`
   const match = sql`(f.project_code = ${code} OR f.cross_deal_project_code = ${code} OR (f.crm_code = ${code} AND ${crmScope}))`
+  const relatedFields=await relatedQueryRegistry(tx,ctx,'project-code-funnels',options.filterTree,options.sorting,sql`f.id`)
   const tableFieldColumns = {name:sql`f.name`,stageName:sql`f.stage_name`,estimatedAmount:sql`f.estimated_amount`,expectedCloseDate:sql`f.expected_close_date`,status:sql`f.status`,ownerName:sql`(SELECT cu.name FROM member cm JOIN "user" cu ON cu.id=cm.user_id WHERE cm.id=f.owner_member_id AND cm.organization_id=f.tenant_id)`,...(ctx.can(PERMISSIONS.ACCOUNT_VIEW)?{account:sql`(SELECT accounts.name FROM accounts WHERE accounts.id=f.account_id AND accounts.tenant_id=f.tenant_id AND accounts.deleted_at IS NULL AND ${accountReadScope(visible)??sql`true`})`}:{}),opportunity:sql`CASE WHEN ${crmScope} THEN f.opportunity_name END`,relationship:sql`array_remove(ARRAY[CASE WHEN f.project_code=${code} THEN 'primary' END,CASE WHEN f.cross_deal_project_code=${code} THEN 'cross-deal' END,CASE WHEN f.crm_code=${code} AND ${crmScope} THEN 'crm' END],NULL)`}
   const rows = await tx.execute<CodeFunnel & { total: number }>(sql`WITH eligible AS (${codeSource(ctx, visible)})
     SELECT f.id, f.name, (count(*) OVER ())::int AS total, f.account_id AS "accountId", f.stage_name AS "stageName", f.stage_kind AS "stageKind", f.status,
@@ -92,8 +95,8 @@ export async function getProjectCode(tx: Tx, ctx: ServerContext, code: string, p
       f.opportunity_id AS "opportunityId", f.opportunity_name AS "opportunityName", f.opportunity_owner AS "opportunityOwner",
       coalesce(f.project_code = ${code}, false) AS "primary", coalesce(f.cross_deal_project_code = ${code}, false) AS "crossDeal",
       coalesce(f.crm_code = ${code} AND ${crmScope}, false) AS "crm"
-    FROM eligible f WHERE ${match} AND ${recordFilter('project-code-funnels',options.filterTree,tableFieldColumns,{currency:sql`f.currency`,dateOnly:['expectedCloseDate'],arrays:['relationship']})??sql`true`} AND ${search ? sql`f.name ILIKE ${like}` : sql`true`}
-    ORDER BY ${sql.join(recordSort(options.sorting,{...tableFieldColumns,...sortColumns},sql`${sortColumn} ${direction}`),sql`, `)}, f.id LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}`)
+    FROM eligible f WHERE ${match} AND ${recordFilterRelated('project-code-funnels',options.filterTree,tableFieldColumns,relatedFields,{currency:sql`f.currency`,dateOnly:['expectedCloseDate'],arrays:['relationship']})??sql`true`} AND ${search ? sql`f.name ILIKE ${like}` : sql`true`}
+    ORDER BY ${sql.join(recordSort(options.sorting,{...relationshipSortColumns(relatedFields),...tableFieldColumns,...sortColumns},sql`${sortColumn} ${direction}`),sql`, `)}, f.id LIMIT ${pageSize + 1} OFFSET ${pageIndex * pageSize}`)
   if (!rows.length) {
     if (!search && !options.filterTree?.children.length && pageIndex === 0) return null
     const existing = await tx.execute(sql`WITH eligible AS (${codeSource(ctx, visible)}) SELECT 1 AS present FROM eligible f WHERE ${match} LIMIT 1`)
@@ -175,9 +178,10 @@ export async function listProjectCodeRelatedRecords(tx:Tx,ctx:ServerContext,code
   source=sql`SELECT projects.id,projects.name,projects.project_code AS "recordCode",projects.status,projects.value AS amount,projects.currency FROM projects WHERE projects.tenant_id=${ctx.tenantId} AND projects.deleted_at IS NULL AND ${ownerScope(projects.ownerMemberId,visible)??sql`true`} AND (projects.funnel_id IN (${ids}) OR (projects.project_code=${code} AND projects.account_id IN (SELECT account_id FROM funnels WHERE id IN (${ids}))))`
   fieldIds=['name','recordCode','status','amount']
  }else throw new Error('Unknown project code relationship')
+ const relatedFields=await relatedQueryRegistry(tx,ctx,`code-${kind}`,options.filterTree,options.sorting,sql`records.id`)
  const expressions=Object.fromEntries(fieldIds.map(id=>[id,sql`${sql.identifier('records')}.${sql.identifier(id)}`]))
  const search=(options.search??'').trim().slice(0,300)
  const pattern=`%${search.replace(/[\\%_]/g,'\\$&')}%`
- const rows=await tx.execute<CodeRelatedRecord & {total:number}>(sql`SELECT records.*,(count(*) OVER ())::int AS total FROM (${source}) records WHERE ${search?sql`records.name ILIKE ${pattern}`:sql`true`} AND ${recordFilter(`code-${kind}`,options.filterTree,expressions,{currency:sql`records.currency`})??sql`true`} ORDER BY ${sql.join(recordSort(options.sorting,expressions,sql`records.name ASC`),sql`, `)},records.id LIMIT ${pageSize} OFFSET ${pageIndex*pageSize}`)
+ const rows=await tx.execute<CodeRelatedRecord & {total:number}>(sql`SELECT records.*,(count(*) OVER ())::int AS total FROM (${source}) records WHERE ${search?sql`records.name ILIKE ${pattern}`:sql`true`} AND ${recordFilterRelated(`code-${kind}`,options.filterTree,expressions,relatedFields,{currency:sql`records.currency`})??sql`true`} ORDER BY ${sql.join(recordSort(options.sorting,{...expressions,...relationshipSortColumns(relatedFields)},sql`records.name ASC`),sql`, `)},records.id LIMIT ${pageSize} OFFSET ${pageIndex*pageSize}`)
  return {rows:rows.map(({total:_total,...row})=>row),total:rows[0]?.total??0}
 }

@@ -1,5 +1,5 @@
-export type TableFieldType = "text" | "number" | "money" | "date" | "boolean" | "enum" | "relation" | "action"
-export type FilterOperator = "contains" | "not-contains" | "equals" | "not-equals" | "starts-with" | "ends-with" | "greater-than" | "greater-or-equal" | "less-than" | "less-or-equal" | "between" | "on" | "before" | "after" | "year" | "relative" | "any-of" | "none-of" | "empty" | "not-empty"
+export type TableFieldType = "text" | "number" | "money" | "date" | "boolean" | "enum" | "relation" | "action" | "collection"
+export type FilterOperator = "contains" | "not-contains" | "equals" | "not-equals" | "starts-with" | "ends-with" | "greater-than" | "greater-or-equal" | "less-than" | "less-or-equal" | "between" | "on" | "before" | "after" | "year" | "relative" | "any-of" | "none-of" | "empty" | "not-empty" | "some" | "none" | "every"
 export type FilterCondition = { kind: "condition"; id: string; fieldId: string; operator: FilterOperator; value?: unknown }
 export type FilterGroup = { kind: "group"; id: string; logic: "and" | "or"; children: FilterNode[] }
 export type FilterNode = FilterCondition | FilterGroup
@@ -9,6 +9,8 @@ export type FilterContext = { now: Date; timezone: string }
 export type TableFieldDefinition = {
   id: string; label: string; type: TableFieldType; operators: readonly FilterOperator[]
   sortable: boolean; defaultVisible: boolean; minWidth: number; defaultWidth: number; required?: boolean
+  filterOnly?: boolean
+  relationship?: {entity:string;fields:readonly TableFieldDefinition[]}
   optional?: boolean
   currency?: string
   options?: readonly { value: string; label: string }[]

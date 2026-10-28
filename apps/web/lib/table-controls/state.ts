@@ -30,6 +30,7 @@ export const tableLayoutSchema = z.object({
 
 /** Reconcile obsolete layout columns; filters deliberately use stricter validation. */
 export function normalizeTableLayout(input: unknown, fields: readonly TableFieldDefinition[]): TableLayout {
+  fields=fields.filter(field=>!field.filterOnly)
   const parsed = tableLayoutSchema.parse(input)
   const known = new Set(fields.map(field=>field.id))
   const uniqueKnown = (values: string[]) => [...new Set(values)].filter(id=>known.has(id))
@@ -74,7 +75,7 @@ export function mergeQuickFilterTree(tree:FilterGroup,filters:Record<string,Data
   }
   if(!nodes.length)return tree
   // IDs are internal identifiers only; preserve structure while avoiding collisions with saved IDs.
-  const reidentify=(node:import('./types').FilterNode):import('./types').FilterNode=>node.kind==='group'?{...node,id:`merged-${sequence++}`,children:node.children.map(reidentify)}:{...node,id:`merged-${sequence++}`}
+  const reidentify=(node:import('./types').FilterNode):import('./types').FilterNode=>node.kind==='group'?{...node,id:`merged-${sequence++}`,children:node.children.map(reidentify)}:{...node,id:`merged-${sequence++}`,...(node.value&&typeof node.value==='object'&&'kind' in node.value&&node.value.kind==='group'?{value:reidentify(node.value as FilterGroup)}:{})}
   return validateFilterTree(reidentify({kind:'group',id:'combined',logic:'and',children:[...(tree.children.length?[tree]:[]),...nodes]}) as FilterGroup,fields)
 }
 
@@ -82,4 +83,13 @@ export function mergeQuickFilterTree(tree:FilterGroup,filters:Record<string,Data
 export function tableFieldSignature(columns:readonly unknown[],currencies:Record<string,string>={}) {
  const ids=columns.map(column=>{const c=column as {id?:string;accessorKey?:string};return c.id??c.accessorKey}).filter((id):id is string=>!!id)
  return JSON.stringify({ids,currencies:Object.fromEntries(Object.entries(currencies).sort(([a],[b])=>a.localeCompare(b)))})
+}
+
+/** Default-hidden catalogue additions must not inflate every table URL. */
+export function compactTableLayout(layout:TableLayout,fields:readonly TableFieldDefinition[]):TableLayout{
+ const columns=fields.filter(field=>!field.filterOnly)
+ const included=(id:string)=>{const field=columns.find(field=>field.id===id);return !!field&&(!field.optional||(layout.visibility[id]??field.defaultVisible))}
+ const defaults=columns.map(field=>field.id).filter(included),selectedOrder=layout.order.filter(included)
+ const order=selectedOrder.length===defaults.length&&selectedOrder.every((id,index)=>id===defaults[index])?[]:selectedOrder
+ return {...layout,order,visibility:Object.fromEntries(Object.entries(layout.visibility).filter(([id,visible])=>{const field=columns.find(field=>field.id===id);return field&&visible!==field.defaultVisible}))}
 }

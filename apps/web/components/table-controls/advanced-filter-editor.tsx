@@ -4,12 +4,13 @@ import { ListFilter, Plus, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, Down
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTitle, PopoverDescription, PopoverTrigger } from '@/components/ui/popover'
-import {prepareColumnFilter,filterHasField} from '@/lib/table-controls/header-filters'
+import {prepareColumnFilter,filterHasField,describeFilter} from '@/lib/table-controls/header-filters'
 import {cn} from '@/lib/utils'
 import { validateFilterTree, RELATIVE_PERIODS } from '@/lib/table-controls/filter-tree'
 import type { FilterCondition, FilterGroup, FilterNode, TableFieldDefinition } from '@/lib/table-controls/types'
 const selectClass='h-8 max-w-full rounded-md border bg-background px-2 text-sm'
-const words=(s:string)=>s.replaceAll('-',' ')
+const words=(s:string)=>({some:'has a matching record',none:'has no matching record',every:'all records match (at least one)'}[s]??s.replaceAll('-',' '))
+const initialValue=(field:TableFieldDefinition)=>field.type==='collection'?{kind:'group',id:crypto.randomUUID(),logic:'and',children:[]}:field.type==='boolean'?true:''
 function FilterChoices({field,value,onChange}:{field:TableFieldDefinition;value:unknown;onChange:(value:string[])=>void}){
  const [search,setSearch]=React.useState('')
  const selected=Array.isArray(value)?value.map(String):typeof value==='string'?value.split(',').filter(Boolean):[]
@@ -25,11 +26,12 @@ export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,titl
   return visit(current) as FilterGroup
  })}
  function remove(id:string){const visit=(node:FilterNode):FilterNode=>node.kind==='group'?{...node,children:node.children.filter(child=>child.id!==id).map(visit)}:node;setDraft(current=>visit(current) as FilterGroup)}
- function newRule():FilterCondition{const field=available.find(field=>field.id===fieldId)??available[0];return {kind:'condition',id:crypto.randomUUID(),fieldId:field.id,operator:field.operators[0],value:field.type==='boolean'?true:''}}
+ function newRule():FilterCondition{const field=available.find(field=>field.id===fieldId)??available[0];return {kind:'condition',id:crypto.randomUUID(),fieldId:field.id,operator:field.operators[0],value:initialValue(field)}}
  function operand(rule:FilterCondition,field:TableFieldDefinition){
   const set=(value:unknown)=>update(rule.id,node=>({...node,value} as FilterCondition))
   const op=rule.operator,v=rule.value
   if(op==='empty'||op==='not-empty')return null
+  if(field.type==='collection')return <div className="min-w-48 flex-1 rounded-md border p-2"><AdvancedFilterEditor fields={field.relationship!.fields} value={v as FilterGroup} onApply={set} timezone={timezone} title={`${field.label}: matching conditions`}/><p className="mt-1 text-xs text-muted-foreground">{(v as FilterGroup).children.length?describeFilter(v as FilterGroup,field.relationship!.fields):'Choose conditions for one related record.'}</p><p className="mt-1 text-xs text-muted-foreground">All conditions here apply to the same related record.</p></div>
   if(field.type==='boolean')return <select className={selectClass} aria-label={`${field.label} value`} value={String(v??'true')} onChange={e=>set(e.target.value==='true')}><option value="true">Yes</option><option value="false">No</option></select>
   if(op==='relative')return <select className={selectClass} aria-label="Relative date period" value={String(v||'')} onChange={e=>set(e.target.value)}><option value="">Choose period</option>{RELATIVE_PERIODS.map(period=><option key={period} value={period}>{words(period)}</option>)}</select>
   if(op==='any-of'||op==='none-of')return field.options?.length?<FilterChoices field={field} value={v} onChange={set}/>:<Input className="min-w-32 flex-1" aria-label={`${field.label} values separated by commas`} placeholder="Values, separated by commas" value={Array.isArray(v)?v.join(','):String(v??'')} onChange={e=>set(e.target.value)}/>
@@ -43,8 +45,8 @@ export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,titl
  function renderGroup(group:FilterGroup,depth:number):React.ReactNode{return <div className="space-y-3 border-l border-border pl-3" key={group.id}>
   <div className="flex items-center gap-2"><span className="text-sm text-muted-foreground">Match</span><select className={selectClass} aria-label="Filter group logic" value={group.logic} onChange={e=>update(group.id,node=>({...node,logic:e.target.value as 'and'|'or'} as FilterGroup))}><option value="and">Match all (AND)</option><option value="or">Match any (OR)</option></select><span className="text-sm text-muted-foreground">conditions</span>{depth>1?<Button variant="ghost" size="icon-sm" className="ml-auto" aria-label="Remove group" onClick={()=>remove(group.id)}><X/></Button>:null}</div>
   {group.children.map(node=>node.kind==='group'?renderGroup(node,depth+1):<div className="flex flex-wrap items-start gap-2" key={node.id}>
-   <select className={selectClass} aria-label="Filter field" value={node.fieldId} onChange={e=>{const field=available.find(f=>f.id===e.target.value)!;update(node.id,()=>({...node,fieldId:field.id,operator:field.operators[0],value:field.type==='boolean'?true:''}))}}>{available.map(field=><option key={field.id} value={field.id}>{field.label}</option>)}</select>
-   <select className={selectClass} aria-label="Filter operator" value={node.operator} onChange={e=>update(node.id,()=>({...node,operator:e.target.value as FilterCondition['operator'],value:''}))}>{available.find(f=>f.id===node.fieldId)?.operators.map(op=><option key={op} value={op}>{words(op)}</option>)}</select>
+   <select className={selectClass} aria-label="Filter field" value={node.fieldId} onChange={e=>{const field=available.find(f=>f.id===e.target.value)!;update(node.id,()=>({...node,fieldId:field.id,operator:field.operators[0],value:initialValue(field)}))}}>{available.map(field=><option key={field.id} value={field.id}>{field.label}</option>)}</select>
+   <select className={selectClass} aria-label="Filter operator" value={node.operator} onChange={e=>update(node.id,()=>({...node,operator:e.target.value as FilterCondition['operator'],value:available.find(f=>f.id===node.fieldId)?.type==='collection'?(node.value&&typeof node.value==='object'&&'kind' in node.value&&node.value.kind==='group'?node.value:initialValue(available.find(f=>f.id===node.fieldId)!)):''}))}>{available.find(f=>f.id===node.fieldId)?.operators.map(op=><option key={op} value={op}>{words(op)}</option>)}</select>
    {available.find(f=>f.id===node.fieldId)?operand(node,available.find(f=>f.id===node.fieldId)!):null}
    <Button variant="ghost" size="icon-sm" aria-label="Remove condition" onClick={()=>remove(node.id)}><X/></Button>
   </div>)}

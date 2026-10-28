@@ -38,3 +38,15 @@ export async function readTableFieldOptions(listKey:string):Promise<Record<strin
   return Object.fromEntries(stageFields.map(field=>[field.id,[...new Map(rows.map(row=>[field.id==='stageId'?row.id:row.name,{value:field.id==='stageId'?row.id:row.name,label:`${row.code} · ${row.name} (${row.pipeline})`}])).values()]]))
  })
 }
+
+
+/** Requested-only business relationship projections; source IDs are re-authorized. */
+export async function readTableRelationships(listKey:string,ids:string[],fields:string[],tree:import('@/lib/table-controls/types').FilterGroup):Promise<Record<string,Record<string,unknown>>>{
+ const ctx=await requireContext()
+ await requireTableAccess(ctx,listKey)
+ const {getTableFields}=await import('@/lib/table-controls/registry')
+ const {validateFilterTree}=await import('@/lib/table-controls/filter-tree')
+ const validated=validateFilterTree(tree,getTableFields(listKey))
+ const {projectRelationships}=await import('@/server/services/table-controls/relationships')
+ return runInTenant(ctx.tenantId,tx=>projectRelationships(tx,ctx,listKey,ids,fields,validated))
+}

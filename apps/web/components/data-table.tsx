@@ -10,10 +10,11 @@ import { evaluateFilterTree } from "@/lib/table-controls/evaluate"
 import { validateFilterTree } from "@/lib/table-controls/filter-tree"
 import { TableExportDialog, type TableExportFormat } from "@/components/table-controls/export-dialog"
 import { ColumnControls } from "@/components/table-controls/column-controls"
-import { readTableFieldOptions, readTablePreferences, saveTablePreferences } from "@/app/(app)/_shared/table-preference-actions"
+import { readTableRelationships, readTableFieldOptions, readTablePreferences, saveTablePreferences } from "@/app/(app)/_shared/table-preference-actions"
 import { getAvailableTableFields, tableExists, tableSupportsAdvancedFilters } from "@/lib/table-controls/registry"
-import { tableFieldSignature, mergeQuickFilterTree, normalizeTableLayout, validateTableState } from "@/lib/table-controls/state"
+import { tableFieldSignature, mergeQuickFilterTree, compactTableLayout, normalizeTableLayout, validateTableState } from "@/lib/table-controls/state"
 import { collectTableExport, tableCsv, tableXlsx } from "@/lib/table-controls/export"
+import {relationRecordId,relatedProjectionFields} from "@/lib/table-controls/relationships"
 import { optionalTableValue, displayTableValue, formatTableField, resolveTableValue, completeTableFieldOptions } from "@/lib/table-controls/values"
 import { EMPTY_FILTER_TREE, type TableLayout, type FilterGroup } from "@/lib/table-controls/types"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -185,6 +186,19 @@ const globalFilterFn = (
   return matchesGlobalSearch(row.getValue(columnId), value)
 }
 
+async function enrichRelatedRows<T>(key:string,rows:T[],fields:string[],tree:FilterGroup):Promise<T[]>{
+ if(!rows.length||(!fields.length&&!JSON.stringify(tree).includes('related.')))return rows
+ const ids=[...new Set(rows.map(row=>relationRecordId(key,row)).filter((id):id is string=>!!id))]
+ if(ids.length!==new Set(rows.map(row=>relationRecordId(key,row))).size)throw new Error('This table has an unsupported record identity for related fields.')
+ const values:Record<string,Record<string,unknown>>={}
+ for(let offset=0;offset<ids.length;offset+=500)Object.assign(values,await readTableRelationships(key,ids.slice(offset,offset+500),fields,tree))
+ return rows.map(row=>{
+  const id=relationRecordId(key,row)!,extra=values[id]
+  if(!extra)throw new Error('Related fields are unavailable for one or more records. Check your permissions and reload.')
+  return {...row,tableFields:{...((row as Record<string,unknown>).tableFields as Record<string,unknown>??{}),...extra}}
+ })
+}
+
 export function DataTable<TData, TValue>({
   columns: suppliedColumns,
   data,
@@ -228,8 +242,8 @@ export function DataTable<TData, TValue>({
   const businessTimezone = useBusinessTimezone()
   const columns = React.useMemo<ColumnDef<TData,TValue>[]>(()=>[
     ...suppliedColumns,
-    ...fieldDefinitions.filter(field=>!suppliedColumns.some(column=>((column as {id?:string;accessorKey?:string}).id??(column as {accessorKey?:string}).accessorKey)===field.id)).map(field=>({
-      id:field.id, header:field.label, accessorFn:(row:TData)=>optionalTableValue(row,field.id) as TValue,
+    ...fieldDefinitions.filter(field=>!field.filterOnly&&!suppliedColumns.some(column=>((column as {id?:string;accessorKey?:string}).id??(column as {accessorKey?:string}).accessorKey)===field.id)).map(field=>({
+      id:field.id, header:field.label, accessorFn:(row:TData)=>{const value=optionalTableValue(row,field.id);return (field.type==='money'&&Array.isArray(value)&&value.length===1?Number(value[0].total):value) as TValue},
       cell:({row}:{row:{original:TData}})=>formatTableField(optionalTableValue(row.original,field.id),field,businessTimezone)||'—',
       enableSorting:field.sortable,
     })),
@@ -383,6 +397,20 @@ export function DataTable<TData, TValue>({
     try{return {tree:advancedEnabled?mergeQuickFilterTree(filterTree,Object.fromEntries(columnFilters.map(filter=>[filter.id,filter.value])) as SavedViewPayload['filters']['columns'],fieldDefinitions):filterTree,error:''}}
     catch(error){return {tree:filterTree,error:error instanceof Error?error.message:'Check the filter values.'}}
   },[advancedEnabled,filterTree,columnFilters,fieldDefinitions])
+  const projectionFields=React.useMemo(()=>relatedProjectionFields(fieldDefinitions,columnVisibility,effectiveFilters.tree,sorting),[fieldDefinitions,columnVisibility,effectiveFilters,sorting])
+  const relationSignature=JSON.stringify({fields:projectionFields,tree:effectiveFilters.tree})
+  const relationRequested=projectionFields.length>0||JSON.stringify(effectiveFilters.tree).includes('related.')
+  const [clientRelations,setClientRelations]=React.useState<{identity:string;signature:string;source:TData[];rows:TData[];error:string}|null>(null)
+  React.useEffect(()=>{
+    if(serverLoadPage||!tableId||!relationRequested)return
+    let active=true
+    const request=JSON.parse(relationSignature) as {fields:string[];tree:FilterGroup}
+    enrichRelatedRows(tableId,data,request.fields,request.tree).then(rows=>{if(active)setClientRelations({identity:preferenceIdentity,signature:relationSignature,source:data,rows,error:''})}).catch(error=>{if(active)setClientRelations({identity:preferenceIdentity,signature:relationSignature,source:data,rows:[],error:error instanceof Error?error.message:'Could not load related fields'})})
+    return ()=>{active=false}
+  },[serverLoadPage,tableId,relationRequested,relationSignature,data,preferenceIdentity])
+  const clientRelationsReady=!relationRequested||!!serverLoadPage||(clientRelations?.identity===preferenceIdentity&&clientRelations.signature===relationSignature&&clientRelations.source===data)
+  const clientRelationError=relationRequested&&!serverLoadPage&&clientRelationsReady?clientRelations?.error:''
+  const relatedClientData=React.useMemo(()=>relationRequested&&!serverLoadPage?(clientRelationsReady?clientRelations?.rows??[]:[]):data,[relationRequested,serverLoadPage,clientRelationsReady,clientRelations,data])
   const skipFirstServerFetch = React.useRef(false)
   const initialDataSynced = React.useRef(false)
   React.useEffect(() => {
@@ -413,7 +441,7 @@ export function DataTable<TData, TValue>({
         ...(advancedEnabled?{filterTree:effectiveFilters.tree}:{}),
         sorting,
         filters: (advancedEnabled?columnFilters.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)):columnFilters) as ServerTableQuery["filters"],
-      }).then((result) => {
+      }).then(async result=>tableId&&relationRequested?{...result,rows:await enrichRelatedRows(tableId,result.rows,projectionFields,effectiveFilters.tree)}:result).then((result) => {
         if (cancelled) return
         setServerRows(result.rows)
         setServerTotal(result.total)
@@ -432,7 +460,7 @@ export function DataTable<TData, TValue>({
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [serverLoadPage, pagination.pageIndex, pagination.pageSize, globalFilter, sorting, columnFilters, refreshKey,filterTree,filterError,advancedEnabled,effectiveFilters,fieldDefinitions])
+  }, [serverLoadPage, pagination.pageIndex, pagination.pageSize, globalFilter, sorting, columnFilters, refreshKey,filterTree,filterError,advancedEnabled,effectiveFilters,fieldDefinitions,tableId,relationRequested,projectionFields,preferenceIdentity])
 
   // Write state back to the URL whenever it changes, using history.replaceState
   // (NOT router.replace): a soft router navigation re-runs the server component,
@@ -446,8 +474,9 @@ export function DataTable<TData, TValue>({
     if(filterTree.children.length && serializedTree.length<=4000){params.set(key("filter_v2"),serializedTree);params.delete(key("filter_v2_view"))}
     else if(filterTree.children.length){params.delete(key("filter_v2"));params.set(key("filter_v2_view"),"required")}
     else if(!filterError){params.delete(key("filter_v2"));params.delete(key("filter_v2_view"))}
-    if(columnOrder.length || Object.keys(columnSizing).length || columnPinning.left.length || columnPinning.right.length)
-      params.set(key("layout_v2"),JSON.stringify({visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning}))
+    const compactLayout=compactTableLayout({visibility:columnVisibility,order:columnOrder,widths:columnSizing,pinning:columnPinning},fieldDefinitions)
+    if(compactLayout.order.length || Object.keys(compactLayout.visibility).length || Object.keys(columnSizing).length || columnPinning.left.length || columnPinning.right.length)
+      params.set(key("layout_v2"),JSON.stringify(compactLayout))
     else params.delete(key("layout_v2"))
 
     if (sorting.length)
@@ -487,7 +516,7 @@ export function DataTable<TData, TValue>({
     }
 
     const hiddenCols = Object.entries(columnVisibility)
-      .filter(([, v]) => v === false)
+      .filter(([id, v]) => v === false&&fieldDefinitions.find(field=>field.id===id)?.defaultVisible!==false)
       .map(([id]) => id)
     if (hiddenCols.length) params.set(key("hide"), hiddenCols.join(","))
     else params.delete(key("hide"))
@@ -521,11 +550,12 @@ export function DataTable<TData, TValue>({
     filterIds,
     pageSize,
     key,
-    pathname,
+    pathname,fieldDefinitions,
   ])
 
-  const clientRows = React.useMemo(()=>sorting.length ? [...data].sort((a,b)=>{const id=(row:TData)=>String((row as Record<string,unknown>).id??(row as Record<string,unknown>).funnelId??(row as Record<string,unknown>).quotationId??'');return id(a)<id(b)?-1:id(a)>id(b)?1:0}) : data,[data,sorting.length])
-  const tableData = React.useMemo(() => server ? serverRows : advancedEnabled && effectiveFilters.tree.children.length ? clientRows.filter(row=>evaluateFilterTree(row,effectiveFilters.tree,fieldDefinitions,{now:new Date(),timezone:businessTimezone},(record,id)=>{
+  const clientRows = React.useMemo(()=>sorting.length ? [...relatedClientData].sort((a,b)=>{const id=(row:TData)=>String(tableId?relationRecordId(tableId,row)??'':(row as Record<string,unknown>).id??'');return id(a)<id(b)?-1:id(a)>id(b)?1:0}) : relatedClientData,[relatedClientData,sorting.length,tableId])
+  const tableData = React.useMemo(() => server ? serverRows : advancedEnabled && effectiveFilters.tree.children.length ? clientRows.filter(row=>evaluateFilterTree(row,effectiveFilters.tree,fieldDefinitions,{now:new Date(),timezone:businessTimezone},(record,id,condition)=>{
+      if(condition&&fieldDefinitions.find(field=>field.id===id)?.type==='collection')return (record as {tableFields?:Record<string,unknown>}).tableFields?.[`match:${condition.id}`]
       const column=columns.find(c=>((c as {id?:string}).id??(c as {accessorKey?:string}).accessorKey)===id)
       return resolveTableValue(record,id,column&&'accessorFn' in column&&column.accessorFn?()=>column.accessorFn!(record as TData,0):undefined,tableId)
     })) : clientRows, [server,serverRows,clientRows,advancedEnabled,fieldDefinitions,businessTimezone,columns,effectiveFilters,tableId])
@@ -606,6 +636,7 @@ export function DataTable<TData, TValue>({
     if(exporting)return
     setExporting(true)
     try {
+      if(!clientRelationsReady||clientRelationError)throw new Error(clientRelationError||'Related fields are still loading. Please try again.')
       if(filterError||effectiveFilters.error)throw new Error('Fix or clear invalid filters before exporting.')
       if(!server&&cap!=null&&data.length>=cap)throw new Error('This panel is truncated. Refine the source or use its full list before exporting.')
       const query:ServerTableQuery={pageIndex:0,pageSize:100,search:globalFilter,sorting:[...sorting],
@@ -614,7 +645,7 @@ export function DataTable<TData, TValue>({
       const exportColumns=table.getVisibleLeafColumns().map(column=>({column,field:filterFields.find(field=>field.id===column.id)})).filter(item=>item.field&&item.field.type!=='action')
       const checkScope=()=>{if(exportScope.current!==preferenceIdentity)throw new Error('The active workspace changed. Please export again in the selected workspace.')}
       checkScope()
-      const rows=server?await collectTableExport(query,async query=>{checkScope();const page=await server.loadPage(query);checkScope();return page}):table.getPrePaginationRowModel().rows.map(row=>row.original)
+      const rows=server?await collectTableExport(query,async query=>{checkScope();const page=await server.loadPage(query);checkScope();return tableId&&relationRequested?{...page,rows:await enrichRelatedRows(tableId,page.rows,projectionFields,effectiveFilters.tree)}:page}):table.getPrePaginationRowModel().rows.map(row=>row.original)
       checkScope()
       const mappedColumns=exportColumns.map(({column,field})=>({field:field!,currency:(row:TData)=>String((row as Record<string,unknown>).currency??''),value:(row:TData)=>{
         const configured=column.columnDef as {accessorFn?:(row:TData,index:number)=>unknown;accessorKey?:string}
@@ -788,6 +819,8 @@ export function DataTable<TData, TValue>({
       {effectiveFilters.error?<StatusCallout role="alert" tone="danger">{effectiveFilters.error}</StatusCallout>:null}
       {filterError?<StatusCallout role="alert" tone="danger">{filterError}. Edit or clear the filters to continue.</StatusCallout>:null}
       {initial.layoutError?<StatusCallout role="alert" tone="warning">The saved column layout is invalid. Reset the column layout to continue.</StatusCallout>:null}
+      {!clientRelationsReady?<p role="status" className="text-sm text-muted-foreground">Loading related fields…</p>:null}
+      {clientRelationError?<StatusCallout role="alert" tone="danger">{clientRelationError}</StatusCallout>:null}
       {serverError ? (
         <StatusCallout role="alert" tone="danger" className="flex items-center gap-2">
           Could not load this page.
