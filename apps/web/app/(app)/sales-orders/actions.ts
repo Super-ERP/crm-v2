@@ -1,5 +1,7 @@
 "use server"
 
+import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
+
 import { getTableFields } from "@/lib/table-controls/registry"
 import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
 
@@ -132,7 +134,8 @@ async function fetchRows(
   const visible = await visibleMemberIds(tx, ctx)
   const search = paging?.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const statuses = paging?.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
-  const where = and(recordFilter("sales-orders",paging?.query.filterTree,{projectName:projects.name,status:salesOrders.status,soNumber:salesOrders.soNumber,submittedAt:salesOrders.submittedAt,submittedByName:sql`(select so_user.name from member so_member join "user" so_user on so_user.id=so_member.user_id where so_member.id=${salesOrders.submittedByMemberId})`}),
+  const tableFieldColumns = {projectName:projects.name,status:salesOrders.status,soNumber:salesOrders.soNumber,submittedAt:salesOrders.submittedAt,submittedByName:sql`(select so_user.name from member so_member join "user" so_user on so_user.id=so_member.user_id where so_member.id=${salesOrders.submittedByMemberId})`}
+    const where = and(recordFilter("sales-orders",paging?.query.filterTree,tableFieldColumns),
     isNull(projects.deletedAt),
     projectId ? eq(salesOrders.projectId, projectId) : undefined,
     salesOrderId ? eq(salesOrders.id, salesOrderId) : undefined,
@@ -140,7 +143,7 @@ async function fetchRows(
     statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
     search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
   )
-  const sortColumns = { projectName: projects.name, status: salesOrders.status, submittedAt: salesOrders.submittedAt }
+  const sortColumns = { ...tableFieldColumns,  projectName: projects.name, status: salesOrders.status, submittedAt: salesOrders.submittedAt }
   const sortColumn = paging?.query.sort?.id ? sortColumns[paging.query.sort.id as keyof typeof sortColumns] : undefined
   const ordering = sortColumn ? paging?.query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(salesOrders.submittedAt)
   const rows = (await tx
@@ -169,7 +172,7 @@ async function fetchRows(
     .leftJoin(funnels, eq(projects.funnelId, funnels.id))
     .leftJoin(quotations, eq(projects.quotationId, quotations.id))
     .where(where)
-    .orderBy(...recordSort(paging?.query.sorting,sortColumns,ordering), desc(salesOrders.id))
+    .orderBy(...recordSort(paging?.query.sorting,sortColumns,ordering, "sales-orders"), desc(salesOrders.id))
     .limit(paging?.limit ?? 1000)
     .offset(paging?.offset ?? 0)) as Array<{
     id: string
@@ -642,7 +645,8 @@ export async function listSalesOrderPage(input: ServerTableQuery): Promise<{ row
     const visible = await visibleMemberIds(tx, ctx)
     const statuses = paging.query.selections.status?.filter((value): value is SalesOrderStatus => salesOrderStatus.enumValues.includes(value as SalesOrderStatus))
     const search = paging.query.search ? `%${paging.query.search.replace(/[\\%_]/g, "\\$&")}%` : null
-    const where = and(recordFilter("sales-orders",paging.query.filterTree,{projectName:projects.name,status:salesOrders.status,soNumber:salesOrders.soNumber,submittedAt:salesOrders.submittedAt,submittedByName:sql`(select so_user.name from member so_member join "user" so_user on so_user.id=so_member.user_id where so_member.id=${salesOrders.submittedByMemberId})`}),isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
+    const tableFieldColumns = {projectName:projects.name,status:salesOrders.status,soNumber:salesOrders.soNumber,submittedAt:salesOrders.submittedAt,submittedByName:sql`(select so_user.name from member so_member join "user" so_user on so_user.id=so_member.user_id where so_member.id=${salesOrders.submittedByMemberId})`}
+    const where = and(recordFilter("sales-orders",paging.query.filterTree,tableFieldColumns),isNull(projects.deletedAt), ownerScope(projects.ownerMemberId, visible),
       statuses?.length ? inArray(salesOrders.status, statuses) : undefined,
       search ? or(ilike(projects.name, search), ilike(projects.projectCode, search), ilike(salesOrders.soNumber, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined)
     const [rows, countRows] = await Promise.all([
@@ -653,7 +657,7 @@ export async function listSalesOrderPage(input: ServerTableQuery): Promise<{ row
         .leftJoin(quotations, eq(projects.quotationId, quotations.id))
         .where(where),
     ])
-    return { rows, total: countRows[0]?.count ?? 0 }
+    return { rows: await enrichTableRows(tx, "sales-orders", rows, ctx.tenantId), total: countRows[0]?.count ?? 0 }
   })
 }
 

@@ -30,6 +30,7 @@ export function normalizeRecordListQuery(
     ...(filterTree ? { filterTree } : {}),
   }
   if (Array.isArray(input.sorting) && input.sorting.length > 5) throw new Error("Use at most five sort fields.")
+  allowedSorts = [...allowedSorts, ...(fields ?? []).filter(field => field.sortable).map(field => field.id)]
   query.sorting = (Array.isArray(input.sorting) ? input.sorting : []).filter(sort => allowedSorts.includes(sort.id)).map(sort => ({ id: sort.id, desc: sort.desc === true }))
   const sort = query.sorting[0]
   if (sort && allowedSorts.includes(sort.id)) query.sort = { id: sort.id, desc: sort.desc === true }

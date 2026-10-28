@@ -1,5 +1,6 @@
 "use server"
 
+import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
 import { getTableFields } from "@/lib/table-controls/registry"
 import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
 
@@ -86,12 +87,13 @@ async function readFinanceDocPage(tx: Tx, direction: "sale" | "purchase", limit:
     const validKinds = kindsForDirection(direction)
     const kinds = query?.selections.kind?.filter((value): value is FinanceDocKind => validKinds.includes(value as FinanceDocKind))
     const statuses = query?.selections.status?.filter((value): value is (typeof financeDocStatus.enumValues)[number] => financeDocStatus.enumValues.includes(value as (typeof financeDocStatus.enumValues)[number]))
-    const where = and(recordFilter(`finance-${direction}`,query?.filterTree,{number:financeDocs.number,kind:financeDocs.kind,from:sql`coalesce((select parent_doc.number from finance_docs parent_doc where parent_doc.id=${financeDocs.parentId}),${salesOrders.soNumber})`,project:projects.projectCode,partyName:financeDocs.partyName,amount:financeDocs.amount,docDate:financeDocs.docDate,status:financeDocs.status},{currency:financeDocs.currency,dateOnly:["docDate"]}),
+    const tableFieldColumns = {number:financeDocs.number,kind:financeDocs.kind,from:sql`coalesce((select parent_doc.number from finance_docs parent_doc where parent_doc.id=${financeDocs.parentId}),${salesOrders.soNumber})`,project:projects.projectCode,partyName:financeDocs.partyName,amount:financeDocs.amount,docDate:financeDocs.docDate,status:financeDocs.status}
+    const where = and(recordFilter(`finance-${direction}`,query?.filterTree,tableFieldColumns,{currency:financeDocs.currency,dateOnly:["docDate"]}),
       inArray(financeDocs.kind, kinds?.length ? kinds : validKinds),
       statuses?.length ? inArray(financeDocs.status, statuses) : undefined,
       search ? or(ilike(financeDocs.number, search), ilike(financeDocs.partyName, search), ilike(salesOrders.soNumber, search), ilike(projects.projectCode, search)) : undefined,
     )
-    const sortColumns = { number: financeDocs.number, kind: financeDocs.kind, status: financeDocs.status, partyName: financeDocs.partyName, amount: financeDocs.amount, docDate: financeDocs.docDate, dueDate: financeDocs.dueDate, createdAt: financeDocs.createdAt }
+    const sortColumns = { ...tableFieldColumns,  number: financeDocs.number, kind: financeDocs.kind, status: financeDocs.status, partyName: financeDocs.partyName, amount: financeDocs.amount, docDate: financeDocs.docDate, dueDate: financeDocs.dueDate, createdAt: financeDocs.createdAt }
     const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
     const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(financeDocs.createdAt)
     const [rows, totalRows] = await Promise.all([tx
@@ -125,7 +127,7 @@ async function readFinanceDocPage(tx: Tx, direction: "sale" | "purchase", limit:
       .leftJoin(salesOrders, eq(financeDocs.salesOrderId, salesOrders.id))
       .leftJoin(projects, eq(financeDocs.projectId, projects.id))
       .where(where)
-      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), desc(financeDocs.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering,`finance-${direction}`), desc(financeDocs.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(financeDocs)
         .leftJoin(salesOrders, eq(financeDocs.salesOrderId, salesOrders.id))
@@ -135,10 +137,11 @@ async function readFinanceDocPage(tx: Tx, direction: "sale" | "purchase", limit:
 }
 
 export async function listFinanceDocPage(direction: "sale" | "purchase", input: ServerTableQuery): Promise<{ rows: FinanceDocRow[]; total: number }> {
-  return withModule("finance", PERMISSIONS.FINANCE_VIEW, (tx) => {
+  return withModule("finance", PERMISSIONS.FINANCE_VIEW, async (tx, ctx) => {
     const { limit, offset, query } = normalizeRecordListQuery(input,
       ["number", "kind", "status", "partyName", "amount", "docDate", "dueDate", "createdAt"], ["kind", "status"],getTableFields(`finance-${direction}`))
-    return readFinanceDocPage(tx, direction, limit, offset, query)
+    const page = await readFinanceDocPage(tx, direction, limit, offset, query)
+    return {...page, rows: await enrichTableRows(tx, `finance-${direction}`, page.rows, ctx.tenantId)}
   })
 }
 

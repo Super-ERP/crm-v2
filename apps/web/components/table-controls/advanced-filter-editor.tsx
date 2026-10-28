@@ -13,7 +13,8 @@ const words=(s:string)=>s.replaceAll('-',' ')
 function FilterChoices({field,value,onChange}:{field:TableFieldDefinition;value:unknown;onChange:(value:string[])=>void}){
  const [search,setSearch]=React.useState('')
  const selected=Array.isArray(value)?value.map(String):typeof value==='string'?value.split(',').filter(Boolean):[]
- const options=field.options??[]
+ const configured=field.options??[]
+ const options=[...configured,...selected.filter(value=>!configured.some(option=>option.value===value)).map(value=>({value,label:`${value} (saved value)`}))]
  return <div className="min-w-40 flex-1 rounded-md border p-2">{options.length>6?<Input aria-label={`Search ${field.label} options`} placeholder="Search options…" value={search} onChange={event=>setSearch(event.target.value)} className="mb-2"/>:null}<div className="max-h-40 overflow-y-auto">{options.filter(option=>option.label.toLowerCase().includes(search.toLowerCase())).map(option=><label key={option.value} className="flex min-h-9 cursor-pointer items-center gap-2 rounded px-1 hover:bg-muted"><input type="checkbox" className="size-4 accent-primary" checked={selected.includes(option.value)} onChange={event=>onChange(event.target.checked?[...selected,option.value]:selected.filter(value=>value!==option.value))}/><span className="break-words">{option.label}</span></label>)}</div></div>
 }
 export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,title,sorting,onSort}:{fields:readonly TableFieldDefinition[];value:FilterGroup;onApply:(tree:FilterGroup)=>void;timezone:string;fieldId?:string;title?:string;sorting?:false|'asc'|'desc';onSort?:(direction:false|'asc'|'desc')=>void}) {

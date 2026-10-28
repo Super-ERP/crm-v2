@@ -1,5 +1,7 @@
 "use server"
 
+import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
+
 import { getTableFields } from "@/lib/table-controls/registry"
 import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
 
@@ -61,22 +63,23 @@ export async function listProductPage(input: ServerTableQuery): Promise<{ rows: 
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const active = query.selections.isActive?.includes("true") && !query.selections.isActive.includes("false")
       ? true : query.selections.isActive?.includes("false") && !query.selections.isActive.includes("true") ? false : undefined
-    const where = and(recordFilter("products",query.filterTree,{name:products.name,description:products.description,productCode:products.productCode,subcategory:products.subcategory,uom:products.uom,standardPrice:products.standardPrice,isActive:products.isActive},{currency:products.currency}),eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt),
+    const tableFieldColumns = {name:products.name,description:products.description,productCode:products.productCode,subcategory:products.subcategory,uom:products.uom,standardPrice:products.standardPrice,isActive:products.isActive}
+    const where = and(recordFilter("products",query.filterTree,tableFieldColumns,{currency:products.currency}),eq(products.tenantId, ctx.tenantId), isNull(products.deletedAt),
       search ? or(ilike(products.name, search), ilike(products.productCode, search), ilike(products.subcategory, search), ilike(products.description, search)) : undefined,
       query.selections.productCode?.length ? inArray(products.productCode, query.selections.productCode) : undefined,
       active === undefined ? undefined : eq(products.isActive, active))
-    const sortColumns = { name: products.name, productCode: products.productCode, subcategory: products.subcategory, uom: products.uom, standardPrice: products.standardPrice, isActive: products.isActive }
+    const sortColumns = { ...tableFieldColumns,  name: products.name, productCode: products.productCode, subcategory: products.subcategory, uom: products.uom, standardPrice: products.standardPrice, isActive: products.isActive }
     const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
     const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : asc(products.name)
     const [rows, totalRows] = await Promise.all([tx
       .select()
       .from(products)
       .where(where)
-      .orderBy(...recordSort(query.sorting,sortColumns,ordering), asc(products.id))
+      .orderBy(...recordSort(query.sorting,sortColumns,ordering, "products"), asc(products.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(products).where(where),
     ])
-    return { rows, total: totalRows[0]?.count ?? 0 }
+    return { rows: await enrichTableRows(tx, "products", rows, ctx.tenantId), total: totalRows[0]?.count ?? 0 }
   })
 }
 

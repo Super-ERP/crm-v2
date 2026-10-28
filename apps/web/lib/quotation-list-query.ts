@@ -6,6 +6,7 @@ import { normalizeTablePageSize, type ServerTableQuery } from "@/lib/table-pagin
 import type { QuotationStatus } from "@/lib/quotation-transitions"
 
 const SORT_COLUMNS = new Set([
+  ...getTableFields("quotations").filter(field => field.sortable).map(field => field.id),
   "quoteNumber", "accountId", "accountOwnerMemberId", "opportunityId", "funnelId",
   "lineItemCount", "subtotal", "taxTotal", "total", "status", "validUntil",
 ])

@@ -61,3 +61,12 @@ Each concrete list key has a separate personal layout. Server lists apply valida
 ## Verification limits
 
 Automated tests cover registry inventory, filter validation, literal wildcard escaping, JS/SQL parity, saved-view ownership, personal preference ownership, full-result core pagination, operational SQL paths and code relationships beyond the first funnel page. Browser interaction requires a preview connection to the development environment; see the PR validation record for the actual checks performed.
+
+
+## Configurable fields and export (2026-10-28)
+
+The shared DataTable resolves capabilities from the existing adapter catalogue. Actual columns supplied by each panel remain the default; approved additions in `lib/table-controls/fields.ts` start hidden. Existing cell renderers, ordering, widths and personal views are retained. Root SQL adapters use `server/services/table-controls/dataset-fields.ts` for optional field filtering, sorting and projection. Enrichment only queries IDs already returned by the authorized loader, with tenant correlation. Complete-client panels use their full authorized DTO arrays; no server-page sampling supplies filter options.
+
+Approved root additions include lifecycle dates, currencies and selected business details; quotations/projects/milestones expose supported funnel relationships. Milestones distinguish milestone status, funnel stage/status, quotation status, customer, salesperson and delivery project. Entity stage choices come from configured pipeline stages. Related panels expose only approved fields already present in their DTO. Action cells remain outside filters/export; array relationship classifications are not sortable. Deprecated legacy invoice-capture columns are deliberately not exposed as live CRM fields.
+
+All registered panels use the same Columns dialog export. CSV follows visible business fields, sorting and filters; server panels reuse their authorized loader for all pages. Numeric money values have separate currency columns. The 100,000-row limit, total-count changes, duplicate stable identities and incomplete pages fail visibly. This detects common concurrent changes but does not provide transactional snapshot consistency. Capped sources cannot claim a full export. Adding a genuinely new field or relationship still requires metadata and adapter registration; normal views over supported fields require no code.

@@ -1,19 +1,22 @@
 "use client"
 import * as React from 'react'
 import type { Table as TableInstance } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, SlidersHorizontal } from 'lucide-react'
+import { ArrowDown, ArrowUp, SlidersHorizontal, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-export function ColumnControls<T>({table,onReset,labels}:{table:TableInstance<T>;onReset:()=>void;labels:Record<string,string>}) {
+export function ColumnControls<T>({table,onReset,labels,onExport,exporting}:{table:TableInstance<T>;onReset:()=>void;labels:Record<string,string>;onExport?:()=>void;exporting?:boolean}) {
+ const [search,setSearch]=React.useState('')
  const columns=table.getAllLeafColumns()
  const order=table.getState().columnOrder
  const ordered=[...columns].sort((a,b)=>(order.indexOf(a.id)<0?columns.indexOf(a):order.indexOf(a.id))-(order.indexOf(b.id)<0?columns.indexOf(b):order.indexOf(b.id)))
  return <Dialog><DialogTrigger render={<Button variant="outline" size="sm"><SlidersHorizontal className="size-4"/>Columns</Button>}/>
   <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
    <DialogHeader><DialogTitle>Table columns</DialogTitle><DialogDescription>Choose visible columns, their order, width and pinned position. Changes are saved to your layout.</DialogDescription></DialogHeader>
+   <Input aria-label="Search table columns" placeholder="Search columns…" value={search} onChange={event=>setSearch(event.target.value)}/>
    <div className="space-y-2">{ordered.map((column,index)=>{
     const title=labels[column.id] ?? (typeof column.columnDef.header==='string'?column.columnDef.header:column.id.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' '))
+    if(search&&!title.toLowerCase().includes(search.toLowerCase()))return null
     function move(delta:number){const ids=ordered.map(c=>c.id);[ids[index],ids[index+delta]]=[ids[index+delta],ids[index]];table.setColumnOrder(ids)}
     return <div key={column.id} className="flex flex-wrap items-center gap-2 rounded-md border p-2">
      <label className="flex min-w-32 flex-1 items-center gap-2 text-sm capitalize"><input type="checkbox" checked={column.getIsVisible()} disabled={!column.getCanHide()} onChange={event=>column.toggleVisibility(event.target.checked)}/>{title}</label>
@@ -23,7 +26,8 @@ export function ColumnControls<T>({table,onReset,labels}:{table:TableInstance<T>
      <select className="h-8 rounded-md border bg-background px-2 text-sm" aria-label={`${title} pinned position`} value={column.getIsPinned()||'none'} onChange={event=>column.pin(event.target.value==='none'?false:event.target.value as 'left'|'right')}><option value="none">Unpinned</option><option value="left">Pin left</option><option value="right">Pin right</option></select>
     </div>
    })}</div>
-   <Button variant="outline" onClick={onReset}>Reset column layout</Button>
+   <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={onReset}>Reset column layout</Button>{onExport?<Button variant="outline" disabled={exporting} onClick={onExport}><Download/>{exporting?'Exporting…':'Export matching rows (CSV)'}</Button>:null}</div>
+   {onExport?<p className="text-xs text-muted-foreground">Export includes all matching records and visible data columns, using your current filters and sorting. CSV opens in Excel.</p>:null}
   </DialogContent>
  </Dialog>
 }

@@ -88,6 +88,8 @@ Click a filterable **column header** to open its sort-and-filter menu. The first
 
 Use **Add condition** for another rule and **Add group** for nested rules. **Match all (AND)** requires every condition in that group; **Match any (OR)** requires at least one. For example: `(Stage is 4A OR Closed Won) AND Expected close year is 2026`. A header opens the whole applied filter tree, so rules for other columns stay visible. **Clear filters** clears the draft tree; click **Apply filters** to apply that change. **Cancel** leaves applied filters unchanged.
 
+For Payment Milestones, choose **Funnel → Stage**, use **any of**, and select the configured 4a and Closed Won stages. This is separate from milestone **Status** (Pending invoicing/Invoiced) and **Quotation → Status**. The list includes existing milestones only.
+
 On Funnel, the **Expected close year** quick filter is also available for selecting calendar years. Board view keeps its own filter controls because it has no column headers.
 
 {% endstep %}
@@ -96,6 +98,8 @@ On Funnel, the **Expected close year** quick filter is also available for select
 #### Customizing Table Columns
 
 Click **Columns** to show or hide fields, move them up or down, set their width, and pin them to the left or right. You can also resize a header by dragging its edge; focus the resize handle and use the arrow keys for keyboard resizing. Required identifying and action columns remain visible.
+
+Existing default columns and saved layouts stay in place. Extra supported fields start hidden; search inside **Columns** to find and enable them. Hidden fields are also available in the filter field selector, so you can filter without adding another visible column.
 
 Your layout is personal and saved for that list and organization. **Reset column layout** restores the default columns without clearing filters. Pinning is temporarily suspended on narrow screens while your desktop preference is retained.
 
@@ -143,3 +147,10 @@ Explicit URL settings take precedence over the default view and personal layout.
 Long cell values wrap within their own columns instead of overlapping neighbouring records. Names, descriptions, product codes and subcategories have wider defaults, while units, status and action columns stay compact. Existing explicitly saved widths take precedence; use **Columns → Reset column layout** to adopt the current defaults.
 
 The Project Code detail Funnel tab starts with the funnel, stage, amount, expected close date and owner. Account, Opportunity and Relationship remain available under **Columns** and in column-header filters; related records also have their own tabs.
+
+
+## Export a table
+
+Open **Columns → Export matching rows (CSV)**. The file opens in Excel and includes all matching records, using your current filters, sorting and visible column order. Money fields include a separate currency column. Your normal record permissions still apply.
+
+Server lists load all matching pages, up to 100,000 records. Add filters for larger exports. If the record count changes, duplicate records are detected, or loading stops early, export fails visibly so you can retry. Export is not a database snapshot; avoid changing records while exporting. Panels whose source is truncated cannot export a complete result.

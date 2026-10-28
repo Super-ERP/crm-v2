@@ -51,13 +51,16 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
   joins: object[]
   limits: number[]
   offsets: number[]
+  orderCalls: SQL[][]
 } {
   const queues = new Map(entries.map(([table, values]) => [table, [...values]]))
   const whereCalls: Array<{ table: object | undefined; condition: unknown }> = []
   const joins: object[] = []
   const limits: number[] = []
   const offsets: number[] = []
+  const orderCalls: SQL[][] = []
   return {
+    execute: vi.fn(async () => []),
     select: vi.fn(() => {
       let value: unknown = []
       let currentTable: object | undefined
@@ -80,7 +83,7 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
           whereCalls.push({ table: currentTable, condition })
           return chain
         }),
-        orderBy: vi.fn(() => chain),
+        orderBy: vi.fn((...values: SQL[]) => { orderCalls.push(values); return chain }),
         groupBy: vi.fn(() => chain),
         limit: vi.fn((value: number) => {
           limits.push(value)
@@ -99,11 +102,13 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
     joins,
     limits,
     offsets,
+    orderCalls,
   } as unknown as Tx & {
     whereCalls: Array<{ table: object | undefined; condition: unknown }>
     joins: object[]
     limits: number[]
     offsets: number[]
+    orderCalls: SQL[][]
   }
 }
 
@@ -136,6 +141,14 @@ describe("module-owned nested API readers", () => {
 
     expect(detail?.projects).toEqual([])
     expect((tx.select as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(2)
+  })
+
+  it("sorts funnel relationship columns by their displayed labels", async () => {
+    for (const [id, expression] of [["opportunityId", '"opportunities"."name"'], ["accountOwnerMemberId", '"funnel_account_owner_user"."name"'], ["stageId", '"pipeline_stages"."name"']]) {
+      const tx = tableTx([[funnels, [[], [{ count: 0 }]]]])
+      await funnelsList(tx, ctx, {limit:25,offset:0,query:{search:'',selections:{},sorting:[{id,desc:false}]}})
+      expect(new PgDialect().sqlToQuery(tx.orderCalls[0][0]).sql).toContain(expression)
+    }
   })
 
   it("does not query or return intercompany parties from the funnel list", async () => {

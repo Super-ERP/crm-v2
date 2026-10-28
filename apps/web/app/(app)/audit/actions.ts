@@ -29,12 +29,13 @@ export async function listAuditPage(input: ServerTableQuery): Promise<{ rows: Au
     const { limit, offset, query } = normalizeRecordListQuery(input,
       ["action", "record", "actor", "createdAt"], ["action", "record"],getTableFields("audit"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
-    const where = and(recordFilter("audit",query.filterTree,{action:auditLog.action,record:auditLog.entityType,entityId:auditLog.entityId,actor:user.name,actorName:user.name,createdAt:auditLog.createdAt},{}),
+    const tableFieldColumns = {action:auditLog.action,record:auditLog.entityType,entityId:auditLog.entityId,actor:user.name,actorName:user.name,createdAt:auditLog.createdAt}
+    const where = and(recordFilter("audit",query.filterTree,tableFieldColumns,{}),
       search ? or(ilike(auditLog.action, search), ilike(auditLog.entityType, search), ilike(user.name, search)) : undefined,
       query.selections.action?.length ? inArray(auditLog.action, query.selections.action) : undefined,
       query.selections.record?.length ? inArray(auditLog.entityType, query.selections.record) : undefined,
     )
-    const sortColumns = { action: auditLog.action, record: auditLog.entityType, actor: user.name, createdAt: auditLog.createdAt }
+    const sortColumns = { ...tableFieldColumns,  action: auditLog.action, record: auditLog.entityType, actor: user.name, createdAt: auditLog.createdAt }
     const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
     const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(auditLog.createdAt)
     const [rows, totalRows] = await Promise.all([tx

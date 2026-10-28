@@ -9,6 +9,7 @@ export type FilterContext = { now: Date; timezone: string }
 export type TableFieldDefinition = {
   id: string; label: string; type: TableFieldType; operators: readonly FilterOperator[]
   sortable: boolean; defaultVisible: boolean; minWidth: number; defaultWidth: number; required?: boolean
+  optional?: boolean
   currency?: string
   options?: readonly { value: string; label: string }[]
 }
