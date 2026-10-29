@@ -15,3 +15,11 @@ The user approved Excel (.xlsx) and CSV exports of all matching rows and selecte
 - Browser using disposable PostgreSQL: Views export downloaded 35 data rows from a 25-row page. Filter Apply & export opened the chooser with the new filter; downloaded XLSX inspected as 30 records, all New, with worksheet autofilter A1:J31. Columns nested chooser also downloaded CSV successfully.
 - The user's follow-up confirmed exports must include the complete matching dataset, regardless of rendering/page size. Chooser copy now states this explicitly; clearing filters/search exports all authorized records. The existing explicit 100,000-row ceiling remains.
 - Both formats reuse the existing authorized full-result loader; no permissions or SQL predicates changed. No deployment performed.
+
+## Revised export placement
+
+User requested one Export button in the shared table toolbar beside Columns and filters. Remove export actions from Columns, Views and filter dialogs. The button opens the existing Excel/CSV chooser and uses the applied filters, sorting and selected column order across all matching pages. Draft filter changes must be applied first. Export loaders and access rules are unchanged.
+
+## CSV-only simplification
+
+Export now downloads CSV directly from the table toolbar. Removed the format dialog, Excel writer and its dependency. Applied filters, sorting, visible columns, complete matching pages and access checks remain unchanged.

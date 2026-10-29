@@ -8,7 +8,6 @@ function cell(value:string,numeric=false):string {
   const safe=!plainNumber&&/^[\s\u0000-\u001f]*[=+@-]/.test(value)?`'${value}`:value
   return `"${safe.replaceAll('"','""')}"`
 }
-type ExportCell={value:string;numeric:boolean}
 function exportMatrix<T>(rows:readonly T[],columns:readonly ExportColumn<T>[],timezone:string) {
   const output=columns.filter(column=>column.field.type!=='action')
   const headers=output.flatMap(column=>column.field.type==='money'?[column.field.label,`${column.field.label} currency`]:[column.field.label])
@@ -28,24 +27,6 @@ function exportMatrix<T>(rows:readonly T[],columns:readonly ExportColumn<T>[],ti
 export function tableCsv<T>(rows:readonly T[],columns:readonly ExportColumn<T>[],timezone:string):string {
   const {headers,values}=exportMatrix(rows,columns,timezone)
   return '\uFEFF'+[headers.map(value=>cell(value)).join(','),...values.map(row=>row.map(({value,numeric})=>cell(value,numeric)).join(','))].join('\r\n')
-}
-/** Lazy loaded only on Excel export; plain strings never become workbook formulas. */
-export async function tableXlsx<T>(rows:readonly T[],columns:readonly ExportColumn<T>[],timezone:string) {
-  const {default:ExcelJS}=await import('exceljs')
-  const {headers,values}=exportMatrix(rows,columns,timezone)
-  const workbook=new ExcelJS.Workbook()
-  const sheet=workbook.addWorksheet('Records',{views:[{state:'frozen',ySplit:1}]})
-  sheet.addRow(headers)
-  for(const row of values)sheet.addRow(row.map(({value,numeric}:ExportCell)=>{
-    const significant=value.replace(/^[+-]/,'').split(/[eE]/)[0].replace('.','').replace(/^0+/,'').length
-    return numeric&&value!==''&&/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)&&significant<=15&&Number.isFinite(Number(value))?Number(value):value
-  }))
-  sheet.getRow(1).font={bold:true}
-  sheet.getRow(1).alignment={vertical:'middle',wrapText:true}
-  sheet.getRow(1).height=30
-  sheet.columns?.forEach((column,index)=>{column.width=Math.min(44,Math.max(16,headers[index].length+3))})
-  if(headers.length)sheet.autoFilter={from:{row:1,column:1},to:{row:Math.max(1,rows.length+1),column:headers.length}}
-  return workbook.xlsx.writeBuffer()
 }
 /** Reuse the panel loader, including parent scope, auth, filters and order. Fail closed on partial results. */
 export async function collectTableExport<T>(query:ServerTableQuery,loadPage:(query:ServerTableQuery)=>Promise<{rows:T[];total:number}>):Promise<T[]> {

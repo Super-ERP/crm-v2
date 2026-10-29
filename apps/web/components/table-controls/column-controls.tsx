@@ -1,11 +1,11 @@
 "use client"
 import * as React from 'react'
 import type { Table as TableInstance } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, SlidersHorizontal, Download } from 'lucide-react'
+import { ArrowDown, ArrowUp, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-export function ColumnControls<T>({table,onReset,labels,onExport,exporting}:{table:TableInstance<T>;onReset:()=>void;labels:Record<string,string>;onExport?:()=>void;exporting?:boolean}) {
+export function ColumnControls<T>({table,onReset,labels}:{table:TableInstance<T>;onReset:()=>void;labels:Record<string,string>}) {
  const [search,setSearch]=React.useState('')
  const columns=table.getAllLeafColumns()
  const order=table.getState().columnOrder
@@ -27,8 +27,7 @@ export function ColumnControls<T>({table,onReset,labels,onExport,exporting}:{tab
      <select className="h-8 rounded-md border bg-background px-2 text-sm" aria-label={`${title} pinned position`} value={column.getIsPinned()||'none'} onChange={event=>column.pin(event.target.value==='none'?false:event.target.value as 'left'|'right')}><option value="none">Unpinned</option><option value="left">Pin left</option><option value="right">Pin right</option></select>
     </div>
    })}</div>
-   <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={onReset}>Reset column layout</Button>{onExport?<Button variant="outline" disabled={exporting} onClick={onExport}><Download/>{exporting?'Exporting…':'Export current view'}</Button>:null}</div>
-   {onExport?<p className="text-xs text-muted-foreground">Export includes all matching records and visible data columns, using your current filters and sorting. Choose Excel (.xlsx) or CSV.</p>:null}
+   <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={onReset}>Reset column layout</Button></div>
   </DialogContent>
  </Dialog>
 }

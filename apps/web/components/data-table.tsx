@@ -8,12 +8,11 @@ import { AdvancedFilterEditor } from "@/components/table-controls/advanced-filte
 import {describeFilter,removeFilterNode} from "@/lib/table-controls/header-filters"
 import { evaluateFilterTree } from "@/lib/table-controls/evaluate"
 import { validateFilterTree } from "@/lib/table-controls/filter-tree"
-import { TableExportDialog, type TableExportFormat } from "@/components/table-controls/export-dialog"
 import { ColumnControls } from "@/components/table-controls/column-controls"
 import { readTableRelationships, readTableFieldOptions, readTablePreferences, saveTablePreferences } from "@/app/(app)/_shared/table-preference-actions"
 import { getAvailableTableFields, tableExists, tableSupportsAdvancedFilters } from "@/lib/table-controls/registry"
 import { tableFieldSignature, mergeQuickFilterTree, compactTableLayout, normalizeTableLayout, validateTableState } from "@/lib/table-controls/state"
-import { collectTableExport, tableCsv, tableXlsx } from "@/lib/table-controls/export"
+import { collectTableExport, tableCsv } from "@/lib/table-controls/export"
 import {relationRecordId,relatedProjectionFields} from "@/lib/table-controls/relationships"
 import { optionalTableValue, displayTableValue, formatTableField, resolveTableValue, completeTableFieldOptions } from "@/lib/table-controls/values"
 import { EMPTY_FILTER_TREE, type TableLayout, type FilterGroup } from "@/lib/table-controls/types"
@@ -42,6 +41,7 @@ import {
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
+  Download,
   ListFilter,
   Search,
   X,
@@ -627,12 +627,10 @@ export function DataTable<TData, TValue>({
     },700)
     return ()=>clearTimeout(timer)
   },[tableId,preferenceIdentity,preferencesReady,columnVisibility,columnOrder,columnSizing,columnPinning])
-  const [exportOpen,setExportOpen]=React.useState(false)
-  const openExport=()=>setExportOpen(true)
   const [exporting,setExporting]=React.useState(false)
   const exportScope=React.useRef<string|null>(preferenceIdentity)
   React.useEffect(()=>{exportScope.current=preferenceIdentity;return ()=>{exportScope.current=null}},[preferenceIdentity])
-  async function exportMatchingRows(format:TableExportFormat){
+  async function exportMatchingRows(){
     if(exporting)return
     setExporting(true)
     try {
@@ -652,12 +650,11 @@ export function DataTable<TData, TValue>({
         const raw=resolveTableValue(row,configured.accessorKey??column.id,configured.accessorFn?()=>configured.accessorFn!(row,0):undefined,tableId)
         return displayTableValue(row,field!,raw,tableId)
       }}))
-      const content=format==='xlsx'?new Uint8Array(await tableXlsx(rows,mappedColumns,businessTimezone)):tableCsv(rows,mappedColumns,businessTimezone)
+      const content=tableCsv(rows,mappedColumns,businessTimezone)
       checkScope()
-      const mime=format==='xlsx'?'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':'text/csv;charset=utf-8'
+      const mime='text/csv;charset=utf-8'
       const url=URL.createObjectURL(new Blob([content],{type:mime}))
-      const link=document.createElement('a');link.href=url;link.download=`${tableId??'records'}-${new Date().toISOString().slice(0,10)}.${format}`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
-      setExportOpen(false)
+      const link=document.createElement('a');link.href=url;link.download=`${tableId??'records'}-${new Date().toISOString().slice(0,10)}.csv`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
       toast.success(`Exported ${rows.length} matching records`)
     }catch(error){toast.error(error instanceof Error?error.message:'Export failed. Please try again.')}finally{setExporting(false)}
   }
@@ -726,7 +723,6 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="flex flex-col gap-3">
-      <TableExportDialog open={exportOpen} onOpenChange={setExportOpen} onExport={exportMatchingRows} busy={exporting}/>
       <div className="flex flex-wrap items-center gap-2">
         {showSearch ? (
           <div className="relative w-full max-w-xs">
@@ -795,7 +791,7 @@ export function DataTable<TData, TValue>({
         </div>
 
         <div className={cn("ml-auto flex flex-wrap items-center justify-end gap-2", renderFilteredView && "order-2 shrink-0")}>
-          {advancedEnabled&&renderFilteredView?<AdvancedFilterEditor onExport={openExport} fields={filterFields} value={effectiveFilters.tree} timezone={businessTimezone} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/>:null}
+          {advancedEnabled&&renderFilteredView?<AdvancedFilterEditor fields={filterFields} value={effectiveFilters.tree} timezone={businessTimezone} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/>:null}
           {toolbar}
           {tableId && savedViews && preferencesReady ? (
             <SavedViewMenu
@@ -806,15 +802,14 @@ export function DataTable<TData, TValue>({
               applyDefault={!hasInitialUrlState}
               onApply={applySavedView}
               onReset={resetToBaseView}
-              onExport={openExport}
-              exporting={exporting}
             />
           ) : null}
-          <ColumnControls table={table} onExport={openExport} exporting={exporting} onReset={resetColumnLayout} labels={Object.fromEntries(fieldDefinitions.map(field=>[field.id,field.label]))} />
+          <ColumnControls table={table} onReset={resetColumnLayout} labels={Object.fromEntries(fieldDefinitions.map(field=>[field.id,field.label]))} />
+          <Button variant="outline" size="sm" onClick={()=>void exportMatchingRows()} disabled={exporting || !!filterError || !!effectiveFilters.error} title="Export all matching rows with the current filters and visible columns"><Download className="size-4" />{exporting ? "Exporting…" : "Export"}</Button>
         </div>
       </div>
 
-      {advancedEnabled&&effectiveFilters.tree.children.length>0?<div aria-label="Active filters" className="flex min-w-0 flex-wrap items-center gap-2 text-sm"><span className="text-muted-foreground">{effectiveFilters.tree.logic==='and'?'Match all:':'Match any:'}</span>{effectiveFilters.tree.children.map(node=><div key={node.id} className="flex max-w-full min-w-0 items-center rounded-md border bg-muted/30 pr-1"><AdvancedFilterEditor onExport={openExport} fields={filterFields} value={effectiveFilters.tree} timezone={businessTimezone} title={describeFilter(node,filterFields)} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/><Button size="icon-sm" variant="ghost" aria-label={`Remove ${describeFilter(node,filterFields)}`} onClick={()=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(removeFilterNode(effectiveFilters.tree,node.id));setPagination(current=>({...current,pageIndex:0}))}}><X className="size-3.5"/></Button></div>)}</div>:null}
+      {advancedEnabled&&effectiveFilters.tree.children.length>0?<div aria-label="Active filters" className="flex min-w-0 flex-wrap items-center gap-2 text-sm"><span className="text-muted-foreground">{effectiveFilters.tree.logic==='and'?'Match all:':'Match any:'}</span>{effectiveFilters.tree.children.map(node=><div key={node.id} className="flex max-w-full min-w-0 items-center rounded-md border bg-muted/30 pr-1"><AdvancedFilterEditor fields={filterFields} value={effectiveFilters.tree} timezone={businessTimezone} title={describeFilter(node,filterFields)} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/><Button size="icon-sm" variant="ghost" aria-label={`Remove ${describeFilter(node,filterFields)}`} onClick={()=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(removeFilterNode(effectiveFilters.tree,node.id));setPagination(current=>({...current,pageIndex:0}))}}><X className="size-3.5"/></Button></div>)}</div>:null}
       {JSON.stringify(filterTree).length>4000?<p role="status" className="text-xs text-muted-foreground">These filters are too large for a shareable link. Save them as a view to reuse them.</p>:null}
       {effectiveFilters.error?<StatusCallout role="alert" tone="danger">{effectiveFilters.error}</StatusCallout>:null}
       {filterError?<StatusCallout role="alert" tone="danger">{filterError}. Edit or clear the filters to continue.</StatusCallout>:null}
@@ -838,7 +833,7 @@ export function DataTable<TData, TValue>({
         pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, search: globalFilter,
         sorting, ...(advancedEnabled?{filterTree:effectiveFilters.tree}:{}), filters: (advancedEnabled?columnFilters.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)):columnFilters) as ServerTableQuery["filters"],
       }) : <div className="overflow-hidden rounded-lg border">
-        <Table style={{tableLayout:"fixed",width:table.getTotalSize(),minWidth:"100%"}}> 
+        <Table style={{tableLayout:"fixed",width:table.getTotalSize(),minWidth:"100%"}}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -846,7 +841,7 @@ export function DataTable<TData, TValue>({
                   <TableHead key={header.id} style={columnStyle(header.column)} className="relative">
                     {header.isPlaceholder
                       ? null
-                      : advancedEnabled && filterFields.find(field=>field.id===header.column.id)?.operators.length ? <AdvancedFilterEditor onExport={openExport}
+                      : advancedEnabled && filterFields.find(field=>field.id===header.column.id)?.operators.length ? <AdvancedFilterEditor
                         fields={filterFields} value={effectiveFilters.tree} fieldId={header.column.id}
                         title={typeof header.column.columnDef.header==='string'?header.column.columnDef.header:filterFields.find(field=>field.id===header.column.id)!.label}
                         timezone={businessTimezone} sorting={header.column.getIsSorted()}

@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Bookmark, Copy, Download, Pencil, Plus, RotateCcw, Star, Trash2 } from "lucide-react"
+import { Bookmark, Copy, Pencil, Plus, RotateCcw, Star, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import {
   deleteView,
@@ -45,8 +45,6 @@ export function SavedViewMenu({
   applyDefault,
   onApply,
   onReset,
-  onExport,
-  exporting=false,
 }: {
   listKey: string
   currentStateValid?: boolean
@@ -54,8 +52,6 @@ export function SavedViewMenu({
   applyDefault: boolean
   onApply: (payload: SavedViewPayload) => void
   onReset: () => void
-  onExport?: () => void
-  exporting?: boolean
 }) {
   const [views, setViews] = React.useState<SavedView[]>([])
   const [selectedId, setSelectedId] = React.useState("")
@@ -237,7 +233,6 @@ export function SavedViewMenu({
               </DropdownMenuItem>
             </>
           ) : null}
-          {onExport?<DropdownMenuItem disabled={exporting||!currentStateValid} onClick={()=>{setMenuOpen(false);onExport()}}><Download/>Export current view</DropdownMenuItem>:null}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => {

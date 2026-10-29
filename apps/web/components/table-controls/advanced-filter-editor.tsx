@@ -1,6 +1,6 @@
 "use client"
 import * as React from 'react'
-import { ListFilter, Plus, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, Download } from 'lucide-react'
+import { ListFilter, Plus, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTitle, PopoverDescription, PopoverTrigger } from '@/components/ui/popover'
@@ -18,7 +18,7 @@ function FilterChoices({field,value,onChange}:{field:TableFieldDefinition;value:
  const options=[...configured,...selected.filter(value=>!configured.some(option=>option.value===value)).map(value=>({value,label:`${value} (saved value)`}))]
  return <div className="min-w-40 flex-1 rounded-md border p-2">{options.length>6?<Input aria-label={`Search ${field.label} options`} placeholder="Search options…" value={search} onChange={event=>setSearch(event.target.value)} className="mb-2"/>:null}<div className="max-h-40 overflow-y-auto">{options.filter(option=>option.label.toLowerCase().includes(search.toLowerCase())).map(option=><label key={option.value} className="flex min-h-9 cursor-pointer items-center gap-2 rounded px-1 hover:bg-muted"><input type="checkbox" className="size-4 accent-primary" checked={selected.includes(option.value)} onChange={event=>onChange(event.target.checked?[...selected,option.value]:selected.filter(value=>value!==option.value))}/><span className="break-words">{option.label}</span></label>)}</div></div>
 }
-export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,title,sorting,onSort,onExport}:{fields:readonly TableFieldDefinition[];value:FilterGroup;onApply:(tree:FilterGroup)=>void;timezone:string;fieldId?:string;title?:string;sorting?:false|'asc'|'desc';onSort?:(direction:false|'asc'|'desc')=>void;onExport?:()=>void}) {
+export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,title,sorting,onSort}:{fields:readonly TableFieldDefinition[];value:FilterGroup;onApply:(tree:FilterGroup)=>void;timezone:string;fieldId?:string;title?:string;sorting?:false|'asc'|'desc';onSort?:(direction:false|'asc'|'desc')=>void}) {
  const [open,setOpen]=React.useState(false),[draft,setDraft]=React.useState(value),[error,setError]=React.useState('')
  const available=fields.filter(f=>f.operators.length)
  function update(id:string,change:(node:FilterNode)=>FilterNode){setDraft(current=>{
@@ -52,7 +52,7 @@ export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,titl
   </div>)}
   <div className="flex gap-2"><Button variant="outline" size="sm" disabled={!available.length} onClick={()=>update(group.id,node=>({...node,children:[...(node as FilterGroup).children,newRule()]} as FilterGroup))}><Plus/>Add condition</Button><Button variant="ghost" size="sm" disabled={depth>=5} onClick={()=>update(group.id,node=>({...node,children:[...(node as FilterGroup).children,{kind:'group',id:crypto.randomUUID(),logic:'and',children:[newRule()]}]} as FilterGroup))}><Plus/>Add group</Button></div>
  </div>}
- function apply(exportAfter=false){try{
+ function apply(){try{
   const number=(v:unknown)=>typeof v==='string'&&!v.trim()?NaN:Number(v)
   const coerce=(node:FilterNode):FilterNode=>{
    if(node.kind==='group')return {...node,children:node.children.map(coerce)}
@@ -65,7 +65,7 @@ export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,titl
    else if(field?.type==='money'&&v&&typeof v==='object'){const m=v as Record<string,unknown>;v=op==='between'?{currency:m.currency,min:number(m.min),max:number(m.max)}:{currency:m.currency,amount:number(m.amount)}}
    return {...node,value:v}
   }
-  onApply(validateFilterTree(coerce(draft),fields));setOpen(false);if(exportAfter)onExport?.()
+  onApply(validateFilterTree(coerce(draft),fields));setOpen(false)
  }catch(e){setError(e instanceof Error?e.message:'Check the filter values.')}}
  const active=fieldId?filterHasField(value,fieldId):value.children.length>0
  return <Popover open={open} onOpenChange={next=>{if(next){const field=available.find(field=>field.id===fieldId);setDraft(field?prepareColumnFilter(value,field,crypto.randomUUID()):value);setError('')}setOpen(next)}}>
@@ -75,7 +75,7 @@ export function AdvancedFilterEditor({fields,value,onApply,timezone,fieldId,titl
    {onSort?<div className="flex flex-wrap gap-2 border-b pb-3"><Button size="sm" variant={sorting==='asc'?'secondary':'ghost'} onClick={()=>onSort('asc')}><ArrowUp/>Ascending</Button><Button size="sm" variant={sorting==='desc'?'secondary':'ghost'} onClick={()=>onSort('desc')}><ArrowDown/>Descending</Button>{sorting?<Button size="sm" variant="ghost" onClick={()=>onSort(false)}>Clear sort</Button>:null}</div>:null}
    {renderGroup(draft,1)}
    {error?<p role="alert" className="text-sm text-destructive">{error}</p>:null}
-   <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 border-t bg-popover p-3"><Button variant="ghost" onClick={()=>setDraft({...value,children:[]})}>Clear filters</Button><Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button><Button onClick={()=>apply()}>Apply filters</Button>{onExport?<Button variant="outline" onClick={()=>apply(true)}><Download/>Apply & export</Button>:null}</div>
+   <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 border-t bg-popover p-3"><Button variant="ghost" onClick={()=>setDraft({...value,children:[]})}>Clear filters</Button><Button variant="outline" onClick={()=>setOpen(false)}>Cancel</Button><Button onClick={()=>apply()}>Apply filters</Button></div>
   </PopoverContent>
  </Popover>
 }
