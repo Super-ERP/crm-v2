@@ -1,63 +1,36 @@
 import "dotenv/config"
-import { eq } from "drizzle-orm"
-import { auth } from "@/lib/auth"
-import { db } from "@/db"
-import * as schema from "@/db/schema"
-import { createInterface } from "node:readline"
-
-function promptHidden(question: string): Promise<string> {
-  return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout })
-    const stdin = process.stdin
-    let answer = ""
-    stdin.setRawMode?.(true)
-    stdin.on("data", (char: Buffer) => {
-      const text = char.toString()
-      if (text === "\n" || text === "\r" || text === "\u0004") {
-        stdin.setRawMode?.(false)
-        rl.close()
-        process.stdout.write("\n")
-        resolve(answer)
-      } else if (text === "\u0003") {
-        process.exit(130)
-      } else if (text === "\u007f") {
-        answer = answer.slice(0, -1)
-      } else {
-        answer += text
-      }
-    })
-    process.stdout.write(question)
-  })
-}
+import postgres from "postgres"
+import { readFile } from "node:fs/promises"
+import { parse } from "dotenv"
+import { parseArgs } from "node:util"
+import { recoveryDatabaseUrl, rotateMasterPassword } from "./master-password-recovery"
 
 async function main() {
-  const email = (process.env.PLATFORM_MASTER_EMAIL ?? "").trim().toLowerCase()
-  if (!email) throw new Error("PLATFORM_MASTER_EMAIL must be set")
-  const password = await promptHidden("New platform master password: ")
-  if (password.length < 12) throw new Error("Password must be at least 12 characters")
-  const confirmation = await promptHidden("Confirm new password: ")
-  if (password !== confirmation) throw new Error("Passwords do not match")
-
-  const [master] = await db
-    .select({ id: schema.user.id, email: schema.user.email })
-    .from(schema.user)
-    .where(eq(schema.user.email, email))
-    .limit(1)
-  if (!master) throw new Error(`No user found for ${email}`)
-
-  const [account] = await db
-    .select({ id: schema.account.id })
-    .from(schema.account)
-    .where(eq(schema.account.userId, master.id))
-    .limit(1)
-  if (!account) throw new Error(`No credential account found for ${email}`)
-
-  const hashed = await (await auth.$context).password.hash(password)
-  await db.update(schema.account).set({ password: hashed, updatedAt: new Date() }).where(eq(schema.account.id, account.id))
-  console.log(`Platform master password updated for ${master.email}`)
+  const { values } = parseArgs({ options: {
+    "env-file": { type: "string" },
+    "output-file": { type: "string" },
+    help: { type: "boolean" },
+  } })
+  if (values.help) {
+    console.log("reset-master --env-file /private/deployment.env --output-file /private/new-password.json")
+    return
+  }
+  if (!values["env-file"] || !values["output-file"]) {
+    throw new Error("Provide --env-file and --output-file")
+  }
+  const deployment = parse(await readFile(values["env-file"], "utf8"))
+  const email = (process.env.PLATFORM_MASTER_EMAIL ?? deployment.PLATFORM_MASTER_EMAIL)?.trim().toLowerCase()
+  const databaseUrl = recoveryDatabaseUrl(deployment, process.env.DATABASE_ADMIN_URL)
+  if (!email) throw new Error("Missing platform master email")
+  const sql = postgres(databaseUrl, { max: 1 })
+  try {
+    await rotateMasterPassword(sql, { expectedEmail: email, envFile: values["env-file"], outputFile: values["output-file"] })
+    console.log("Platform master password rotated; sessions revoked. Retrieve it from the private output file.")
+  } finally { await sql.end() }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
+main().catch(() => {
+  // Database and filesystem errors can contain secrets or SQL parameters.
+  console.error("Password recovery failed. No secrets logged. Inspect the private output file if one was created; reconcile database and deployment configuration before retrying.")
+  process.exitCode = 1
 })

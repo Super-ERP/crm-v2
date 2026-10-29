@@ -1,9 +1,8 @@
-import { and, asc, eq, isNull } from "drizzle-orm"
+import { and, asc, eq } from "drizzle-orm"
 import { z } from "zod"
 import { type Tx } from "@/db"
 import { normalizeQuotationPdfTemplateCode } from "@/lib/quotation-pdf-template"
 import {
-  accounts,
   quotationTemplates,
   tenantSettings,
 } from "@/db/schema"
@@ -173,28 +172,6 @@ export async function clearTenantQuotationTemplateCode(
       and(
         eq(tenantSettings.organizationId, tenantId),
         eq(tenantSettings.quotationTemplateCode, quotationTemplateCode)
-      )
-    )
-}
-
-export async function upsertTemplateCodeOnAccount(
-  tx: Tx,
-  tenantId: string,
-  accountId: string,
-  rawTemplateCode: string | null
-) {
-  const code = toNormalizedTemplateCode(rawTemplateCode)
-  await tx
-    .update(accounts)
-    .set({
-      quotationTemplateCode: code,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(accounts.id, accountId),
-        eq(accounts.tenantId, tenantId),
-        isNull(accounts.deletedAt)
       )
     )
 }

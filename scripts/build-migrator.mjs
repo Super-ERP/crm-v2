@@ -15,6 +15,7 @@ await build({
   entryPoints: {
     migrate: path.join(webRoot, "db/migrate.ts"),
     seed: path.join(webRoot, "db/seed.ts"),
+    "reset-master": path.join(webRoot, "db/reset-master.ts"),
   },
   absWorkingDir: webRoot,
   banner: {

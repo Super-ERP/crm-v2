@@ -1,5 +1,5 @@
 import "server-only"
-import { eq, desc, and, isNull, isNotNull, lt, sql, type SQL } from "drizzle-orm"
+import { eq, desc, and, isNull, sql, type SQL } from "drizzle-orm"
 import { db } from "@/db"
 import { operatorAlerts } from "@/db/schema"
 import { organization } from "@/db/schema"
@@ -141,24 +141,4 @@ export async function resolveOperatorAlerts(
         isNull(operatorAlerts.resolvedAt),
       ),
     )
-}
-
-/** Delete old resolved alerts. Called by a scheduled job or on-demand. */
-export async function purgeResolvedAlerts(olderThanDays = 90): Promise<number> {
-  const ctx = await requireContext()
-  if (!ctx.isSuperadmin) throw new Error("Only the platform master can purge operator alerts.")
-
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - olderThanDays)
-
-  const result = await db
-    .delete(operatorAlerts)
-    .where(
-      and(
-        isNotNull(operatorAlerts.resolvedAt),
-        lt(operatorAlerts.resolvedAt, cutoff),
-      ),
-    )
-    .returning({ id: operatorAlerts.id })
-  return result.length
 }

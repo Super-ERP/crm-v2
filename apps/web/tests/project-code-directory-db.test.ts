@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/postgres-js"
 import { sql as query } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Tx, ServerContext } from "@/lib/actions"
+import { PERMISSIONS } from "@/lib/permissions"
 import { funnels } from "@/db/schema"
 import { visibleProjectCode } from "@/server/services/project-code-visibility"
 const scope = vi.hoisted(() => ({ members: ["rep"] as string[] | null, tx: null as unknown as Tx, ctx: null as unknown as ServerContext }))
@@ -69,6 +70,36 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
     expect(result.rows.find(r => r.code === "A/a & #1")).toMatchObject({ funnelCount: 2, primaryCount: 1, crossDealCount: 1 })
     expect((await listProjectCodes(tx, ctx, { search: "A/a & #1" })).rows).toHaveLength(1)
     expect((await listProjectCodes(tx, ctx, { search: "%" })).rows).toEqual([])
+  })
+  it("aggregates selectable fields without counting a funnel twice or mixing currencies", async () => {
+    await client`update funnels set cross_deal_project_code = project_code, expected_close_date = '2026-11-15' where id = ${active}`
+    await client`update funnels set currency = 'USD', estimated_amount = 250, expected_close_date = '2026-12-15' where id = ${cross}`
+    try {
+      const row = (await listProjectCodes(tx, ctx, { search: 'A/a & #1' })).rows[0]
+      expect(row).toMatchObject({ funnelCount: 2, expectedCloseDate: '2026-11-15', ownerName: ['Sales representative'] })
+      expect(row.estimatedTotalsByCurrency).toEqual([{ currency: 'MYR', total: '1000' }, { currency: 'USD', total: '250' }])
+      expect(row.linkedFunnels).toHaveLength(2)
+      expect(row.accountName).toHaveLength(1)
+      for (const [fieldId, operator, value] of [
+        ['funnelName', 'contains', 'SECOND'], ['ownerName', 'equals', 'Sales representative'],
+        ['stageName', 'any-of', ['won']], ['expectedCloseDate', 'before', '2026-12-01'],
+        ['totalEstimatedFunnelAmount', 'greater-than', { currency: 'USD', amount: 200 }],
+      ] as const) {
+        const filtered = await listProjectCodes(tx, ctx, { search: 'A/a & #1', filterTree: {
+          kind: 'group', id: 'root', logic: 'and', children: [{ kind: 'condition', id: 'condition', fieldId, operator, value }],
+        } })
+        expect(filtered.rows.map(r => r.code)).toEqual(['A/a & #1'])
+      }
+      for (const id of ['accountName', 'funnelName', 'ownerName', 'stageName', 'expectedCloseDate']) {
+        expect((await listProjectCodes(tx, ctx, { sorting: [{ id, desc: true }] })).total).toBe(3)
+      }
+      const restricted = (await listProjectCodes(tx, { ...ctx, can: p => p === PERMISSIONS.OPPORTUNITY_VIEW }, { search: 'A/a & #1' })).rows[0]
+      expect(restricted.accountName).toEqual([])
+      expect(restricted.linkedAccounts).toEqual([])
+    } finally {
+      await client`update funnels set cross_deal_project_code = 'CROSS', expected_close_date = null where id = ${active}`
+      await client`update funnels set currency = 'MYR', estimated_amount = 1000, expected_close_date = null where id = ${cross}`
+    }
   })
   it("returns standard table totals and funnels with CRM summary fields", async () => {
     const directory = await listProjectCodes(tx, ctx, { pageSize: 50, sort: { id: "funnelCount", desc: true } })

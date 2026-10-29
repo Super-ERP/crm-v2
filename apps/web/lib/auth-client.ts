@@ -6,6 +6,3 @@ import { organizationClient, genericOAuthClient, twoFactorClient } from "better-
 export const authClient = createAuthClient({
   plugins: [organizationClient(), genericOAuthClient(), twoFactorClient()],
 })
-
-export const { signIn, signOut, signUp, useSession, useActiveOrganization } =
-  authClient

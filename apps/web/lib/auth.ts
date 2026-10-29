@@ -11,6 +11,8 @@ import * as schema from "@/db/schema"
 import { writeAuthAudit } from "@/server/audit"
 import { ROLE_TEMPLATES } from "@/lib/permissions"
 import { env, microsoftConfigured, isProd } from "@/lib/env"
+import { findSignInInvitations } from "@/lib/auth-invitation-query"
+import { authSessionPolicy } from "@/lib/session-policy"
 import { canUsePasswordLogin } from "@/lib/password-login-policy"
 import {
   autoJoinMembership,
@@ -41,13 +43,8 @@ async function consumePendingInvites(user: {
   const organizations = await db.select({ id: schema.organization.id }).from(schema.organization)
   const invites: Array<{ id: string; tenantId: string }> = []
   for (const organization of organizations) {
-    const rows = await runInTenant(organization.id, (tx) => tx
-      .select({ id: schema.pendingInvites.id, tenantId: schema.pendingInvites.tenantId })
-      .from(schema.pendingInvites)
-      .where(and(
-        eq(schema.pendingInvites.normalizedEmail, email),
-        sql`${schema.pendingInvites.expiresAt} > ${now}`,
-      )))
+    const rows = await runInTenant(organization.id, (tx) =>
+      findSignInInvitations(tx, email, now))
     invites.push(...rows)
   }
   if (invites.length === 0) return null
@@ -127,14 +124,8 @@ async function autoJoinByDomain(user: {
   return org.orgId
 }
 
-/**
- * Per-tenant gate for email/password sign-in. A tenant can switch itself to
- * SSO-only via `tenant_settings.allow_password_login = false`; we enforce that
- * here so the toggle is real (it was previously dead config). A user with no
- * membership yet (first-login bootstrap / break-glass superadmin) is allowed
- * through — there is no tenant to consult. A multi-tenant user is allowed if
- * ANY of their orgs still permits password login.
- */
+/** Production password login is restricted to the configured platform master
+ * or an explicitly designated break-glass account with two-factor enabled. */
 async function passwordLoginAllowed(email: string): Promise<boolean> {
   if (!isProd) return true
   const [candidate] = await db
@@ -200,8 +191,8 @@ export const auth = betterAuth({
   },
   // Email/password is enabled at the framework level (so the seed can hash via
   // auth.$context.password.hash and break-glass admins exist), but actual
-  // sign-in is gated per tenant by `tenant_settings.allow_password_login` in
-  // the `hooks.before` middleware below. Public sign-up is disabled — password
+  // sign-in is gated by the platform-master/break-glass policy in the
+  // `hooks.before` middleware below. Public sign-up is disabled — password
   // users are admin-provisioned.
   emailAndPassword: {
     enabled: true,
@@ -218,7 +209,7 @@ export const auth = betterAuth({
       "/two-factor/verify-backup-code": { window: 300, max: 3 },
     },
   },
-  // Reject email/password sign-in for tenants that have opted into SSO-only.
+  // Enforce the production platform-master/break-glass password policy.
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
       if (ctx.path !== "/sign-in/email") return
@@ -327,10 +318,7 @@ export const auth = betterAuth({
       },
     },
   },
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 days
-    cookieCache: { enabled: true, maxAge: 5 * 60 },
-  },
+  session: authSessionPolicy,
   account: {
     accountLinking: {
       // Microsoft Entra is single-tenant and the callback still requires an

@@ -481,7 +481,13 @@
     "fields": [
       "code",
       "relationship",
-      "funnelCount"
+      "funnelCount",
+      "accountName",
+      "funnelName",
+      "ownerName",
+      "stageName",
+      "totalEstimatedFunnelAmount",
+      "expectedCloseDate"
     ],
     "adapters": {
       "project-codes": {

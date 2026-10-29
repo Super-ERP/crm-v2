@@ -19,7 +19,7 @@ export async function getProjectCodeDetail(code: string, page: unknown = 0) {
 }
 
 export async function listProjectCodeTablePage(query: ServerTableQuery) {
-  const normalized = normalizeRecordListQuery(query, ["code", "funnelCount"], [],getTableFields("project-codes"))
+  const normalized = normalizeRecordListQuery(query, ["code", "funnelCount", "accountName", "funnelName", "ownerName", "stageName", "expectedCloseDate"], [],getTableFields("project-codes"))
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => listProjectCodes(tx, ctx, {
     search: normalized.query.search, page: normalized.offset / normalized.limit, pageSize: normalized.limit, sort: normalized.query.sort,filterTree:normalized.query.filterTree,sorting:normalized.query.sorting,
   }))

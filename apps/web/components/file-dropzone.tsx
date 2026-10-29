@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import { useDropzone, type Accept } from "react-dropzone"
 import { UploadCloudIcon, XIcon, FileIcon, Loader2Icon } from "lucide-react"
 import { cn } from "@/lib/utils"

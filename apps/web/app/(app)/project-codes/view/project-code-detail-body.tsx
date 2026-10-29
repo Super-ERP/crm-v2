@@ -16,6 +16,7 @@ import type { ServerTableQuery } from "@/lib/table-pagination"
 import type { CodeDetail, CodeRelatedRecord } from "@/server/services/project-codes"
 import { getProjectCodeTablePage, listCodeRelatedTablePage } from "../actions"
 import { CodeRoles } from "../project-codes-table"
+import { StageBadge } from "../../funnel/stage-badge"
 
 type FunnelRow = CodeDetail["funnels"][number]
 type Tab = "funnels" | "opportunities" | "quotations" | "accounts" | "contacts" | "projects"
@@ -66,7 +67,7 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
   const funnelColumns = React.useMemo<ColumnDef<FunnelRow>[]>(() => [
     { accessorKey: "name", header: ({ column }) => <SortableHeader column={column} title="Funnel" />, cell: ({ row }) => objectLink("funnel", `/funnel/${row.original.id}`, row.original.name) },
     { id: "relationship", header: "Relationship", enableSorting: false, cell: ({ row }) => <CodeRoles {...row.original} /> },
-    { accessorKey: "stageName", header: ({ column }) => <SortableHeader column={column} title="Stage" />, cell: ({ row }) => <Badge variant={row.original.stageKind === "WON" ? "default" : "secondary"}>{row.original.stageName ?? row.original.status}</Badge> },
+    { accessorKey: "stageName", header: ({ column }) => <SortableHeader column={column} title="Stage" />, cell: ({ row }) => <StageBadge name={row.original.stageName ?? row.original.status} kind={row.original.stageKind} /> },
     { accessorKey: "estimatedAmount", header: ({ column }) => <SortableHeader column={column} title="Est. amount" />, cell: moneyCell(r => r.estimatedAmount, r => r.currency) },
     { accessorKey: "expectedCloseDate", header: ({ column }) => <SortableHeader column={column} title="Expected close date" />, cell: ({ row }) => formatDate(row.original.expectedCloseDate) },
     { id: "account", header: "Account", enableSorting: false, cell: ({ row }) => { const a = accounts.get(row.original.accountId); return a ? objectLink("account", `/accounts/${a.id}`, a.name) : "—" } },
@@ -81,7 +82,7 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
     { tab: "contacts", label: "Contacts", kind: "contact", count: detail.contacts.length },
     ...(detail.projects.length ? [{ tab: "projects" as const, label: "Projects", kind: "project" as const, count: detail.projects.length }] : []),
   ]
-  return <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+  return <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
     <DetailAside>
       <Card><DetailCardHeader kind="projectCode" eyebrow="Project code" /><CardContent className="grid gap-3 text-sm">
         <FieldRow inline label="Code"><span className="break-all font-mono font-medium">{detail.code}</span></FieldRow>
@@ -92,7 +93,7 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
       <RelatedCard items={groups.map(group => ({ kind: group.kind, label: group.label, count: group.count, onSelect: () => setTab(group.tab) }))} />
     </DetailAside>
     <DetailTabs value={groups.some(group => group.tab === tab) ? tab : "funnels"} onValueChange={value => setTab(value as Tab)}>
-      <TabsList variant="line" className="w-full justify-start overflow-x-auto">{groups.map(group => <CountTab key={group.tab} value={group.tab} count={group.count}>{group.label}</CountTab>)}</TabsList>
+      <TabsList>{groups.map(group => <CountTab key={group.tab} value={group.tab} count={group.count}>{group.label}</CountTab>)}</TabsList>
       {/* DataTable owns fetched rows; stable initial props prevent a refresh loop. */}
       <TabsContent value="funnels" className="mt-4"><DataTable columns={funnelColumns} data={initialDetail.funnels}
         server={{ total: initialDetail.total, loadPage: loadFunnels }} tableId="project-code-funnels" searchColumn="name" searchPlaceholder="Search funnels…"

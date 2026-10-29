@@ -832,48 +832,6 @@ export async function updateOpportunity(
   })
 }
 
-export async function deleteOpportunity(id: string): Promise<ActionResult> {
-  return runAction(async () => {
-  await withTenant(PERMISSIONS.OPPORTUNITY_DELETE, async (tx, ctx) => {
-    const visible = await visibleMemberIds(tx, ctx)
-    const [existing] = await tx
-      .select({
-        id: funnels.id,
-        ownerMemberId: funnels.ownerMemberId,
-        opportunityId: funnels.opportunityId,
-      })
-      .from(funnels)
-      .where(and(eq(funnels.id, id), isNull(funnels.deletedAt)))
-      .limit(1)
-    if (!existing) throw new Error("Funnel not found")
-    if (!canManageAllRecords(ctx) && !ownsOrManages(visible, existing.ownerMemberId))
-      throw new Error("FORBIDDEN: not permitted on this Funnel")
-
-    await tx
-      .update(funnels)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(funnels.id, id))
-
-    // Removing a funnel changes its container's rollup.
-    await recomputeOpportunityTotal(tx, ctx.tenantId, existing.opportunityId)
-
-    await writeAudit(tx, ctx, {
-      action: "opportunity.deleted",
-      entityType: "opportunity",
-      entityId: id,
-    })
-    // A deleted deal must disappear from the partner's inbound list too.
-    if ((await getEntitledModuleMap()).finance) {
-      const { syncIntercompanyMirror } = await import(
-        "@/server/services/intercompany"
-      )
-      await syncIntercompanyMirror(tx, id)
-    }
-  })
-  revalidatePath("/funnel")
-  })
-}
-
 /** All persons with their accountId, for client-side filtering in the form. */
 export async function listPersonsWithAccount(): Promise<
   { id: string; name: string; accountId: string; designation: string | null; department: string | null }[]

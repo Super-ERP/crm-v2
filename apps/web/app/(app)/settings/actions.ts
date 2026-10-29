@@ -26,7 +26,6 @@ import { PERMISSIONS } from "@/lib/permissions"
 import {
   getLicenseStateForTenant,
 } from "@/lib/subscription-licensing"
-import { listEntities } from "@/lib/lookups"
 import { storage } from "@/lib/storage"
 import {
   getEntitledModuleMap,
@@ -39,10 +38,6 @@ import {
 } from "@/lib/stage-gate"
 import {
   tenantSettings,
-  membershipProfiles,
-  roles,
-  member,
-  user,
   pipelines,
   pipelineStages,
   funnels,
@@ -142,15 +137,6 @@ export type CompanyProfile = {
   website: string
   bankDetails: string
   quoteFooter: string
-}
-
-export type TenantMemberView = {
-  memberId: string
-  name: string
-  email: string
-  roleName: string | null
-  tierLevel: number
-  status: string
 }
 
 export type UpdateSettingsInput = {
@@ -563,65 +549,6 @@ export async function updateQuoteDefaults(
   })
 }
 
-/**
- * Replace the payment-milestone template. Titles required; percents must be
- * positive and sum to at most 100 (a sum below 100 leaves the remainder
- * unallocated, which is allowed — the team adds the tail manually).
- */
-export async function updateMilestoneTemplate(
-  template: { title: string; percent: number }[]
-): Promise<ActionResult<TenantSettingsView>> {
-  return runAction(async () => {
-    const ctx = await requireContext()
-    assertCan(ctx, PERMISSIONS.TENANT_SETTINGS)
-
-    const cleaned = template.map((t) => ({
-      title: (t.title ?? "").trim().slice(0, 120),
-      percent: Number(t.percent),
-    }))
-    let sum = 0
-    for (const t of cleaned) {
-      if (!t.title) throw new Error("Every milestone needs a title.")
-      if (!Number.isFinite(t.percent) || t.percent <= 0 || t.percent > 100) {
-        throw new Error("Each percent must be between 0 and 100.")
-      }
-      sum += t.percent
-    }
-    if (sum > 100.0001) {
-      throw new Error("The milestone percents add up to more than 100%.")
-    }
-
-    const view = await runInTenant(ctx.tenantId, async (tx) => {
-      const [updated] = await tx
-        .insert(tenantSettings)
-        .values({
-          organizationId: ctx.tenantId,
-          ...DEFAULTS,
-          milestoneTemplate: cleaned,
-        })
-        .onConflictDoUpdate({
-          target: tenantSettings.organizationId,
-          set: { milestoneTemplate: cleaned, updatedAt: new Date() },
-        })
-        .returning()
-      await writeAudit(tx, ctx, {
-        action: "settings.milestone_template_updated",
-        entityType: "tenant_settings",
-        entityId: ctx.tenantId,
-        after: { milestoneTemplate: cleaned },
-      })
-      const [org] = await tx
-        .select({ name: organization.name })
-        .from(organization)
-        .where(eq(organization.id, ctx.tenantId))
-        .limit(1)
-      return await toViewWithLicense(tx, updated, org?.name ?? "", ctx.tenantId)
-    })
-    revalidatePath("/settings")
-    return view
-  })
-}
-
 /** Replace the invoice reminder schedule (days after due; sorted, unique). */
 export async function updateInvoiceReminderDays(
   days: string[]
@@ -749,63 +676,6 @@ export async function removeCompanyLogo(): Promise<ActionResult<void>> {
       if (prev?.key) await storage.delete(prev.key).catch(() => {})
     })
     revalidatePath("/settings")
-  })
-}
-
-/**
- * Replace the intercompany partner allow-list. Every id must be an entity the
- * caller belongs to (there is no directory of foreign orgs to pick from).
- * An empty list restores the legacy behavior (any own entity is a valid
- * handling partner).
- */
-export async function updateIntercompanyPartners(
-  ids: string[]
-): Promise<ActionResult<TenantSettingsView>> {
-  return runAction(async () => {
-    await requireEntitledModule("finance")
-    const ctx = await requireContext()
-    assertCan(ctx, PERMISSIONS.TENANT_SETTINGS)
-
-    const unique = [...new Set(ids.map((s) => s.trim()).filter(Boolean))]
-    const entities = await listEntities()
-    const valid = new Set(entities.map((e) => e.id))
-    for (const id of unique) {
-      if (!valid.has(id)) {
-        throw new Error(
-          "Each allow-listed partner must be an entity you belong to."
-        )
-      }
-    }
-
-    const view = await runInTenant(ctx.tenantId, async (tx) => {
-      const [updated] = await tx
-        .insert(tenantSettings)
-        .values({
-          organizationId: ctx.tenantId,
-          ...DEFAULTS,
-          intercompanyPartnerIds: unique,
-        })
-        .onConflictDoUpdate({
-          target: tenantSettings.organizationId,
-          set: { intercompanyPartnerIds: unique, updatedAt: new Date() },
-        })
-        .returning()
-      await writeAudit(tx, ctx, {
-        action: "settings.intercompany_partners_updated",
-        entityType: "tenant_settings",
-        entityId: ctx.tenantId,
-        after: { intercompanyPartnerIds: unique },
-      })
-      const [org] = await tx
-        .select({ name: organization.name })
-        .from(organization)
-        .where(eq(organization.id, ctx.tenantId))
-        .limit(1)
-      return await toViewWithLicense(tx, updated, org?.name ?? "", ctx.tenantId)
-    })
-
-    revalidatePath("/settings")
-    return view
   })
 }
 
@@ -1418,37 +1288,6 @@ export async function updateAutoJoin(input: {
     })
     revalidatePath("/settings/security")
     return saved
-  })
-}
-
-/** Members of the active tenant with their role + seniority tier. */
-export async function listTenantMembers(): Promise<TenantMemberView[]> {
-  const ctx = await requireContext()
-  assertCan(ctx, PERMISSIONS.TENANT_SETTINGS)
-  return runInTenant(ctx.tenantId, async (tx) => {
-    const rows = await tx
-      .select({
-        memberId: member.id,
-        name: user.name,
-        email: user.email,
-        roleName: roles.name,
-        tierLevel: membershipProfiles.tierLevel,
-        status: membershipProfiles.status,
-      })
-      .from(member)
-      .innerJoin(user, eq(member.userId, user.id))
-      .leftJoin(membershipProfiles, eq(membershipProfiles.memberId, member.id))
-      .leftJoin(roles, eq(membershipProfiles.roleId, roles.id))
-      .where(eq(member.organizationId, ctx.tenantId))
-
-    return rows.map((r) => ({
-      memberId: r.memberId,
-      name: r.name,
-      email: r.email,
-      roleName: r.roleName ?? null,
-      tierLevel: r.tierLevel ?? 0,
-      status: r.status ?? "active",
-    }))
   })
 }
 

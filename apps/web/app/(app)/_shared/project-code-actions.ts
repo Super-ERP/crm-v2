@@ -8,7 +8,7 @@ import { runInTenant } from "@/db"
 import { requireContext } from "@/lib/server-context"
 import { visibleMemberIds, canAccessAttachable } from "@/lib/access-scope"
 import { PERMISSIONS } from "@/lib/permissions"
-import { normalizeTablePageSize, type ServerTableQuery } from "@/lib/table-pagination"
+import { normalizeTablePageSize } from "@/lib/table-pagination"
 import { normalizeApprovalPage } from "@/lib/approval-pagination"
 
 export type RelatedProjectCodeRow = {
@@ -54,9 +54,4 @@ export async function listRelatedProjectCodes(kind: "account" | "person", id: st
     `)
     return { rows: rows.slice(0, pageSize).map(({ total: _total, ...row }) => row), pageIndex, hasNextPage: rows.length > pageSize, total: rows[0]?.total ?? 0 }
   })
-}
-
-/** Uses the same page/search contract as other CRM related tables. */
-export async function listRelatedProjectCodeTablePage(kind: "account" | "person", id: string, query: ServerTableQuery) {
-  return listRelatedProjectCodes(kind, id, query.pageIndex, { pageSize: query.pageSize, search: query.search, sort: Array.isArray(query.sorting) ? query.sorting[0] : undefined })
 }
