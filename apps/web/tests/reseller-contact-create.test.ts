@@ -1,0 +1,16 @@
+import {beforeEach,expect,it,vi} from 'vitest'
+const m=vi.hoisted(()=>({account:{ownerMemberId:'zaf',accountType:'reseller'},insert:vi.fn(),update:vi.fn(),owner:false}))
+vi.mock('@/lib/actions',()=>({withTenant:async(permission:string,work:(...args:unknown[])=>Promise<unknown>)=>{expect(permission).toBe('person.create');return work({select:()=>({from:()=>({where:()=>({limit:()=>({for:async()=>[m.account]})})})}),insert:()=>({values:(values:unknown)=>{m.insert(values);return {returning:async()=>[{id:'new',firstName:'New',...values as object}]}}}),update:m.update},{tenantId:'entity'})}}))
+vi.mock('@/lib/action-result',()=>({runAction:async(work:(...args:unknown[])=>Promise<unknown>)=>work()}))
+vi.mock('@/lib/access-scope',()=>({visibleMemberIds:async()=>['heng'],canManageAllRecords:()=>false,ownsOrManages:()=>m.owner}))
+vi.mock('@/lib/api-readers',()=>({personsList:vi.fn(),personsGet:vi.fn()}))
+vi.mock('@/server/audit',()=>({writeAudit:vi.fn()}))
+vi.mock('@/server/services/activity',()=>({logActivity:vi.fn()}))
+vi.mock('@/server/services/changes/record',()=>({recordChanges:vi.fn()}))
+vi.mock('next/cache',()=>({revalidatePath:vi.fn()}))
+import {createPerson} from '@/app/(app)/persons/actions'
+beforeEach(()=>{m.account={ownerMemberId:'zaf',accountType:'reseller'};m.owner=false;vi.clearAllMocks()})
+it('allows shared reseller creation and preserves account ownership on the contact',async()=>{await createPerson({accountId:'reseller',firstName:'New'});expect(m.insert).toHaveBeenCalledWith(expect.objectContaining({ownerMemberId:'zaf',tenantId:'entity'}));expect(m.update).not.toHaveBeenCalled()})
+it('rejects another salesperson’s ordinary account',async()=>{m.account.accountType='customer';await expect(createPerson({accountId:'customer',firstName:'New'})).rejects.toThrow('FORBIDDEN');expect(m.insert).not.toHaveBeenCalled()})
+it('prevents shared creation from replacing the primary contact',async()=>{await expect(createPerson({accountId:'reseller',firstName:'New',isPrimary:true})).rejects.toThrow('primary contact');expect(m.update).not.toHaveBeenCalled();expect(m.insert).not.toHaveBeenCalled()})
+it('still allows creation on an owned ordinary account',async()=>{m.owner=true;m.account.accountType='customer';await createPerson({accountId:'customer',firstName:'New'});expect(m.insert).toHaveBeenCalled()})
