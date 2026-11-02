@@ -295,3 +295,7 @@ Active project codes are clickable: open one to see its connected sales records.
 Revisions keep the original Bill To and valid Attention contact. Duplicates review these against the selected destination before copying. If Bill To is not explicitly selected, the Funnel account is the recipient; a reseller’s default end user does not override it. Attention must still belong to that recipient account.
 
 If an old quotation’s Attention contact was removed or belongs to another account, revision or duplication still creates an editable draft. Its selected Bill To and Funnel are retained; the incompatible contact and contact snapshot are cleared and a message requests reselection. The original quotation is unchanged. A valid reseller Bill To and its contact are preserved.
+
+### Quotation date
+
+Draft quotations have an editable **Quotation date** beside **Valid until**. Select an earlier or later calendar date when needed for procurement. Save the draft to persist it; QM and QA previews and PDFs use this date. New quotations default to today. Older records without a saved quotation date display their creation date. Sent and approved quotations retain the existing editing restrictions; create a revision when needed. Revisions retain the source date; independent duplicates default to today.

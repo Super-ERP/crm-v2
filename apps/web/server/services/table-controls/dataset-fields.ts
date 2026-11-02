@@ -37,7 +37,9 @@ export function datasetFieldExpressions(key:string): Record<string,SQL> {
   if(!root)return {}
   return Object.fromEntries((OPTIONAL_TABLE_FIELDS[key]??[]).map(field=>{
     let expression:string
-    if(field.id==='salespersonName') {
+    if(key==='quotations'&&field.id==='quoteDate') {
+      expression=`coalesce(${ref(root,'quote_date')},${ref(root,'created_at')}::date)`
+    } else if(field.id==='salespersonName') {
       const owner=['opportunities','funnel','projects'].includes(key)?ref(root,'owner_member_id'):funnelValue(key,root,'owner_member_id')
       expression=memberName(root,owner)
     } else if(field.id==='funnelStatus')expression=funnelValue(key,root,'status')
