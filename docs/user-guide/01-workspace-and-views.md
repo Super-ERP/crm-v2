@@ -168,6 +168,6 @@ To find accounts with a pending milestone due in 2026:
 
 All conditions inside the relationship must match the same milestone. **Has no matching record** also includes accounts with no accessible milestones. **All records match (at least one)** requires a nonempty accessible collection. Use **empty/not empty** to test whether any accessible linked records exist.
 
-Parent rows remain one per record; bridge-table relationships count a target once even if several linking rows exist. Related filters run before server pagination and counting. Complete-client panels fetch authorized related summaries for their full source arrays. Related columns are included in Excel/CSV exports with the current view.
+Parent rows remain one per record; bridge-table relationships count a target once even if several linking rows exist. Related filters run before server pagination and counting. Complete-client panels fetch authorized related summaries for their full source arrays. Related columns are included in CSV exports with the current view.
 
 Only registered business relationships/fields are offered. Target permissions and module entitlements apply independently from access to the parent. Nested relationship conditions support two relationship steps within the existing five group levels, 50-condition and 32 KiB limits. Individual child-row reports should start from that child's table; a parent summary export does not flatten children into duplicate parent rows.

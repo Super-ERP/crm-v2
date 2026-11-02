@@ -76,6 +76,8 @@ Opening any Account presents a comprehensive 360-degree customer view:
 
 ### Shared resellers and billing relationships
 
+Users with **Create contacts** permission can add contacts to a reseller account in the same entity without changing its owner. The new contact inherits the account owner and creation is audited. Editing or deleting existing contacts remains ownership-restricted. Only the account owner or an authorized manager/administrator can set a primary contact. Ordinary client accounts still require ownership or authorized management access.
+
 Reseller accounts and their contacts are shared within the entity so account managers can select them when preparing quotations. Viewing a reseller does not grant permission to change its account data or view other salespeople's Funnels, Opportunities, Projects or Quotations.
 
 A reseller can serve several end users, and an end user can receive quotations through several resellers. Select the actual **Bill To** account on each quotation. The account's **Default end user (optional)** field is a legacy convenience; it does not restrict the quotation's billing relationships. You can create a reseller without filling this field.
