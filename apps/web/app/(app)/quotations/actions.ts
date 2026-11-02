@@ -1089,12 +1089,11 @@ async function createQuotationCopy(
         .from(funnels)
         .where(eq(funnels.id, source.funnelId))
         .limit(1)
-      let recipientAccountId = resolveQuotationBillingAccount(funnel?.accountId ?? null, source.billToAccountId)
+      const recipientAccountId = resolveQuotationBillingAccount(funnel?.accountId ?? null, source.billToAccountId)
       if (recipientAccountId) {
         const [account] = await tx
           .select({
-            accountType: accounts.accountType,
-            endUserAccountId: accounts.endUserAccountId,
+            id: accounts.id,
           })
           .from(accounts)
           .where(
@@ -1105,9 +1104,9 @@ async function createQuotationCopy(
             )
           )
           .limit(1)
-        if (!source.billToAccountId && account?.accountType === "reseller" && account.endUserAccountId) {
-          recipientAccountId = account.endUserAccountId
-        }
+        if (!account) throw new Error("Recipient account not found")
+        // A reseller's default end user does not override the quote's Bill To.
+        // Without an explicit Bill To, the funnel account remains the recipient.
       }
 
       let attentionContactId = source.attentionContactId

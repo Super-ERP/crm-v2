@@ -381,3 +381,18 @@ it("duplicates the quote-specific reseller billing snapshot without using the en
   expect(await duplicateQuotation(source.id)).toEqual({ ok: true, data: { id: "duplicate", quoteNumber: "Q10001-4" } })
   expect(fixture.inserts[0]).toMatchObject({ funnelId: "funnel-1", billToAccountId: "reseller", billingSnapshot, attentionContactId: "contact-1", status: "draft" })
 })
+
+it.each([createQuotationRevision, duplicateQuotation])('copies a legacy reseller recipient without following its default end user', async (copy) => {
+  vi.clearAllMocks()
+  mocks.ownsOrManages.mockReturnValue(true)
+  mocks.visibleMemberIds.mockResolvedValue(['member-1'])
+  const fixture = txWithSelects([
+    [{...source, billToAccountId:null}],
+    [{ownerMemberId:'member-1'}], [sourceLine], [{accountId:'reseller'}],
+    [{accountType:'reseller',endUserAccountId:'end-user'}], [{accountId:'reseller'}],
+  ], [[{id:'copied',quoteNumber:'Q10001-4'}]])
+  mocks.withTenant.mockImplementation(async (_permission,work)=>work(fixture.tx,ctx))
+  mocks.nextQuoteNumber.mockResolvedValue({quoteNumber:'Q10001-4',version:4})
+  expect(await copy(source.id)).toEqual({ok:true,data:{id:'copied',quoteNumber:'Q10001-4'}})
+  expect(fixture.inserts[0]).toMatchObject({billToAccountId:null,attentionContactId:'contact-1'})
+})

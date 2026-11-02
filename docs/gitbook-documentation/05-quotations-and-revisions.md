@@ -289,3 +289,7 @@ Active project codes are clickable: open one to see its connected sales records.
 * [Payment milestones](06-payment-milestones.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+### Reseller quotation revisions
+
+Revisions and duplicates keep the original Bill To and Attention contact. If Bill To is not explicitly selected, the Funnel account is the recipient; a reseller’s default end user does not override it. Attention must still belong to that recipient account.
