@@ -1041,18 +1041,18 @@ export async function canDirectlyApproveQuotation(): Promise<boolean> {
  * intentionally does not filter soft-deleted rows: a deleted quotation is
  * still tenant-owned history and may be revised by a user who can see it.
  */
-export async function createQuotationRevision(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
+export async function createQuotationRevision(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string; attentionNeedsSelection?: boolean }>> {
   return createQuotationCopy(sourceQuotationId, "revision")
 }
 
-export async function duplicateQuotation(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
+export async function duplicateQuotation(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string; attentionNeedsSelection?: boolean }>> {
   return createQuotationCopy(sourceQuotationId, "duplicate")
 }
 
 async function createQuotationCopy(
   sourceQuotationId: string,
   mode: "revision" | "duplicate"
-): Promise<ActionResult<{ id: string; quoteNumber: string }>> {
+): Promise<ActionResult<{ id: string; quoteNumber: string; attentionNeedsSelection?: boolean }>> {
   return runAction(async () => {
     let sourceFunnelId: string | null = null
     const result = await withTenant(PERMISSIONS.QUOTATION_CREATE, async (tx, ctx) => {
@@ -1122,12 +1122,14 @@ async function createQuotationCopy(
             )
           )
           .limit(1)
-        // A removed contact cannot be copied as a live foreign-key snapshot.
-        // A present contact must still belong to the current recipient.
-        if (!contact) attentionContactId = null
-        else assertAttentionContactBelongsToAccount(contact.accountId, recipientAccountId)
+        // Recover old inconsistent links into an editable draft; never infer Bill To
+        // from a contact or carry a mismatched recipient snapshot into the copy.
+        if (!contact || contact.accountId !== recipientAccountId) attentionContactId = null
       }
 
+      const attentionNeedsSelection = !!source.attentionContactId && !attentionContactId
+      const billingSnapshot = attentionNeedsSelection && source.billingSnapshot
+        ? {...source.billingSnapshot, contact: null} : source.billingSnapshot
       const { quoteNumber, version } = await nextQuoteNumber(
         tx,
         ctx,
@@ -1159,7 +1161,7 @@ async function createQuotationCopy(
           delivery: source.delivery,
           paymentTerm: source.paymentTerm,
           billToAccountId: source.billToAccountId,
-          billingSnapshot: source.billingSnapshot,
+          billingSnapshot,
           attentionContactId,
           approverMemberId: null,
           approvedAt: null,
@@ -1209,7 +1211,7 @@ async function createQuotationCopy(
         },
       })
 
-      return created
+      return attentionNeedsSelection ? {...created, attentionNeedsSelection: true} : created
     })
     revalidatePath("/quotations")
     revalidatePath("/approvals")

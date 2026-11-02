@@ -293,3 +293,5 @@ Active project codes are clickable: open one to see its connected sales records.
 ### Reseller quotation revisions
 
 Revisions and duplicates keep the original Bill To and Attention contact. If Bill To is not explicitly selected, the Funnel account is the recipient; a reseller’s default end user does not override it. Attention must still belong to that recipient account.
+
+If an old quotation’s Attention contact was removed or belongs to another account, revision or duplication still creates an editable draft. Its Bill To and Funnel stay unchanged; the incompatible contact and contact snapshot are cleared and a message requests reselection. The original quotation is unchanged. A valid reseller Bill To and its contact are preserved.

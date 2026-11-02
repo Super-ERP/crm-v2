@@ -319,22 +319,23 @@ describe("quotation revisions", () => {
     }
   )
 
-  it("rejects a source whose attention contact no longer belongs to the recipient account", async () => {
+  it.each([createQuotationRevision, duplicateQuotation])("recovers a mismatched historical contact into a draft without changing Bill To", async (copy) => {
     const fixture = txWithSelects([
-      [source],
+      [{...source,billToAccountId:"reseller",billingSnapshot:{account:{name:"Reseller"},contact:{name:"Old contact"}}}],
       [{ ownerMemberId: "member-1" }],
       [],
       [{ accountId: "account-1" }],
       [{ accountType: "customer", endUserAccountId: null }],
       [{ accountId: "another-account" }],
-    ])
+    ], [[{id:"recovered",quoteNumber:"Q10001-3"}]])
     currentTx = fixture.tx
     mocks.withTenant.mockImplementation(async (_permission, work) => work(currentTx, ctx))
 
-    const result = await createQuotationRevision(source.id)
+    const result = await copy(source.id)
 
-    expect(result).toEqual({ ok: false, error: "Attention contact must belong to recipient account" })
-    expect(mocks.nextQuoteNumber).not.toHaveBeenCalled()
+    expect(result).toEqual({ok:true,data:{id:"recovered",quoteNumber:"Q10001-3",attentionNeedsSelection:true}})
+    expect(fixture.inserts[0]).toMatchObject({funnelId:source.funnelId,billToAccountId:"reseller",attentionContactId:null,billingSnapshot:{account:{name:"Reseller"},contact:null}})
+    expect(mocks.nextQuoteNumber).toHaveBeenCalled()
   })
 
   it("rejects a source outside the authenticated tenant before allocation", async () => {
@@ -366,7 +367,7 @@ describe("quotation revisions", () => {
   })
 })
 
-it("duplicates the quote-specific reseller billing snapshot without using the end-user contact", async () => {
+it.each([createQuotationRevision, duplicateQuotation])("preserves the quote-specific reseller billing snapshot without using the end-user contact", async (copy) => {
   vi.clearAllMocks()
   mocks.ownsOrManages.mockReturnValue(true)
   mocks.visibleMemberIds.mockResolvedValue(["member-1"])
@@ -378,7 +379,7 @@ it("duplicates the quote-specific reseller billing snapshot without using the en
   ], [[{ id: "duplicate", quoteNumber: "Q10001-4" }]])
   mocks.withTenant.mockImplementation(async (_permission, work) => work(fixture.tx, ctx))
   mocks.nextQuoteNumber.mockResolvedValue({ quoteNumber: "Q10001-4", version: 4 })
-  expect(await duplicateQuotation(source.id)).toEqual({ ok: true, data: { id: "duplicate", quoteNumber: "Q10001-4" } })
+  expect(await copy(source.id)).toEqual({ ok: true, data: { id: "duplicate", quoteNumber: "Q10001-4" } })
   expect(fixture.inserts[0]).toMatchObject({ funnelId: "funnel-1", billToAccountId: "reseller", billingSnapshot, attentionContactId: "contact-1", status: "draft" })
 })
 
