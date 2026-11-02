@@ -88,6 +88,8 @@ Click a filterable **column header** to open its sort-and-filter menu. The first
 
 Use **Add condition** for another rule and **Add group** for nested rules. **Match all (AND)** requires every condition in that group; **Match any (OR)** requires at least one. For example: `(Stage is 4A OR Closed Won) AND Expected close year is 2026`. A header opens the whole applied filter tree, so rules for other columns stay visible. **Clear filters** clears the draft tree; click **Apply filters** to apply that change. **Cancel** leaves applied filters unchanged.
 
+For Payment Milestones, choose **Funnel → Stage**, use **any of**, and select the configured 4a and Closed Won stages. This is separate from milestone **Status** (Pending invoicing/Invoiced) and **Quotation → Status**. The list includes existing milestones only.
+
 On Funnel, the **Expected close year** quick filter is also available for selecting calendar years. Board view keeps its own filter controls because it has no column headers.
 
 {% endstep %}
@@ -96,6 +98,8 @@ On Funnel, the **Expected close year** quick filter is also available for select
 #### Customizing Table Columns
 
 Click **Columns** to show or hide fields, move them up or down, set their width, and pin them to the left or right. You can also resize a header by dragging its edge; focus the resize handle and use the arrow keys for keyboard resizing. Required identifying and action columns remain visible.
+
+Existing default columns and saved layouts stay in place. Extra supported fields start hidden; search inside **Columns** to find and enable them. Hidden fields are also available in the filter field selector, so you can filter without adding another visible column.
 
 Your layout is personal and saved for that list and organization. **Reset column layout** restores the default columns without clearing filters. Pinning is temporarily suspended on narrow screens while your desktop preference is retained.
 
@@ -143,3 +147,27 @@ Explicit URL settings take precedence over the default view and personal layout.
 Long cell values wrap within their own columns instead of overlapping neighbouring records. Names, descriptions, product codes and subcategories have wider defaults, while units, status and action columns stay compact. Existing explicitly saved widths take precedence; use **Columns → Reset column layout** to adopt the current defaults.
 
 The Project Code detail Funnel tab starts with the funnel, stage, amount, expected close date and owner. Account, Opportunity and Relationship remain available under **Columns** and in column-header filters; related records also have their own tabs.
+
+
+## Export a table
+
+Click **Export** beside **Columns** to download a CSV of all matching rows with the current filters, sorting and visible columns. Apply draft filter changes first. Clear search and filters to export all accessible records.
+
+Server lists load all matching pages, up to 100,000 records. Add filters for larger exports. If the record count changes, duplicate records are detected, or loading stops early, export fails visibly so you can retry. Export is not a database snapshot; avoid changing records while exporting. Panels whose source is truncated cannot export a complete result.
+
+## Related records in table views
+
+Existing columns and saved layouts stay in place. In **Columns**, search for a relationship such as **Milestones**, **Quotations**, **Account** or **Products**. Single related records offer their supported fields; collections offer a count, distinct values, earliest/latest dates and supported numeric totals. Money totals stay grouped by currency. These summaries include all accessible linked records; a filter that selects parent records does not implicitly narrow their summaries to the matching children.
+
+To find accounts with a pending milestone due in 2026:
+
+1. Open a column's filter menu and select **Milestones** as the filter field.
+2. Choose **has a matching record**, then open **Milestones: matching conditions**.
+3. Add **Status → any of → Pending invoicing** and **Due date → year → 2026**, using **Match all (AND)**.
+4. Apply the inner conditions, then apply the parent filter.
+
+All conditions inside the relationship must match the same milestone. **Has no matching record** also includes accounts with no accessible milestones. **All records match (at least one)** requires a nonempty accessible collection. Use **empty/not empty** to test whether any accessible linked records exist.
+
+Parent rows remain one per record; bridge-table relationships count a target once even if several linking rows exist. Related filters run before server pagination and counting. Complete-client panels fetch authorized related summaries for their full source arrays. Related columns are included in CSV exports with the current view.
+
+Only registered business relationships/fields are offered. Target permissions and module entitlements apply independently from access to the parent. Nested relationship conditions support two relationship steps within the existing five group levels, 50-condition and 32 KiB limits. Individual child-row reports should start from that child's table; a parent summary export does not flatten children into duplicate parent rows.

@@ -1,4 +1,6 @@
+import {tableRelationshipFields} from "./relationships"
 import catalog from "./catalog.json"
+import { OPTIONAL_TABLE_FIELDS, tableFieldOptions } from "./fields"
 import { FIELD_TYPES } from "./field-types"
 import type { FilterOperator, TableFieldDefinition, TableFieldType } from "./types"
 export const TABLE_CATALOG = catalog
@@ -16,6 +18,7 @@ const TABLE_FIELD_LABELS: Record<string, Record<string, string>> = {
 }
 const empty: FilterOperator[] = ["empty", "not-empty"]
 export const FIELD_OPERATORS: Record<TableFieldType, readonly FilterOperator[]> = {
+  collection: ["some","none","every","empty","not-empty"],
   text: ["contains", "not-contains", "equals", "not-equals", "starts-with", "ends-with", ...empty],
   number: ["equals", "not-equals", "greater-than", "greater-or-equal", "less-than", "less-or-equal", "between", ...empty],
   money: ["equals", "not-equals", "greater-than", "greater-or-equal", "less-than", "less-or-equal", "between", ...empty],
@@ -26,11 +29,25 @@ export function tableExists(listKey: string) { return catalog.some(entry => entr
 export function getTableFields(listKey: string, columnIds?: readonly string[]): TableFieldDefinition[] {
   const entry = catalog.find(entry => entry.keys.includes(listKey))
   if (!entry) throw new Error("Unknown table")
-  const ids = columnIds ?? entry.fields
+  const extras = OPTIONAL_TABLE_FIELDS[listKey] ?? []
+  const related = tableRelationshipFields(listKey)
+  const ids = columnIds ?? [...new Set([...entry.fields, ...extras.map(field => field.id),...related.map(field=>field.id)])]
   return ids.map(id => {
-    const type = FIELD_TYPES[id]
-    if (!entry.fields.includes(id) || !type) throw new Error(`Unavailable table field: ${id}`)
-    return { id, label: TABLE_FIELD_LABELS[listKey]?.[id] ?? (listKey === "funnel" && id === "id" ? "Funnel" : FIELD_LABELS[id] ?? id.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase())), type, operators: id === "order" ? [] : FIELD_OPERATORS[type],
-      required: id === (REQUIRED_IDENTIFIERS[listKey] ?? (entry.fields.includes("name") ? "name" : entry.fields[0])) || type === "action", sortable: type !== "action", defaultVisible: !["crossDealProjectCode", "crossDealProjectCodes"].includes(id) && !(listKey === "project-code-funnels" && ["relationship", "account", "opportunity"].includes(id)), minWidth: 48, defaultWidth: type === "action" ? 56 : id === "description" ? 260 : id === "subcategory" ? 220 : id === "productCode" ? 200 : ["name", "title", "id"].includes(id) ? 280 : ["uom", "unit"].includes(id) ? 88 : type === "relation" ? 200 : type === "money" || type === "date" ? 168 : type === "boolean" ? 96 : type === "enum" ? 120 : 160 }
+    const relationship=related.find(field=>field.id===id)
+    if(relationship)return relationship
+    const extra = extras.find(field => field.id === id)
+    const type = extra?.type ?? FIELD_TYPES[id]
+    if ((!entry.fields.includes(id) && !extra) || !type) throw new Error(`Unavailable table field: ${id}`)
+    return { id, optional: !!extra && !entry.fields.includes(id), options: tableFieldOptions(listKey,id), label: TABLE_FIELD_LABELS[listKey]?.[id] ?? extra?.label ?? (listKey === "funnel" && id === "id" ? "Funnel" : FIELD_LABELS[id] ?? id.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, c => c.toUpperCase())), type, operators: id === "order" ? [] : FIELD_OPERATORS[type],
+      required: id === (REQUIRED_IDENTIFIERS[listKey] ?? (entry.fields.includes("name") ? "name" : entry.fields[0])) || type === "action", sortable: type !== "action" && id !== "relationship", defaultVisible: (!extra || entry.fields.includes(id)) && !["crossDealProjectCode", "crossDealProjectCodes"].includes(id) && !(listKey === "project-code-funnels" && ["relationship", "account", "opportunity"].includes(id)), minWidth: 48, defaultWidth: type === "action" ? 56 : id === "description" ? 260 : id === "subcategory" ? 220 : id === "productCode" ? 200 : ["name", "title", "id"].includes(id) ? 280 : ["uom", "unit"].includes(id) ? 88 : type === "relation" ? 200 : type === "money" || type === "date" ? 168 : type === "boolean" ? 96 : type === "enum" ? 120 : 160 }
   })
+}
+
+/** Include approved additions without exposing unrelated union-catalogue fields. */
+export function getAvailableTableFields(listKey: string, columnIds: readonly string[]) {
+  return getTableFields(listKey, [...new Set([...columnIds, ...(OPTIONAL_TABLE_FIELDS[listKey] ?? []).map(field => field.id),...tableRelationshipFields(listKey).map(field=>field.id)])]).map(field => columnIds.includes(field.id) ? field : {...field,optional:true,defaultVisible:false})
+}
+export function tableSupportsAdvancedFilters(listKey: string) {
+  const entry = catalog.find(entry => entry.keys.includes(listKey))
+  return !!entry?.adapters[listKey as keyof typeof entry.adapters]
 }

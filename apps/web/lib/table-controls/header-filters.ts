@@ -11,6 +11,7 @@ export function describeFilter(node:FilterNode,fields:readonly TableFieldDefinit
  if(node.kind==='group')return '('+node.children.map(child=>describeFilter(child,fields)).join(node.logic==='and'?' AND ':' OR ')+')'
  const field=fields.find(field=>field.id===node.fieldId)
  const label=(v:unknown):string=>field?.options?.find(option=>option.value===String(v))?.label??String(v??'')
+ if(field?.type==='collection')return `${field.label} ${({some:'has a matching record',none:'has no matching record',every:'all records match',empty:'has no accessible records','not-empty':'has accessible records'} as Record<string,string>)[node.operator]??node.operator}${node.value?' ('+describeFilter(node.value as FilterGroup,field.relationship!.fields)+')':''}`
  const value=Array.isArray(node.value)?node.value.map(label).join(', '):node.value&&typeof node.value==='object'?Object.values(node.value).join(' '):label(node.value)
  return `${field?.label??node.fieldId} ${node.operator.replaceAll('-',' ')}${value?' '+value:''}`
 }

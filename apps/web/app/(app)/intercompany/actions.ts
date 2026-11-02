@@ -1,7 +1,8 @@
 "use server"
+import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { getTableFields } from "@/lib/table-controls/registry"
-import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
@@ -68,13 +69,15 @@ export async function listInboundIntercompanyDealPage(input: ServerTableQuery): 
       ["name", "originEntityName", "status", "dealValue", "yourShare", "expectedCloseDate", "updatedAt"], ["status", "response"],getTableFields("intercompany-inbound"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const responses = query.selections.response?.filter((value): value is IntercompanyResponseValue => value === "accepted" || value === "declined")
-    const where = and(recordFilter("intercompany-inbound",query.filterTree,{name:intercompanyDeals.name,originEntityName:organization.name,status:intercompanyDeals.status,response:intercompanyDealResponses.response,dealValue:sql`coalesce(${intercompanyDeals.quotedAmount},${intercompanyDeals.estimatedAmount},0)`,yourShare:sql`greatest(0,case when ${intercompanyDeals.shareType}='amount' then ${intercompanyDeals.shareValue} else coalesce(${intercompanyDeals.quotedAmount},${intercompanyDeals.estimatedAmount},0)*${intercompanyDeals.shareValue}/100 end)`,project:projects.projectCode,expectedCloseDate:intercompanyDeals.expectedCloseDate},{currency:intercompanyDeals.currency,dateOnly:["expectedCloseDate"]}),eq(intercompanyDeals.partnerTenantId, ctx.tenantId),
+    const relatedFields=await relatedQueryRegistry(tx,ctx,"intercompany-inbound",query.filterTree,query.sorting)
+    const tableFieldColumns = {name:intercompanyDeals.name,originEntityName:organization.name,status:intercompanyDeals.status,response:intercompanyDealResponses.response,dealValue:sql`coalesce(${intercompanyDeals.quotedAmount},${intercompanyDeals.estimatedAmount},0)`,yourShare:sql`greatest(0,case when ${intercompanyDeals.shareType}='amount' then ${intercompanyDeals.shareValue} else coalesce(${intercompanyDeals.quotedAmount},${intercompanyDeals.estimatedAmount},0)*${intercompanyDeals.shareValue}/100 end)`,project:projects.projectCode,expectedCloseDate:intercompanyDeals.expectedCloseDate}
+    const where = and(recordFilterRelated("intercompany-inbound",query.filterTree,tableFieldColumns,relatedFields,{currency:intercompanyDeals.currency,dateOnly:["expectedCloseDate"]}),eq(intercompanyDeals.partnerTenantId, ctx.tenantId),
       search ? or(ilike(intercompanyDeals.name, search), ilike(intercompanyDeals.accountName, search), ilike(organization.name, search)) : undefined,
       query.selections.status?.length ? inArray(intercompanyDeals.status, query.selections.status) : undefined,
       responses?.length ? inArray(intercompanyDealResponses.response, responses) : undefined)
     const dealValue = sql`coalesce(${intercompanyDeals.quotedAmount}, ${intercompanyDeals.estimatedAmount}, 0)`
     const yourShare = sql`greatest(0, case when ${intercompanyDeals.shareType} = 'amount' then ${intercompanyDeals.shareValue} else ${dealValue} * ${intercompanyDeals.shareValue} / 100 end)`
-    const sortColumns = { name: intercompanyDeals.name, originEntityName: organization.name, status: intercompanyDeals.status, dealValue, yourShare, expectedCloseDate: intercompanyDeals.expectedCloseDate, updatedAt: intercompanyDeals.updatedAt }
+    const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  name: intercompanyDeals.name, originEntityName: organization.name, status: intercompanyDeals.status, dealValue, yourShare, expectedCloseDate: intercompanyDeals.expectedCloseDate, updatedAt: intercompanyDeals.updatedAt }
     const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
     const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(intercompanyDeals.updatedAt)
     const [rows, totalRows] = await Promise.all([tx

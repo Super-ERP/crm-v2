@@ -38,7 +38,7 @@ describe('project code presentation', () => {
 
 describe('project code column controls', () => {
   it('uses matching business labels throughout the shared table controls', () => {
-    expect(getTableFields('project-codes').map(({ id, label }) => [id, label])).toEqual([
+    expect(getTableFields('project-codes').filter(field => !field.optional).map(({ id, label }) => [id, label])).toEqual([
       ['code', 'Project code'], ['relationship', 'Used as'], ['funnelCount', 'Linked funnels'],
       ['accountName', 'Account'], ['funnelName', 'Funnel'], ['ownerName', 'Owner'], ['stageName', 'Stage'],
       ['totalEstimatedFunnelAmount', 'Est. amount'], ['expectedCloseDate', 'Earliest expected close date'],
@@ -55,8 +55,9 @@ describe('project code column controls', () => {
       widths: { funnelCount: 120 },
       pinning: { left: ['code'], right: [] },
     }, fields)
-    expect(layout.visibility).toEqual({ code: true, relationship: false, funnelCount: true })
-    expect(layout.order).toEqual(['funnelCount', 'code', 'relationship', 'accountName', 'funnelName', 'ownerName', 'stageName', 'totalEstimatedFunnelAmount', 'expectedCloseDate'])
+    expect(layout.visibility).toMatchObject({ code: true, relationship: false, funnelCount: true })
+    expect(layout.order.filter(id => !fields.find(field => field.id === id)?.optional)).toEqual(['funnelCount', 'code', 'relationship', 'accountName', 'funnelName', 'ownerName', 'stageName', 'totalEstimatedFunnelAmount', 'expectedCloseDate'])
+    expect(fields.filter(field => field.optional).every(field => layout.visibility[field.id] !== true)).toBe(true)
     expect(layout.widths.funnelCount).toBe(120)
     expect(layout.pinning.left).toEqual(['code'])
   })

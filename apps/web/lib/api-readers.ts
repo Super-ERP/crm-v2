@@ -1,4 +1,7 @@
-import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
+
+import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
+import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 import type { FilterGroup } from "@/lib/table-controls/types"
 import "server-only"
 import { activeProjectCodeFunnel, visibleProjectCode } from "@/server/services/project-code-visibility"
@@ -69,15 +72,17 @@ export async function leadsList(
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const validStatuses = ["new", "contacted", "qualified", "disqualified", "converted"] as const
   const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
-  const where = and(
-    recordFilter("leads",query?.filterTree,{name:leads.name,company:leads.companyName,companyName:leads.companyName,mobile:leads.mobile,phone:leads.phone,email:leads.email,status:leads.status,ownerName:user.name,source:leads.source,stage:sql`(select name from ${pipelineStages} where ${pipelineStages.id}=${leads.currentStageId})`,converted:sql`${leads.convertedAccountId} is not null`,createdAt:leads.createdAt},{}),
+  const relatedFields=await relatedQueryRegistry(tx,ctx,"leads",query?.filterTree,query?.sorting)
+  const tableFieldColumns = {name:leads.name,company:leads.companyName,companyName:leads.companyName,mobile:leads.mobile,phone:leads.phone,email:leads.email,status:leads.status,ownerName:user.name,source:leads.source,stage:sql`(select name from ${pipelineStages} where ${pipelineStages.id}=${leads.currentStageId})`,converted:sql`${leads.convertedAccountId} is not null`,createdAt:leads.createdAt}
+    const where = and(
+    recordFilterRelated("leads",query?.filterTree,tableFieldColumns,relatedFields,{}),
     isNull(leads.deletedAt), ownerScope(leads.ownerMemberId, visible),
     search ? or(ilike(leads.name, search), ilike(leads.companyName, search), ilike(leads.email, search), ilike(leads.phone, search), ilike(leads.mobile, search), ilike(leads.source, search), ilike(user.name, search)) : undefined,
     statuses?.length ? inArray(leads.status, statuses) : undefined,
     query?.selections.source?.length ? inArray(leads.source, query.selections.source) : undefined,
     query?.selections.ownerName?.length ? inArray(user.name, query.selections.ownerName) : undefined
   )
-  const sortColumns = { name: leads.name, company: leads.companyName, status: leads.status, ownerName: user.name, source: leads.source, createdAt: leads.createdAt }
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  name: leads.name, company: leads.companyName, status: leads.status, ownerName: user.name, source: leads.source, createdAt: leads.createdAt }
   const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
   const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(leads.createdAt)
   const [rows, totalRows] = await Promise.all([
@@ -87,14 +92,14 @@ export async function leadsList(
       .leftJoin(member, eq(leads.ownerMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id))
       .where(where)
-      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), desc(leads.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering, "leads"), desc(leads.id))
       .limit(limit)
       .offset(offset),
     tx.select({ count: sql<number>`count(*)::int` }).from(leads)
       .leftJoin(member, eq(leads.ownerMemberId, member.id))
       .leftJoin(user, eq(member.userId, user.id)).where(where),
   ])
-  return { rows: rows.map((row) => row.leads), total: countOf(totalRows) }
+  return { rows: await enrichTableRows(tx, "leads", rows.map((row) => row.leads), ctx.tenantId), total: countOf(totalRows) }
 }
 
 export async function leadsFilterSources(tx: Tx, ctx: ServerContext): Promise<string[]> {
@@ -189,15 +194,17 @@ export async function accountsList(
   const visible = await visibleMemberIds(tx, ctx)
   const parent = alias(accounts, "account_list_parent")
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
-  const where = and(
-    recordFilter("accounts",query?.filterTree,{name:accounts.name,ownerName:user.name,code:accounts.code,accountType:accounts.accountType,currency:accounts.currency,industry:accounts.industry,parentAccountName:parent.name,createdAt:accounts.createdAt},{}),
+  const relatedFields=await relatedQueryRegistry(tx,ctx,"accounts",query?.filterTree,query?.sorting)
+  const tableFieldColumns = {name:accounts.name,ownerName:user.name,code:accounts.code,accountType:accounts.accountType,currency:accounts.currency,industry:accounts.industry,parentAccountName:parent.name,createdAt:accounts.createdAt}
+    const where = and(
+    recordFilterRelated("accounts",query?.filterTree,tableFieldColumns,relatedFields,{}),
     isNull(accounts.deletedAt), accountReadScope(visible),
     search ? or(ilike(accounts.name, search), ilike(accounts.code, search), ilike(accounts.registrationNumber, search), ilike(accounts.industry, search), ilike(user.name, search)) : undefined,
     query?.selections.accountType?.length ? inArray(accounts.accountType, query.selections.accountType) : undefined,
     query?.selections.industry?.length ? inArray(accounts.industry, query.selections.industry) : undefined,
     query?.selections.ownerName?.length ? inArray(user.name, query.selections.ownerName) : undefined
   )
-  const sortColumns = { name: accounts.name, code: accounts.code, accountType: accounts.accountType, industry: accounts.industry, ownerName: user.name, createdAt: accounts.createdAt }
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  name: accounts.name, code: accounts.code, accountType: accounts.accountType, industry: accounts.industry, ownerName: user.name, createdAt: accounts.createdAt }
   const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
   const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : asc(accounts.name)
   const [rows, totalRows] = await Promise.all([
@@ -208,7 +215,7 @@ export async function accountsList(
       .leftJoin(user, eq(member.userId, user.id))
       .leftJoin(parent, and(eq(accounts.parentAccountId, parent.id), isNull(parent.deletedAt)))
       .where(where)
-      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), asc(accounts.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering, "accounts"), asc(accounts.id))
       .limit(limit)
       .offset(offset),
     tx.select({ count: sql<number>`count(*)::int` }).from(accounts)
@@ -221,7 +228,7 @@ export async function accountsList(
     parentAccountName: r.parentName,
     ownerName: r.ownerName ?? null,
   }))
-  return { rows: mapped, total: countOf(totalRows) }
+  return { rows: await enrichTableRows(tx, "accounts", mapped, ctx.tenantId), total: countOf(totalRows) }
 }
 
 export async function accountsFilterOptions(tx: Tx, ctx: ServerContext) {
@@ -383,8 +390,10 @@ export async function personsList(
   const visible = await visibleMemberIds(tx, ctx)
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const primaryValues = query?.selections.primary ?? []
-  const where = and(
-    recordFilter("persons",query?.filterTree,{name:sql`concat_ws(' ',${persons.firstName},${persons.lastName})`,accountName:accounts.name,email:persons.email,title:persons.title,department:persons.department,phone:persons.phone,primary:persons.isPrimary},{}),
+  const relatedFields=await relatedQueryRegistry(tx,ctx,"persons",query?.filterTree,query?.sorting)
+  const tableFieldColumns = {name:sql`concat_ws(' ',${persons.firstName},${persons.lastName})`,accountName:accounts.name,email:persons.email,title:persons.title,department:persons.department,phone:persons.phone,primary:persons.isPrimary}
+    const where = and(
+    recordFilterRelated("persons",query?.filterTree,tableFieldColumns,relatedFields,{}),
     isNull(persons.deletedAt),
     isNull(accounts.deletedAt),
     accountReadScope(visible),
@@ -393,7 +402,7 @@ export async function personsList(
     primaryValues.length === 1 && primaryValues[0] === "Primary" ? eq(persons.isPrimary, true) : undefined,
     primaryValues.length === 1 && primaryValues[0] === "Other" ? eq(persons.isPrimary, false) : undefined
   )
-  const sortColumns = { name: persons.firstName, accountName: accounts.name, title: persons.title, email: persons.email, primary: persons.isPrimary }
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  name: persons.firstName, accountName: accounts.name, title: persons.title, email: persons.email, primary: persons.isPrimary }
   const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
   const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : asc(persons.firstName)
   const [rows, totalRows] = await Promise.all([
@@ -402,7 +411,7 @@ export async function personsList(
       .from(persons)
       .innerJoin(accounts, eq(persons.accountId, accounts.id))
       .where(where)
-      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), asc(persons.lastName), asc(persons.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering, "persons"), asc(persons.lastName), asc(persons.id))
       .limit(limit)
       .offset(offset),
     tx
@@ -412,7 +421,7 @@ export async function personsList(
       .where(where),
   ])
   return {
-    rows: rows.map((r) => ({ ...r.person, accountName: r.accountName })),
+    rows: await enrichTableRows(tx, "persons", rows.map((r) => ({ ...r.person, accountName: r.accountName })), ctx.tenantId),
     total: countOf(totalRows),
   }
 }
@@ -536,8 +545,10 @@ export async function opportunitiesList(
   const visible = await visibleMemberIds(tx, ctx)
   const accountOwnerMember = alias(member, "opportunity_account_owner_member")
   const accountOwnerUser = alias(user, "opportunity_account_owner_user")
-  const where = and(
-    recordFilter("opportunities",query?.filterTree,{name:opportunities.name,accountId:opportunities.accountId,accountOwnerMemberId:accounts.ownerMemberId,totalEstimatedFunnelAmount:opportunities.totalEstimatedFunnelAmount,funnelCount:sql`(select count(*) from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,projectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.projectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,crossDealProjectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.crossDealProjectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`},{currency:opportunities.currency,moneyBuckets:{totalEstimatedFunnelAmount:opportunities.estimatedTotalsByCurrency},arrays:['projectCodes','crossDealProjectCodes'],relationNames:{accountId:accounts.name,accountOwnerMemberId:accountOwnerUser.name}}),
+  const relatedFields=await relatedQueryRegistry(tx,ctx,"opportunities",query?.filterTree,query?.sorting)
+  const tableFieldColumns = {name:opportunities.name,accountId:opportunities.accountId,accountOwnerMemberId:accounts.ownerMemberId,totalEstimatedFunnelAmount:opportunities.totalEstimatedFunnelAmount,funnelCount:sql`(select count(*) from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,projectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.projectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,crossDealProjectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.crossDealProjectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`}
+    const where = and(
+    recordFilterRelated("opportunities",query?.filterTree,tableFieldColumns,relatedFields,{currency:opportunities.currency,moneyBuckets:{totalEstimatedFunnelAmount:opportunities.estimatedTotalsByCurrency},arrays:['projectCodes','crossDealProjectCodes'],relationNames:{accountId:accounts.name,accountOwnerMemberId:accountOwnerUser.name}}),
     isNull(opportunities.deletedAt),
     ownerScope(opportunities.ownerMemberId, visible),
     query?.search ? or(
@@ -550,7 +561,7 @@ export async function opportunitiesList(
     query?.selections.accountOwnerMemberId?.length ? inArray(accounts.ownerMemberId, query.selections.accountOwnerMemberId) : undefined
   )
   const funnelCount = sql<number>`(select count(*) from ${funnels} where ${funnels.opportunityId} = ${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible)??sql`true`})`
-  const sortColumns = {
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,
     name: opportunities.name,
     accountId: accounts.name,
     funnelCount,
@@ -579,7 +590,7 @@ export async function opportunitiesList(
       .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(where)
-      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), desc(opportunities.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering, "opportunities"), desc(opportunities.id))
       .limit(limit)
       .offset(offset),
     tx
@@ -591,7 +602,7 @@ export async function opportunitiesList(
       .where(where),
   ])
 
-  if (rows.length === 0) return { rows: [], total: countOf(totalRows) }
+  if (rows.length === 0) return { rows: await enrichTableRows(tx, "opportunities", [], ctx.tenantId), total: countOf(totalRows) }
   const counts = await tx
     .select({
       opportunityId: funnels.opportunityId,
@@ -606,7 +617,7 @@ export async function opportunitiesList(
     .groupBy(funnels.opportunityId)
   const countBy = new Map(counts.map((c) => [c.opportunityId, c]))
   return {
-    rows: rows.map((r) => ({ ...r, funnelCount: countBy.get(r.id)?.n ?? 0, projectCodes: countBy.get(r.id)?.projectCodes ?? [], crossDealProjectCodes: countBy.get(r.id)?.crossDealProjectCodes ?? [] })),
+    rows: await enrichTableRows(tx, "opportunities", rows.map((r) => ({ ...r, funnelCount: countBy.get(r.id)?.n ?? 0, projectCodes: countBy.get(r.id)?.projectCodes ?? [], crossDealProjectCodes: countBy.get(r.id)?.crossDealProjectCodes ?? [] })), ctx.tenantId),
     total: countOf(totalRows),
   }
 }
@@ -902,8 +913,10 @@ export async function funnelsList(
   const search = query?.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
   const validStatuses = ["open", "won", "lost", "on_hold"] as const
   const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
-  const where = and(
-    recordFilter("funnel",query?.filterTree,{id:funnels.name,accountId:funnels.accountId,projectCode:visibleProjectCode(funnels.projectCode),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:funnels.opportunityId,accountOwnerMemberId:accounts.ownerMemberId,amount:sql`coalesce(${funnels.estimatedAmount},${funnels.amount},0)`,expectedCloseDate:funnels.expectedCloseDate,stageId:funnels.currentStageId,status:funnels.status},{currency:funnels.currency,dateOnly:['expectedCloseDate'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name}}),
+  const relatedFields=await relatedQueryRegistry(tx,ctx,"funnel",query?.filterTree,query?.sorting)
+  const tableFieldColumns = {id:funnels.name,accountId:funnels.accountId,projectCode:visibleProjectCode(funnels.projectCode),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:funnels.opportunityId,accountOwnerMemberId:accounts.ownerMemberId,amount:sql`coalesce(${funnels.estimatedAmount},${funnels.amount},0)`,expectedCloseDate:funnels.expectedCloseDate,stageId:funnels.currentStageId,status:funnels.status}
+    const where = and(
+    recordFilterRelated("funnel",query?.filterTree,tableFieldColumns,relatedFields,{currency:funnels.currency,dateOnly:['expectedCloseDate'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name}}),
     isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible),
     isNull(opportunities.deletedAt),
     search ? ilike(funnels.name, search) : undefined,
@@ -917,7 +930,7 @@ export async function funnelsList(
     statuses?.length ? inArray(funnels.status, statuses) : undefined,
     stageId ? eq(funnels.currentStageId, stageId) : undefined
   )
-  const sortColumns = { id: funnels.name, accountId: accounts.name, amount: sql`coalesce(${funnels.estimatedAmount}, ${funnels.amount}, 0)`, expectedCloseDate: funnels.expectedCloseDate, ownerMemberId: user.name, status: funnels.status }
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  id: funnels.name, accountId: accounts.name, opportunityId: opportunities.name, accountOwnerMemberId: accountOwnerUser.name, stageId: pipelineStages.name, amount: sql`coalesce(${funnels.estimatedAmount}, ${funnels.amount}, 0)`, expectedCloseDate: funnels.expectedCloseDate, ownerMemberId: user.name, status: funnels.status }
   const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
   const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(funnels.createdAt)
   const [rows, totalRows] = await Promise.all([
@@ -972,7 +985,7 @@ export async function funnelsList(
       .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .where(where)
-      .orderBy(...recordSort(query?.sorting,sortColumns,ordering), desc(funnels.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,ordering, "funnel"), desc(funnels.id))
       .limit(limit)
       .offset(offset),
     tx
@@ -996,7 +1009,7 @@ export async function funnelsList(
       )
     : new Map<string, PartyRow[]>()
   return {
-    rows: rows.map((r) => ({ ...r, parties: partiesByOpp.get(r.id) ?? [] })),
+    rows: await enrichTableRows(tx, "funnel", rows.map((r) => ({ ...r, parties: partiesByOpp.get(r.id) ?? [] })), ctx.tenantId),
     total: countOf(totalRows),
     valueTotal: totalRows[0]?.valueTotal ?? "0",
   }
@@ -1302,8 +1315,10 @@ export async function quotationsList(
   const accountOwnerUser = alias(user, "quotation_account_owner_user")
   const term = query?.search?.trim()
   const pattern = term ? `%${term.replace(/[\\%_]/g, "\\$&")}%` : null
-  const where = and(
-    recordFilter('quotations',query?.filterTree,{quoteNumber:quotations.quoteNumber,accountId:funnels.accountId,projectCode:visibleProjectCode(funnels.projectCode),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:opportunities.id,accountOwnerMemberId:accounts.ownerMemberId,funnelId:funnels.id,lineItemCount:sql`(select count(*) from ${quotationLineItems} where ${quotationLineItems.quotationId}=${quotations.id})`,subtotal:quotations.subtotal,taxTotal:quotations.taxTotal,total:quotations.total,status:quotations.status,primary:quotations.isPrimary,validUntil:quotations.validUntil},{currency:quotations.currency,dateOnly:['validUntil'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name,funnelId:funnels.name}}),
+  const relatedFields=await relatedQueryRegistry(tx,ctx,"quotations",query?.filterTree,query?.sorting)
+  const tableFieldColumns = {quoteNumber:quotations.quoteNumber,accountId:funnels.accountId,projectCode:visibleProjectCode(funnels.projectCode),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:opportunities.id,accountOwnerMemberId:accounts.ownerMemberId,funnelId:funnels.id,lineItemCount:sql`(select count(*) from ${quotationLineItems} where ${quotationLineItems.quotationId}=${quotations.id})`,subtotal:quotations.subtotal,taxTotal:quotations.taxTotal,total:quotations.total,status:quotations.status,primary:quotations.isPrimary,validUntil:quotations.validUntil}
+    const where = and(
+    recordFilterRelated('quotations',query?.filterTree,tableFieldColumns,relatedFields,{currency:quotations.currency,dateOnly:['validUntil'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name,funnelId:funnels.name}}),
     isNull(quotations.deletedAt),
     ownerScope(funnels.ownerMemberId, visible),
     pattern ? or(
@@ -1325,7 +1340,7 @@ export async function quotationsList(
     select count(*) from ${quotationLineItems}
     where ${quotationLineItems.quotationId} = ${quotations.id}
   )`.mapWith(Number)
-  const sortColumns = {
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,
     quoteNumber: quotations.quoteNumber,
     accountId: accounts.name,
     accountOwnerMemberId: accountOwnerUser.name,
@@ -1368,7 +1383,7 @@ export async function quotationsList(
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
       .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .where(where)
-      .orderBy(...recordSort(query?.sorting,sortColumns,order), desc(quotations.id))
+      .orderBy(...recordSort(query?.sorting,sortColumns,order, "quotations"), desc(quotations.id))
       .limit(limit)
       .offset(offset),
     tx
@@ -1382,7 +1397,7 @@ export async function quotationsList(
       .where(where),
   ])
   return {
-    rows: rows.map((r) => ({
+    rows: await enrichTableRows(tx, "quotations", rows.map((r) => ({
       ...r.q,
       accountId: r.accountId,
       accountName: r.accountName,
@@ -1396,7 +1411,7 @@ export async function quotationsList(
       opportunityCode: r.opportunityCode,
       opportunityName: r.opportunityName,
       lineItemCount: r.lineItemCount,
-    })),
+    })), ctx.tenantId),
     total: countOf(totalRows),
   }
 }

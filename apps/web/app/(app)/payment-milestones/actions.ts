@@ -1,7 +1,10 @@
 "use server"
+import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
+
+import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
 
 import { getTableFields } from "@/lib/table-controls/registry"
-import { recordFilter, recordSort } from "@/server/services/table-controls/record-filter"
+import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 
 import { milestoneReadScope } from "@/server/services/milestone-access"
 import { milestoneStatusForFunnel, milestoneContextForFunnel } from "@/server/services/milestone-status"
@@ -95,11 +98,13 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const statuses = query.selections.status?.filter((value): value is (typeof paymentMilestoneStatus.enumValues)[number] => paymentMilestoneStatus.enumValues.includes(value as (typeof paymentMilestoneStatus.enumValues)[number]))
     const milestoneCurrency=sql<string|null>`coalesce(${quotations.currency},${funnels.currency},(select projects.currency from projects where projects.id=${paymentMilestones.projectId} and projects.tenant_id=${paymentMilestones.tenantId}))`
-    const where = and(recordFilter("payment-milestones",query.filterTree,{title:paymentMilestones.title,amount:paymentMilestones.amount,quoteNumber:quotations.quoteNumber,status:paymentMilestones.status,funnelName:funnels.name},{currency:milestoneCurrency}),
+    const relatedFields=await relatedQueryRegistry(tx,ctx,"payment-milestones",query.filterTree,query.sorting)
+  const tableFieldColumns = {title:paymentMilestones.title,amount:paymentMilestones.amount,quoteNumber:quotations.quoteNumber,status:paymentMilestones.status,funnelName:funnels.name}
+    const where = and(recordFilterRelated("payment-milestones",query.filterTree,tableFieldColumns,relatedFields,{currency:milestoneCurrency}),
       await milestoneReadScope(tx, ctx),
       search ? or(ilike(paymentMilestones.title, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
       statuses?.length ? inArray(paymentMilestones.status, statuses) : undefined)
-    const sortColumns = { title: paymentMilestones.title, amount: paymentMilestones.amount, quoteNumber: quotations.quoteNumber, status: paymentMilestones.status, funnelName: funnels.name }
+    const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  title: paymentMilestones.title, amount: paymentMilestones.amount, quoteNumber: quotations.quoteNumber, status: paymentMilestones.status, funnelName: funnels.name }
     const sortColumn = query.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
     const ordering = sortColumn ? query.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(paymentMilestones.createdAt)
     const [rows, totalRows] = await Promise.all([tx
@@ -113,18 +118,18 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
       .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
       .leftJoin(quotations, eq(paymentMilestones.quotationId, quotations.id))
       .where(where)
-      .orderBy(...recordSort(query.sorting,sortColumns,ordering), desc(paymentMilestones.id))
+      .orderBy(...recordSort(query.sorting,sortColumns,ordering, "payment-milestones"), desc(paymentMilestones.id))
       .limit(limit).offset(offset),
       tx.select({ count: sql<number>`count(*)::int` }).from(paymentMilestones)
         .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
         .leftJoin(quotations, eq(paymentMilestones.quotationId, quotations.id)).where(where),
     ])
-    return { rows: rows.map((r) => ({
+    return { rows: await enrichTableRows(tx, "payment-milestones", rows.map((r) => ({
       ...r.m,
       currency:r.currency,
       funnelName: r.funnelName,
       quoteNumber: r.quoteNumber,
-    })), total: totalRows[0]?.count ?? 0 }
+    })), ctx.tenantId), total: totalRows[0]?.count ?? 0 }
   })
 }
 

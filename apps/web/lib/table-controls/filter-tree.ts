@@ -12,18 +12,24 @@ export function validateFilterTree(input: unknown, fields: readonly TableFieldDe
   if (!serialized || new TextEncoder().encode(serialized).length > 32768) throw new Error('Filter exceeds the 32 KiB limit')
   const byId = new Map(fields.map(f => [f.id,f])), ids = new Set<string>()
   let conditions=0
-  function visit(node: unknown, depth: number): FilterNode {
+  function visit(node: unknown, depth: number, available=byId): FilterNode {
     if (!record(node) || typeof node.id !== 'string' || !node.id || node.id.length > 100 || ids.has(node.id)) throw new Error('Invalid or duplicate filter identifier')
     ids.add(node.id)
     if (node.kind === 'group') {
       if (depth > 5 || !['and','or'].includes(String(node.logic)) || !Array.isArray(node.children) || (depth > 1 && !node.children.length)) throw new Error('Invalid group: use AND/OR and at most five nested levels')
       if (Object.keys(node).some(key => !['kind','id','logic','children'].includes(key))) throw new Error('Unknown group setting')
-      return { kind:'group',id:node.id,logic:node.logic as 'and'|'or',children:node.children.map(child=>visit(child,depth+1)) }
+      return { kind:'group',id:node.id,logic:node.logic as 'and'|'or',children:node.children.map(child=>visit(child,depth+1,available)) }
     }
     if (node.kind !== 'condition' || ++conditions > 50 || Object.keys(node).some(key=>!['kind','id','fieldId','operator','value'].includes(key))) throw new Error('Invalid condition or more than 50 conditions')
-    const field=byId.get(String(node.fieldId)), op=String(node.operator), v=node.value
+    const field=available.get(String(node.fieldId)), op=String(node.operator), v=node.value
     if (!field || !field.operators.includes(op as FilterCondition['operator'])) throw new Error(`Unavailable field or operator: ${String(node.fieldId)}`)
     const fail=()=>{throw new Error(`Invalid ${field.label} filter value`)}
+    if(field.type==='collection'){
+      if(!field.relationship)fail()
+      const value=(op==='empty'||op==='not-empty')?undefined:visit(v,depth+1,new Map(field.relationship!.fields.map(f=>[f.id,f])))
+      if(value&&value.kind!=='group')fail()
+      return {kind:'condition',id:node.id,fieldId:field.id,operator:op as FilterCondition['operator'],...(value?{value}:{})}
+    }
     if (op !== 'empty' && op !== 'not-empty') {
       if (field.type === 'money') {
         if (!record(v) || typeof v.currency!=='string' || !/^[A-Z]{3}$/.test(v.currency)) fail()

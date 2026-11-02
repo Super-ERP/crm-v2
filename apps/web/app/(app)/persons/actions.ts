@@ -132,19 +132,20 @@ export async function createPerson(
     const row = await withTenant(PERMISSIONS.PERSON_CREATE, async (tx, ctx) => {
       const visible = await visibleMemberIds(tx, ctx)
       const [account] = await tx
-        .select({ ownerMemberId: accounts.ownerMemberId })
+        .select({ ownerMemberId: accounts.ownerMemberId, accountType: accounts.accountType })
         .from(accounts)
-        .where(and(eq(accounts.id, input.accountId), isNull(accounts.deletedAt)))
+        .where(and(eq(accounts.id, input.accountId), eq(accounts.tenantId, ctx.tenantId), isNull(accounts.deletedAt)))
         .limit(1)
         .for("share")
       if (!account) throw new Error("Account not found")
-      if (
-        !canManageAllRecords(ctx) &&
-        !ownsOrManages(visible, account.ownerMemberId)
-      ) {
+      const managesAccount = canManageAllRecords(ctx) || ownsOrManages(visible, account.ownerMemberId)
+      if (!managesAccount && account.accountType !== "reseller") {
         throw new Error("FORBIDDEN: not permitted on this account")
       }
 
+      if (input.isPrimary && !managesAccount) {
+        throw new Error("Only the account owner or manager can change its primary contact.")
+      }
       if (input.isPrimary) await clearOtherPrimaries(tx, input.accountId)
 
       const [created] = await tx

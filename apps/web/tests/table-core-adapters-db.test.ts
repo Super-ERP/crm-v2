@@ -1,3 +1,5 @@
+import { sql } from 'drizzle-orm'
+import { datasetFieldExpressions } from '@/server/services/table-controls/dataset-fields'
 import { randomUUID } from 'node:crypto'
 import postgres from 'postgres'
 import { drizzle } from 'drizzle-orm/postgres-js'
@@ -41,6 +43,9 @@ const url=process.env.TEST_DATABASE_ADMIN_URL
    await client`insert into quotations (id,tenant_id,quote_number,funnel_id,status,currency,total,is_primary) values (${quote},'qm','Target quote',${funnel},'draft','MYR',100,true)`
    for(let index=0;index<60;index++)await client`insert into leads (id,tenant_id,name,owner_member_id,status) values (${randomUUID()},'qm',${`Lead ${String(index).padStart(2,'0')}`},${index<50?'rep':'hidden'},'new')`
    const tx=drizzle(client) as unknown as Tx;runtime.tx=tx;runtime.ctx=ctx
+   const rootTables={leads:schema.leads,accounts:schema.accounts,persons:schema.persons,opportunities:schema.opportunities,funnel:schema.funnels,quotations:schema.quotations,products:schema.products,projects:schema.projects,'payment-milestones':schema.paymentMilestones,'sales-orders':schema.salesOrders,'finance-sale':schema.financeDocs,'finance-purchase':schema.financeDocs}
+   for(const [key,table] of Object.entries(rootTables))await tx.execute(sql`select ${sql.join(Object.values(datasetFieldExpressions(key)),sql`, `)} from ${table} where false`)
+
    const query={search:'',selections:{},filterTree:tree('name','Lead')}
    const page=await leadsList(tx,ctx,{limit:25,offset:25,query:{...query,sorting:[{id:'name',desc:false}]}})
    expect(page.total).toBe(50);expect(page.rows).toHaveLength(25);expect(page.rows[0].name).toBe('Lead 25')
@@ -69,6 +74,18 @@ const url=process.env.TEST_DATABASE_ADMIN_URL
     ()=>listSalesOrderPage({...input,filterTree:tree('submittedByName','Representative')}),
    ]
    for(const run of operational){const result=await run();expect(result.total).toBe(0);expect(result.rows).toHaveLength(0)}
+   await client`update quotations set status='accepted' where id=${quote}`
+   const milestone=randomUUID()
+   await client`insert into payment_milestones (id,tenant_id,funnel_id,quotation_id,title,amount,status) values (${milestone},'qm',${funnel},${quote},'Eligible deposit',50,'pending_invoicing')`
+   const stagePage=await listPaymentMilestonePage({...input,sorting:[{id:'funnelStageName',desc:false}],filterTree:tree('funnelStageName',['4A','Closed Won'],'any-of')})
+   expect(stagePage.total).toBe(1)
+   expect((stagePage.rows[0] as unknown as {tableFields:{funnelStageName:string;funnelStatus:string;customerName:string}}).tableFields).toMatchObject({funnelStageName:'4A',funnelStatus:'open',customerName:'Target account'})
+   await client`update pipeline_stages set name='Closed Won',kind='WON' where id=${stage}`
+   await client`update funnels set status='won' where id=${funnel}`
+   expect((await listPaymentMilestonePage({...input,filterTree:tree('funnelStatus',['won'],'any-of')})).total).toBe(1)
+   await client`update funnels set owner_member_id='hidden' where id=${funnel}`
+   expect((await listPaymentMilestonePage({...input,filterTree:tree('funnelStatus',['won'],'any-of')})).total).toBe(0)
+   await client`update funnels set owner_member_id='rep' where id=${funnel}`
    const legacyProject=randomUUID()
    await client`insert into projects (id,tenant_id,name,owner_member_id,currency) values (${legacyProject},'qm','Historical delivery','rep','USD')`
    await client`insert into payment_milestones (id,tenant_id,project_id,title,amount,status) values (${randomUUID()},'qm',${legacyProject},'Historical invoice',100,'invoiced')`

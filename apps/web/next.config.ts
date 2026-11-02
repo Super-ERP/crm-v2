@@ -24,8 +24,13 @@ const nextConfig: NextConfig = {
     ? { turbopack: { root: path.resolve(process.env.LOCAL_TURBOPACK_ROOT) } }
     : {}),
   serverExternalPackages: ["postgres"],
-  allowedDevOrigins: ['192.168.68.100', '10.1.30.86', 'localhost',
+  allowedDevOrigins: [
+    '192.168.68.100', '10.1.30.86', 'localhost',
     ...(process.env.LOCAL_DEV_ORIGINS ?? '').split(',').map(host => host.trim()).filter(Boolean),
+    ...[process.env.APP_URL, process.env.BETTER_AUTH_URL].flatMap((url) => {
+      if (!url) return [];
+      try { return [new URL(url).hostname]; } catch { return []; }
+    }),
   ],
 };
 
