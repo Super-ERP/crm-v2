@@ -140,6 +140,8 @@ integration("deployment status PostgreSQL boundary", () => {
       const [rollup] = await app`select * from read_deployment_status_rollup()`
       expect(rollup.applied_migration_version).toBe(latestAppliedMigration)
 
+      // Isolate the numeric boundary fixture from the current migration journal.
+      await admin`update deployment_runtime_metadata set migration_version = '0099' where singleton = 1`
       await publishAppliedMigrationVersion(admin, "0099")
       await publishAppliedMigrationVersion(admin, "0100")
       await publishAppliedMigrationVersion(admin, "0099")

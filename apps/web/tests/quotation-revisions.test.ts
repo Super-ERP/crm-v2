@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   }),
   visibleMemberIds: vi.fn(async () => ["member-1"]),
   canManageAllRecords: vi.fn(() => false),
-  ownsOrManages: vi.fn(() => true),
+  ownsOrManages: vi.fn<(visible: string[] | null, owner: string | null | undefined) => boolean>(() => true),
   nextQuoteNumber: vi.fn(),
   writeAudit: vi.fn(),
   revalidatePath: vi.fn(),
@@ -167,7 +167,7 @@ describe("quotation revisions", () => {
     const result = await createQuotationRevision(source.id)
 
     expect(result).toEqual({ ok: true, data: { id: "quote-revision", quoteNumber: "Q10001-3" } })
-    expect(mocks.nextQuoteNumber).toHaveBeenCalledWith(currentTx, ctx, "funnel-1")
+    expect(mocks.nextQuoteNumber).toHaveBeenCalledWith(currentTx, ctx, "funnel-1", {sourceQuoteNumber:source.quoteNumber,sourceSeriesKey:undefined})
     expect(fixture.inserts).toEqual(expect.arrayContaining([
       expect.objectContaining({
         tenantId: "tenant-1",
@@ -242,13 +242,14 @@ describe("quotation revisions", () => {
     "duplicates a live %s quotation in the same funnel with a clean Draft",
     async (status) => {
       mocks.ownsOrManages.mockReturnValue(true)
+      mocks.nextQuoteNumber.mockResolvedValue({quoteNumber:"Q10002-1",version:1,seriesKey:"Q10002"})
       const fixture = configureRevision({ status })
       const result = await duplicateQuotation(source.id)
       expect(result).toMatchObject({ ok: true, data: { id: "quote-revision" } })
-      expect(mocks.nextQuoteNumber).toHaveBeenCalledWith(currentTx, ctx, source.funnelId)
+      expect(mocks.nextQuoteNumber).toHaveBeenCalledWith(currentTx, ctx, source.funnelId, {newSeries:true})
       expect(fixture.inserts[0]).toMatchObject({
         funnelId: source.funnelId, revisionOfId: null, status: "draft",
-        version: 3, isPrimary: false, approvedAt: null, approverMemberId: null,
+        version: 1, seriesKey:"Q10002", isPrimary: false, approvedAt: null, approverMemberId: null,
         sentAt: null, acceptedAt: null, validUntil: null,
         subtotal: source.subtotal, notes: source.notes,
       })
@@ -396,4 +397,32 @@ it.each([createQuotationRevision, duplicateQuotation])('copies a legacy reseller
   mocks.nextQuoteNumber.mockResolvedValue({quoteNumber:'Q10001-4',version:4})
   expect(await copy(source.id)).toEqual({ok:true,data:{id:'copied',quoteNumber:'Q10001-4'}})
   expect(fixture.inserts[0]).toMatchObject({billToAccountId:null,attentionContactId:'contact-1'})
+})
+
+it('duplicates into an authorized destination with reviewed reseller billing',async()=>{
+  vi.clearAllMocks();mocks.ownsOrManages.mockReturnValue(true)
+  const fixture=txWithSelects([
+    [source],[{ownerMemberId:'member-1'}],[sourceLine],
+    [{accountId:'destination-customer',ownerMemberId:'member-1',currency:'MYR'}],
+    [{id:'reseller',accountType:'reseller',ownerMemberId:'peer'}],
+    [{id:'reseller'}],[{accountId:'reseller'}],
+    [{name:'Reseller',code:null,phone:null,address:null}],
+    [{firstName:'Billing',lastName:'Contact',email:null,phone:null}],
+  ],[[{id:'duplicate',quoteNumber:'Q10600-1'}]])
+  mocks.withTenant.mockImplementation(async(_permission,work)=>work(fixture.tx,ctx))
+  mocks.nextQuoteNumber.mockResolvedValue({quoteNumber:'Q10600-1',version:1})
+  expect(await duplicateQuotation(source.id,{funnelId:'destination',billToAccountId:'reseller',attentionContactId:'billing-contact'})).toEqual({ok:true,data:{id:'duplicate',quoteNumber:'Q10600-1'}})
+  expect(mocks.nextQuoteNumber).toHaveBeenCalledWith(fixture.tx,ctx,'destination',{newSeries:true})
+  expect(fixture.inserts[0]).toMatchObject({funnelId:'destination',revisionOfId:null,version:1,billToAccountId:'reseller',attentionContactId:'billing-contact',billingSnapshot:{account:{name:'Reseller'},contact:{name:'Billing Contact'}}})
+})
+it.each([
+  {funnel:undefined,error:'Destination funnel not found'},
+  {funnel:{accountId:'account',ownerMemberId:'peer',currency:'MYR'},error:'FORBIDDEN'},
+  {funnel:{accountId:'account',ownerMemberId:'member-1',currency:'USD'},error:'same currency'},
+])('rejects unavailable, unauthorized or incompatible destinations before numbering: $error',async({funnel,error})=>{
+  vi.clearAllMocks();mocks.ownsOrManages.mockImplementation((_visible,owner)=>owner==='member-1')
+  const fixture=txWithSelects([[source],[{ownerMemberId:'member-1'}],[],funnel?[funnel]:[]])
+  mocks.withTenant.mockImplementation(async(_permission,work)=>work(fixture.tx,ctx))
+  expect(await duplicateQuotation(source.id,{funnelId:'destination'})).toMatchObject({ok:false,error:expect.stringContaining(error)})
+  expect(mocks.nextQuoteNumber).not.toHaveBeenCalled();expect(fixture.inserts).toEqual([])
 })

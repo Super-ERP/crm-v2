@@ -708,6 +708,13 @@
 			"when": 1792060000000,
 			"tag": "0100_universal_table_state",
 			"breakpoints": true
+		},
+		{
+			"idx": 101,
+			"version": "7",
+			"when": 1793610000000,
+			"tag": "0101_quotation_series",
+			"breakpoints": true
 		}
 	]
 }

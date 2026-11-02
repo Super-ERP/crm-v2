@@ -70,6 +70,8 @@ export const quotations = pgTable(
       onDelete: "set null",
     }),
     quoteNumber: text("quote_number").notNull(),
+    /** Independent numbering family; immutable across revisions. */
+    seriesKey: text("series_key").notNull().default(""),
     version: integer("version").notNull().default(1),
     isPrimary: boolean("is_primary").notNull().default(false),
     status: quotationStatus("status").notNull().default("draft"),
@@ -129,7 +131,7 @@ export const quotations = pgTable(
     unique("quotations_number_uq").on(t.tenantId, t.quoteNumber),
     index("quotations_bill_to_account_idx").on(t.tenantId, t.billToAccountId),
     index("quotations_revision_of_idx").on(t.revisionOfId),
-    uniqueIndex("quotations_funnel_version_uq").on(t.funnelId, t.version),
+    uniqueIndex("quotations_series_version_uq").on(t.tenantId, t.seriesKey, t.version),
     // DB-level backstops for the app-side guards in acceptQuotation /
     // setPrimaryQuotation: at most ONE live accepted and ONE live primary
     // quotation per funnel, even under concurrent requests.

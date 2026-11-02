@@ -1,9 +1,9 @@
 import "server-only"
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import type { Tx } from "@/db"
 import { funnels, projectCounters, quotations, tenantSettings } from "@/db/schema"
 import { toDateString } from "@/lib/dates"
-import { formatQuoteRef, QUOTE_PAD_WIDTH } from "@/lib/quote-number"
+import { formatQuoteRef, QUOTE_PAD_WIDTH, quotationSeriesKey } from "@/lib/quote-number"
 import type { ServerContext } from "@/lib/server-context"
 
 /**
@@ -22,32 +22,15 @@ export function isDuplicateNumberError(e: unknown): boolean {
   )
 }
 
-/**
- * Allocate the next quotation reference, matching the client's Salesforce
- * format (see lib/quote-number.ts for the exact rules):
- *
- *  - The RUNNING number is per-FUNNEL: every quote on `funnelId` shares one
- *    running number. The funnel's first quote assigns a new one (the
- *    tenant's atomic `quoteNextNumber` counter, i.e. global max + 1);
- *    subsequent quotes on the same funnel reuse the funnel's stored
- *    `funnels.quoteRunningNumber`.
- *  - The REVISION is per-quote-in-funnel: `quotations.version`
- *    (max(version) + 1 for the funnel, or 1 for its first quote).
- *  - The FORMAT (old `Q{yy}-...` vs. new `Q1...`) is fixed by the funnel's
- *    earliest quote's creation date — see formatQuoteRef.
- *
- * Call inside the same tx that inserts the quotation, after the funnel row
- * is known to exist. Returns both the formatted reference AND the revision
- * number the caller MUST write to the new row's `quotations.version` column
- * — the reference's `-{rev}` suffix and the stored version must always
- * agree, since the version column is what the NEXT call's `max(version)`
- * reads back.
- */
+/** Allocate under the funnel lock. Revisions retain a source prefix; duplicates
+ * claim a new tenant-wide prefix. Deleted history always reserves its numbers.
+ * Ordinary create continues the funnel's original/default series for compatibility. */
 export async function nextQuoteNumber(
   tx: Tx,
   ctx: ServerContext,
-  funnelId: string
-): Promise<{ quoteNumber: string; version: number }> {
+  funnelId: string,
+  options: { newSeries?: boolean; sourceQuoteNumber?: string; sourceSeriesKey?: string } = {}
+): Promise<{ quoteNumber: string; version: number; seriesKey: string }> {
   const [f] = await tx
     .select({ quoteRunningNumber: funnels.quoteRunningNumber })
     .from(funnels)
@@ -66,10 +49,9 @@ export async function nextQuoteNumber(
   if (!ts) throw new Error("Quotation numbering is not configured for this tenant")
 
   let running = f.quoteRunningNumber
-  if (running == null) {
-    // First quote on this funnel — atomically claim the next running number
-    // off the tenant's global counter and stamp it onto the funnel so every
-    // later quote on this funnel reuses it.
+  if (running == null || options.newSeries) {
+    // Atomically claim a fresh parent number. Only the first series sets the
+    // funnel default; independent duplicates never overwrite that default.
     const [s] = await tx
       .update(tenantSettings)
       .set({ quoteNextNumber: sql`${tenantSettings.quoteNextNumber} + 1` })
@@ -77,35 +59,35 @@ export async function nextQuoteNumber(
       .returning({ next: tenantSettings.quoteNextNumber })
     if (!s) throw new Error("Quotation numbering is not configured for this tenant")
     running = s.next - 1
-    await tx
+    if (f.quoteRunningNumber == null) await tx
       .update(funnels)
       .set({ quoteRunningNumber: running, updatedAt: new Date() })
       .where(eq(funnels.id, funnelId))
   }
 
-  // Revision + format are both derived from the funnel's existing quotes.
-  // Soft-deleted quotes are INCLUDED here deliberately: quoteNumber keeps a
-  // hard (non-partial) unique constraint even after soft-delete, so a
-  // deleted quote's version/date must still count to avoid re-minting a
-  // reference that collides with it.
-  const [agg] = await tx
-    .select({
-      maxVersion: sql<number>`coalesce(max(${quotations.version}), 0)`,
-      minCreatedAt: sql<string | null>`min(${quotations.createdAt})`,
-    })
-    .from(quotations)
-    .where(eq(quotations.funnelId, funnelId))
+  if (options.newSeries) {
+    const quoteNumber=formatQuoteRef({running, rev:1, earliestQuoteDate:null, pad:ts.pad ?? QUOTE_PAD_WIDTH})
+    return {quoteNumber,version:1,seriesKey:quoteNumber.replace(/-[^-]+$/, '')}
+  }
 
+  const sourcePrefix = options.sourceSeriesKey ?? (options.sourceQuoteNumber ? quotationSeriesKey(options.sourceQuoteNumber) : undefined)
+  const series = sourcePrefix
+    ? sql`${quotations.seriesKey} = ${sourcePrefix}`
+    : sql`${quotations.seriesKey} = (
+        select q.series_key from quotations q
+        where q.funnel_id = ${funnelId} order by q.created_at, q.version, q.id limit 1
+      )`
+  const [agg] = await tx.select({
+    seriesKey: sql<string | null>`min(${quotations.seriesKey})`,
+    maxVersion: sql<number>`coalesce(max(${quotations.version}), 0)`,
+    minCreatedAt: sql<string | null>`min(${quotations.createdAt})`,
+  }).from(quotations).where(and(eq(quotations.funnelId, funnelId), series))
   const rev = (agg?.maxVersion ?? 0) + 1
-  const earliestQuoteDate = agg?.minCreatedAt ?? null
-
-  const quoteNumber = formatQuoteRef({
-    running,
-    rev,
-    earliestQuoteDate,
-    pad: ts.pad ?? QUOTE_PAD_WIDTH,
+  const prefix = sourcePrefix ?? agg?.seriesKey
+  const quoteNumber = prefix ? `${prefix}-${rev}` : formatQuoteRef({
+    running, rev, earliestQuoteDate: agg?.minCreatedAt ?? null, pad: ts.pad ?? QUOTE_PAD_WIDTH,
   })
-  return { quoteNumber, version: rev }
+  return { quoteNumber, version: rev, seriesKey: prefix ?? quotationSeriesKey(quoteNumber) }
 }
 
 /**

@@ -194,8 +194,8 @@ See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/referen
 
 Use **Duplicate quotation** on a live quotation with **Create quotations** permission and access to the record. Duplication is available in any live status, including Draft and Pending Approval.
 
-* The copy belongs to the **same funnel only**. There is no destination funnel or entity selector.
-* It starts as a new, non-primary Draft with the next quotation version number. The source keeps its content, status, and history.
+* Choose the **same funnel** or **another accessible funnel in the same entity and currency**, then review Bill To and Attention before creating.
+* It starts as a new, non-primary Draft with a fresh parent number and version 1 (for example, Q10594-1 becomes Q10595-1). The source keeps its content, status, and history.
 * Pricing, line items, notes, delivery and payment terms are copied. Approval, sending and customer acceptance metadata are cleared.
 * The quotation date resets to today and **Valid until** is cleared. Review dates, contacts, pricing and tax before submitting the copy for its own approval.
 * Duplication creates an independent quotation; **Create revision** additionally links the new Draft to its source as a revision.
@@ -203,13 +203,13 @@ Use **Duplicate quotation** on a live quotation with **Create quotations** permi
 
 ### Copying between entities
 
-Cross-entity quotation import is not currently available. **Duplicate quotation** cannot copy a QM quotation into QA or into another Funnel. Create the destination quotation in its own entity and Funnel until an import workflow is released.
+Cross-entity quotation import is not currently available. **Duplicate quotation** can target another accessible Funnel in the same entity and currency, but cannot copy a QM quotation into QA. Create a separate quotation in the destination entity.
 
 ## Delete quotations and preserve numbering
 
 **Issued quotation numbers are never reused after deletion, even for a Draft.** Deletion hides the quotation through a soft delete while retaining its original number and audit history. It does not reset a counter, renumber remaining quotations, or fill gaps.
 
-The running number belongs to the funnel. Every quotation in that funnel shares that running number and has a distinct version suffix. New quotations, duplicates and revisions use the highest version ever issued in the funnel plus one, including deleted versions.
+Each quotation series has its own parent number and revision suffix. A funnel can contain several independent series. Create revision uses the highest version in the source series plus one, including deleted versions. Duplicate always allocates a fresh parent number at version 1. Ordinary New quotation continues the funnel’s default/original series. Existing references are unchanged.
 
 | Situation | Result |
 | --- | --- |
@@ -218,7 +218,7 @@ The running number belongs to the funnel. Every quotation in that funnel shares 
 | Delete every quotation in a funnel after issuing versions 1–3. | A later quotation in that funnel retains running number `0001` and starts at version 4: `Q10001-4`. |
 | Create the first quotation in a different funnel. | It takes the entity's next running number; the deleted funnel's running number is not recycled. |
 | Recall Pending Approval or return Approved to Draft. | The same record keeps its existing number and version; editing and resubmitting do not allocate another number. |
-| Duplicate a quotation. | The new Draft takes the next version in the same funnel; the source keeps its number. |
+| Duplicate a quotation. | The new Draft takes a fresh parent number at version 1, in the selected funnel; the source keeps its number. |
 
 These examples use the current quotation format. Existing funnels retain their established reference format.
 
@@ -292,6 +292,6 @@ Active project codes are clickable: open one to see its connected sales records.
 
 ### Reseller quotation revisions
 
-Revisions and duplicates keep the original Bill To and Attention contact. If Bill To is not explicitly selected, the Funnel account is the recipient; a reseller’s default end user does not override it. Attention must still belong to that recipient account.
+Revisions keep the original Bill To and valid Attention contact. Duplicates review these against the selected destination before copying. If Bill To is not explicitly selected, the Funnel account is the recipient; a reseller’s default end user does not override it. Attention must still belong to that recipient account.
 
-If an old quotation’s Attention contact was removed or belongs to another account, revision or duplication still creates an editable draft. Its Bill To and Funnel stay unchanged; the incompatible contact and contact snapshot are cleared and a message requests reselection. The original quotation is unchanged. A valid reseller Bill To and its contact are preserved.
+If an old quotation’s Attention contact was removed or belongs to another account, revision or duplication still creates an editable draft. Its selected Bill To and Funnel are retained; the incompatible contact and contact snapshot are cleared and a message requests reselection. The original quotation is unchanged. A valid reseller Bill To and its contact are preserved.
