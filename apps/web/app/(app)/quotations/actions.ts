@@ -762,7 +762,7 @@ export async function createQuotation(input: {
 
     const billingSnapshot = await loadBillingSnapshot(tx, ctx.tenantId, billToAccountId, attentionContactId)
 
-    const { quoteNumber, version } = await nextQuoteNumber(tx, ctx, input.funnelId)
+    const { quoteNumber, version, seriesKey } = await nextQuoteNumber(tx, ctx, input.funnelId)
 
     const [created] = await tx
       .insert(quotations)
@@ -770,6 +770,7 @@ export async function createQuotation(input: {
         tenantId: ctx.tenantId,
         funnelId: input.funnelId,
         quoteNumber,
+        seriesKey,
         version,
         status: "draft",
         currency,
@@ -1045,13 +1046,16 @@ export async function createQuotationRevision(sourceQuotationId: string): Promis
   return createQuotationCopy(sourceQuotationId, "revision")
 }
 
-export async function duplicateQuotation(sourceQuotationId: string): Promise<ActionResult<{ id: string; quoteNumber: string; attentionNeedsSelection?: boolean }>> {
-  return createQuotationCopy(sourceQuotationId, "duplicate")
+export async function duplicateQuotation(sourceQuotationId: string, destination?: {
+  funnelId: string; billToAccountId?: string | null; attentionContactId?: string | null
+}): Promise<ActionResult<{ id: string; quoteNumber: string; attentionNeedsSelection?: boolean }>> {
+  return createQuotationCopy(sourceQuotationId, "duplicate", destination)
 }
 
 async function createQuotationCopy(
   sourceQuotationId: string,
-  mode: "revision" | "duplicate"
+  mode: "revision" | "duplicate",
+  destination?: {funnelId: string; billToAccountId?: string | null; attentionContactId?: string | null}
 ): Promise<ActionResult<{ id: string; quoteNumber: string; attentionNeedsSelection?: boolean }>> {
   return runAction(async () => {
     let sourceFunnelId: string | null = null
@@ -1084,12 +1088,23 @@ async function createQuotationCopy(
         .where(eq(quotationLineItems.quotationId, source.id))
         .orderBy(asc(quotationLineItems.sortOrder))
 
+      const destinationFunnelId = mode === "duplicate" ? destination?.funnelId ?? source.funnelId : source.funnelId
       const [funnel] = await tx
-        .select({ accountId: funnels.accountId })
+        .select({ accountId: funnels.accountId, ownerMemberId: funnels.ownerMemberId, currency: funnels.currency })
         .from(funnels)
-        .where(eq(funnels.id, source.funnelId))
+        .where(and(eq(funnels.id, destinationFunnelId), eq(funnels.tenantId, ctx.tenantId), isNull(funnels.deletedAt)))
         .limit(1)
-      const recipientAccountId = resolveQuotationBillingAccount(funnel?.accountId ?? null, source.billToAccountId)
+        .for("update")
+      if (!funnel) throw new Error("Destination funnel not found")
+      const crossFunnel = destinationFunnelId !== source.funnelId
+      const visible = await visibleMemberIds(tx, ctx)
+      if (crossFunnel && !canManageAllRecords(ctx) && !ownsOrManages(visible, funnel.ownerMemberId)) {
+        throw new Error("FORBIDDEN: not permitted on destination funnel")
+      }
+      if (crossFunnel && funnel.currency !== source.currency) throw new Error("Choose a funnel with the same currency as the quotation.")
+      const billToAccountId = destination?.billToAccountId === undefined ? source.billToAccountId : destination.billToAccountId
+      const recipientAccountId = resolveQuotationBillingAccount(funnel.accountId, billToAccountId)
+      if (destination) await assertBillToAccount(tx, ctx.tenantId, recipientAccountId, visible, funnel.accountId)
       if (recipientAccountId) {
         const [account] = await tx
           .select({
@@ -1109,7 +1124,7 @@ async function createQuotationCopy(
         // Without an explicit Bill To, the funnel account remains the recipient.
       }
 
-      let attentionContactId = source.attentionContactId
+      let attentionContactId = destination?.attentionContactId === undefined ? source.attentionContactId : destination.attentionContactId
       if (attentionContactId) {
         const [contact] = await tx
           .select({ accountId: persons.accountId })
@@ -1128,20 +1143,23 @@ async function createQuotationCopy(
       }
 
       const attentionNeedsSelection = !!source.attentionContactId && !attentionContactId
-      const billingSnapshot = attentionNeedsSelection && source.billingSnapshot
-        ? {...source.billingSnapshot, contact: null} : source.billingSnapshot
-      const { quoteNumber, version } = await nextQuoteNumber(
+      const billingSnapshot = destination
+        ? await loadBillingSnapshot(tx, ctx.tenantId, recipientAccountId, attentionContactId)
+        : attentionNeedsSelection && source.billingSnapshot ? {...source.billingSnapshot, contact: null} : source.billingSnapshot
+      const { quoteNumber, version, seriesKey } = await nextQuoteNumber(
         tx,
         ctx,
-        source.funnelId
+        destinationFunnelId,
+        mode === "duplicate" ? {newSeries:true} : {sourceQuoteNumber:source.quoteNumber,sourceSeriesKey:source.seriesKey}
       )
       const [created] = await tx
         .insert(quotations)
         .values({
           tenantId: ctx.tenantId,
-          funnelId: source.funnelId,
+          funnelId: destinationFunnelId,
           revisionOfId: mode === "revision" ? source.id : null,
           quoteNumber,
+          seriesKey,
           version,
           isPrimary: false,
           status: "draft",
@@ -1160,7 +1178,7 @@ async function createQuotationCopy(
           notes: source.notes,
           delivery: source.delivery,
           paymentTerm: source.paymentTerm,
-          billToAccountId: source.billToAccountId,
+          billToAccountId,
           billingSnapshot,
           attentionContactId,
           approverMemberId: null,
@@ -1208,9 +1226,12 @@ async function createQuotationCopy(
           quoteNumber: created.quoteNumber,
           version,
           status: "draft",
+          sourceQuotationId: source.id,
+          destinationFunnelId,
         },
       })
 
+      if (crossFunnel) revalidatePath(`/funnel/${destinationFunnelId}`)
       return attentionNeedsSelection ? {...created, attentionNeedsSelection: true} : created
     })
     revalidatePath("/quotations")

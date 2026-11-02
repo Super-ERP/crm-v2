@@ -1,18 +1,6 @@
-/**
- * Pure helpers for the Salesforce-format quotation reference. No IO, no
- * `server-only`, so they are unit-testable and safe to import anywhere.
- *
- * Client's Salesforce behavior being mirrored:
- *  - The running number is per-FUNNEL: every quote in a funnel shares ONE
- *    running number, assigned on the funnel's FIRST quote (global max + 1).
- *  - The revision is per-quote-in-funnel: `quotations.version`, 1 for the
- *    first quote, max(version) + 1 thereafter.
- *  - The FORMAT depends on the funnel's EARLIEST quote's creation date:
- *      before 1 Sept 2025 → old format `Q{yy}-{running}-{rev}`
- *      on/after 1 Sept 2025 → new format `Q1{running}-{rev}`
- *    A brand-new funnel (no earlier quote) always gets the new format, since
- *    it is created "now" — always after the cutoff.
- */
+/** Pure quotation reference formatting. Each independent series has a running
+ * number; revisions retain its prefix. Duplicate allocates a fresh series.
+ * Existing original series retain their legacy date-based format. */
 
 /** Default zero-pad width for the running number, overridable per tenant. */
 export const QUOTE_PAD_WIDTH = 4
@@ -64,4 +52,10 @@ export function formatQuoteRef({
     return `Q${yy}-${runningStr}-${revStr}`
   }
   return `Q1${runningStr}-${revStr}`
+}
+
+/** Legacy references without a canonical revision suffix are independent series. */
+export function quotationSeriesKey(reference: string): string {
+  return /^Q([0-9]{2}-[0-9]+|1[0-9]+)-[0-9]+$/.test(reference)
+    ? reference.replace(/-[^-]+$/, '') : reference
 }

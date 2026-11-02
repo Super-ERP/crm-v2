@@ -1,5 +1,6 @@
 "use client"
 
+import { QuotationDuplicateDialog } from "@/components/quotation-duplicate-dialog"
 import { ProjectCodeLink } from "@/components/project-code-link"
 import * as React from "react"
 import Link from "next/link"
@@ -522,9 +523,9 @@ export function QuotationForm({
     setBusy(false)
   }
 
-  async function onDuplicate() {
+  async function onDuplicate(destination: {funnelId:string;billToAccountId:string|null;attentionContactId:string|null}) {
     setBusy(true)
-    const res = await duplicateQuotation(quotation.id)
+    const res = await duplicateQuotation(quotation.id, destination)
     if (!res.ok) {
       showActionError(res)
       setBusy(false)
@@ -1305,9 +1306,8 @@ export function QuotationForm({
               </Button>
             ) : null}
             {showDuplicate ? (
-              <Button variant="outline" disabled={busy} onClick={onDuplicate}>
-                Duplicate quotation
-              </Button>
+              <QuotationDuplicateDialog disabled={busy} funnelId={quotation.funnelId} currency={quotation.currency}
+                billToAccountId={quotation.billToAccountId} attentionContactId={quotation.attentionContactId} onCreate={onDuplicate}/>
             ) : null}
             {showRevision ? (
               <AlertDialog>
