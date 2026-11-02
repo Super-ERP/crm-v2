@@ -530,7 +530,8 @@ export function QuotationForm({
       setBusy(false)
       return
     }
-    toast.success("Quotation duplicated as a new Draft")
+    if (res.data.attentionNeedsSelection) toast.warning("Draft created. Select Attention for the Bill To account.")
+    else toast.success("Quotation duplicated as a new Draft")
     router.push(`/quotations/${res.data.id}`)
   }
 
@@ -542,7 +543,8 @@ export function QuotationForm({
       setBusy(false)
       return
     }
-    toast.success("Revision created")
+    if (res.data.attentionNeedsSelection) toast.warning("Draft created. Select Attention for the Bill To account.")
+    else toast.success("Revision created")
     router.push(`/quotations/${res.data.id}`)
   }
 

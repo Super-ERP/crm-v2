@@ -368,7 +368,8 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                     showActionError(result)
                     return
                   }
-                  toast.success("Revision created")
+                  if (result.data.attentionNeedsSelection) toast.warning("Draft created. Select Attention for the Bill To account.")
+                  else toast.success("Revision created")
                   router.push(`/quotations/${result.data.id}`)
                 }}
               >
