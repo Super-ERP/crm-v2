@@ -90,7 +90,7 @@ describe("quotation edit currency persistence", () => {
     vi.clearAllMocks()
   })
 
-  it("keeps the draft quotation currency when edit input omits an override", async () => {
+  it.each([undefined, "2020-01-01", "2030-12-31"])("keeps currency and persists the selected quotation date %s", async (quoteDate) => {
     const existing = {
       id: "quotation-1",
       funnelId: "funnel-1",
@@ -109,6 +109,7 @@ describe("quotation edit currency persistence", () => {
     )
 
     const result = await updateQuotation("quotation-1", {
+      quoteDate,
       taxSettingId: null,
       validUntil: null,
       notes: null,
@@ -124,7 +125,7 @@ describe("quotation edit currency persistence", () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(updates[0]).toMatchObject({ currency: "USD" })
+    expect(updates[0]).toMatchObject({ currency: "USD", quoteDate })
   })
 
   it("saves a draft when its unchanged attention contact is now unavailable", async () => {

@@ -1,5 +1,7 @@
 "use client"
 
+import { toDateString } from "@/lib/dates"
+
 import { QuotationDuplicateDialog } from "@/components/quotation-duplicate-dialog"
 import { ProjectCodeLink } from "@/components/project-code-link"
 import * as React from "react"
@@ -100,6 +102,7 @@ import { EntityQuotationDocument } from "./[id]/preview/entity-quotation-documen
 import { PrintButton } from "./[id]/preview/print-button"
 
 const schema = z.object({
+  quoteDate: z.string().min(1, "Quotation date is required"),
   taxSettingId: z.string(),
   projectNatureCode: z.string(),
   validUntil: z.string(),
@@ -225,6 +228,7 @@ export function QuotationForm({
     defaultValues: {
       taxSettingId: quotation.taxSettingId ?? NO_TAX,
       projectNatureCode: quotation.projectNatureCode ?? NO_PROJECT_NATURE,
+      quoteDate: quotation.quoteDate ?? toDateString(new Date(quotation.createdAt)),
       validUntil: quotation.validUntil ?? "",
       notes: quotation.notes ?? "",
       delivery: quotation.delivery ?? "",
@@ -316,6 +320,7 @@ export function QuotationForm({
   // Live totals: watch lines + tax selection and recompute with the shared formula.
   const watchedLines = useWatch({ control: form.control, name: "lines" })
   const watchedTaxId = useWatch({ control: form.control, name: "taxSettingId" })
+  const watchedQuoteDate = useWatch({ control: form.control, name: "quoteDate" })
   const watchedValidUntil = useWatch({ control: form.control, name: "validUntil" })
   const watchedNotes = useWatch({ control: form.control, name: "notes" })
   const watchedDelivery = useWatch({ control: form.control, name: "delivery" })
@@ -384,6 +389,7 @@ export function QuotationForm({
         contact: billingContacts.find(contact => contact.id === watchedAttentionContactId) ?? null,
         quotation: {
           ...preview.quotation,
+          quoteDate: watchedQuoteDate,
           validUntil: watchedValidUntil || null,
           notes: watchedNotes || null,
           delivery: watchedDelivery || null,
@@ -450,6 +456,7 @@ export function QuotationForm({
         values.projectNatureCode === NO_PROJECT_NATURE
           ? null
           : values.projectNatureCode,
+      quoteDate: values.quoteDate,
       validUntil: values.validUntil || null,
       notes: values.notes || null,
       delivery: values.delivery || null,
@@ -687,6 +694,19 @@ export function QuotationForm({
                     )}
                   />
                 ) : null}
+                <FormField
+                  control={form.control}
+                  name="quoteDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quotation date</FormLabel>
+                      <FormControl>
+                        <Input type="date" disabled={!canEditDraft} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="validUntil"

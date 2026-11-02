@@ -45,6 +45,7 @@ import { nextQuoteNumber } from "@/server/services/numbering"
 import { logActivity } from "@/server/services/activity"
 import { writeAudit } from "@/server/audit"
 import { toDateString } from "@/lib/dates"
+import { parseQuotationDate } from "@/lib/quotation-date"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import {
   getActiveQuotationTemplateByCode,
@@ -96,6 +97,7 @@ export type LineInput = {
 export type QuotationHeaderInput = {
   currency?: string | null
   taxSettingId: string | null
+  quoteDate?: string | null
   validUntil: string | null
   notes: string | null
   delivery?: string | null
@@ -649,6 +651,7 @@ export async function createQuotation(input: {
   funnelId: string
   currency?: string | null
   taxSettingId: string | null
+  quoteDate?: string | null
   validUntil: string | null
   notes?: string | null
   delivery?: string | null
@@ -782,6 +785,7 @@ export async function createQuotation(input: {
         discountTotal: totals.discountTotal.toFixed(2),
         taxTotal: totals.taxTotal.toFixed(2),
         total: totals.total.toFixed(2),
+        quoteDate: input.quoteDate === undefined ? toDateString() : parseQuotationDate(input.quoteDate),
         validUntil: input.validUntil || null,
         notes: content.notes,
         delivery: content.delivery,
@@ -822,7 +826,7 @@ export async function createQuotation(input: {
       action: "quotation.created",
       entityType: "quotation",
       entityId: created.id,
-      after: { billToAccountId: created.billToAccountId, billingSnapshot: created.billingSnapshot, ...quotationContentAuditSnapshot(created) },
+      after: { quoteDate: created.quoteDate, billToAccountId: created.billToAccountId, billingSnapshot: created.billingSnapshot, ...quotationContentAuditSnapshot(created) },
     })
     return created
   })
@@ -920,6 +924,7 @@ export async function updateQuotation(
         discountTotal: totals.discountTotal.toFixed(2),
         taxTotal: totals.taxTotal.toFixed(2),
         total: totals.total.toFixed(2),
+        quoteDate: input.quoteDate === undefined ? undefined : parseQuotationDate(input.quoteDate),
         validUntil: input.validUntil || null,
         notes: content.notes,
         delivery: content.delivery,
@@ -947,13 +952,13 @@ export async function updateQuotation(
       action: "quotation.updated",
       entityType: "quotation",
       entityId: id,
-      before: { billToAccountId: existing.billToAccountId, billingSnapshot: existing.billingSnapshot, ...quotationContentAuditSnapshot({
+      before: { quoteDate: existing.quoteDate, billToAccountId: existing.billToAccountId, billingSnapshot: existing.billingSnapshot, ...quotationContentAuditSnapshot({
         attentionContactId: existing.attentionContactId,
         notes: existing.notes,
         delivery: existing.delivery,
         paymentTerm: existing.paymentTerm,
       }) },
-      after: { billToAccountId, billingSnapshot, ...quotationContentAuditSnapshot({
+      after: { quoteDate: updated.quoteDate, billToAccountId, billingSnapshot, ...quotationContentAuditSnapshot({
         attentionContactId,
         notes: content.notes,
         delivery: content.delivery,
