@@ -41,7 +41,7 @@ vi.mock("@/lib/modules.server", () => ({
   getEntitledModuleMap: vi.fn(async () => ({ projects: false })),
 }))
 
-import { createQuotationRevision, duplicateQuotation } from "@/app/(app)/quotations/actions"
+import { createQuotation, createQuotationRevision, duplicateQuotation } from "@/app/(app)/quotations/actions"
 
 type Chain = {
   from: ReturnType<typeof vi.fn>
@@ -399,13 +399,13 @@ it.each([createQuotationRevision, duplicateQuotation])('copies a legacy reseller
   expect(fixture.inserts[0]).toMatchObject({billToAccountId:null,attentionContactId:'contact-1'})
 })
 
-it('duplicates into an authorized destination with reviewed reseller billing',async()=>{
+it.each(['reseller','destination-customer'])('duplicates into an authorized destination with Attention from %s',async(contactAccountId)=>{
   vi.clearAllMocks();mocks.ownsOrManages.mockReturnValue(true)
   const fixture=txWithSelects([
     [source],[{ownerMemberId:'member-1'}],[sourceLine],
     [{accountId:'destination-customer',ownerMemberId:'member-1',currency:'MYR'}],
     [{id:'reseller',accountType:'reseller',ownerMemberId:'peer'}],
-    [{id:'reseller'}],[{accountId:'reseller'}],
+    [{id:'reseller'}],[{accountId:contactAccountId}],
     [{name:'Reseller',code:null,phone:null,address:null}],
     [{firstName:'Billing',lastName:'Contact',email:null,phone:null}],
   ],[[{id:'duplicate',quoteNumber:'Q10600-1'}]])
@@ -425,4 +425,44 @@ it.each([
   mocks.withTenant.mockImplementation(async(_permission,work)=>work(fixture.tx,ctx))
   expect(await duplicateQuotation(source.id,{funnelId:'destination'})).toMatchObject({ok:false,error:expect.stringContaining(error)})
   expect(mocks.nextQuoteNumber).not.toHaveBeenCalled();expect(fixture.inserts).toEqual([])
+})
+
+
+it.each([createQuotationRevision, duplicateQuotation])("preserves customer Attention while the quotation is billed to PSMB", async (copy) => {
+  vi.clearAllMocks()
+  mocks.ownsOrManages.mockReturnValue(true)
+  const billingSnapshot = { account: { name: "PSMB", code: null, phone: null, address: null }, contact: { name: "Dell Customer", email: "customer@example.test", phone: null } }
+  const fixture = txWithSelects([
+    [{ ...source, billToAccountId: "psmb", billingSnapshot }],
+    [{ ownerMemberId: "member-1" }], [sourceLine],
+    [{ accountId: "dell", currency: "MYR" }], [{ id: "psmb" }], [{ accountId: "dell" }],
+  ], [[{ id: "copy", quoteNumber: "Q10600-1" }]])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(fixture.tx, ctx))
+  mocks.nextQuoteNumber.mockResolvedValue({ quoteNumber: "Q10600-1", version: 1 })
+  expect(await copy(source.id)).toMatchObject({ ok: true, data: { id: "copy" } })
+  expect(fixture.inserts[0]).toMatchObject({ billToAccountId: "psmb", attentionContactId: "contact-1", billingSnapshot })
+})
+
+
+it.each(["dell", "psmb", "unrelated"])("creates PSMB billing with Attention from %s only when related", async (contactAccountId) => {
+  vi.clearAllMocks()
+  mocks.ownsOrManages.mockReturnValue(true)
+  const fixture = txWithSelects([
+    [{ id: "funnel-1", accountId: "dell", ownerMemberId: "member-1", currency: "MYR", primaryQuotationId: "existing" }],
+    [{ taxInclusive: false }], [{ currencies: ["MYR"], defaultCurrency: "MYR" }],
+    [{ id: "psmb", accountType: "reseller", ownerMemberId: "member-1" }], [{ accountId: contactAccountId }],
+    [{}], [{ name: "PSMB", code: null, phone: null, address: { line1: "PSMB billing street" } }],
+    [{ firstName: "Selected", lastName: "Contact", email: null, phone: null }],
+  ], [[{ id: "created", quoteNumber: "Q10600-1" }]])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(fixture.tx, ctx))
+  mocks.nextQuoteNumber.mockResolvedValue({ quoteNumber: "Q10600-1", version: 1, seriesKey: "Q10600" })
+  const result = await createQuotation({ funnelId: "funnel-1", billToAccountId: "psmb", attentionContactId: "chosen", taxSettingId: null, validUntil: null, lines: [] })
+  if (contactAccountId === "unrelated") {
+    expect(result).toMatchObject({ ok: false })
+    expect(fixture.inserts).toEqual([])
+    expect(mocks.nextQuoteNumber).not.toHaveBeenCalled()
+  } else {
+    expect(result).toMatchObject({ ok: true })
+    expect(fixture.inserts[0]).toMatchObject({ billToAccountId: "psmb", attentionContactId: "chosen", billingSnapshot: { account: { name: "PSMB" }, contact: { name: "Selected Contact" } } })
+  }
 })

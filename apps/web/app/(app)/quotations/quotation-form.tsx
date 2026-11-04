@@ -168,7 +168,7 @@ export function QuotationForm({
   projectNatures?: ProjectNatureOption[]
   /** Active catalog products for the line-item picker. */
   products?: ProductOption[]
-  /** Recipient-account contacts available for the Attention snapshot. */
+  /** Customer and Bill To contacts available for the Attention snapshot. */
   contacts?: QuotationContactOption[]
   /** The delivery project created from this quotation, if any. */
   project?: { id: string; projectCode: string } | null
@@ -538,7 +538,7 @@ export function QuotationForm({
       setBusy(false)
       return
     }
-    if (res.data.attentionNeedsSelection) toast.warning("Draft created. Select Attention for the Bill To account.")
+    if (res.data.attentionNeedsSelection) toast.warning("Draft created. Select Attention from the Bill To account or funnel customer.")
     else toast.success("Quotation duplicated as a new Draft")
     router.push(`/quotations/${res.data.id}`)
   }
@@ -551,7 +551,7 @@ export function QuotationForm({
       setBusy(false)
       return
     }
-    if (res.data.attentionNeedsSelection) toast.warning("Draft created. Select Attention for the Bill To account.")
+    if (res.data.attentionNeedsSelection) toast.warning("Draft created. Select Attention from the Bill To account or funnel customer.")
     else toast.success("Revision created")
     router.push(`/quotations/${res.data.id}`)
   }
@@ -774,7 +774,7 @@ export function QuotationForm({
                           { value: NO_CONTACT, label: "No contact" },
                           ...billingContacts.map((contact) => ({
                             value: contact.id,
-                            label: `${contact.name}${contact.isPrimary ? " (Primary)" : ""}`,
+                            label: `${contact.name}${contact.companyName ? ` — ${contact.companyName}` : ""}${contact.isPrimary ? " (Primary)" : ""}`,
                           })),
                         ]}
                       >
@@ -787,7 +787,7 @@ export function QuotationForm({
                           <SelectItem value={NO_CONTACT}>No contact</SelectItem>
                           {billingContacts.map((contact) => (
                             <SelectItem key={contact.id} value={contact.id}>
-                              {contact.name}{contact.isPrimary ? " (Primary)" : ""}
+                              {contact.name}{contact.companyName ? ` — ${contact.companyName}` : ""}{contact.isPrimary ? " (Primary)" : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>

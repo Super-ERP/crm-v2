@@ -169,7 +169,7 @@ See [Bill To when quoting through a reseller](../05-quotations-and-revisions.md#
 <details>
 <summary>Why can I only select contacts from one company?</summary>
 
-Attention choices belong to the selected **Bill To** company. Select the reseller first to load its contacts. Changing Bill To clears the old selection; check the contact before saving. Shared reseller accounts and contacts are available within the active entity, while the related sales records still follow ownership/team access.
+Attention choices can belong to either the selected **Bill To** company or the **funnel customer**. Each choice shows the contact’s company. For example, select PSMB as Bill To and the customer’s contact as Attention; the PDF keeps PSMB’s billing details. Changing Bill To clears the old selection; check the contact before saving. Shared reseller accounts and contacts are available within the active entity, while the related sales records still follow ownership/team access.
 
 </details>
 
