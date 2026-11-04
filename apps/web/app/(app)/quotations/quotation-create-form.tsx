@@ -599,7 +599,7 @@ export function QuotationCreateForm({
                     { value: NO_CONTACT, label: "No contact" },
                     ...renderedContacts.map((contact) => ({
                       value: contact.id,
-                      label: `${contact.name}${contact.isPrimary ? " (Primary)" : ""}`,
+                      label: `${contact.name}${contact.companyName ? ` — ${contact.companyName}` : ""}${contact.isPrimary ? " (Primary)" : ""}`,
                     })),
                   ]}
                 >
@@ -612,7 +612,7 @@ export function QuotationCreateForm({
                     <SelectItem value={NO_CONTACT}>No contact</SelectItem>
                     {renderedContacts.map((contact) => (
                       <SelectItem key={contact.id} value={contact.id}>
-                        {contact.name}{contact.isPrimary ? " (Primary)" : ""}
+                        {contact.name}{contact.companyName ? ` — ${contact.companyName}` : ""}{contact.isPrimary ? " (Primary)" : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>

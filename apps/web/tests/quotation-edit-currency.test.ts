@@ -42,7 +42,7 @@ vi.mock("@/lib/modules.server", () => ({
 vi.mock("@/lib/quotation-template-registry", () => ({ listActiveQuotationTemplateCodes: vi.fn(async () => new Set(["default"])), getActiveQuotationTemplateByCode: vi.fn(async () => null) }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
-import { getQuotationDocument, updateQuotation } from "@/app/(app)/quotations/actions"
+import { getQuotationDocument, getQuotationFormMeta, updateQuotation } from "@/app/(app)/quotations/actions"
 
 type Chain = {
   from: ReturnType<typeof vi.fn>
@@ -185,13 +185,13 @@ describe("quotation edit currency persistence", () => {
   })
 })
 
-it("changes billing to a shared reseller, validates its contact, and stores its address snapshot", async () => {
+it.each(["reseller", "end-user"])("stores the Bill To address independently from the selected Attention account %s", async (contactAccountId) => {
   const existing = { id: "quotation-1", funnelId: "funnel-1", status: "draft", currency: "MYR", isPrimary: false, billToAccountId: null, attentionContactId: null }
   const { tx, updates } = txWithSelects([
     [existing], [{ ownerMemberId: "member-1", currency: "MYR", accountId: "end-user" }],
     [{ currencies: ["MYR"], defaultCurrency: "MYR" }], [{ taxInclusive: false }],
     [{ id: "reseller", accountType: "reseller", ownerMemberId: "other" }],
-    [{ accountId: "reseller" }], [{ name: "Uniti", code: null, phone: null, address: { line1: "Billing street" } }],
+    [{ accountId: contactAccountId }], [{ name: "Uniti", code: null, phone: null, address: { line1: "Billing street" } }],
     [{ firstName: "Billing", lastName: "Contact", email: null, phone: null }],
   ])
   mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
@@ -199,15 +199,15 @@ it("changes billing to a shared reseller, validates its contact, and stores its 
   expect(updates[0]).toMatchObject({ billToAccountId: "reseller", attentionContactId: "billing-contact", billingSnapshot: { account: { name: "Uniti", address: { line1: "Billing street" } }, contact: { name: "Billing Contact" } } })
 })
 
-it("rejects an end-user contact when billing changes to a reseller", async () => {
+it("rejects an unrelated contact when billing changes to a reseller", async () => {
   const { tx, updates } = txWithSelects([
     [{ id: "quotation-1", funnelId: "funnel-1", status: "draft", currency: "MYR", billToAccountId: null, attentionContactId: "end-contact" }],
     [{ ownerMemberId: "member-1", currency: "MYR", accountId: "end-user" }],
     [{ currencies: ["MYR"], defaultCurrency: "MYR" }], [{ taxInclusive: false }],
-    [{ id: "reseller", accountType: "reseller", ownerMemberId: "other" }], [{ accountId: "end-user" }],
+    [{ id: "reseller", accountType: "reseller", ownerMemberId: "other" }], [{ accountId: "unrelated" }],
   ])
   mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
-  await expect(updateQuotation("quotation-1", { billToAccountId: "reseller", attentionContactId: "end-contact", taxSettingId: null, validUntil: null, notes: null, lines: [] })).rejects.toThrow("Attention contact must belong to recipient account")
+  await expect(updateQuotation("quotation-1", { billToAccountId: "reseller", attentionContactId: "end-contact", taxSettingId: null, validUntil: null, notes: null, lines: [] })).rejects.toThrow("Attention contact must belong to the Bill To account or funnel customer")
   expect(updates).toEqual([])
 })
 
@@ -224,4 +224,36 @@ it("renders issued billing snapshots after live company details change", async (
   expect(document?.account).toEqual(billingSnapshot.account)
   expect(document?.contact).toEqual(billingSnapshot.contact)
   expect(document?.projectName).toBe("MCMC deal")
+})
+
+
+it("labels both customer and Bill To contacts with their company while retaining the Bill To default", async () => {
+  const { tx } = txWithSelects([
+    [], [{ taxInclusive: false }], [{ currencies: ["MYR"] }], [],
+    [{ ownerMemberId: "member-1", accountId: "dell" }],
+    [{ id: "dell", name: "Dell", accountType: "customer" }, { id: "psmb", name: "PSMB", accountType: "reseller" }],
+    [{ id: "customer-contact", accountId: "dell", firstName: "Customer", lastName: "Contact", isPrimary: true },
+     { id: "payer-contact", accountId: "psmb", firstName: "Payer", lastName: "Contact", isPrimary: true }],
+  ])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
+  const meta = await getQuotationFormMeta("funnel-1", "psmb")
+  expect(meta.contacts).toEqual([
+    expect.objectContaining({ id: "customer-contact", companyName: "Dell" }),
+    expect.objectContaining({ id: "payer-contact", companyName: "PSMB" }),
+  ])
+  expect(meta.defaultAttentionContactId).toBe("payer-contact")
+})
+
+it("renders customer Attention independently from Bill To even without a saved snapshot", async () => {
+  mocks.ownsOrManages.mockReturnValue(true)
+  const { tx } = txWithSelects([
+    [{ q: { id: "quote", status: "draft", billToAccountId: "psmb", attentionContactId: "customer-contact", billingSnapshot: null }, oppOwner: "member-1", accountId: "dell", projectName: "Dell training" }],
+    [], [{ name: "PSMB", billingAddress: { line1: "PSMB street" }, accountType: "reseller" }],
+    [{ accountId: "dell", firstName: "Customer", lastName: "Contact", email: "customer@example.test", phone: null }],
+    [{ name: "Seller", slug: "seller" }], [],
+  ])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
+  const doc = await getQuotationDocument("quote")
+  expect(doc?.account).toMatchObject({ name: "PSMB", address: { line1: "PSMB street" } })
+  expect(doc?.contact).toMatchObject({ name: "Customer Contact", email: "customer@example.test" })
 })

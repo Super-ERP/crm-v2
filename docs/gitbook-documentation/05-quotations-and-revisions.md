@@ -46,7 +46,7 @@ Choose the Funnel when starting from the Quotations list. Its customer records a
 
 ### Bill To when quoting through a reseller
 
-Keep the Opportunity and Funnel under the **end user**. In the quotation, select the company that receives and pays the quotation in **Bill To**, then choose an **Attention** contact from that company.
+Keep the Opportunity and Funnel under the **end user**. In the quotation, select the company that receives and pays the quotation in **Bill To**, then choose an **Attention** contact from either that company or the funnel customer. Each contact shows their company name. For example, Bill To can be PSMB while Attention is the Dell customer contact; the PDF shows PSMB’s billing details and the selected Dell contact.
 
 For example, when Uniti sells to MCMC, keep the Funnel under **MCMC**, select **Uniti Office** as Bill To, and select Uniti's contact. Quandatics bills Uniti; Uniti bills MCMC. Different quotations in the same Funnel may be addressed to different resellers, so you do not need a separate Funnel for every reseller quote.
 
@@ -54,7 +54,7 @@ The Bill To picker includes accounts you can access and shared reseller accounts
 
 Saving a new quotation or its Draft captures the billing company, address, phone and selected contact. Issued quotations use that saved snapshot in the PDF. To correct an issued quotation, follow the available return-to-Draft or revision workflow. Duplicating or revising a quotation copies its billing snapshot into the new Draft for review.
 
-For five resellers pursuing the same end-user deal, keep one Funnel and prepare a quotation for each reseller. Select Bill To first; changing it clears the old Attention choice and loads contacts for the new company. Shared reseller access is limited to the current entity.
+For five resellers pursuing the same end-user deal, keep one Funnel and prepare a quotation for each reseller. Select Bill To first; changing it clears the old Attention choice and loads contacts from the new Bill To company and the funnel customer. Shared reseller access is limited to the current entity.
 
 **Address check:** there is no separate quotation-address field. Correct the selected Bill To account address before saving the Draft, then check Preview. A blank address is not automatically filled from another company or from the end user. Issued quotations retain their billing snapshot; use the appropriate Draft or revision workflow for corrections.
 
@@ -292,9 +292,9 @@ Active project codes are clickable: open one to see its connected sales records.
 
 ### Reseller quotation revisions
 
-Revisions keep the original Bill To and valid Attention contact. Duplicates review these against the selected destination before copying. If Bill To is not explicitly selected, the Funnel account is the recipient; a reseller’s default end user does not override it. Attention must still belong to that recipient account.
+Revisions keep the original Bill To and valid Attention contact. Duplicates review these against the selected destination before copying. If Bill To is not explicitly selected, the Funnel account is the recipient; a reseller’s default end user does not override it. Attention must belong to either the selected Bill To account or the destination funnel customer.
 
-If an old quotation’s Attention contact was removed or belongs to another account, revision or duplication still creates an editable draft. Its selected Bill To and Funnel are retained; the incompatible contact and contact snapshot are cleared and a message requests reselection. The original quotation is unchanged. A valid reseller Bill To and its contact are preserved.
+If an old quotation’s Attention contact was removed or belongs to neither permitted account, revision or duplication still creates an editable draft. Its selected Bill To and Funnel are retained; the incompatible contact and contact snapshot are cleared and a message requests reselection. The original quotation is unchanged. A valid reseller Bill To and its contact are preserved.
 
 ### Quotation date
 

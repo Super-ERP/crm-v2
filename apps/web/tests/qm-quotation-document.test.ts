@@ -186,3 +186,16 @@ describe.each(["qm", "qa"] as const)("%s line discounts", (template) => {
     expect(html).not.toContain("qm-lines-discounted")
   })
 })
+
+describe.each(["qm", "qa"] as const)("%s payer and customer Attention", (template) => {
+  it("prints PSMB billing details with the selected Dell contact", () => {
+    const doc = documentWithTax(null, null)
+    doc.account = { name: "PSMB", code: null, phone: null, address: { line1: "PSMB billing street" } }
+    doc.contact = { name: "Dell Customer Contact", email: "dell@example.test", phone: "0123456789" }
+    const html = renderToStaticMarkup(createElement(QmQuotationDocument, { doc, template }))
+    expect(html).toContain("<strong>PSMB</strong>")
+    expect(html).toContain("PSMB billing street")
+    expect(html).toContain("<b>Attn</b><span>Dell Customer Contact</span>")
+    expect(html).toContain("dell@example.test")
+  })
+})

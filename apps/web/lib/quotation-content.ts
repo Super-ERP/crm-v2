@@ -81,9 +81,10 @@ export function quotationContentAuditSnapshot(input: {
 
 export function assertAttentionContactBelongsToAccount(
   contactAccountId: string | null,
-  recipientAccountId: string | null
+  recipientAccountId: string | null,
+  customerAccountId?: string | null
 ): void {
-  if (contactAccountId !== recipientAccountId) {
-    throw new Error("Attention contact must belong to recipient account")
+  if (!contactAccountId || (contactAccountId !== recipientAccountId && contactAccountId !== customerAccountId)) {
+    throw new Error("Attention contact must belong to the Bill To account or funnel customer")
   }
 }

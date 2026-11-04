@@ -101,11 +101,18 @@ describe("quotation content snapshots", () => {
   it("rejects an attention contact from another recipient account", () => {
     expect(() =>
       assertAttentionContactBelongsToAccount("contact-account", "recipient-account")
-    ).toThrow("Attention contact must belong to recipient account")
+    ).toThrow("Attention contact must belong to the Bill To account or funnel customer")
 
     expect(() =>
       assertAttentionContactBelongsToAccount("recipient-account", "recipient-account")
     ).not.toThrow()
+  })
+
+  it("accepts Attention from either quotation account and rejects unrelated or unassigned contacts", () => {
+    expect(() => assertAttentionContactBelongsToAccount("customer", "psmb", "customer")).not.toThrow()
+    expect(() => assertAttentionContactBelongsToAccount("psmb", "psmb", "customer")).not.toThrow()
+    expect(() => assertAttentionContactBelongsToAccount("other", "psmb", "customer")).toThrow()
+    expect(() => assertAttentionContactBelongsToAccount(null, null, null)).toThrow()
   })
 
   it("keeps an edited product description instead of re-reading the catalog", () => {

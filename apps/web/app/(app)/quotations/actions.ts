@@ -5,7 +5,7 @@ import { activeProjectCodeFunnel } from "@/server/services/project-code-visibili
 import { findManagerApprover, resolveApprovalRoute } from "@/server/services/approval-routing"
 
 import { canSelectBillToAccount, resolveQuotationBillingAccount, type QuotationBillingSnapshot } from "@/lib/quotation-billing"
-import { and, asc, desc, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -298,7 +298,8 @@ export async function getQuotationDocument(
         try {
           assertAttentionContactBelongsToAccount(
             savedContact.accountId,
-            attentionAccountId
+            attentionAccountId,
+            row.accountId
           )
         } catch {
           belongsToRecipient = false
@@ -466,6 +467,8 @@ export type QuotationContactOption = {
   email: string | null
   phone: string | null
   isPrimary: boolean
+  accountId?: string
+  companyName?: string
 }
 
 /**
@@ -534,6 +537,7 @@ export async function getQuotationFormMeta(funnelId?: string | null, billToAccou
       .where(and(eq(products.isActive, true), isNull(products.deletedAt)))
       .orderBy(asc(products.name))
     let contacts: QuotationContactOption[] = []
+    let attentionDefaultAccountId: string | null = null
     let billToAccounts: { id: string; name: string }[] = []
     let billingAccount: QuotationBillingSnapshot["account"] | null = null
     if (funnelId) {
@@ -567,6 +571,7 @@ export async function getQuotationFormMeta(funnelId?: string | null, billToAccou
       billToAccounts = available.filter(account => account.id === funnel.accountId ||
         canSelectBillToAccount(account, visible, existingBillToAccountId)).map(({ id, name }) => ({ id, name }))
       const recipientAccountId = resolveQuotationBillingAccount(funnel.accountId, billToAccountId)
+      attentionDefaultAccountId = recipientAccountId
       const selectedAccount = available.find(account => account.id === recipientAccountId)
       if (selectedAccount) billingAccount = { name: selectedAccount.name, code: selectedAccount.code, phone: selectedAccount.phone, address: selectedAccount.address as QuotationBillingSnapshot["account"]["address"] }
       if (recipientAccountId && !billToAccounts.some(account => account.id === recipientAccountId)) {
@@ -576,6 +581,7 @@ export async function getQuotationFormMeta(funnelId?: string | null, billToAccou
         contacts = await tx
           .select({
             id: persons.id,
+            accountId: persons.accountId,
             firstName: persons.firstName,
             lastName: persons.lastName,
             email: persons.email,
@@ -586,7 +592,7 @@ export async function getQuotationFormMeta(funnelId?: string | null, billToAccou
           .where(
             and(
               eq(persons.tenantId, ctx.tenantId),
-              eq(persons.accountId, recipientAccountId),
+              inArray(persons.accountId, [...new Set([recipientAccountId, funnel.accountId].filter((id): id is string => !!id))]),
               isNull(persons.deletedAt)
             )
           )
@@ -595,6 +601,8 @@ export async function getQuotationFormMeta(funnelId?: string | null, billToAccou
             rows.map((row) => ({
               id: row.id,
               name: [row.firstName, row.lastName].filter(Boolean).join(" "),
+              accountId: row.accountId ?? undefined,
+              companyName: available.find(account => account.id === row.accountId)?.name,
               email: row.email,
               phone: row.phone,
               isPrimary: row.isPrimary,
@@ -612,7 +620,7 @@ export async function getQuotationFormMeta(funnelId?: string | null, billToAccou
       billToAccounts,
       billingAccount,
       contacts,
-      defaultAttentionContactId: contacts.find((contact) => contact.isPrimary)?.id ?? null,
+      defaultAttentionContactId: contacts.find((contact) => contact.isPrimary && contact.accountId === attentionDefaultAccountId)?.id ?? null,
       quoteDefaults: {
         notes: settings?.quoteDefaultNotes ?? null,
         delivery: settings?.quoteDefaultDelivery ?? null,
@@ -745,7 +753,7 @@ export async function createQuotation(input: {
         )
         .limit(1)
       if (!contact) throw new Error("Attention contact not found")
-      assertAttentionContactBelongsToAccount(contact.accountId, recipientAccountId)
+      assertAttentionContactBelongsToAccount(contact.accountId, recipientAccountId, opp.accountId)
     }
 
     const [settings] = await tx
@@ -763,7 +771,7 @@ export async function createQuotation(input: {
       paymentTerm: settings?.quoteDefaultPaymentTerm ?? null,
     })
 
-    const billingSnapshot = await loadBillingSnapshot(tx, ctx.tenantId, billToAccountId, attentionContactId)
+    const billingSnapshot = await loadBillingSnapshot(tx, ctx.tenantId, billToAccountId, attentionContactId, opp?.accountId)
 
     const { quoteNumber, version, seriesKey } = await nextQuoteNumber(tx, ctx, input.funnelId)
 
@@ -902,10 +910,10 @@ export async function updateQuotation(
         .where(and(eq(persons.id, attentionContactId), eq(persons.tenantId, ctx.tenantId), isNull(persons.deletedAt))).limit(1)
       if (!contact) throw new Error("Attention contact not found")
       assertAttentionContactBelongsToAccount(contact.accountId,
-        resolveQuotationBillingAccount(opp?.accountId ?? null, billToAccountId))
+        resolveQuotationBillingAccount(opp?.accountId ?? null, billToAccountId), opp?.accountId)
     }
     const billingSnapshot = billToAccountId
-      ? await loadBillingSnapshot(tx, ctx.tenantId, billToAccountId, attentionContactId)
+      ? await loadBillingSnapshot(tx, ctx.tenantId, billToAccountId, attentionContactId, opp?.accountId)
       : existing.billingSnapshot
     const content = resolveQuotationContent(input, {
       notes: existing.notes,
@@ -1144,12 +1152,12 @@ async function createQuotationCopy(
           .limit(1)
         // Recover old inconsistent links into an editable draft; never infer Bill To
         // from a contact or carry a mismatched recipient snapshot into the copy.
-        if (!contact || contact.accountId !== recipientAccountId) attentionContactId = null
+        if (!contact || !contact.accountId || (contact.accountId !== recipientAccountId && contact.accountId !== funnel.accountId)) attentionContactId = null
       }
 
       const attentionNeedsSelection = !!source.attentionContactId && !attentionContactId
       const billingSnapshot = destination
-        ? await loadBillingSnapshot(tx, ctx.tenantId, recipientAccountId, attentionContactId)
+        ? await loadBillingSnapshot(tx, ctx.tenantId, recipientAccountId, attentionContactId, funnel.accountId)
         : attentionNeedsSelection && source.billingSnapshot ? {...source.billingSnapshot, contact: null} : source.billingSnapshot
       const { quoteNumber, version, seriesKey } = await nextQuoteNumber(
         tx,
@@ -1900,12 +1908,12 @@ async function assertBillToAccount(tx: Tx, tenantId: string, accountId: string |
 }
 
 async function loadBillingSnapshot(tx: Tx, tenantId: string, accountId: string | null,
-  attentionContactId: string | null): Promise<QuotationBillingSnapshot | null> {
+  attentionContactId: string | null, customerAccountId?: string | null): Promise<QuotationBillingSnapshot | null> {
   if (!accountId) return null
   const [account] = await tx.select({ name: accounts.name, code: accounts.code, phone: accounts.phone, address: accounts.billingAddress })
     .from(accounts).where(and(eq(accounts.id, accountId), eq(accounts.tenantId, tenantId), isNull(accounts.deletedAt))).limit(1)
   if (!account) throw new Error("Bill To account not found")
   const [person] = attentionContactId ? await tx.select({ firstName: persons.firstName, lastName: persons.lastName, email: persons.email, phone: persons.phone })
-    .from(persons).where(and(eq(persons.id, attentionContactId), eq(persons.accountId, accountId), eq(persons.tenantId, tenantId), isNull(persons.deletedAt))).limit(1) : []
+    .from(persons).where(and(eq(persons.id, attentionContactId), inArray(persons.accountId, [...new Set([accountId, customerAccountId].filter((id): id is string => !!id))]), eq(persons.tenantId, tenantId), isNull(persons.deletedAt))).limit(1) : []
   return { account: { ...account, address: account.address as QuotationBillingSnapshot["account"]["address"] }, contact: person ? { name: [person.firstName, person.lastName].filter(Boolean).join(" "), email: person.email, phone: person.phone } : null }
 }
