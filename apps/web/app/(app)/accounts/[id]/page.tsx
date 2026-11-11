@@ -232,9 +232,11 @@ export default async function AccountDetailPage({
           projectCodes={projectCodes ? <ProjectCodePanel kind="account" recordId={id} initialPage={projectCodes} /> : null}
           projectCodeCount={projectCodes?.total}
           accountId={account.id}
+          editAccount={account}
+          countrySettings={countries}
           sections={sections}
           record={record}
-          canEdit={ctx.can(PERMISSIONS.ACCOUNT_UPDATE)}
+          canEdit={data.canEdit}
           industries={industries}
           parentOptions={parentOptions}
           currencies={currencies}

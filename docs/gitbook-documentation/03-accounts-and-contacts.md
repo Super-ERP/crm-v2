@@ -74,6 +74,14 @@ Opening any Account presents a comprehensive 360-degree customer view:
 * **Quotations**: All generated commercial proposals and revision histories.
 * **Activity Stream**: An audit log showing recent updates, stage advances, and notes.
 
+### Edit account details
+
+Open an account and use the **Details** tab. Click **Edit details** to change its company information, Client/Reseller type, optional default end user, owner, parent, currency, contact details and billing address directly in the tab. The Accounts list’s **Edit** action opens this editor too. Creating an account still uses the existing creation dialog.
+
+Use **Save changes** to save the form together or **Cancel** to discard it. Validation errors keep your changes available for correction. Switching tabs, following a normal page link, or reloading/closing warns about unsaved changes; browsers supporting the Navigation API also guard in-app back/forward navigation. Save/Cancel are disabled while a save is running. Changing the account owner also transfers related records under the existing ownership rules.
+
+Editing requires account-update permission plus ownership or authorized management access. Shared reseller visibility alone does not allow editing. System and historical values remain read-only.
+
 ### Shared resellers and billing relationships
 
 Users with **Create contacts** permission can add contacts to a reseller account in the same entity without changing its owner. The new contact inherits the account owner and creation is audited. Editing or deleting existing contacts remains ownership-restricted. Only the account owner or an authorized manager/administrator can set a primary contact. Ordinary client accounts still require ownership or authorized management access.

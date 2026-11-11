@@ -36,32 +36,12 @@ import type { Option, CountryOption } from "@/lib/lookups"
 import { AccountForm } from "./account-form"
 import { deleteAccount, restoreAccount, listAccountPage, type AccountListItem } from "./actions"
 
-function RowActions({
-  account,
-  parentOptions,
-  industries,
-  countries,
-  currencies,
-}: {
-  account: AccountListItem
-  parentOptions: Option[]
-  industries: string[]
-  countries: CountryOption[]
-  currencies: string[]
-}) {
+function RowActions({ account }: { account: AccountListItem }) {
   const router = useRouter()
   const perms = usePermissions()
   const canUpdate = perms.has(PERMISSIONS.ACCOUNT_UPDATE)
   const canDelete = perms.has(PERMISSIONS.ACCOUNT_DELETE)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
-  const [editOpen, setEditOpen] = React.useState(false)
-
-  // Exclude self from parent + end-user options (no self-parenting / self-end-user).
-  const editOptions = React.useMemo(
-    () => parentOptions.filter((o) => o.id !== account.id),
-    [parentOptions, account.id]
-  )
-
   async function onDelete() {
     const res = await deleteAccount(account.id)
     if (!res.ok) {
@@ -89,23 +69,6 @@ function RowActions({
 
   return (
     <div className="flex justify-end">
-      {canUpdate ? (
-        <AccountForm
-          account={account}
-          parentOptions={editOptions}
-          endUserOptions={editOptions}
-          industries={industries}
-          countries={countries}
-          currencies={currencies}
-          open={editOpen}
-          onOpenChange={setEditOpen}
-          onSaved={() => {
-            setEditOpen(false)
-            router.refresh()
-          }}
-        />
-      ) : null}
-
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -120,7 +83,7 @@ function RowActions({
             View
           </DropdownMenuItem>
           {canUpdate ? (
-            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+            <DropdownMenuItem onClick={() => router.push(`/accounts/${account.id}?edit=1`)}>
               Edit
             </DropdownMenuItem>
           ) : null}
@@ -263,18 +226,12 @@ export function AccountsTable({
         id: "actions",
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => (
-          <RowActions
-            account={row.original}
-            parentOptions={parentOptions}
-            industries={industries}
-            countries={countries}
-            currencies={currencies}
-          />
+          <RowActions account={row.original} />
         ),
         enableHiding: false,
       },
     ],
-    [parentOptions, industries, countries, currencies]
+    []
   )
 
   return (
