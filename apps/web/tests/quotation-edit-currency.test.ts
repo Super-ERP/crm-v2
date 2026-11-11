@@ -42,7 +42,7 @@ vi.mock("@/lib/modules.server", () => ({
 vi.mock("@/lib/quotation-template-registry", () => ({ listActiveQuotationTemplateCodes: vi.fn(async () => new Set(["default"])), getActiveQuotationTemplateByCode: vi.fn(async () => null) }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
-import { getQuotationDocument, getQuotationFormMeta, updateQuotation } from "@/app/(app)/quotations/actions"
+import { getQuotationDocument, getQuotationFormMeta, setPrimaryQuotation, updateQuotation } from "@/app/(app)/quotations/actions"
 
 type Chain = {
   from: ReturnType<typeof vi.fn>
@@ -256,4 +256,27 @@ it("renders customer Attention independently from Bill To even without a saved s
   const doc = await getQuotationDocument("quote")
   expect(doc?.account).toMatchObject({ name: "PSMB", address: { line1: "PSMB street" } })
   expect(doc?.contact).toMatchObject({ name: "Customer Contact", email: "customer@example.test" })
+})
+
+
+it.each(["draft", "pending_approval", "approved", "sent", "accepted", "rejected", "expired", "void"])("sets a %s quotation primary without altering its status", async status => {
+  mocks.canManageAllRecords.mockReturnValue(true)
+  const { tx, updates } = txWithSelects([
+    [{ id: "quote-2", funnelId: "funnel-1", status }],
+    [{ ownerMemberId: "member-1", primaryQuotationId: "quote-1" }],
+    [{ id: "quote-2" }],
+  ])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, { tenantId: "tenant-1" }))
+  expect(await setPrimaryQuotation("quote-2")).toMatchObject({ok:true,data:{previousPrimaryId:"quote-1"}})
+  expect(updates).toEqual([
+    {isPrimary:false}, expect.objectContaining({isPrimary:true}), expect.objectContaining({primaryQuotationId:"quote-2"}),
+  ])
+  expect(updates.every(update => !("status" in (update as object)))).toBe(true)
+})
+
+it("does not assign primary on an archived or unavailable funnel", async () => {
+  const { tx, updates } = txWithSelects([[{id:"quote-2",funnelId:"archived"}], []])
+  mocks.withTenant.mockImplementation(async (_permission, work) => work(tx, {tenantId:"tenant-1"}))
+  await expect(setPrimaryQuotation("quote-2")).rejects.toThrow("Funnel not found")
+  expect(updates).toEqual([])
 })
