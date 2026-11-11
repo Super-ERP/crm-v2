@@ -14,12 +14,17 @@ ARG LZ4_LIBS_VERSION=1.10.0-r0
 ARG NCURSES_TERMINFO_BASE_VERSION=6.5_p20251123-r0
 ARG POSTGRESQL_COMMON_VERSION=1.2-r2
 ARG READLINE_VERSION=8.3.1-r0
-ARG RSYNC_VERSION=3.5.0-r0
-ARG OPENSSH_CLIENT_VERSION=10.2_p1-r0
-ARG TZDATA_VERSION=2026e-r0
+ARG RSYNC_VERSION=3.5.2-r1
+ARG OPENSSH_CLIENT_VERSION=10.2_p1-r1
+ARG TZDATA_VERSION=2026f-r0
 ARG ZSTD_LIBS_VERSION=1.5.7-r2
+ARG MUSL_VERSION=1.2.5-r24
+ARG ZLIB_VERSION=1.4-r0
 
 RUN apk add --no-cache \
+      "musl=${MUSL_VERSION}" \
+      "musl-utils=${MUSL_VERSION}" \
+      "zlib=${ZLIB_VERSION}" \
       "ca-certificates=${CA_CERTIFICATES_VERSION}" \
       "libncursesw=${LIBNCURSESW_VERSION}" \
       "libpq=${LIBPQ_VERSION}" \
@@ -53,7 +58,7 @@ LABEL org.opencontainers.image.title="Quandatics backup runtime" \
   org.opencontainers.image.description="Source-free PostgreSQL backup and SSH offsite-copy runtime" \
   org.opencontainers.image.source="https://github.com/Super-ERP/crm-v2" \
   com.quandatics.postgresql-client.version="17.11-r0" \
-  com.quandatics.rsync.version="3.5.0-r0"
+  com.quandatics.rsync.version="3.5.2-r1"
 
 WORKDIR /var/lib/backup/work
 USER 10001:10001
