@@ -56,6 +56,7 @@ describe.skipIf(!databaseUrl)("payment milestone invoicing policy", () => {
         .toEqual({ status: "invoiced", invoice_number: "INV-KEEP", amount: "100" })
       expect((await client`SELECT DISTINCT status::text FROM payment_milestones ORDER BY status::text`).map((r) => r.status))
         .toEqual(["invoiced", "pending_invoicing"])
+      await client`ALTER TABLE payment_milestones ADD COLUMN deleted_at timestamptz`
       const db = drizzle(client, { schema })
       const ctx = { memberId: "sales", isSuperadmin: false, can: () => false } as unknown as ServerContext
       await db.transaction(async (tx) => {
@@ -79,6 +80,12 @@ describe.skipIf(!databaseUrl)("payment milestone invoicing policy", () => {
         const afterRollback = await tx.select({ id: schema.paymentMilestones.id }).from(schema.paymentMilestones)
           .where(await milestoneReadScope(tx, ctx))
         expect(afterRollback.map((r) => r.id).sort()).toEqual(["closed", "invoice"])
+        await tx.execute(query`update payment_milestones set deleted_at = now() where id = 'invoice'`)
+        const afterVoid = await tx.select({ id: schema.paymentMilestones.id }).from(schema.paymentMilestones)
+          .where(await milestoneReadScope(tx, ctx))
+        expect(afterVoid.map((r) => r.id)).toEqual(["closed"])
+        const retained = await tx.execute(query`select status::text, invoice_number, amount::text from payment_milestones where id = 'invoice'`)
+        expect(retained[0]).toEqual({ status: "invoiced", invoice_number: "INV-KEEP", amount: "100" })
         await tx.execute(query`update funnels set current_stage_id = 'commit', status = 'on_hold' where id = 'commit'`)
         await expect(milestoneStatusForFunnel(tx, "commit")).rejects.toThrow("4a")
       })

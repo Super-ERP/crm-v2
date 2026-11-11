@@ -1,5 +1,7 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import { canSetQuotationPrimary } from "@/lib/quotation-primary"
 import { toDateString } from "@/lib/dates"
 
@@ -94,7 +96,6 @@ import {
   acceptQuotation,
   rejectCustomerQuotation,
   setPrimaryQuotation,
-  deleteQuotation,
   type QuotationContactOption,
   type QuotationDetail,
   type QuotationDocument,
@@ -216,9 +217,9 @@ export function QuotationForm({
     perms.canCreateRevision &&
     canCreateQuotationRevision(quotation.status, quotation.deletedAt)
   const showSetPrimary = canSetQuotationPrimary(quotation, perms.canUpdate)
-  const showDelete = perms.canDelete
+  const showVoid = perms.canUpdate && !quotation.deletedAt
   const hasAnyAction =
-    showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary || showDelete
+    showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary || showVoid
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -1372,41 +1373,7 @@ export function QuotationForm({
               </div>
             ) : null}
 
-            {showDelete ? (
-              <AlertDialog>
-                <AlertDialogTrigger
-                  render={
-                    <Button variant="destructive" disabled={busy}>
-                      Delete
-                    </Button>
-                  }
-                />
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete this quotation?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This soft-deletes {quotation.quoteNumber}. It will no
-                      longer appear in the list.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      onClick={() =>
-                        submitAction(
-                          () => deleteQuotation(quotation.id),
-                          "Quotation deleted",
-                          { redirect: "/quotations" }
-                        )
-                      }
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            ) : null}
+            {showVoid ? <RecordVoidButton target={{ type: "quotation", id: quotation.id }} /> : null}
           </CardContent>
         </Card>
         ) : null}

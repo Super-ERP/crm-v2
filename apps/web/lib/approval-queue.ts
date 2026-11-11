@@ -5,7 +5,9 @@ import type { LeadConversionApprovalRow } from '@/app/(app)/approvals/lead-conve
 
 import type { FunnelVoidApprovalRow } from '@/app/(app)/approvals/void-actions'
 
-export const APPROVAL_KINDS = ['lead','quotation','stage','void'] as const
+import type { UniversalVoidRow } from '@/app/(app)/voids/actions'
+
+export const APPROVAL_KINDS = ['lead','quotation','stage','void','record_void'] as const
 export type ApprovalKind = typeof APPROVAL_KINDS[number]
 export type ApprovalOrder = 'oldest'|'newest'
 export type QueuePosition = { kind:ApprovalKind; id:string; queueSortKey:string }
@@ -13,7 +15,7 @@ const positionSchema=z.object({kind:z.enum(APPROVAL_KINDS),id:z.string().uuid(),
 export type ApprovalQueueRead = { order:ApprovalOrder; search?:string; cursor?:QueuePosition|null }
 export type ApprovalQueueMeta = { queueSortKey?:string }
 export type ApprovalQueueItem = QueuePosition & (
- {kind:'void';row:FunnelVoidApprovalRow}|{kind:'stage';row:ApprovalRow}|{kind:'quotation';row:QuotationApprovalRow}|{kind:'lead';row:LeadConversionApprovalRow}
+ {kind:'record_void';row:UniversalVoidRow}|{kind:'void';row:FunnelVoidApprovalRow}|{kind:'stage';row:ApprovalRow}|{kind:'quotation';row:QuotationApprovalRow}|{kind:'lead';row:LeadConversionApprovalRow}
 )
 export type ApprovalQueuePage = { items:ApprovalQueueItem[]; counts:Record<ApprovalKind,number>; hasNextPage:boolean; nextCursor:string|null; asOf?:string }
 export const approvalQueueInputSchema=z.object({tab:z.enum(['incoming','mine']).default('incoming'),type:z.enum(['all',...APPROVAL_KINDS]).default('all'),order:z.enum(['oldest','newest']).default('oldest'),search:z.string().trim().max(200).default(''),cursor:z.string().max(512).nullable().optional()}).strict()
@@ -35,7 +37,7 @@ export function mergeApprovalQueue<T extends QueuePosition>(rows:T[],order:Appro
   return order==='oldest'?n:-n
  })
 }
-export const APPROVAL_TYPE_LABELS:Record<ApprovalKind,string>={lead:'Lead conversion',quotation:'Quotation',stage:'Funnel stage',void:'Funnel void'}
+export const APPROVAL_TYPE_LABELS:Record<ApprovalKind,string>={lead:'Lead conversion',quotation:'Quotation',stage:'Funnel stage',void:'Funnel void',record_void:'Record void'}
 export function approvalItemTitle(item:ApprovalQueueItem):string {
- return item.kind==='quotation'?item.row.quoteNumber:item.kind==='lead'?item.row.leadName:item.row.opportunityName
+ return item.kind==='record_void'?item.row.impact.target.label:item.kind==='quotation'?item.row.quoteNumber:item.kind==='lead'?item.row.leadName:item.row.opportunityName
 }

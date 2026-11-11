@@ -52,7 +52,7 @@ export function relatedEntityScope(entity:RelationEntity,alias:string,scope:Rela
    where rl_mf.id=${milestoneFunnel(alias,scope)} and rl_mf.tenant_id=${scope.ctx.tenantId} and ${owner(sql`rl_mf.owner_member_id`,scope)}
    and (${ref(alias,'status')}='invoiced' or (rl_mf.deleted_at is null and rl_mf.status in ('open','won') and (rl_ms.kind='WON' or (rl_ms.kind='OPEN' and rl_ms.code='4a')) and exists(select 1 from quotations rl_mq where rl_mq.funnel_id=rl_mf.id and rl_mq.tenant_id=rl_mf.tenant_id and rl_mq.status='accepted' and rl_mq.deleted_at is null))))
   or (${ref(alias,'funnel_id')} is null and ${ref(alias,'status')}='invoiced' and exists(select 1 from projects rl_mp where rl_mp.id=${ref(alias,'project_id')} and rl_mp.tenant_id=${scope.ctx.tenantId} and rl_mp.funnel_id is null and ${owner(sql`rl_mp.owner_member_id`,scope)})))`
- return sql`${tenant} and (${access})`
+ return sql`${tenant} and (${access})${['milestones','costs','contractYears'].includes(entity)?sql` and ${ref(alias,'deleted_at')} is null`:sql``}`
 }
 function scalar(entity:RelationEntity,alias:string,field:BusinessField,scope:RelationshipScope):SQL{
  if(field.column==='@projectCode')return ref(alias,'id')

@@ -1,4 +1,6 @@
 "use server"
+
+import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
@@ -28,7 +30,6 @@ import {
   user,
   paymentMilestones,
   paymentMilestoneStatus,
-  salesOrders,
   tenantSettings,
   intercompanyDeals,
 } from "@/db/schema"
@@ -215,6 +216,7 @@ export async function createProject(
     "projects",
     PERMISSIONS.PROJECT_CREATE,
     async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       const [acct] = await tx
         .select({ code: accounts.code, ownerMemberId: accounts.ownerMemberId })
         .from(accounts)
@@ -281,7 +283,7 @@ export async function createProject(
           await resolveDeliveryCode(existing.projectCode, input.codeNature === "manual" ? input.projectCode : undefined, async () => "")
           if (input.intercompanyDealId && existing.intercompanyDealId !== input.intercompanyDealId) throw new Error("Project code conflict: different intercompany deal")
           await tx.update(funnels).set({ projectCode: existing.projectCode, updatedAt: new Date() })
-            .where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
+            .where(and(isNull(funnels.deletedAt), and(eq(funnels.id, source.id), isNull(funnels.projectCode))))
           return { id: existing.id, projectCode: existing.projectCode }
         }
       }
@@ -332,7 +334,7 @@ export async function createProject(
           const [srcOpp] = await tx
             .select({ projectYear: funnels.projectYear })
             .from(funnels)
-            .where(eq(funnels.id, input.funnelId))
+            .where(and(isNull(funnels.deletedAt), eq(funnels.id, input.funnelId)))
             .limit(1)
           contractYear = srcOpp?.projectYear ?? null
         }
@@ -388,7 +390,7 @@ export async function createProject(
 
       if (source && !source.projectCode) {
         await tx.update(funnels).set({ projectCode, updatedAt: new Date() })
-          .where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
+          .where(and(isNull(funnels.deletedAt), and(eq(funnels.id, source.id), isNull(funnels.projectCode))))
       }
 
       await logActivity(tx, ctx, {
@@ -423,6 +425,7 @@ export async function updateProject(
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
   await withModule("projects", PERMISSIONS.PROJECT_UPDATE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
     // Lock the project row so this value edit serializes against concurrent
     // milestone writes (which also lock it) before reconciling allocation.
     const [before] = await tx
@@ -459,7 +462,7 @@ export async function updateProject(
           ne(projects.id, before.id), isNull(projects.deletedAt))).limit(1)
       if (linkedProject) throw new Error("Project code conflict: the source funnel already has another delivery project")
     }
-    if (source?.projectCodeActive && !source.projectCode) await tx.update(funnels).set({ projectCode: before.projectCode, updatedAt: new Date() }).where(and(eq(funnels.id, source.id), isNull(funnels.projectCode)))
+    if (source?.projectCodeActive && !source.projectCode) await tx.update(funnels).set({ projectCode: before.projectCode, updatedAt: new Date() }).where(and(isNull(funnels.deletedAt), and(eq(funnels.id, source.id), isNull(funnels.projectCode))))
 
     const nextValue =
       input.value === undefined
@@ -501,7 +504,7 @@ export async function updateProject(
       updatedAt: new Date(),
     }
 
-    await tx.update(projects).set(updated).where(eq(projects.id, id))
+    await tx.update(projects).set(updated).where(and(isNull(projects.deletedAt), eq(projects.id, id)))
 
     await recordChanges(tx, ctx, {
       entityType: "project",
@@ -519,68 +522,10 @@ export async function updateProject(
 
 export async function deleteProject(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-  await withModule("projects", PERMISSIONS.PROJECT_DELETE, async (tx, ctx) => {
-    const [existing] = await tx
-      .select({ ownerMemberId: projects.ownerMemberId })
-      .from(projects)
-      .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
-      .limit(1)
-    if (!existing) throw new Error("Project not found")
-
-    const visible = await visibleMemberIds(tx, ctx)
-    if (!canManageAllRecords(ctx) && !ownsOrManages(visible, existing.ownerMemberId)) {
-      throw new Error("FORBIDDEN: not permitted on this project")
-    }
-
-    // Soft-delete doesn't fire the cascade FKs on sales_orders / payment_
-    // milestones, so an approved (number-minted) SO would keep showing in the
-    // global list pointing at a hidden project, and milestones would orphan.
-    // Refuse while live dependents exist, mirroring deleteAccount's guard.
-    const [{ soCount }] = await tx
-      .select({
-        soCount: sql<number>`count(*)`,
-      })
-      .from(salesOrders)
-      .where(
-        and(eq(salesOrders.projectId, id), ne(salesOrders.status, "rejected"))
-      )
-    if (Number(soCount) > 0) {
-      throw new Error(
-        "This project has active sales orders. Reject them before deleting the project."
-      )
-    }
-
-    const [{ milestoneCount }] = await tx
-      .select({ milestoneCount: sql<number>`count(*)` })
-      .from(paymentMilestones)
-      .where(eq(paymentMilestones.projectId, id))
-    if (Number(milestoneCount) > 0) {
-      throw new Error(
-        "This project has payment milestones. Remove them before deleting the project."
-      )
-    }
-
-    const [updated] = await tx
-      .update(projects)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
-      .returning({ id: projects.id })
-    if (!updated) throw new Error("Project not found")
-
-    await logActivity(tx, ctx, {
-      entityType: "project",
-      entityId: id,
-      type: "system",
-      subject: "Project deleted",
+    void id
+    await withModule("projects", PERMISSIONS.PROJECT_DELETE, async () => {
+      throw new Error("Use Void to request reviewed cancellation")
     })
-
-    await writeAudit(tx, ctx, {
-      action: "project.deleted",
-      entityType: "project",
-      entityId: id,
-    })
-  })
-  revalidatePath("/projects")
   })
 }
 
@@ -838,14 +783,14 @@ async function allocatedTotal(
       total: sql<string>`coalesce(sum(${paymentMilestones.amount}), 0)`,
     })
     .from(paymentMilestones)
-    .where(
+    .where(and(isNull(paymentMilestones.deletedAt),
       excludeId
         ? and(
             eq(paymentMilestones.projectId, projectId),
             ne(paymentMilestones.id, excludeId)
           )
         : eq(paymentMilestones.projectId, projectId)
-    )
+    ))
   return Number(row?.total ?? 0)
 }
 
@@ -878,7 +823,7 @@ export async function listMilestones(
         sortOrder: paymentMilestones.sortOrder,
       })
       .from(paymentMilestones)
-      .where(and(eq(paymentMilestones.projectId, projectId), await milestoneReadScope(tx, ctx)))
+      .where(and(isNull(paymentMilestones.deletedAt), and(eq(paymentMilestones.projectId, projectId), await milestoneReadScope(tx, ctx))))
       .orderBy(asc(paymentMilestones.sortOrder), asc(paymentMilestones.createdAt))
     return rows
   })
@@ -892,6 +837,7 @@ export async function createMilestone(
     "projects",
     PERMISSIONS.PROJECT_UPDATE,
     async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       // Lock the project row so concurrent milestone writes on the same
       // project serialize — otherwise two racing inserts could each pass the
       // reconciliation check below and jointly over-allocate.
@@ -945,7 +891,7 @@ export async function createMilestone(
           maxSort: sql<number>`coalesce(max(${paymentMilestones.sortOrder}), -1)`,
         })
         .from(paymentMilestones)
-        .where(eq(paymentMilestones.projectId, input.projectId))
+        .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.projectId, input.projectId)))
 
       const status = await milestoneStatusForFunnel(tx, project.funnelId)
       const [row] = await tx
@@ -992,10 +938,11 @@ export async function updateMilestone(
     "projects",
     PERMISSIONS.PROJECT_UPDATE,
     async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       const [existing] = await tx
         .select()
         .from(paymentMilestones)
-        .where(eq(paymentMilestones.id, id))
+        .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.id, id)))
         .limit(1)
       if (!existing || !existing.projectId) throw new Error("Milestone not found")
 
@@ -1004,7 +951,7 @@ export async function updateMilestone(
       const [project] = await tx
         .select({ value: projects.value, ownerMemberId: projects.ownerMemberId, funnelId: projects.funnelId })
         .from(projects)
-        .where(eq(projects.id, (existing.projectId ?? "")))
+        .where(and(isNull(projects.deletedAt), eq(projects.id, (existing.projectId ?? ""))))
         .limit(1)
         .for("update")
 
@@ -1016,6 +963,7 @@ export async function updateMilestone(
         throw new Error("FORBIDDEN: not permitted on this project")
       }
 
+      if (!project) throw new Error("Project not found")
       const projectValue = project?.value ? Number(project.value) : 0
 
       // Milestones are split by exact amount; an untouched amount is preserved.
@@ -1073,7 +1021,7 @@ export async function updateMilestone(
           status: nextStatus,
           updatedAt: new Date(),
         })
-        .where(eq(paymentMilestones.id, id))
+        .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.id, id)))
 
       await logActivity(tx, ctx, {
         entityType: "project",
@@ -1102,72 +1050,20 @@ export async function updateMilestone(
 
 export async function deleteMilestone(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-  const projectId = await withModule(
-    "projects",
-    PERMISSIONS.PROJECT_UPDATE,
-    async (tx, ctx) => {
-      const [milestone] = await tx
-        .select({ projectId: paymentMilestones.projectId })
-        .from(paymentMilestones)
-        .where(eq(paymentMilestones.id, id))
-        .limit(1)
-      if (!milestone || !milestone.projectId) throw new Error("Milestone not found")
-
-      const [project] = await tx
-        .select({ ownerMemberId: projects.ownerMemberId })
-        .from(projects)
-        .where(eq(projects.id, (milestone.projectId ?? "")))
-        .limit(1)
-      const visible = await visibleMemberIds(tx, ctx)
-      if (
-        !canManageAllRecords(ctx) &&
-        !ownsOrManages(visible, project?.ownerMemberId ?? null)
-      ) {
-        throw new Error("FORBIDDEN: not permitted on this project")
-      }
-
-      const [deleted] = await tx
-        .delete(paymentMilestones)
-        .where(eq(paymentMilestones.id, id))
-        .returning({
-          projectId: paymentMilestones.projectId,
-          title: paymentMilestones.title,
-        })
-      if (!deleted) throw new Error("Milestone not found")
-
-      await logActivity(tx, ctx, {
-        entityType: "project",
-        entityId: (deleted.projectId ?? ""),
-        type: "system",
-        subject: `Milestone deleted: ${deleted.title}`,
-      })
-
-      await writeAudit(tx, ctx, {
-        action: "milestone.deleted",
-        entityType: "project",
-        entityId: (deleted.projectId ?? ""),
-        before: { milestoneId: id, title: deleted.title },
-      })
-
-      return (deleted.projectId ?? "")
-    }
-  )
-  revalidatePath(`/projects/${projectId}`)
+    await withModule("projects", PERMISSIONS.PROJECT_UPDATE, async () => {
+      void id
+      throw new Error("Use Void to request reviewed cancellation")
+    })
   })
 }
 
-/**
- * Persist a new milestone ordering. `order` is milestone ids in the desired
- * sequence; sortOrder is rewritten to match the index. Scoped to the project
- * (and tenant via RLS) so only this project's milestones are touched. There is
- * no unique (projectId, sortOrder) constraint, so a single pass is safe.
- */
 export async function reorderMilestones(
   projectId: string,
   order: string[]
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
   await withModule("projects", PERMISSIONS.PROJECT_UPDATE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
     const [project] = await tx
       .select({ ownerMemberId: projects.ownerMemberId })
       .from(projects)
@@ -1180,16 +1076,19 @@ export async function reorderMilestones(
       throw new Error("FORBIDDEN: not permitted on this project")
     }
 
+    if (new Set(order).size !== order.length) throw new Error("Duplicate milestone order entries")
     for (let i = 0; i < order.length; i++) {
-      await tx
+      const [updated] = await tx
         .update(paymentMilestones)
         .set({ sortOrder: i, updatedAt: new Date() })
-        .where(
+        .where(and(isNull(paymentMilestones.deletedAt),
           and(
             eq(paymentMilestones.id, order[i]),
             eq(paymentMilestones.projectId, projectId)
           )
-        )
+        ))
+        .returning({ id: paymentMilestones.id })
+      if (!updated) throw new Error("Milestone not found or already voided")
     }
 
     await writeAudit(tx, ctx, {

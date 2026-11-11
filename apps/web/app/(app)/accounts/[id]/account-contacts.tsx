@@ -1,5 +1,7 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import * as React from "react"
 import Link from "next/link"
 import { MoreHorizontal, Plus, Star } from "lucide-react"
@@ -15,24 +17,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
 import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
 import { PersonForm } from "../../persons/person-form"
 import {
-  deletePerson,
   setPrimaryPerson,
   type PersonRow,
 } from "../../persons/actions"
@@ -44,20 +35,7 @@ function fullName(p: { firstName: string; lastName: string | null }) {
 function ContactActions({ person }: { person: PersonRow }) {
   const perms = usePermissions()
   const canUpdate = perms.has(PERMISSIONS.PERSON_UPDATE)
-  const canDelete = perms.has(PERMISSIONS.PERSON_DELETE)
-  const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
-
-  async function onDelete() {
-    const res = await deletePerson(person.id)
-    if (!res.ok) {
-      showActionError(res)
-      setConfirmOpen(false)
-      return
-    }
-    toast.success("Contact deleted")
-    setConfirmOpen(false)
-  }
 
   async function onMakePrimary() {
     const res = await setPrimaryPerson(person.id)
@@ -69,7 +47,7 @@ function ContactActions({ person }: { person: PersonRow }) {
   }
 
   return (
-    <div className="flex justify-end">
+    <div className="flex items-center justify-end gap-2">
       {canUpdate ? (
         <PersonForm
           person={person}
@@ -100,39 +78,11 @@ function ContactActions({ person }: { person: PersonRow }) {
               Make primary
             </DropdownMenuItem>
           ) : null}
-          {canDelete ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setConfirmOpen(true)}
-              >
-                Delete
-              </DropdownMenuItem>
-            </>
-          ) : null}
+
         </DropdownMenuContent>
       </DropdownMenu>
+      {canUpdate ? <RecordVoidButton target={{ type: "person", id: person.id }} /> : null}
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete contact?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes {fullName(person) || "this contact"} from the account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onDelete}
-              className="bg-destructive text-white hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

@@ -1,5 +1,7 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -18,7 +20,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -29,16 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
 import { formatDate } from "@/lib/format"
 import { useOpenOnNewParam } from "@/hooks/use-open-on-new-param"
 import { usePermissions } from "@/components/command-palette"
@@ -52,8 +44,6 @@ import { LeadForm } from "./lead-form"
 import {
   createLead,
   updateLead,
-  deleteLead,
-  restoreLead,
   disqualifyLead,
   listLeadPage,
   type Lead,
@@ -88,7 +78,6 @@ export function LeadsTable({
   const perms = usePermissions()
   const canCreate = perms.has(PERMISSIONS.LEAD_CREATE)
   const canUpdate = perms.has(PERMISSIONS.LEAD_UPDATE)
-  const canDelete = perms.has(PERMISSIONS.LEAD_DELETE)
   const canConvert = perms.has(PERMISSIONS.LEAD_CONVERT)
 
   // Resolve an owner member id to its display name for the Owner column/facet.
@@ -102,7 +91,6 @@ export function LeadsTable({
   // Auto-open from the header "+ New" quick-create deep link (/leads?new=1).
   useOpenOnNewParam(() => setNewOpen(true))
   const [editLead, setEditLead] = React.useState<Lead | null>(null)
-  const [deleteTarget, setDeleteTarget] = React.useState<Lead | null>(null)
   const [disqualifyTarget, setDisqualifyTarget] = React.useState<Lead | null>(null)
 
   // Resolve a stage id to its name for the Stage column.
@@ -312,7 +300,7 @@ export function LeadsTable({
           const lead = row.original
           const isConverted = lead.status === "converted"
           return (
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
@@ -350,25 +338,16 @@ export function LeadsTable({
                       Disqualify
                     </DropdownMenuItem>
                   ) : null}
-                  {canDelete ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => setDeleteTarget(lead)}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
+
                 </DropdownMenuContent>
               </DropdownMenu>
+              {canUpdate ? <RecordVoidButton target={{ type: "lead", id: lead.id }} /> : null}
             </div>
           )
         },
       },
     ],
-    [stageNameById, ownerNameById, canUpdate, canDelete, canConvert]
+    [stageNameById, ownerNameById, canUpdate, canConvert]
   )
 
   return (
@@ -451,54 +430,6 @@ export function LeadsTable({
         />
       ) : null}
 
-      {/* Delete confirmation */}
-      <AlertDialog
-        open={!!deleteTarget}
-        onOpenChange={(o) => !o && setDeleteTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete lead?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove “{deleteTarget?.name}” from your lead list. You
-              can undo this right after.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={async () => {
-                if (!deleteTarget) return
-                const target = deleteTarget
-                const res = await deleteLead(target.id)
-                if (!res.ok) {
-                  showActionError(res)
-                  return
-                }
-                toast.success("Lead deleted", {
-                  action: {
-                    label: "Undo",
-                    onClick: async () => {
-                      const r = await restoreLead(target.id)
-                      if (!r.ok) {
-                        showActionError(r)
-                        return
-                      }
-                      toast.success("Lead restored")
-                      router.refresh()
-                    },
-                  },
-                })
-                setDeleteTarget(null)
-                router.refresh()
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }

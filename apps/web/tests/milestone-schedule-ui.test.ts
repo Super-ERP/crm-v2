@@ -1,15 +1,19 @@
 import { createElement } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MilestonesPanel, type MilestoneItemBase } from "@/components/milestones-panel"
 
+const access = vi.hoisted(() => ({ permissions: new Set<string>() }))
+vi.mock("@/components/command-palette", () => ({ usePermissions: () => access.permissions }))
+vi.mock("@/components/record-void-button", () => ({ RecordVoidButton: ({ target }: { target: { type: string; id: string } }) => createElement("button", { "data-void-type": target.type, "data-void-id": target.id }, "Void") }))
+beforeEach(() => { access.permissions = new Set(["payment_milestone.manage", "payment_milestone.view"]) })
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
 
 function render(milestones: MilestoneItemBase[], canManage = true) {
   const action = async () => ({ ok: true as const, data: undefined })
   return renderToStaticMarkup(createElement(MilestonesPanel, {
     milestones, valueCeiling: "100", currency: "MYR", canManage,
-    onCreate: action, onUpdate: action, onDelete: action, onReorder: action, onSplit: action,
+    onCreate: action, onUpdate: action, onReorder: action, onSplit: action,
   }))
 }
 
@@ -19,6 +23,18 @@ const milestone: MilestoneItemBase = {
 }
 
 describe("explicit milestone setup", () => {
+  it("requests reviewed void instead of deleting, independently of project edit permission", () => {
+    const html = render([milestone], false)
+    expect(html).toContain('data-void-type="payment_milestone"')
+    expect(html).toContain('data-void-id="payment"')
+    expect(html).toContain("Void")
+    expect(html).not.toContain("Delete")
+    expect(html).not.toContain("Move milestone")
+  })
+  it("hides void without the milestone request permission", () => {
+    access.permissions = new Set(["payment_milestone.view"])
+    expect(render([milestone])).not.toContain("Void")
+  })
   it("offers setup without creating a default milestone", () => {
     const html = render([])
     expect(html).toContain("Payment schedule not configured")

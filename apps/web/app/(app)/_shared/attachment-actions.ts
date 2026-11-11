@@ -277,6 +277,12 @@ export async function listEntityDocuments(
   })
 }
 
+async function assertNotVoidedAttachmentTarget(tx: Tx, tenantId: string, type: AttachableType, id: string) {
+  const entityType = type === "opportunity" ? "funnel" : type === "opportunity_container" ? "opportunity" : type
+  const [voided] = await tx.execute(sql`select id from record_void_requests where tenant_id=${tenantId} and entity_type=${entityType} and entity_id=${id} and status='approved' limit 1`)
+  if (voided) throw new Error("Voided record attachments are retained and read-only")
+}
+
 export async function uploadEntityAttachment(
   formData: FormData
 ): Promise<ActionResult> {
@@ -297,6 +303,7 @@ export async function uploadEntityAttachment(
       if (!(await canAccessAttachable(tx, ctx, type, id, "manage"))) {
         throw new Error("FORBIDDEN: not permitted on this record")
       }
+      await assertNotVoidedAttachmentTarget(tx, ctx.tenantId, type, id)
       await tx.insert(attachments).values({
         tenantId: ctx.tenantId,
         attachableType: type,
@@ -347,6 +354,7 @@ export async function renameEntityAttachment(
       if (!(await canAccessAttachable(tx, ctx, type, row.attachableId, "manage"))) {
         throw new Error("FORBIDDEN: not permitted on this record")
       }
+      await assertNotVoidedAttachmentTarget(tx, ctx.tenantId, type, row.attachableId)
       const nextName = name.slice(0, 200)
       await tx
         .update(attachments)
@@ -383,6 +391,7 @@ export async function deleteEntityAttachment(
       if (!(await canAccessAttachable(tx, ctx, type, row.attachableId, "manage"))) {
         throw new Error("FORBIDDEN: not permitted on this record")
       }
+      await assertNotVoidedAttachmentTarget(tx, ctx.tenantId, type, row.attachableId)
       // The proof gate outlives issuance: an issued/settled receipt or
       // payment must keep at least one attachment (its payment proof).
       if (type === "finance_doc") {
@@ -394,7 +403,7 @@ export async function deleteEntityAttachment(
         if (
           doc &&
           FINANCE_KINDS[doc.kind as FinanceDocKind].settlesParent &&
-          (doc.status === "issued" || doc.status === "settled")
+          (doc.status === "issued" || doc.status === "settled" || doc.status === "cancelled")
         ) {
           const [c] = await tx
             .select({ n: sql<number>`count(*)::int` })

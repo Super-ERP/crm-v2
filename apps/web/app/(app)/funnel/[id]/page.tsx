@@ -1,3 +1,5 @@
+
+import { RecordVoidButton } from "@/components/record-void-button"
 import { isPaymentMilestoneEligible } from "@/lib/payment-milestone-lifecycle"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -28,7 +30,6 @@ import {
 import { listFunnelMilestones } from "@/app/(app)/payment-milestones/actions"
 import { listFunnelApprovalHistory } from "@/app/(app)/approvals/actions"
 import { buildStageGate } from "@/lib/stage-gate"
-import { VoidDuplicateDialog } from "../void-duplicate-dialog"
 import { StageAdvanceDialog } from "../stage-advance-dialog"
 import { isTerminalKind, selectableTargets } from "../stage-transitions"
 import { listDealCosts } from "../cost-actions"
@@ -189,7 +190,7 @@ export default async function OpportunityDetailPage({
     <>
       <PageBody>
         <div className="flex flex-wrap items-center justify-end gap-2">
-            {opp.status === "won" && stage.kind === "WON" && canUpdate ? <VoidDuplicateDialog funnelId={opp.id} name={opp.name} /> : null}
+            {canUpdate ? <RecordVoidButton target={{ type: "funnel", id: opp.id }} /> : null}
             {canCreateQuote ? (
               <Button
                 variant="outline"

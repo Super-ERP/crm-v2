@@ -12,7 +12,7 @@ export async function milestoneReadScope(tx: Tx, ctx: ServerContext, includeInvo
     ? inArray(sql`mf.owner_member_id`, visible) : sql`false`
   const projectOwner = visible === null ? sql`true` : visible.length
     ? inArray(sql`mp.owner_member_id`, visible) : sql`false`
-  return sql`(
+  return sql`${paymentMilestones.deletedAt} is null and (
     exists (
       select 1 from funnels mf
       join pipeline_stages ms on ms.id = mf.current_stage_id and ms.tenant_id = mf.tenant_id

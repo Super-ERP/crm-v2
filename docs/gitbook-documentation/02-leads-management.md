@@ -108,7 +108,7 @@ Confirm the disqualification. The typed reason is saved with the lead and record
 
 #### Understand the available follow-up actions
 
-The lead detail page locks status controls for Disqualified and Converted records. There is no dedicated disqualification restore action. **Undo** in the Leads list’s deletion toast only reverses deletion, requires Delete leads permission and record access, and preserves the prior status. It does not restore a Disqualified lead to Contacted.
+The lead detail page locks status controls for Disqualified and Converted records. There is no dedicated disqualification restore action. Record removal now uses a reviewed **Void** request and preserves the prior status; it has no self-service Undo. It does not restore a Disqualified lead to Contacted.
 
 **Converted** is set only by the approved conversion workflow. The edit/status actions cannot be used to bypass conversion approval. Ask your administrator or support contact to review a disqualified lead that needs renewed follow-up.
 
@@ -195,3 +195,5 @@ Click **Submit conversion**. The server either queues it for approval or perform
 * [Accounts & contacts](03-accounts-and-contacts.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+For record corrections, select **Void** and track the request in Approvals. Converted leads require their active resulting records to be resolved first. See [Void records](07-void-records.md).

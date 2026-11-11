@@ -16,6 +16,7 @@ export const salesOrderStatus = pgEnum("sales_order_status", [
   "submitted",
   "approved",
   "rejected",
+  "void",
 ])
 
 /**

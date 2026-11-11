@@ -13,7 +13,7 @@ import { organization } from "./auth"
 import { projects } from "./projects"
 import { funnels } from "./pipeline"
 import { quotations } from "./quotations"
-import { timestamps } from "./_helpers"
+import { timestamps, softDelete } from "./_helpers"
 
 export const paymentMilestoneStatus = pgEnum("payment_milestone_status", [
   "pending_invoicing",
@@ -73,6 +73,7 @@ export const paymentMilestones = pgTable(
   productSubcategory: text("product_subcategory"),
   isDefault: boolean("is_default").notNull().default(false),
   ...timestamps,
+    ...softDelete,
   },
   (t) => [
     index("payment_milestones_project_idx").on(t.projectId),

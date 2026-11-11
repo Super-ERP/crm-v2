@@ -257,7 +257,7 @@ describe("direct module-owned action entrypoints", () => {
 
     expect(result).toEqual({
       ok: false,
-      error: "This project has active sales orders. Reject them before deleting the project.",
+      error: "Use Void to request reviewed cancellation",
     })
     expect(mutations.updates).toHaveLength(0)
   })
@@ -273,7 +273,7 @@ describe("direct module-owned action entrypoints", () => {
 
     expect(result).toEqual({
       ok: false,
-      error: "This quotation can't be deleted because a project references it.",
+      error: "Use Void to request reviewed cancellation",
     })
     expect(mutations.updates).toHaveLength(0)
   })

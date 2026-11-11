@@ -1,39 +1,30 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Package, MoreHorizontal, Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
 
 import { DataTable, SortableHeader, linkCell } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { showActionError } from "@/lib/show-action-error"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
 import { formatMoney } from "@/lib/format"
 import { useOpenOnNewParam } from "@/hooks/use-open-on-new-param"
 import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
 import { ProductForm } from "./product-form"
-import { deleteProduct, restoreProduct, listProductPage, type ProductRow } from "./actions"
+import { listProductPage, type ProductRow } from "./actions"
 import type { ProductCategory } from "@/app/(app)/settings/constants"
 
 type ProductCodeOption = ProductCategory
@@ -50,37 +41,10 @@ function RowActions({
   const router = useRouter()
   const perms = usePermissions()
   const canUpdate = perms.has(PERMISSIONS.PRODUCT_UPDATE)
-  const canDelete = perms.has(PERMISSIONS.PRODUCT_DELETE)
-  const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
 
-  async function onDelete() {
-    const res = await deleteProduct(product.id)
-    if (!res.ok) {
-      showActionError(res)
-      setConfirmOpen(false)
-      return
-    }
-    toast.success("Product deleted", {
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          const r = await restoreProduct(product.id)
-          if (!r.ok) {
-            showActionError(r)
-            return
-          }
-          toast.success("Product restored")
-          router.refresh()
-        },
-      },
-    })
-    router.refresh()
-    setConfirmOpen(false)
-  }
-
   return (
-    <div className="flex justify-end">
+    <div className="flex items-center justify-end gap-2">
       {canUpdate ? (
         <ProductForm
           product={product}
@@ -111,38 +75,11 @@ function RowActions({
           {canUpdate ? (
             <DropdownMenuItem onClick={() => setEditOpen(true)}>Edit</DropdownMenuItem>
           ) : null}
-          {canDelete ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => setConfirmOpen(true)}>
-                Delete
-              </DropdownMenuItem>
-            </>
-          ) : null}
+
         </DropdownMenuContent>
       </DropdownMenu>
+      {canUpdate ? <RecordVoidButton target={{ type: "product", id: product.id }} /> : null}
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete product?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This soft-deletes “{product.name}”. Existing quotation lines that
-              referenced it keep their copied description and price. You can undo
-              this right after.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onDelete}
-              className="bg-destructive text-white hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

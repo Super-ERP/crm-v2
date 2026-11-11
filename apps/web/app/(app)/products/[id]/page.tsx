@@ -1,3 +1,5 @@
+
+import { RecordVoidButton } from "@/components/record-void-button"
 import { notFound } from "next/navigation"
 
 import { requireContext } from "@/lib/server-context"
@@ -29,6 +31,7 @@ export default async function ProductDetailPage({
   return (
     <>
       <PageBody>
+        {canUpdate ? <div className="flex justify-end"><RecordVoidButton target={{ type: "product", id }} /></div> : null}
         <ProductDetailBody
           product={product}
           codeName={codeName}

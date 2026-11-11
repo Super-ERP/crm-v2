@@ -2,6 +2,8 @@ import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
 import { Forbidden } from "@/components/forbidden"
 import { getServerContext } from "@/lib/server-context"
+import { VOID_ENTITY_TYPES } from "@/lib/record-void"
+import { canRequestRecordVoid } from "@/server/services/record-void-registry"
 import { PERMISSIONS } from "@/lib/permissions"
 import { listApprovalQueue } from "./queue-actions"
 import { ApprovalsClient } from "./approvals-client"
@@ -11,7 +13,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   const ctx = await getServerContext()
   const canParticipate =
     !!ctx &&
-    (ctx.can(PERMISSIONS.OPPORTUNITY_UPDATE) || ctx.can(PERMISSIONS.FUNNEL_VOID_APPROVE) || ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) ||
+    (VOID_ENTITY_TYPES.some(type=>canRequestRecordVoid(ctx,type)) || ctx.can(PERMISSIONS.RECORD_VOID_APPROVE) || ctx.can(PERMISSIONS.OPPORTUNITY_UPDATE) || ctx.can(PERMISSIONS.FUNNEL_VOID_APPROVE) || ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) ||
       ctx.can(PERMISSIONS.STAGE_ADVANCE) ||
       ctx.can(PERMISSIONS.QUOTATION_APPROVE) ||
       ctx.can(PERMISSIONS.QUOTATION_UPDATE) ||

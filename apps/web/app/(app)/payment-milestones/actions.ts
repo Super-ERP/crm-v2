@@ -1,4 +1,6 @@
 "use server"
+
+import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
@@ -9,7 +11,7 @@ import { recordFilterRelated, recordSort } from "@/server/services/table-control
 import { milestoneReadScope } from "@/server/services/milestone-access"
 import { milestoneStatusForFunnel, milestoneContextForFunnel } from "@/server/services/milestone-status"
 
-import { and, asc, desc, eq, ilike, inArray, ne, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
@@ -144,7 +146,7 @@ export async function listFunnelMilestones(
     return tx
       .select()
       .from(paymentMilestones)
-      .where(and(eq(paymentMilestones.funnelId, funnelId), await milestoneReadScope(tx, ctx, false)))
+      .where(and(isNull(paymentMilestones.deletedAt), and(eq(paymentMilestones.funnelId, funnelId), await milestoneReadScope(tx, ctx, false))))
       .orderBy(
         asc(paymentMilestones.sortOrder),
         asc(paymentMilestones.createdAt)
@@ -166,7 +168,7 @@ export async function getPaymentMilestone(
       .from(paymentMilestones)
       .leftJoin(funnels, eq(paymentMilestones.funnelId, funnels.id))
       .leftJoin(quotations, eq(paymentMilestones.quotationId, quotations.id))
-      .where(and(eq(paymentMilestones.id, id), await milestoneReadScope(tx, ctx)))
+      .where(and(isNull(paymentMilestones.deletedAt), and(eq(paymentMilestones.id, id), await milestoneReadScope(tx, ctx))))
       .limit(1)
     if (!row) return null
     const product = await resolveMilestoneProduct(tx, row.m.quotationId, row.m.title)
@@ -222,14 +224,14 @@ async function funnelAllocatedTotal(
       total: sql<string>`coalesce(sum(${paymentMilestones.amount}), 0)`,
     })
     .from(paymentMilestones)
-    .where(
+    .where(and(isNull(paymentMilestones.deletedAt),
       excludeId
         ? and(
             eq(paymentMilestones.funnelId, funnelId),
             ne(paymentMilestones.id, excludeId)
           )
         : eq(paymentMilestones.funnelId, funnelId)
-    )
+    ))
   return Number(row?.total ?? 0)
 }
 
@@ -240,6 +242,7 @@ export async function createFunnelMilestone(
     const created = await withTenant(
       PERMISSIONS.PAYMENT_MILESTONE_MANAGE,
       async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
         // Lock the funnel row so concurrent milestone writes serialize against
         // the reconciliation check below (same guard as the project version).
         const [funnel] = await tx
@@ -250,11 +253,10 @@ export async function createFunnelMilestone(
           })
           .from(funnels)
           .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
-          .where(eq(funnels.id, input.funnelId))
+          .where(and(isNull(funnels.deletedAt), eq(funnels.id, input.funnelId)))
           .limit(1)
           .for("update", { of: funnels })
         if (!funnel) throw new Error("Funnel not found")
-
         const visible = await visibleMemberIds(tx, ctx)
         if (
           !canManageAllRecords(ctx) &&
@@ -293,7 +295,7 @@ export async function createFunnelMilestone(
             maxSort: sql<number>`coalesce(max(${paymentMilestones.sortOrder}), -1)`,
           })
           .from(paymentMilestones)
-          .where(eq(paymentMilestones.funnelId, input.funnelId))
+          .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.funnelId, input.funnelId)))
 
         const status = milestoneContext.status
         const [row] = await tx
@@ -342,10 +344,11 @@ export async function updateFunnelMilestone(
     const funnelId = await withTenant(
       PERMISSIONS.PAYMENT_MILESTONE_MANAGE,
       async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
         const [existing] = await tx
           .select()
           .from(paymentMilestones)
-          .where(eq(paymentMilestones.id, id))
+          .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.id, id)))
           .limit(1)
         if (!existing || !existing.funnelId) throw new Error("Milestone not found")
 
@@ -354,10 +357,11 @@ export async function updateFunnelMilestone(
         const [funnel] = await tx
           .select({ ownerMemberId: funnels.ownerMemberId })
           .from(funnels)
-          .where(eq(funnels.id, existing.funnelId))
+          .where(and(isNull(funnels.deletedAt), eq(funnels.id, existing.funnelId)))
           .limit(1)
           .for("update")
 
+        if (!funnel) throw new Error("Funnel not found")
         const visible = await visibleMemberIds(tx, ctx)
         if (
           !canManageAllRecords(ctx) &&
@@ -429,7 +433,7 @@ export async function updateFunnelMilestone(
             status: nextStatus,
             updatedAt: new Date(),
           })
-          .where(eq(paymentMilestones.id, id))
+          .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.id, id)))
 
         await logActivity(tx, ctx, {
           entityType: "opportunity",
@@ -459,75 +463,24 @@ export async function updateFunnelMilestone(
 
 export async function deleteFunnelMilestone(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    const funnelId = await withTenant(
-      PERMISSIONS.PAYMENT_MILESTONE_MANAGE,
-      async (tx, ctx) => {
-        const [milestone] = await tx
-          .select({ funnelId: paymentMilestones.funnelId })
-          .from(paymentMilestones)
-          .where(eq(paymentMilestones.id, id))
-          .limit(1)
-        if (!milestone || !milestone.funnelId) throw new Error("Milestone not found")
-
-        const [funnel] = await tx
-          .select({ ownerMemberId: funnels.ownerMemberId })
-          .from(funnels)
-          .where(eq(funnels.id, milestone.funnelId))
-          .limit(1)
-        const visible = await visibleMemberIds(tx, ctx)
-        if (
-          !canManageAllRecords(ctx) &&
-          !ownsOrManages(visible, funnel?.ownerMemberId ?? null)
-        ) {
-          throw new Error("FORBIDDEN: not permitted on this Funnel")
-        }
-
-        const [deleted] = await tx
-          .delete(paymentMilestones)
-          .where(eq(paymentMilestones.id, id))
-          .returning({
-            funnelId: paymentMilestones.funnelId,
-            title: paymentMilestones.title,
-          })
-        if (!deleted) throw new Error("Milestone not found")
-
-        await logActivity(tx, ctx, {
-          entityType: "opportunity",
-          entityId: deleted.funnelId ?? "",
-          type: "system",
-          subject: `Milestone deleted: ${deleted.title}`,
-        })
-
-        await writeAudit(tx, ctx, {
-          action: "milestone.deleted",
-          entityType: "opportunity",
-          entityId: deleted.funnelId ?? "",
-          before: { milestoneId: id, title: deleted.title },
-        })
-
-        return deleted.funnelId ?? ""
-      }
-    )
-    revalidatePath(`/funnel/${funnelId}`)
-    revalidatePath("/payment-milestones")
+    await withTenant(PERMISSIONS.PAYMENT_MILESTONE_MANAGE, async () => {
+      void id
+      throw new Error("Use Void to request reviewed cancellation")
+    })
   })
 }
 
-/**
- * Persist a new milestone ordering. `order` is milestone ids in the desired
- * sequence; sortOrder is rewritten to match the index. Scoped to the funnel
- * (and tenant via RLS) so only this funnel's milestones are touched.
- */
 export async function reorderFunnelMilestones(
   funnelId: string,
   order: string[]
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
     await withTenant(PERMISSIONS.PAYMENT_MILESTONE_MANAGE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       const [funnel] = await tx
         .select({ ownerMemberId: funnels.ownerMemberId })
         .from(funnels)
-        .where(eq(funnels.id, funnelId))
+        .where(and(isNull(funnels.deletedAt), eq(funnels.id, funnelId)))
         .limit(1)
       if (!funnel) throw new Error("Funnel not found")
 
@@ -536,16 +489,19 @@ export async function reorderFunnelMilestones(
         throw new Error("FORBIDDEN: not permitted on this Funnel")
       }
 
+      if (new Set(order).size !== order.length) throw new Error("Duplicate milestone order entries")
       for (let i = 0; i < order.length; i++) {
-        await tx
+        const [updated] = await tx
           .update(paymentMilestones)
           .set({ sortOrder: i, updatedAt: new Date() })
-          .where(
+          .where(and(isNull(paymentMilestones.deletedAt),
             and(
               eq(paymentMilestones.id, order[i]),
               eq(paymentMilestones.funnelId, funnelId)
             )
-          )
+          ))
+          .returning({ id: paymentMilestones.id })
+        if (!updated) throw new Error("Milestone not found or already voided")
       }
 
       await writeAudit(tx, ctx, {
@@ -580,6 +536,7 @@ export async function splitFunnelMilestones(
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
     await withTenant(PERMISSIONS.PAYMENT_MILESTONE_MANAGE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       if (parts.length < 2) {
         throw new Error("Split into at least 2 parts.")
       }
@@ -595,7 +552,7 @@ export async function splitFunnelMilestones(
         })
         .from(funnels)
         .leftJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
-        .where(eq(funnels.id, funnelId))
+        .where(and(isNull(funnels.deletedAt), eq(funnels.id, funnelId)))
         .limit(1)
         .for("update", { of: funnels })
       if (!funnel) throw new Error("Funnel not found")
@@ -616,10 +573,15 @@ export async function splitFunnelMilestones(
       }
 
       const [invoiced] = await tx.select({ id: paymentMilestones.id }).from(paymentMilestones)
-        .where(and(eq(paymentMilestones.funnelId, funnelId), eq(paymentMilestones.status, "invoiced"))).limit(1)
+        .where(and(isNull(paymentMilestones.deletedAt), and(eq(paymentMilestones.funnelId, funnelId), eq(paymentMilestones.status, "invoiced")))).limit(1)
       if (invoiced) throw new Error("Invoiced milestones cannot be split.")
+      const linkedFinance = await tx.execute(sql`select 1 from finance_docs d
+        join payment_milestones m on m.id = d.milestone_id and m.tenant_id = d.tenant_id
+        where m.tenant_id = ${ctx.tenantId} and m.funnel_id = ${funnelId}
+        and m.deleted_at is null limit 1`)
+      if (linkedFinance.length) throw new Error("Milestones with finance history cannot be split. Use Void to request reviewed cancellation")
       const status = milestoneContext.status
-      await tx.delete(paymentMilestones).where(eq(paymentMilestones.funnelId, funnelId))
+      await tx.update(paymentMilestones).set({ deletedAt: new Date(), updatedAt: new Date() }).where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.funnelId, funnelId)))
 
       const rows = parts.map((p, i) => ({
         tenantId: ctx.tenantId,

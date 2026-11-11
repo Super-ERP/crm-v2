@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { organization } from "./auth"
 import { funnels } from "./pipeline"
-import { timestamps } from "./_helpers"
+import { timestamps, softDelete } from "./_helpers"
 
 /**
  * Co-billing cost / purchase-order lines for a deal. Models the procurement
@@ -56,6 +56,7 @@ export const dealCosts = pgTable(
       .default("0"),
     notes: text("notes"),
     ...timestamps,
+    ...softDelete,
   },
   (t) => [index("deal_costs_opportunity_idx").on(t.tenantId, t.funnelId)]
 )

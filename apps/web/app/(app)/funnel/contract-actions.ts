@@ -1,5 +1,7 @@
 "use server"
 
+import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
+
 import { and, asc, eq, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant } from "@/lib/actions"
@@ -55,7 +57,7 @@ export async function listContractYears(
     return tx
       .select()
       .from(contractYears)
-      .where(eq(contractYears.funnelId, funnelId))
+      .where(and(isNull(contractYears.deletedAt), eq(contractYears.funnelId, funnelId)))
       .orderBy(asc(contractYears.year), asc(contractYears.sortOrder))
   })
 }
@@ -67,6 +69,7 @@ export async function createContractYear(
   return runAction(async () => {
     if (!input.year) throw new Error("A year is required")
     const row = await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       await assertOppAccess(tx, ctx, funnelId, true)
       const [oppCurrency] = await tx
         .select({ currency: funnels.currency })
@@ -109,10 +112,11 @@ export async function updateContractYear(
 ): Promise<ActionResult<ContractYearRow>> {
   return runAction(async () => {
     const row = await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       const [before] = await tx
         .select()
         .from(contractYears)
-        .where(eq(contractYears.id, id))
+        .where(and(isNull(contractYears.deletedAt), eq(contractYears.id, id)))
         .limit(1)
       if (!before) throw new Error("Contract year not found")
       await assertOppAccess(tx, ctx, before.funnelId, true)
@@ -132,7 +136,7 @@ export async function updateContractYear(
           notes: input.notes === undefined ? before.notes : clean(input.notes),
           updatedAt: new Date(),
         })
-        .where(eq(contractYears.id, id))
+        .where(and(isNull(contractYears.deletedAt), eq(contractYears.id, id)))
         .returning()
       await writeAudit(tx, ctx, {
         action: "contract_year.updated",
@@ -149,21 +153,9 @@ export async function updateContractYear(
 
 export async function deleteContractYear(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
-      const [before] = await tx
-        .select()
-        .from(contractYears)
-        .where(eq(contractYears.id, id))
-        .limit(1)
-      if (!before) throw new Error("Contract year not found")
-      await assertOppAccess(tx, ctx, before.funnelId, true)
-      await tx.delete(contractYears).where(eq(contractYears.id, id))
-      await writeAudit(tx, ctx, {
-        action: "contract_year.deleted",
-        entityType: "opportunity",
-        entityId: before.funnelId,
-      })
-      revalidatePath(`/funnel/${before.funnelId}`)
+    await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async () => {
+      void id
+      throw new Error("Use Void to request reviewed cancellation")
     })
   })
 }

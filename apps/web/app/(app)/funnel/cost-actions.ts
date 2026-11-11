@@ -1,5 +1,7 @@
 "use server"
 
+import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
+
 import { and, asc, eq, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant } from "@/lib/actions"
@@ -68,7 +70,7 @@ export async function listDealCosts(
     return tx
       .select()
       .from(dealCosts)
-      .where(eq(dealCosts.funnelId, funnelId))
+      .where(and(isNull(dealCosts.deletedAt), eq(dealCosts.funnelId, funnelId)))
       .orderBy(asc(dealCosts.createdAt))
   })
 }
@@ -79,6 +81,7 @@ export async function createDealCost(
 ): Promise<ActionResult<DealCostRow>> {
   return runAction(async () => {
     const row = await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       await assertOppAccess(tx, ctx, funnelId, true)
       const amountBase = baseAmount(input.amount, input.exchangeRate)
       const [created] = await tx
@@ -119,21 +122,9 @@ export async function createDealCost(
 
 export async function deleteDealCost(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
-      const [before] = await tx
-        .select()
-        .from(dealCosts)
-        .where(eq(dealCosts.id, id))
-        .limit(1)
-      if (!before) throw new Error("Cost line not found")
-      await assertOppAccess(tx, ctx, before.funnelId, true)
-      await tx.delete(dealCosts).where(eq(dealCosts.id, id))
-      await writeAudit(tx, ctx, {
-        action: "deal_cost.deleted",
-        entityType: "opportunity",
-        entityId: before.funnelId,
-      })
-      revalidatePath(`/funnel/${before.funnelId}`)
+    await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async () => {
+      void id
+      throw new Error("Use Void to request reviewed cancellation")
     })
   })
 }

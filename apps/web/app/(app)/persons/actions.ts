@@ -270,40 +270,10 @@ export async function updatePerson(
 
 export async function deletePerson(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    await withTenant(PERMISSIONS.PERSON_DELETE, async (tx, ctx) => {
-      const [before] = await tx
-        .select()
-        .from(persons)
-        .where(and(eq(persons.id, id), isNull(persons.deletedAt)))
-        .limit(1)
-      if (!before) throw new Error("Contact not found.")
-
-      const visible = await visibleMemberIds(tx, ctx)
-      const [account] = await tx
-        .select({ ownerMemberId: accounts.ownerMemberId })
-        .from(accounts)
-        .where(eq(accounts.id, before.accountId))
-        .limit(1)
-      if (
-        !canManageAllRecords(ctx) &&
-        !ownsOrManages(visible, account?.ownerMemberId ?? null)
-      ) {
-        throw new Error("FORBIDDEN: not permitted on this account")
-      }
-
-      await tx
-        .update(persons)
-        .set({ deletedAt: new Date(), updatedAt: new Date() })
-        .where(eq(persons.id, id))
-      await writeAudit(tx, ctx, {
-        action: "person.delete",
-        entityType: "person",
-        entityId: id,
-        before,
-      })
-      revalidatePath(`/accounts/${before.accountId}`)
+    void id
+    await withTenant(PERMISSIONS.PERSON_DELETE, async () => {
+      throw new Error("Use Void to request reviewed cancellation")
     })
-    revalidatePath("/persons")
   })
 }
 

@@ -1,4 +1,5 @@
 "use client"
+import { RecordVoidButton } from "@/components/record-void-button"
 
 import * as React from "react"
 import Link from "next/link"
@@ -197,9 +198,7 @@ export function DocDetailBody({
                   >
                     Issue
                   </Button>
-                  <Button variant="ghost" disabled={busy} onClick={() => move("cancelled")}>
-                    Cancel
-                  </Button>
+
                 </>
               ) : null}
               {doc.status === "issued" ? (
@@ -211,11 +210,10 @@ export function DocDetailBody({
                   <Button variant="outline" disabled={busy} onClick={() => move("settled")}>
                     Mark settled
                   </Button>
-                  <Button variant="ghost" disabled={busy} onClick={() => move("cancelled")}>
-                    Cancel
-                  </Button>
+
                 </>
               ) : null}
+              {doc.status !== "cancelled" ? <RecordVoidButton target={{ type: "finance_doc", id: doc.id }} /> : null}
               {needsProof && doc.attachCount === 0 ? (
                 <p className="w-full text-xs text-warning">
                   Attach the payment proof (Documents tab) to enable Issue.

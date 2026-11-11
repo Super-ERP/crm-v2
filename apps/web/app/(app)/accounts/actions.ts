@@ -691,92 +691,10 @@ export async function updateAccount(
 
 export async function deleteAccount(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    await withTenant(PERMISSIONS.ACCOUNT_DELETE, async (tx, ctx) => {
-      const [before] = await tx
-        .select()
-        .from(accounts)
-        .where(and(eq(accounts.id, id), isNull(accounts.deletedAt)))
-        .limit(1)
-      if (!before) throw new Error("Account not found.")
-
-      const visible = await visibleMemberIds(tx, ctx)
-      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, before.ownerMemberId)) {
-        throw new Error("FORBIDDEN: not permitted on this account")
-      }
-
-      // Soft-delete doesn't cascade, so block while active dependents exist —
-      // otherwise contacts/funnels/projects would be orphaned under a
-      // hidden account.
-      const [contact] = await tx
-        .select({ id: persons.id })
-        .from(persons)
-        .where(and(eq(persons.accountId, id), isNull(persons.deletedAt)))
-        .limit(1)
-      if (contact) {
-        throw new Error(
-          "Remove this account's contacts before deleting it."
-        )
-      }
-      const [opp] = await tx
-        .select({ id: funnels.id })
-        .from(funnels)
-        .where(and(eq(funnels.accountId, id), isNull(funnels.deletedAt)))
-        .limit(1)
-      if (opp) {
-        throw new Error(
-          "Close or remove this account's pipelines before deleting it."
-        )
-      }
-      const [project] = await tx
-        .select({ id: projects.id })
-        .from(projects)
-        .where(and(eq(projects.accountId, id), isNull(projects.deletedAt)))
-        .limit(1)
-      if (project) {
-        throw new Error(
-          "Close or remove this account's projects before deleting it."
-        )
-      }
-      // Self-references (parentAccountId / endUserAccountId) only FK-null on a
-      // hard delete, so block while any active account still points here —
-      // otherwise the hierarchy and reseller rollups resolve to a hidden row.
-      const [child] = await tx
-        .select({ id: accounts.id })
-        .from(accounts)
-        .where(
-          and(eq(accounts.parentAccountId, id), isNull(accounts.deletedAt))
-        )
-        .limit(1)
-      if (child) {
-        throw new Error(
-          "Reassign this account's child accounts before deleting it."
-        )
-      }
-      const [reseller] = await tx
-        .select({ id: accounts.id })
-        .from(accounts)
-        .where(
-          and(eq(accounts.endUserAccountId, id), isNull(accounts.deletedAt))
-        )
-        .limit(1)
-      if (reseller) {
-        throw new Error(
-          "This account is the end user for a reseller. Unlink it before deleting."
-        )
-      }
-
-      await tx
-        .update(accounts)
-        .set({ deletedAt: new Date(), updatedAt: new Date() })
-        .where(eq(accounts.id, id))
-      await writeAudit(tx, ctx, {
-        action: "account.delete",
-        entityType: "account",
-        entityId: id,
-        before,
-      })
+    void id
+    await withTenant(PERMISSIONS.ACCOUNT_DELETE, async () => {
+      throw new Error("Use Void to request reviewed cancellation")
     })
-    revalidatePath("/accounts")
   })
 }
 

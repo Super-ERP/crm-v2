@@ -1,5 +1,7 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -16,27 +18,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
 import { useOpenOnNewParam } from "@/hooks/use-open-on-new-param"
 import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
 import type { Option } from "@/lib/lookups"
 import { PersonForm } from "./person-form"
 import {
-  deletePerson,
-  restorePerson,
   setPrimaryPerson,
   listPersonPage,
   type PersonListItem,
@@ -56,34 +46,7 @@ function RowActions({
   const router = useRouter()
   const perms = usePermissions()
   const canUpdate = perms.has(PERMISSIONS.PERSON_UPDATE)
-  const canDelete = perms.has(PERMISSIONS.PERSON_DELETE)
-  const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
-
-  async function onDelete() {
-    const res = await deletePerson(person.id)
-    if (!res.ok) {
-      showActionError(res)
-      setConfirmOpen(false)
-      return
-    }
-    toast.success("Contact deleted", {
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          const r = await restorePerson(person.id)
-          if (!r.ok) {
-            showActionError(r)
-            return
-          }
-          toast.success("Contact restored")
-          router.refresh()
-        },
-      },
-    })
-    router.refresh()
-    setConfirmOpen(false)
-  }
 
   async function onMakePrimary() {
     const res = await setPrimaryPerson(person.id)
@@ -96,7 +59,7 @@ function RowActions({
   }
 
   return (
-    <div className="flex justify-end">
+    <div className="flex items-center justify-end gap-2">
       {canUpdate ? (
         <PersonForm
           accounts={accounts}
@@ -130,40 +93,11 @@ function RowActions({
               Make primary
             </DropdownMenuItem>
           ) : null}
-          {canDelete ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setConfirmOpen(true)}
-              >
-                Delete
-              </DropdownMenuItem>
-            </>
-          ) : null}
+
         </DropdownMenuContent>
       </DropdownMenu>
+      {canUpdate ? <RecordVoidButton target={{ type: "person", id: person.id }} /> : null}
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete contact?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes {fullName(person) || "this contact"} from the account.
-              You can undo this right after.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onDelete}
-              className="bg-destructive text-white hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

@@ -60,9 +60,9 @@ export async function voidDuplicateWonFunnel(tx: Tx, ctx: ServerContext, input: 
         (m.quotation_id in (select q.id from quotations q where q.tenant_id=${ctx.tenantId} and q.funnel_id=${funnelId}) and
           (m.project_id is not null or m.funnel_id is distinct from ${funnelId}::uuid)))) as crosslinks,
       exists(select 1 from audit_log a where a.tenant_id=${ctx.tenantId} and a.action='funnel.duplicate_voided' and a."after"->>'retainedFunnelId'=${funnelId}) as retained_history,
-      exists(select 1 from contracts c where c.tenant_id=${ctx.tenantId} and c.funnel_id=${funnelId}) as contracts,
-      exists(select 1 from contract_years c where c.tenant_id=${ctx.tenantId} and c.funnel_id=${funnelId}) as schedules,
-      exists(select 1 from deal_costs c where c.tenant_id=${ctx.tenantId} and c.funnel_id=${funnelId}) as costs,
+      exists(select 1 from contracts c where c.tenant_id=${ctx.tenantId} and c.funnel_id=${funnelId} and c.deleted_at is null) as contracts,
+      exists(select 1 from contract_years c where c.tenant_id=${ctx.tenantId} and c.funnel_id=${funnelId} and c.deleted_at is null and c.status<>'cancelled') as schedules,
+      exists(select 1 from deal_costs c where c.tenant_id=${ctx.tenantId} and c.funnel_id=${funnelId} and c.deleted_at is null) as costs,
       (exists(select 1 from intercompany_deal_parties p where p.funnel_id=${funnelId}) or
        exists(select 1 from intercompany_deals d where d.funnel_id=${funnelId})) as intercompany
   `)

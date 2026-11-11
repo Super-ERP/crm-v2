@@ -14,6 +14,7 @@ vi.mock("@/server/services/activity", () => ({ logActivity: vi.fn() }))
 vi.mock("@/server/audit", () => ({ writeAudit: vi.fn() }))
 vi.mock("@/server/services/changes/record", () => ({ recordChanges: vi.fn() }))
 vi.mock("@/server/services/tenant-currency", () => ({ tenantDefaultCurrency: async () => "MYR" }))
+vi.mock("@/server/services/record-void-lock", () => ({ lockRecordVoidGraph: vi.fn() }))
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 import { createProject, updateProject } from "@/app/(app)/projects/actions"
 function query(value: unknown) {

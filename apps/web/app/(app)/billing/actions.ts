@@ -1,4 +1,5 @@
 "use server"
+import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
@@ -323,6 +324,7 @@ export async function createFinanceDoc(
       "finance",
       PERMISSIONS.FINANCE_MANAGE,
       async (tx, ctx) => {
+        await lockRecordVoidGraph(tx, ctx.tenantId)
         const kind = input.kind
         if (!financeDocKind.enumValues.includes(kind)) {
           throw new Error("Unknown document kind")
@@ -355,7 +357,21 @@ export async function createFinanceDoc(
           }
           parent = p
         }
+        if (parent && input.salesOrderId && input.salesOrderId !== parent.salesOrderId) {
+          throw new Error("Sales order must match the source document")
+        }
         const salesOrderId = input.salesOrderId || parent?.salesOrderId || null
+        if (salesOrderId) {
+          const [source] = await tx.select({ id: salesOrders.id }).from(salesOrders)
+            .innerJoin(projects, eq(projects.id, salesOrders.projectId))
+            .where(and(eq(salesOrders.id, salesOrderId), eq(salesOrders.status, "approved"), isNull(projects.deletedAt), ne(projects.status, "cancelled"))).limit(1)
+          if (!source) throw new Error("An active project and approved sales order are required")
+        }
+        if (parent?.projectId) {
+          const [project] = await tx.select({ id: projects.id }).from(projects)
+            .where(and(eq(projects.id, parent.projectId), isNull(projects.deletedAt), ne(projects.status, "cancelled"))).limit(1)
+          if (!project) throw new Error("The source project is inactive")
+        }
         if (!canAttach(kind, (parent?.kind as FinanceDocKind) ?? null, !!salesOrderId)) {
           const meta = FINANCE_KINDS[kind]
           const from = [
@@ -446,16 +462,33 @@ export async function setFinanceDocStatus(
   next: FinanceDocStatus
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
+    if (next === "cancelled") throw new Error("Use Void to request reviewed cancellation")
     // Info collected inside the transaction for post-commit automation.
     let mirrors: IntercoMirror[] = []
 
     await withModule("finance", PERMISSIONS.FINANCE_MANAGE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       const [doc] = await tx
         .select()
         .from(financeDocs)
         .where(eq(financeDocs.id, id))
         .limit(1)
       if (!doc) throw new Error("Document not found")
+      if (doc.projectId) {
+        const [project] = await tx.select({ id: projects.id }).from(projects)
+          .where(and(eq(projects.id, doc.projectId), isNull(projects.deletedAt), ne(projects.status, "cancelled"))).limit(1)
+        if (!project) throw new Error("The source project is inactive")
+      }
+      if (doc.salesOrderId) {
+        const [so] = await tx.select({ id: salesOrders.id }).from(salesOrders)
+          .where(and(eq(salesOrders.id, doc.salesOrderId), eq(salesOrders.status, "approved"))).limit(1)
+        if (!so) throw new Error("The source sales order is inactive")
+      }
+      if (doc.parentId) {
+        const [parent] = await tx.select({ id: financeDocs.id }).from(financeDocs)
+          .where(and(eq(financeDocs.id, doc.parentId), ne(financeDocs.status, "cancelled"))).limit(1)
+        if (!parent) throw new Error("The source document is inactive")
+      }
       if (!FINANCE_STATUS_NEXT[doc.status]?.includes(next)) {
         throw new Error(`A ${doc.status} document cannot become ${next}.`)
       }
@@ -541,59 +574,6 @@ export async function setFinanceDocStatus(
         // queues the auto-mirror (executed after this tx commits).
         if (doc.kind === "invoice" && !doc.intercompanyDealId) {
           mirrors = await prepareIntercoMirror(tx, ctx.tenantId, doc)
-        }
-      }
-
-      // Cancelling an issued document must undo what issuing did.
-      if (next === "cancelled" && doc.status === "issued") {
-        // Live payment documents block the cancel — cancel those first.
-        const [liveSettle] = await tx
-          .select({ number: financeDocs.number })
-          .from(financeDocs)
-          .where(
-            and(
-              eq(financeDocs.parentId, id),
-              inArray(financeDocs.kind, SETTLING_KINDS),
-              ne(financeDocs.status, "cancelled")
-            )
-          )
-          .limit(1)
-        if (liveSettle) {
-          throw new Error(
-            `Cancel ${liveSettle.number} first — it records a payment against this document.`
-          )
-        }
-        // Cancelling a receipt/payment: un-settle the parent when the
-        // remaining live payments no longer cover it.
-        if (FINANCE_KINDS[doc.kind as FinanceDocKind].settlesParent && doc.parentId) {
-          const [parent] = await tx
-            .select()
-            .from(financeDocs)
-            .where(eq(financeDocs.id, doc.parentId))
-            .limit(1)
-          if (parent?.status === "settled") {
-            const [agg] = await tx
-              .select({ total: sql<string>`coalesce(sum(${financeDocs.amount}), 0)` })
-              .from(financeDocs)
-              .where(
-                and(
-                  eq(financeDocs.parentId, parent.id),
-                  inArray(financeDocs.kind, SETTLING_KINDS),
-                  inArray(financeDocs.status, ["issued", "settled"])
-                )
-              )
-            if (cents(agg?.total) < cents(parent.amount)) {
-              await tx
-                .update(financeDocs)
-                .set({ status: "issued", updatedAt: new Date() })
-                .where(
-                  and(
-                    eq(financeDocs.id, parent.id),
-                    eq(financeDocs.status, "settled")
-                  )
-                )
-            }
-          }
         }
       }
 
@@ -760,7 +740,13 @@ async function executeIntercoMirror(m: IntercoMirror): Promise<void> {
     const asTenant = (t: string) =>
       tx.execute(sql`select set_config('app.current_tenant', ${t}, true)`)
 
+    // Serialize with reviewed void and recheck the source after the issue commit.
+    await lockRecordVoidGraph(tx as Tx, [m.originTenantId, m.partnerTenantId].sort()[0])
+    await lockRecordVoidGraph(tx as Tx, [m.originTenantId, m.partnerTenantId].sort()[1])
     await asTenant(m.originTenantId)
+    const [source] = await tx.select({ status: financeDocs.status }).from(financeDocs)
+      .where(eq(financeDocs.id, m.originDocId)).limit(1)
+    if (!source || source.status === "cancelled" || source.status === "draft") return
     // Entity display names (organization is RLS-excluded — readable).
     const orgs = await tx
       .select({ id: organization.id, name: organization.name })
@@ -935,6 +921,7 @@ export async function getFinanceDoc(id: string): Promise<FinanceDocDetail | null
 export async function logReminder(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
     await withModule("finance", PERMISSIONS.FINANCE_MANAGE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       const [doc] = await tx
         .update(financeDocs)
         .set({

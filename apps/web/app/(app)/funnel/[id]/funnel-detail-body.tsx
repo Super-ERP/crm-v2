@@ -74,7 +74,6 @@ import type { ContractYearRow } from "../contract-actions"
 import {
   createFunnelMilestone,
   updateFunnelMilestone,
-  deleteFunnelMilestone,
   reorderFunnelMilestones,
   splitFunnelMilestones,
   type PaymentMilestoneRow,
@@ -199,7 +198,7 @@ export type FunnelDetailData = {
   documents: React.ComponentProps<typeof DocumentsSection>["documents"]
   /** Payment milestones attached to this funnel (core, funnel-scoped). */
   milestones: PaymentMilestoneRow[]
-  /** Gates the milestones panel's add/edit/reorder/delete affordances. */
+  /** Gates the milestones panel's add/edit/reorder affordances. */
   milestoneValueCeiling: string | null
   milestoneEligible: boolean
   canManageMilestones: boolean
@@ -1424,7 +1423,6 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                     createFunnelMilestone({ funnelId, ...values })
                   }
                   onUpdate={(id, values) => updateFunnelMilestone(id, values)}
-                  onDelete={(id) => deleteFunnelMilestone(id)}
                   onReorder={(order) => reorderFunnelMilestones(funnelId, order)}
                   onSplit={(parts) => splitFunnelMilestones(funnelId, parts)}
                 />
