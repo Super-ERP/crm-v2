@@ -1,6 +1,6 @@
 "use server"
 
-import { asc, eq } from "drizzle-orm"
+import { and, asc, eq, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -45,13 +45,15 @@ function baseAmount(amount?: string | null, rate?: string | null): string {
 async function assertOppAccess(
   tx: Parameters<Parameters<typeof withTenant>[1]>[0],
   ctx: Parameters<Parameters<typeof withTenant>[1]>[1],
-  funnelId: string
+  funnelId: string,
+  lock = false
 ): Promise<void> {
-  const [opp] = await tx
+  const query = tx
     .select({ ownerMemberId: funnels.ownerMemberId })
     .from(funnels)
-    .where(eq(funnels.id, funnelId))
+    .where(and(eq(funnels.id, funnelId), eq(funnels.tenantId, ctx.tenantId), isNull(funnels.deletedAt)))
     .limit(1)
+  const [opp] = await (lock ? query.for("update") : query)
   if (!opp) throw new Error("Funnel not found")
   const visible = await visibleMemberIds(tx, ctx)
   if (!canManageAllRecords(ctx) && !ownsOrManages(visible, opp.ownerMemberId))
@@ -77,7 +79,7 @@ export async function createDealCost(
 ): Promise<ActionResult<DealCostRow>> {
   return runAction(async () => {
     const row = await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
-      await assertOppAccess(tx, ctx, funnelId)
+      await assertOppAccess(tx, ctx, funnelId, true)
       const amountBase = baseAmount(input.amount, input.exchangeRate)
       const [created] = await tx
         .insert(dealCosts)
@@ -124,7 +126,7 @@ export async function deleteDealCost(id: string): Promise<ActionResult<void>> {
         .where(eq(dealCosts.id, id))
         .limit(1)
       if (!before) throw new Error("Cost line not found")
-      await assertOppAccess(tx, ctx, before.funnelId)
+      await assertOppAccess(tx, ctx, before.funnelId, true)
       await tx.delete(dealCosts).where(eq(dealCosts.id, id))
       await writeAudit(tx, ctx, {
         action: "deal_cost.deleted",
