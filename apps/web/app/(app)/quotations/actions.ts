@@ -1793,7 +1793,7 @@ export async function setPrimaryQuotation(
     const [q] = await tx
       .select()
       .from(quotations)
-      .where(and(eq(quotations.id, id), isNull(quotations.deletedAt)))
+      .where(and(eq(quotations.id, id), eq(quotations.tenantId, ctx.tenantId), isNull(quotations.deletedAt)))
       .limit(1)
     if (!q) throw new Error("Quotation not found")
     const visible = await visibleMemberIds(tx, ctx)
@@ -1803,10 +1803,16 @@ export async function setPrimaryQuotation(
         primaryQuotationId: funnels.primaryQuotationId,
       })
       .from(funnels)
-      .where(eq(funnels.id, q.funnelId))
+      .where(and(eq(funnels.id, q.funnelId), eq(funnels.tenantId, ctx.tenantId), isNull(funnels.deletedAt)))
       .limit(1)
+      .for("update")
+    if (!opp) throw new Error("Funnel not found")
     if (!canManageAllRecords(ctx) && !ownsOrManages(visible, opp?.ownerMemberId ?? null))
       throw new Error("FORBIDDEN: not permitted on this quotation")
+    const [liveQuote] = await tx.select({ id: quotations.id }).from(quotations)
+      .where(and(eq(quotations.id, id), eq(quotations.tenantId, ctx.tenantId), eq(quotations.funnelId, q.funnelId), isNull(quotations.deletedAt)))
+      .limit(1).for("update")
+    if (!liveQuote) throw new Error("Quotation not found")
     // Capture the prior primary so the caller can offer an Undo (it changes the
     // funnel's reported value/forecast, so a reversible affordance matters).
     const previousPrimaryId =
@@ -1817,7 +1823,7 @@ export async function setPrimaryQuotation(
       .update(quotations)
       .set({ isPrimary: false })
       .where(
-        and(eq(quotations.funnelId, q.funnelId), ne(quotations.id, id))
+        and(eq(quotations.tenantId, ctx.tenantId), eq(quotations.funnelId, q.funnelId), ne(quotations.id, id))
       )
     await tx
       .update(quotations)
@@ -1835,13 +1841,16 @@ export async function setPrimaryQuotation(
       action: "quotation.set_primary",
       entityType: "quotation",
       entityId: id,
+      after: { previousPrimaryId, funnelId: q.funnelId },
     })
-    return { previousPrimaryId }
-  })
+    return { previousPrimaryId, funnelId: q.funnelId }
+  }, { deadlockRetries: 2 })
   revalidatePath("/quotations")
   revalidatePath("/approvals")
   revalidatePath(`/quotations/${id}`)
-  return out
+  revalidatePath(`/funnel/${out.funnelId}`)
+  if (out.previousPrimaryId) revalidatePath(`/quotations/${out.previousPrimaryId}`)
+  return { previousPrimaryId: out.previousPrimaryId }
   })
 }
 

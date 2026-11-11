@@ -1,5 +1,6 @@
 "use client"
 
+import { canSetQuotationPrimary } from "@/lib/quotation-primary"
 import { toDateString } from "@/lib/dates"
 
 import { QuotationDuplicateDialog } from "@/components/quotation-duplicate-dialog"
@@ -214,10 +215,7 @@ export function QuotationForm({
   const showRevision =
     perms.canCreateRevision &&
     canCreateQuotationRevision(quotation.status, quotation.deletedAt)
-  const showSetPrimary =
-    !quotation.isPrimary &&
-    (quotation.status === "accepted" || quotation.status === "sent") &&
-    perms.canUpdate
+  const showSetPrimary = canSetQuotationPrimary(quotation, perms.canUpdate)
   const showDelete = perms.canDelete
   const hasAnyAction =
     showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary || showDelete
