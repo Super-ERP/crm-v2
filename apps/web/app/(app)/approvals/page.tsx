@@ -11,7 +11,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   const ctx = await getServerContext()
   const canParticipate =
     !!ctx &&
-    (ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) ||
+    (ctx.can(PERMISSIONS.OPPORTUNITY_UPDATE) || ctx.can(PERMISSIONS.FUNNEL_VOID_APPROVE) || ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE) ||
       ctx.can(PERMISSIONS.STAGE_ADVANCE) ||
       ctx.can(PERMISSIONS.QUOTATION_APPROVE) ||
       ctx.can(PERMISSIONS.QUOTATION_UPDATE) ||

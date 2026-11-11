@@ -8,11 +8,10 @@ import { PERMISSIONS } from "@/lib/permissions"
 import { canManageAllRecords, ownsOrManages, ownerScope, visibleMemberIds } from "@/lib/access-scope"
 import { funnels, pipelineStages } from "@/db/schema"
 import type { VoidDuplicateFunnelInput } from "@/lib/funnel-void"
-import { canVoidDuplicateFunnel, voidDuplicateWonFunnel } from "@/server/services/void-duplicate-funnel"
+import { requestFunnelVoid } from "@/server/services/funnel-void-approval"
 
 export async function listDuplicateWonTargets(funnelId: string) {
-  return withTenant(PERMISSIONS.OPPORTUNITY_DELETE, async (tx, ctx) => {
-    if (!canVoidDuplicateFunnel(ctx)) throw new Error("FORBIDDEN")
+  return withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
     const visible = await visibleMemberIds(tx, ctx)
     const [source] = await tx.select().from(funnels).where(and(eq(funnels.id, funnelId), eq(funnels.tenantId, ctx.tenantId), isNull(funnels.deletedAt))).limit(1)
     if (!source || (!canManageAllRecords(ctx) && !ownsOrManages(visible, source.ownerMemberId))) throw new Error("Funnel not available")
@@ -23,10 +22,11 @@ export async function listDuplicateWonTargets(funnelId: string) {
   })
 }
 
-export async function voidDuplicateFunnel(input: VoidDuplicateFunnelInput): Promise<ActionResult<{ retainedFunnelId: string; archivedQuotationCount: number }>> {
+export async function voidDuplicateFunnel(input: VoidDuplicateFunnelInput): Promise<ActionResult<{ requestId: string }>> {
   return runAction(async () => {
-    const result = await withTenant(PERMISSIONS.OPPORTUNITY_DELETE, (tx, ctx) => voidDuplicateWonFunnel(tx, ctx, input), { deadlockRetries: 2 })
-    for (const path of ["/funnel", "/opportunities", "/accounts", "/quotations", "/payment-milestones", "/project-codes", "/dashboard", "/reports", "/audit", `/funnel/${input.funnelId}`, `/funnel/${result.retainedFunnelId}`, `/opportunities/${result.opportunityId}`]) revalidatePath(path)
-    return { retainedFunnelId: result.retainedFunnelId, archivedQuotationCount: result.archivedQuotationCount }
+    const requestId = await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, (tx, ctx) => requestFunnelVoid(tx, ctx, input), { deadlockRetries: 2 })
+    revalidatePath(`/funnel/${input.funnelId}`)
+    revalidatePath("/approvals")
+    return { requestId }
   })
 }

@@ -36,9 +36,9 @@ export function VoidDuplicateDialog({ funnelId, name }: { funnelId: string; name
     try {
       const result = await voidDuplicateFunnel({ funnelId, retainedFunnelId, reason })
       if (!result.ok) { setError(result.error); return }
-      toast.success("Duplicate funnel voided")
+      toast.success("Void request sent to Sales Admin")
       setOpen(false)
-      router.push(`/funnel/${result.data.retainedFunnelId}`)
+      router.push("/approvals?tab=mine")
       router.refresh()
     } catch (error) {
       setError(error instanceof Error ? error.message : "Unable to void the duplicate. Try again.")
@@ -50,11 +50,11 @@ export function VoidDuplicateDialog({ funnelId, name }: { funnelId: string; name
     if (next) { setRetained(""); setReason(""); setError(""); setTargets([]); setLoading(true) }
     setOpen(next)
   }}>
-    <DialogTrigger render={<Button variant="outline" />}>Void duplicate</DialogTrigger>
+    <DialogTrigger render={<Button variant="outline" />}>Void</DialogTrigger>
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Void duplicate Closed Won</DialogTitle>
-        <DialogDescription>Archive “{name}” and keep the correct funnel. This is a duplicate correction, not a financial reversal.</DialogDescription>
+        <DialogTitle>Request to void funnel</DialogTitle>
+        <DialogDescription>Ask Sales Admin to void “{name}” as a duplicate. Nothing is archived until approved.</DialogDescription>
       </DialogHeader>
       <form id={id} onSubmit={submit} className="grid gap-4">
         <fieldset disabled={busy || loading} className="grid gap-4">
@@ -70,12 +70,12 @@ export function VoidDuplicateDialog({ funnelId, name }: { funnelId: string; name
           </div>
         </fieldset>
         {!loading && !targets.length && !error ? <p role="status" className="text-sm">No eligible funnel to keep. Ask an administrator to review the records.</p> : null}
-        <p className="text-sm text-muted-foreground">The duplicate and its quotations leave active lists and totals; pending invoice schedules are hidden. History is retained in the audit log. Linked invoicing, delivery, contracts, purchase costs or intercompany records must be reviewed first.</p>
+        <p className="text-sm text-muted-foreground">After approval, the duplicate and its quotations leave active lists and totals; pending invoice schedules are hidden. History is retained in the audit log. Linked invoicing, delivery, contracts, purchase costs or intercompany records must be reviewed first.</p>
         {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
       </form>
       <DialogFooter>
         <Button type="button" variant="outline" disabled={busy} onClick={() => setOpen(false)}>Cancel</Button>
-        <Button type="submit" form={id} variant="destructive" disabled={loading || busy || !retainedFunnelId || !reason.trim()}>{busy ? "Voiding…" : "Void duplicate"}</Button>
+        <Button type="submit" form={id} variant="destructive" disabled={loading || busy || !retainedFunnelId || !reason.trim()}>{busy ? "Submitting…" : "Submit request"}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

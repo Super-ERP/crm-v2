@@ -10,9 +10,9 @@ import { writeAudit } from "@/server/audit"
 import { logActivity } from "@/server/services/activity"
 import { recomputeOpportunityTotal } from "@/server/services/opportunity-container"
 
-/** Existing delete + approval capabilities deliberately exclude default sales reps. */
+/** Execution is reserved for the dedicated Sales Admin approval capability. */
 export function canVoidDuplicateFunnel(ctx: Pick<ServerContext, "can">) {
-  return ctx.can(PERMISSIONS.OPPORTUNITY_DELETE) && ctx.can(PERMISSIONS.STAGE_ADVANCE_APPROVE)
+  return ctx.can(PERMISSIONS.FUNNEL_VOID_APPROVE)
 }
 
 /** Caller supplies one tenant transaction; every check and write is atomic. */

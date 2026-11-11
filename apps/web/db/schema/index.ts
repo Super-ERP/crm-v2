@@ -24,3 +24,5 @@ export * from "./operator-alerts"
 
 export * from "./lead-conversion-approvals"
 export * from "./table-preferences"
+
+export * from "./funnel-void-approvals"

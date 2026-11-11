@@ -102,7 +102,7 @@ const NAV_SECTIONS: NavSection[] = [
       { title: "Project Codes", url: "/project-codes", icon: HashIcon, tile: OBJECT_TILES.projectCode.color, permission: PERMISSIONS.OPPORTUNITY_VIEW },
       { title: "Projects", url: "/projects", icon: FolderKanbanIcon, tile: OBJECT_TILES.project.color, permission: PERMISSIONS.PROJECT_VIEW, module: "projects" },
       { title: "Sales Orders", url: "/sales-orders", icon: ReceiptIcon, tile: OBJECT_TILES.salesOrder.color, permission: PERMISSIONS.SALES_ORDER_VIEW, module: "salesOrders" },
-      { title: "Approvals", url: "/approvals", icon: StampIcon, tile: "bg-rose-500", anyPermission: [PERMISSIONS.STAGE_ADVANCE, PERMISSIONS.STAGE_ADVANCE_APPROVE, PERMISSIONS.QUOTATION_UPDATE, PERMISSIONS.QUOTATION_APPROVE, PERMISSIONS.LEAD_CONVERT, PERMISSIONS.LEAD_CONVERT_APPROVE] },
+      { title: "Approvals", url: "/approvals", icon: StampIcon, tile: "bg-rose-500", anyPermission: [PERMISSIONS.FUNNEL_VOID_APPROVE, PERMISSIONS.OPPORTUNITY_UPDATE, PERMISSIONS.STAGE_ADVANCE, PERMISSIONS.STAGE_ADVANCE_APPROVE, PERMISSIONS.QUOTATION_UPDATE, PERMISSIONS.QUOTATION_APPROVE, PERMISSIONS.LEAD_CONVERT, PERMISSIONS.LEAD_CONVERT_APPROVE] },
     ],
   },
   {

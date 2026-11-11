@@ -14,6 +14,9 @@ vi.mock("@/lib/access-scope", () => ({
 }))
 vi.mock("@/server/audit", () => ({ writeAudit: mocks.audit }))
 vi.mock("@/server/services/activity", () => ({ logActivity: mocks.activity }))
+import { requestFunnelVoid, decideFunnelVoid } from "@/server/services/funnel-void-approval"
+import { visibleMemberIds } from "@/lib/access-scope"
+import { PERMISSIONS } from "@/lib/permissions"
 import { recomputeOpportunityTotal } from "@/server/services/opportunity-container"
 import { milestoneReadScope } from "@/server/services/milestone-access"
 import { voidDuplicateWonFunnel } from "@/server/services/void-duplicate-funnel"
@@ -41,6 +44,15 @@ integration("void duplicate PostgreSQL boundary", () => {
     dbSql = postgres(root.toString(), { max: 4 })
     db = drizzle(dbSql)
     await dbSql.unsafe(`
+      create table member(id text primary key,organization_id text);
+      create table membership_profiles(member_id text,tenant_id text,status text);
+      create table member_roles(member_id text,tenant_id text,role_id uuid);
+      create table roles(id uuid,tenant_id text);
+      create table role_permissions(role_id uuid,tenant_id text,permission_id uuid);
+      create table permissions(id uuid,key text);
+      create type approval_status as enum ('pending','approved','rejected','cancelled');
+      create table funnel_void_requests(id uuid primary key default gen_random_uuid(),tenant_id text,funnel_id uuid,retained_funnel_id uuid,requester_member_id text,owner_member_id text,reason text,status approval_status default 'pending',decision_note text,decided_by_member_id text,requested_at timestamptz default now(),decided_at timestamptz);
+      create unique index funnel_void_one_pending on funnel_void_requests(tenant_id,funnel_id) where status='pending';
       create table pipeline_stages(id uuid primary key,tenant_id text,kind text,code text default 'won');
       create table funnels(id uuid primary key,tenant_id text,name text,account_id uuid,currency text,opportunity_id uuid,owner_member_id text,status text,current_stage_id uuid,estimated_amount numeric,deleted_at timestamptz,updated_at timestamptz);
       create table quotations(id uuid primary key,tenant_id text,funnel_id uuid,status text,is_primary boolean,deleted_at timestamptz,updated_at timestamptz);
@@ -66,7 +78,15 @@ integration("void duplicate PostgreSQL boundary", () => {
   })
   beforeEach(async () => {
     vi.clearAllMocks()
-    await dbSql.unsafe("truncate pipeline_stages,funnels,quotations,projects,payment_milestones,finance_docs,contracts,contract_years,deal_costs,intercompany_deal_parties,intercompany_deals,stage_approval_requests,opportunities,audit_log,activity_test")
+    vi.mocked(visibleMemberIds).mockResolvedValue(["manager"])
+    await dbSql.unsafe("truncate member,membership_profiles,member_roles,roles,role_permissions,permissions,funnel_void_requests,pipeline_stages,funnels,quotations,projects,payment_milestones,finance_docs,contracts,contract_years,deal_costs,intercompany_deal_parties,intercompany_deals,stage_approval_requests,opportunities,audit_log,activity_test")
+    const role = randomUUID(), permission = randomUUID(), updatePermission = randomUUID(), viewPermission = randomUUID()
+    await dbSql`insert into member values ('manager',${tenant}),('sales-admin',${tenant})`
+    await dbSql`insert into membership_profiles values ('manager',${tenant},'active'),('sales-admin',${tenant},'active')`
+    await dbSql`insert into roles values (${role},${tenant})`
+    await dbSql`insert into permissions values (${permission},'funnel.void.approve'),(${updatePermission},'opportunity.update'),(${viewPermission},'opportunity.view')`
+    await dbSql`insert into member_roles values ('sales-admin',${tenant},${role}),('manager',${tenant},${role})`
+    await dbSql`insert into role_permissions values (${role},${tenant},${permission}),(${role},${tenant},${updatePermission}),(${role},${tenant},${viewPermission})`
     await dbSql`insert into pipeline_stages(id,tenant_id,kind) values (${stage},${tenant},'WON')`
     await dbSql`insert into opportunities(id,tenant_id,total_estimated_funnel_amount) values (${parent},${tenant},200)`
     for (const id of [source,retained]) await dbSql`insert into funnels(id,tenant_id,name,account_id,currency,opportunity_id,owner_member_id,status,current_stage_id,estimated_amount) values (${id},${tenant},${id===source?'Duplicate':'Correct deal'},${customer},'MYR',${parent},'manager','won',${stage},100)`
@@ -214,5 +234,64 @@ integration("void duplicate PostgreSQL boundary", () => {
     await Promise.all([createChild(),createChild()])
     expect(Number((await dbSql`select total_estimated_funnel_amount from opportunities`)[0].total_estimated_funnel_amount)).toBe(300)
   }, 15_000)
+
+  const rep = {...ctx, can: (key:string) => [PERMISSIONS.OPPORTUNITY_UPDATE,PERMISSIONS.OPPORTUNITY_VIEW].includes(key as never)} as ServerContext
+  const admin = {...ctx, memberId:'sales-admin'} as ServerContext
+  const request = () => db.transaction(tx => requestFunnelVoid(tx as unknown as Tx,rep,input))
+  const decide = (id:string,approve=true,note='',context=admin) => db.transaction(tx => decideFunnelVoid(tx as unknown as Tx,context,id,approve,note))
+  it('sales requests preserve the funnel until Sales Admin approves, with history and no self approval',async()=>{
+    const id=await request()
+    expect((await dbSql`select deleted_at from funnels where id=${source}`)[0].deleted_at).toBeNull()
+    await expect(decide(id,true,'',rep)).rejects.toThrow(/FORBIDDEN/)
+    await expect(decide(id,true,'',ctx)).rejects.toThrow(/own request/)
+    await expect(request()).rejects.toThrow(/already awaiting/)
+    await decide(id)
+    expect((await dbSql`select status,decided_by_member_id from funnel_void_requests where id=${id}`)[0]).toMatchObject({status:'approved',decided_by_member_id:'sales-admin'})
+    expect((await dbSql`select deleted_at from funnels where id=${source}`)[0].deleted_at).not.toBeNull()
+    await expect(decide(id)).rejects.toThrow(/no longer pending/)
+  })
+  it('rejects with a reason without archiving and permits a corrected request',async()=>{
+    const id=await request()
+    await expect(decide(id,false,' ')).rejects.toThrow(/reason/)
+    await decide(id,false,'Wrong duplicate')
+    expect((await dbSql`select status from funnel_void_requests where id=${id}`)[0].status).toBe('rejected')
+    expect((await dbSql`select deleted_at from funnels where id=${source}`)[0].deleted_at).toBeNull()
+    expect(await request()).toBeTruthy()
+  })
+  it('rechecks newly linked invoices atomically before approval',async()=>{
+    const id=await request()
+    await dbSql`update payment_milestones set status='invoiced' where id=${milestone}`
+    await expect(decide(id)).rejects.toThrow(/invoicing/)
+    expect((await dbSql`select status from funnel_void_requests where id=${id}`)[0].status).toBe('pending')
+    expect((await dbSql`select deleted_at from funnels where id=${source}`)[0].deleted_at).toBeNull()
+  })
+  it('rejects stale ownership and disabled requesters',async()=>{
+    const id=await request()
+    await dbSql`update funnels set owner_member_id='other' where id=${source}`
+    await expect(decide(id)).rejects.toThrow(/access|owner changed/)
+    await dbSql`update funnels set owner_member_id='manager' where id=${source}`
+    await dbSql`update membership_profiles set status='disabled' where member_id='manager'`
+    await expect(decide(id)).rejects.toThrow(/no longer active/)
+  })
+  it('does not submit without an active other Sales Admin',async()=>{
+    await dbSql`update membership_profiles set status='disabled' where member_id='sales-admin'`
+    await expect(request()).rejects.toThrow(/No other active Sales Admin/)
+    expect(await dbSql`select id from funnel_void_requests`).toHaveLength(0)
+  })
+
+  it('fails submission when the only Sales Admin lacks record scope or view permission',async()=>{
+    vi.mocked(visibleMemberIds).mockImplementation(async (_tx,context)=>context.memberId==='sales-admin'?['sales-admin']:['manager'])
+    await expect(request()).rejects.toThrow(/No other active Sales Admin/)
+    vi.mocked(visibleMemberIds).mockResolvedValue(['manager'])
+    await dbSql`delete from role_permissions where permission_id in (select id from permissions where key='opportunity.view')`
+    await expect(request()).rejects.toThrow(/No other active Sales Admin/)
+  })
+  it('rechecks requester retained-funnel access even when the reviewer still has access',async()=>{
+    const id=await request()
+    await dbSql`update funnels set owner_member_id='other' where id=${retained}`
+    vi.mocked(visibleMemberIds).mockImplementation(async (_tx,context)=>context.memberId==='sales-admin'?['manager','other']:['manager'])
+    await expect(decide(id)).rejects.toThrow(/Requester no longer has access/)
+    expect((await dbSql`select status from funnel_void_requests where id=${id}`)[0].status).toBe('pending')
+  })
 
 })

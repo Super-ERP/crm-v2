@@ -1,8 +1,9 @@
 import {beforeEach,expect,it,vi} from 'vitest'
-const mocks=vi.hoisted(()=>({stage:vi.fn(),mine:vi.fn(),quotation:vi.fn(),lead:vi.fn()}))
+const mocks=vi.hoisted(()=>({stage:vi.fn(),mine:vi.fn(),quotation:vi.fn(),lead:vi.fn(),voids:vi.fn()}))
 vi.mock('@/app/(app)/approvals/actions',()=>({listIncomingApprovals:mocks.stage,listMyApprovals:mocks.mine}))
 vi.mock('@/app/(app)/approvals/quotation-actions',()=>({listQuotationApprovals:mocks.quotation}))
 vi.mock('@/app/(app)/approvals/lead-conversion-actions',()=>({listLeadConversionApprovals:mocks.lead}))
+vi.mock('@/app/(app)/approvals/void-actions',()=>({listFunnelVoidApprovals:mocks.voids}))
 import {listApprovalQueue} from '@/app/(app)/approvals/queue-actions'
 import {decodeApprovalCursor} from '@/lib/approval-queue'
 const id=(n:number)=>`00000000-0000-4000-8000-${n.toString().padStart(12,'0')}`
@@ -13,7 +14,7 @@ it('merges bounded candidates from existing scoped readers, oldest first across 
  mocks.lead.mockResolvedValue({rows:[{id:id(3),queueSortKey:'3000000'}],total:1})
  const page=await listApprovalQueue()
  expect(page.items.map(i=>i.kind)).toEqual(['quotation','stage','lead'])
- expect(page.counts).toEqual({stage:1,quotation:1,lead:1})
+ expect(page.counts).toEqual({stage:1,quotation:1,lead:1,void:0})
  expect(mocks.stage).toHaveBeenCalledWith(0,{order:'oldest',search:'',cursor:null})
 })
 it('returns 25 requests with a cursor for the last displayed request, not the lookahead',async()=>{
@@ -32,4 +33,13 @@ it('uses requester-scoped history for My requests and forwards all queue constra
  await listApprovalQueue({tab:'mine',type:'stage',order:'newest',search:'Renewal'})
  expect(mocks.stage).not.toHaveBeenCalled()
  expect(mocks.mine).toHaveBeenCalledWith(0,{order:'newest',search:'Renewal',cursor:null})
+})
+
+it('includes Sales Admin void requests and their searchable requester history',async()=>{
+ mocks.voids.mockResolvedValue({rows:[{id:id(7),queueSortKey:'1'}],total:1})
+ const page=await listApprovalQueue({tab:'mine',type:'void',search:'Duplicate'})
+ expect(page.items[0].kind).toBe('void')
+ expect(page.counts.void).toBe(1)
+ expect(mocks.voids).toHaveBeenCalledWith('mine',{order:'oldest',search:'Duplicate',cursor:null})
+ expect(mocks.stage).not.toHaveBeenCalled()
 })
