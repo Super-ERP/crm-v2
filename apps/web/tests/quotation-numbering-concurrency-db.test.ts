@@ -37,6 +37,8 @@ integration("quotation numbering PostgreSQL boundary", () => {
       CREATE TABLE "funnels" (
         "id" uuid PRIMARY KEY,
         "quote_running_number" integer,
+        "tenant_id" text,
+        "deleted_at" timestamp with time zone,
         "updated_at" timestamp with time zone NOT NULL DEFAULT now()
       );
       CREATE TABLE "tenant_settings" (
@@ -64,7 +66,7 @@ integration("quotation numbering PostgreSQL boundary", () => {
     expect(await sql`SELECT quote_number,series_key FROM quotations ORDER BY quote_number`).toEqual([
       {quote_number:'Q-SMP-0001',series_key:'Q-SMP-0001'}, {quote_number:'Q-SMP-0002',series_key:'Q-SMP-0002'},
     ])
-    await sql`INSERT INTO "funnels" ("id") VALUES (${funnelId})`
+    await sql`INSERT INTO "funnels" ("id", "tenant_id") VALUES (${funnelId}, ${tenantId})`
     await sql`
       INSERT INTO "tenant_settings" ("organization_id", "quote_next_number", "quote_pad_width")
       VALUES (${tenantId}, 100, 4)
@@ -143,7 +145,7 @@ integration("quotation numbering PostgreSQL boundary", () => {
     expect(await sql`SELECT count(*)::int AS count FROM quotations WHERE funnel_id = ${funnelId} AND deleted_at IS NOT NULL`)
       .toEqual([{ count: 2 }])
     const otherFunnel = randomUUID()
-    await sql`INSERT INTO funnels (id) VALUES (${otherFunnel})`
+    await sql`INSERT INTO funnels (id,tenant_id) VALUES (${otherFunnel},${tenantId})`
     const other = await db.transaction((tx) => nextQuoteNumber(tx as unknown as Tx, ctx, otherFunnel))
     expect(other.version).toBe(1)
     expect(await sql`SELECT quote_running_number FROM funnels WHERE id = ${otherFunnel}`)
@@ -191,6 +193,14 @@ integration("quotation numbering PostgreSQL boundary", () => {
     await sql`INSERT INTO quotations(id,funnel_id,quote_number,version,created_at) VALUES (${id},${funnelId},'Q19998-1',1,now())`
     expect(await sql`SELECT series_key FROM quotations WHERE id=${id}`).toEqual([{series_key:'Q19998'}])
     await expect(sql`INSERT INTO quotations(id,funnel_id,quote_number,version,series_key,created_at) VALUES (${randomUUID()},${funnelId},'different-number',1,'Q19998',now())`).rejects.toMatchObject({code:'23505'})
+  })
+
+  it("does not allocate a number for an archived or foreign-tenant funnel", async () => {
+    const archived = randomUUID()
+    await sql`insert into funnels(id,tenant_id,deleted_at) values (${archived},${tenantId},now())`
+    const ctx = { tenantId } as Parameters<typeof nextQuoteNumber>[1]
+    await expect(db.transaction(tx => nextQuoteNumber(tx as unknown as Tx, ctx, archived))).rejects.toThrow("Funnel not found")
+    await expect(db.transaction(tx => nextQuoteNumber(tx as unknown as Tx, {tenantId:"other"} as typeof ctx, funnelId))).rejects.toThrow("Funnel not found")
   })
 
 })

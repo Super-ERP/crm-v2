@@ -1,5 +1,5 @@
 import "server-only"
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, isNull, sql } from "drizzle-orm"
 import type { Tx } from "@/db"
 import { funnels, projectCounters, quotations, tenantSettings } from "@/db/schema"
 import { toDateString } from "@/lib/dates"
@@ -34,7 +34,7 @@ export async function nextQuoteNumber(
   const [f] = await tx
     .select({ quoteRunningNumber: funnels.quoteRunningNumber })
     .from(funnels)
-    .where(eq(funnels.id, funnelId))
+    .where(and(eq(funnels.id, funnelId), eq(funnels.tenantId, ctx.tenantId), isNull(funnels.deletedAt)))
     .limit(1)
     .for("update")
   if (!f) throw new Error("Funnel not found")

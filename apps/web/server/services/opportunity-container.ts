@@ -177,6 +177,12 @@ export async function recomputeOpportunityTotal(
   tenantId: string,
   opportunityId: string
 ): Promise<void> {
+  // Every caller must lock before reading children: otherwise a queued cache
+  // update can overwrite a concurrent correction with an older aggregate.
+  // NO KEY UPDATE also permits concurrent child inserts holding FK KEY SHARE.
+  await tx.select({ id: opportunities.id }).from(opportunities)
+    .where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, tenantId)))
+    .limit(1).for("no key update")
   const rows = await tx
     .select({
       currency: funnels.currency,

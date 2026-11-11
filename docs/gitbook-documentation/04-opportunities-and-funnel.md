@@ -207,3 +207,14 @@ When Projects is enabled, creating or relinking a delivery Project to a funnel r
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+
+## Void a duplicate Closed Won funnel
+
+A duplicate Closed Won record is a data correction, not a lost sale. It cannot be moved backwards through the stage path.
+
+An authorized manager or administrator can open the duplicate Funnel and select **Void duplicate**. Choose the correct **Funnel to keep**, enter a reason, and confirm **Void duplicate**. The retained Funnel must be another accessible Closed Won record in the same entity, for the same customer and currency. This requires both **Delete pipelines** and **Approve stage advances**, plus ownership/team or administrator record access. Standard sales users cannot void; send the duplicate and correct Funnel links and a reason to your manager.
+
+The correction archives the duplicate Funnel and its quotations from active lists and normal reporting, hides its pending invoice schedules, and recalculates its parent Opportunity total. Original Won status, quotation numbers, amounts, schedules, line items, attachments and history remain stored. The retained Funnel's activity records the correction and reason, and a `funnel.duplicate_voided` event records the linkage in the audit log. This does not merge or move records into the retained Funnel, mark the duplicate Closed Lost, or reverse financial documents. The source parent Opportunity is retained even when its total becomes zero.
+
+The action is blocked when linked delivery projects/sales orders (including archived projects), invoiced or legacy-invoice milestones, finance documents, contracts, contract schedules, purchase costs, intercompany records, or cross-linked milestones require review. A Funnel already retained by a prior correction cannot itself be voided through this action. Ask an administrator and the relevant operations/finance owner to review these cases; there is no bypass button. Duplicate correction has no self-service Undo; any recovery needs controlled administrator review.
