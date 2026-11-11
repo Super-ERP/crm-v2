@@ -610,6 +610,7 @@ export async function updateOpportunity(
       .from(funnels)
       .where(and(eq(funnels.id, id), isNull(funnels.deletedAt)))
       .limit(1)
+      .for("update")
     if (!existing) throw new Error("Funnel not found")
     if (!canManageAllRecords(ctx) && !ownsOrManages(visible, existing.ownerMemberId))
       throw new Error("FORBIDDEN: not permitted on this Funnel")
