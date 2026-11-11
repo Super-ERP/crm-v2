@@ -16,7 +16,6 @@ import {
   DialogClose,
   DialogContent,
   DIALOG_FORM_BODY_CLASS,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -71,6 +70,7 @@ const schema = (country: string) =>
     ),
     registrationNumber: z.string().optional(),
     parentAccountId: z.string().optional(),
+    ownerMemberId: z.string().optional(),
     accountType: z.enum(["client", "reseller"]),
     endUserAccountId: z.string().optional(),
     industry: z.string().optional(),
@@ -119,6 +119,7 @@ function defaults(
     code: account?.code ?? "",
     registrationNumber: account?.registrationNumber ?? "",
     parentAccountId: account?.parentAccountId ?? NONE,
+    ownerMemberId: account?.ownerMemberId ?? "",
     accountType: account?.accountType === "reseller" ? "reseller" : "client",
     endUserAccountId: account?.endUserAccountId ?? "",
     industry: account?.industry ?? "",
@@ -147,6 +148,11 @@ export function AccountForm({
   open: controlledOpen,
   onOpenChange,
   onSaved,
+  embedded = false,
+  onCancel,
+  onDirtyChange,
+  onBusyChange,
+  members,
 }: {
   /** Existing account to edit; omit to create. */
   account?: AccountRow
@@ -167,6 +173,11 @@ export function AccountForm({
   open?: boolean
   onOpenChange?: (open: boolean) => void
   onSaved?: () => void
+  embedded?: boolean
+  onCancel?: () => void
+  onDirtyChange?: (dirty: boolean) => void
+  onBusyChange?: (busy: boolean) => void
+  members?: { memberId: string; name: string }[]
 }) {
   const [open, setOpen] = useDialogOpen(controlledOpen, onOpenChange)
   const editing = !!account
@@ -175,6 +186,10 @@ export function AccountForm({
     resolver: zodResolver(schema(presets?.defaultCountry ?? "MY")),
     defaultValues: defaults(account, presets, currencies),
   })
+
+  const formId = React.useId()
+  React.useEffect(() => { onDirtyChange?.(form.formState.isDirty) }, [onDirtyChange, form.formState.isDirty])
+  React.useEffect(() => { onBusyChange?.(form.formState.isSubmitting) }, [onBusyChange, form.formState.isSubmitting])
 
   // Near-miss duplicate warning (create only): checked when the user leaves
   // the Name field. Warn-only — submitting is still allowed; the exact-match
@@ -244,6 +259,7 @@ export function AccountForm({
       country: values.country || null,
     }
     const payload = {
+      ...(editing && members ? { ownerMemberId: values.ownerMemberId || null } : {}),
       name: values.name,
       currency: values.currency,
       code: values.code || null,
@@ -262,35 +278,32 @@ export function AccountForm({
       phone: toPhoneE164(values.phone, values.defaultCountry ?? presets?.defaultCountry) || null,
       billingAddress,
     }
-    const res = editing
-      ? await updateAccount(account!.id, payload)
-      : await createAccount(payload)
-    if (!res.ok) {
-      showActionError(res)
-      return
+    try {
+      const res = editing
+        ? await updateAccount(account!.id, payload)
+        : await createAccount(payload)
+      if (!res.ok) {
+        showActionError(res)
+        return
+      }
+      toast.success(editing ? "Account updated" : "Account created")
+      form.reset(values)
+      if (!embedded) setOpen(false)
+      onSaved?.()
+    } catch (error) {
+      showActionError({ ok: false, error: error instanceof Error ? error.message : "Unable to save account. Please try again." })
     }
-    toast.success(editing ? "Account updated" : "Account created")
-    setOpen(false)
-    onSaved?.()
   }
 
-  return (
+  const content = (
     <>
-    <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ? (
-        <DialogTrigger render={trigger as React.ReactElement} />
-      ) : null}
-      <DialogContent size="wide">
-        <DialogHeader>
-          <DialogTitle>{editing ? "Edit account" : "New account"}</DialogTitle>
-        </DialogHeader>
-
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className={DIALOG_FORM_BODY_CLASS}
-            id="account-form"
+            className={embedded ? "space-y-6" : DIALOG_FORM_BODY_CLASS}
+            id={formId}
           >
+            <fieldset disabled={form.formState.isSubmitting} className="contents">
             <div className="grid gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -300,6 +313,7 @@ export function AccountForm({
                     <FormLabel required>Name</FormLabel>
                     <FormControl>
                       <Input
+                        autoFocus={embedded}
                         placeholder="Acme Corp"
                         {...field}
                         onBlur={() => {
@@ -428,6 +442,14 @@ export function AccountForm({
             />
 
             <div className="grid gap-4 sm:grid-cols-2">
+              {editing && members ? <FormField control={form.control} name="ownerMemberId" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account owner</FormLabel>
+                  <FormControl><Combobox value={field.value ?? ""} onChange={field.onChange} options={members.map(member => ({ value: member.memberId, label: member.name }))} placeholder="Select owner…" /></FormControl>
+                  <FormDescription>Changing the owner also transfers related contacts and sales records.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )} /> : null}
               <FormField
                 control={form.control}
                 name="accountType"
@@ -699,23 +721,32 @@ export function AccountForm({
                 />
               </div>
             </div>
+            </fieldset>
           </form>
         </Form>
 
-        <DialogFooter>
-          <DialogClose render={<Button type="button" variant="outline" />}>
-            Cancel
-          </DialogClose>
-          <Button
-            type="submit"
-            form="account-form"
-            disabled={form.formState.isSubmitting}
-          >
-            {editing ? "Save changes" : "Create account"}
+        <div className={embedded ? "sticky bottom-0 flex flex-wrap justify-end gap-2 border-t bg-card py-4" : "flex justify-end gap-2 pt-4"}>
+          {embedded ? <Button type="button" variant="outline" disabled={form.formState.isSubmitting} onClick={onCancel}>Cancel</Button> : (
+            <DialogClose render={<Button type="button" variant="outline" disabled={form.formState.isSubmitting} />}>Cancel</DialogClose>
+          )}
+          <Button type="submit" form={formId} disabled={form.formState.isSubmitting || (embedded && !form.formState.isDirty)}>
+            {form.formState.isSubmitting ? "Saving…" : editing ? "Save changes" : "Create account"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </>
+  )
+
+  return (
+    <>
+      {embedded ? content : (
+        <Dialog open={open} onOpenChange={setOpen}>
+          {trigger ? <DialogTrigger render={trigger as React.ReactElement} /> : null}
+          <DialogContent size="wide">
+            <DialogHeader><DialogTitle>{editing ? "Edit account" : "New account"}</DialogTitle></DialogHeader>
+            {content}
+          </DialogContent>
+        </Dialog>
+      )}
 
       <AccountQuickCreate
         open={accountCreate.open}
@@ -724,10 +755,10 @@ export function AccountForm({
         onCreated={(rec) => {
           if (accountCreate.target === "parent") {
             setParentOptionsState((prev) => [...prev, rec])
-            form.setValue("parentAccountId", rec.id)
+            form.setValue("parentAccountId", rec.id, { shouldDirty: true })
           } else {
             setEndUserOptionsState((prev) => [...prev, rec])
-            form.setValue("endUserAccountId", rec.id, { shouldValidate: true })
+            form.setValue("endUserAccountId", rec.id, { shouldValidate: true, shouldDirty: true })
           }
         }}
       />
