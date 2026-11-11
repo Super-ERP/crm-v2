@@ -3,6 +3,10 @@
 import * as React from "react"
 import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
+import { AccountForm } from "../account-form"
+import { useUnsavedChanges } from "@/components/use-unsaved-changes"
+import type { AccountRow } from "../actions"
 import { Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -33,7 +37,7 @@ import { useInlineSave } from "@/components/use-inline-save"
 import { InlinePhoneValue, PhoneNumberDisplay } from "@/components/phone-input"
 import { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
-import type { MemberOption, Option } from "@/lib/lookups"
+import type { MemberOption, Option, CountryOption } from "@/lib/lookups"
 import { StageBadge } from "@/app/(app)/funnel/stage-badge"
 import { AccountContacts } from "./account-contacts"
 import {
@@ -79,6 +83,8 @@ export type AccountDetailData = {
   projectCodes?: React.ReactNode
   projectCodeCount?: number
   accountId: string
+  editAccount: AccountRow
+  countrySettings: CountryOption[]
   sections: AccountDetailSection[]
   /** Raw field values — updateAccount is full-replace, so each inline save
    *  merges the one edited field into this snapshot. */
@@ -114,6 +120,8 @@ export type AccountDetailData = {
 export function AccountDetailBody(props: AccountDetailData) {
   const {
     accountId,
+    editAccount,
+    countrySettings,
     projectCodes,projectCodeCount,
     sections,
     record,
@@ -141,7 +149,26 @@ export function AccountDetailBody(props: AccountDetailData) {
   // deep-link the account's first funnel as the prefill.
   const firstFunnelId = pipelines[0]?.funnelId
 
-  const [tab, setTab] = React.useState("contacts")
+  const [tab, setTab] = React.useState("details")
+  const searchParams = useSearchParams()
+  const [editingDetails, setEditingDetails] = React.useState(canEdit && searchParams.get("edit") === "1")
+  const [detailsDirty, setDetailsDirty] = React.useState(false)
+  const [detailsBusy, setDetailsBusy] = React.useState(false)
+  const confirmDiscard = useUnsavedChanges(detailsDirty, detailsBusy)
+  const router = useRouter()
+  const editButton = React.useRef<HTMLButtonElement>(null)
+  const closeEditor = () => {
+    setEditingDetails(false)
+    setDetailsDirty(false)
+    setDetailsBusy(false)
+    if (searchParams.get("edit") === "1") router.replace(`/accounts/${accountId}`, { scroll: false })
+    requestAnimationFrame(() => editButton.current?.focus())
+  }
+  const changeTab = (next: string) => {
+    if (next === tab || !confirmDiscard()) return
+    closeEditor()
+    setTab(next)
+  }
   const revalidate = `/accounts/${accountId}`
 
 
@@ -324,7 +351,7 @@ export function AccountDetailBody(props: AccountDetailData) {
             {sections.map((section) => (
               <FieldSection key={section.title} title={section.title}>
                 {section.fields.map((d) => {
-                  const key = canEdit ? d.editKey : undefined
+                  const key = canEdit && !editingDetails ? d.editKey : undefined
                   const addressSub =
                     key && key.startsWith("address.")
                       ? (key.slice("address.".length) as AccountAddressKey)
@@ -444,21 +471,22 @@ export function AccountDetailBody(props: AccountDetailData) {
 
         <RelatedCard
           items={[
-            { kind: "contact", label: "Contacts", count: contacts.length, onSelect: () => setTab("contacts") },
-            { kind: "opportunity", label: "Opportunities", count: opportunities.length, onSelect: () => setTab("opportunities") },
-            { kind: "funnel", label: "Funnels", count: pipelines.length, onSelect: () => setTab("pipelines") },
+            { kind: "contact", label: "Contacts", count: contacts.length, onSelect: () => changeTab("contacts") },
+            { kind: "opportunity", label: "Opportunities", count: opportunities.length, onSelect: () => changeTab("opportunities") },
+            { kind: "funnel", label: "Funnels", count: pipelines.length, onSelect: () => changeTab("pipelines") },
             ...(projectsEnabled
-              ? [{ kind: "project" as const, label: "Projects", count: projects.length, onSelect: () => setTab("projects") }]
+              ? [{ kind: "project" as const, label: "Projects", count: projects.length, onSelect: () => changeTab("projects") }]
               : []),
-            { kind: "quotation", label: "Quotations", count: quotations.length, onSelect: () => setTab("quotations") },
-            { kind: "account", label: "Child accounts", count: childAccounts.length, onSelect: () => setTab("children") },
+            { kind: "quotation", label: "Quotations", count: quotations.length, onSelect: () => changeTab("quotations") },
+            { kind: "account", label: "Child accounts", count: childAccounts.length, onSelect: () => changeTab("children") },
           ]}
         />
       </DetailAside>
 
       {/* Right column — tabbed related lists */}
-      <DetailTabs value={tab} onValueChange={setTab}>
+      <DetailTabs value={tab} onValueChange={changeTab}>
         <TabsList>
+          <CountTab value="details">Details</CountTab>
           <CountTab value="contacts" count={contacts.length}>
             Contacts
           </CountTab>
@@ -485,6 +513,25 @@ export function AccountDetailBody(props: AccountDetailData) {
             Documents
           </CountTab>
         </TabsList>
+
+        <TabsContent value="details" className="mt-4">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-semibold">Account details</h2>
+            {!editingDetails && canEdit ? <Button ref={editButton} variant="outline" size="sm" onClick={() => setEditingDetails(true)}>Edit details</Button> : null}
+            {editingDetails ? <span role="status" className="text-sm text-muted-foreground">{detailsBusy ? "Saving changes…" : detailsDirty ? "Unsaved changes" : "Editing account"}</span> : null}
+          </div>
+          {editingDetails ? <AccountForm
+            embedded account={editAccount} parentOptions={parentOptions} endUserOptions={parentOptions}
+            industries={industries} countries={countrySettings} currencies={currencies} members={members}
+            onDirtyChange={setDetailsDirty} onBusyChange={setDetailsBusy}
+            onCancel={() => { if (confirmDiscard()) closeEditor() }}
+            onSaved={() => { closeEditor(); router.refresh() }}
+          /> : <div className="grid gap-6 sm:grid-cols-2">
+            {sections.map(section => <FieldSection key={section.title} title={section.title}>
+              {section.fields.map(field => <FieldRow key={field.label} label={field.label}>{field.value}</FieldRow>)}
+            </FieldSection>)}
+          </div>}
+        </TabsContent>
 
         <TabsContent value="contacts" className="mt-4">
           <AccountContacts accountId={accountId} contacts={contacts} />

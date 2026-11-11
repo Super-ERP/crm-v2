@@ -166,7 +166,13 @@ export async function listAccountFilterOptions() {
  * can link to /funnel/<oppId>).
  */
 export async function getAccount(id: string) {
-  return withTenant(PERMISSIONS.ACCOUNT_VIEW, (tx, ctx) => accountsGet(tx, ctx, id))
+  return withTenant(PERMISSIONS.ACCOUNT_VIEW, async (tx, ctx) => {
+    const data = await accountsGet(tx, ctx, id)
+    if (!data) return null
+    const visible = await visibleMemberIds(tx, ctx)
+    return { ...data, canEdit: ctx.can(PERMISSIONS.ACCOUNT_UPDATE) &&
+      (canManageAllRecords(ctx) || ownsOrManages(visible, data.account.ownerMemberId)) }
+  })
 }
 
 /** One delivery project belonging to an account. */
