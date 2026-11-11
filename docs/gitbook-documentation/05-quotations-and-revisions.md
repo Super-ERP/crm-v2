@@ -178,13 +178,13 @@ Each action also requires record access and its permission. **Edit quotations** 
 | Approved | Send, or Return to Draft. | Read-only until returned to Draft. Returning clears approval; resubmit after editing. No revision action for a live record. |
 | Sent | Record customer acceptance or rejection. | Read-only; create a separate Draft revision with Create quotations permission. |
 | Accepted or customer Rejected | No further lifecycle decision on this record. | Read-only; an eligible revision starts a separate Draft. |
-| Expired or Void | No manual lifecycle action offered by the current action menu. | Eligible historical states for a separate Draft revision. |
+| Expired or Void | Expired records can request Void; already voided records are read-only. | Eligible historical states for a separate Draft revision. |
 
 **Send checks:** the funnel must still be open and the quotation must not be past **Valid until**. If an Approved quotation has lapsed, return it to Draft, update its validity, and obtain approval again. **Send** records sending; deliver the document to the customer through your usual channel.
 
-**Acceptance checks:** only a Sent quotation on an open funnel can be accepted, and its validity date must not have passed. Only one live quotation per funnel can be Accepted. Creating a revision of an Accepted quote does not replace that acceptance; the current workflow blocks accepting another quote while the earlier live quote remains Accepted. There is currently no supersede or cancel-acceptance action. The original Accepted quotation cannot be returned to Draft or deleted. A revision can therefore be prepared, but its acceptance cannot be completed through the current workflow while the original remains Accepted. Sending and acceptance are also blocked once the Funnel is Won. Ask support to review the case; do not treat a prepared revision as accepted.
+**Acceptance checks:** only a Sent quotation on an open funnel can be accepted, and its validity date must not have passed. Only one live quotation per funnel can be Accepted. Creating a revision of an Accepted quote does not replace that acceptance; the current workflow blocks accepting another quote while the earlier live quote remains Accepted. There is no direct cancel-acceptance action. An Accepted quotation can be voided through a reviewed Void request after linked projects and milestones are resolved; its acceptance and numbers remain in history. It cannot be returned directly to Draft. A revision can be prepared, but another quote cannot be accepted while the original remains live and Accepted. Sending and acceptance are also blocked once the Funnel is Won. Ask support to review the case; do not treat a prepared revision as accepted.
 
-**Other actions:** **Set Primary** is shown for any non-deleted, non-primary quotation with Edit quotations permission, including Draft, Pending Approval and Approved. Selecting it does not approve, send or change the quotation status. Existing rejected/expired/void value-exclusion rules still apply. It selects the quotation used for linked funnel values; it does not approve it. Deletion requires **Delete quotations**, is subject to record/reference checks, and is blocked for Accepted quotations. Deletion is not a customer-rejection or approval-rejection decision.
+**Other actions:** **Set Primary** is shown for any non-deleted, non-primary quotation with Edit quotations permission, including Draft, Pending Approval and Approved. Selecting it does not approve, send or change the quotation status. Existing rejected/expired/void value-exclusion rules still apply. It selects the quotation used for linked funnel values; it does not approve it. Removal now uses a reviewed **Void** request, including for Accepted quotations after dependencies are resolved. Void is separate from customer rejection and approval rejection.
 
 **PDF checks:** Preview and exporting do not approve or send the quotation. Sending captures the tax rate and recomputes stored totals using the current tax configuration. The Send action reads the current tax rate and tax-inclusive setting, recalculates header and line totals, and stores that snapshot. It does not compare the recalculated figures with the approved figures or request fresh approval if they differ. For example, if the configured tax rate changes between approval and sending, the Sent quotation can have different tax and total amounts. Review the final PDF's tax and totals before sharing.
 
@@ -205,17 +205,17 @@ Use **Duplicate quotation** on a live quotation with **Create quotations** permi
 
 Cross-entity quotation import is not currently available. **Duplicate quotation** can target another accessible Funnel in the same entity and currency, but cannot copy a QM quotation into QA. Create a separate quotation in the destination entity.
 
-## Delete quotations and preserve numbering
+## Void quotations and preserve numbering
 
-**Issued quotation numbers are never reused after deletion, even for a Draft.** Deletion hides the quotation through a soft delete while retaining its original number and audit history. It does not reset a counter, renumber remaining quotations, or fill gaps.
+**Issued quotation numbers are never reused after Void, even for a Draft.** Approved Void archives the quotation while retaining its original number and audit history. It does not reset a counter, renumber remaining quotations, or fill gaps.
 
 Each quotation series has its own parent number and revision suffix. A funnel can contain several independent series. Create revision uses the highest version in the source series plus one, including deleted versions. Duplicate always allocates a fresh parent number at version 1. Ordinary New quotation continues the funnel’s default/original series. Existing references are unchanged.
 
 | Situation | Result |
 | --- | --- |
-| Delete `Q10001-2`, with version 2 the highest issued version. | The next quotation in the same funnel is `Q10001-3`; `Q10001-2` stays reserved. |
-| Delete an earlier version while `Q10001-3` exists. | The next quotation is `Q10001-4`; earlier gaps remain. |
-| Delete every quotation in a funnel after issuing versions 1–3. | A later quotation in that funnel retains running number `0001` and starts at version 4: `Q10001-4`. |
+| Void `Q10001-2`, with version 2 the highest issued version. | The next quotation in the same funnel is `Q10001-3`; `Q10001-2` stays reserved. |
+| Void an earlier version while `Q10001-3` exists. | The next quotation is `Q10001-4`; earlier gaps remain. |
+| Void every quotation in a funnel after issuing versions 1–3. | A later quotation in that funnel retains running number `0001` and starts at version 4: `Q10001-4`. |
 | Create the first quotation in a different funnel. | It takes the entity's next running number; the deleted funnel's running number is not recycled. |
 | Recall Pending Approval or return Approved to Draft. | The same record keeps its existing number and version; editing and resubmitting do not allocate another number. |
 | Duplicate a quotation. | The new Draft takes a fresh parent number at version 1, in the selected funnel; the source keeps its number. |
@@ -224,7 +224,7 @@ These examples use the current quotation format. Existing funnels retain their e
 
 Skipping numbers avoids ambiguity when an earlier PDF was emailed, downloaded, referenced in an approval, or retained by a customer. A visible gap is preferable to two different documents bearing the same reference.
 
-Deletion requires **Delete quotations** permission and access to the record. The current server allows deletion of Draft, Pending Approval, Approved, Sent, Rejected, Expired and Void quotations, provided no live project references them. **Accepted quotations cannot be deleted.** Deleting a primary quotation selects another eligible live quotation or clears the primary reference and updates the linked funnel value. Use Recall or Return to Draft when the intention is to edit an existing quotation rather than remove it.
+Void requests require Edit quotations and current record access. Sales Admin approval is required and linked projects/milestones must be resolved first. This includes Accepted quotations. Voiding a primary quotation selects another eligible live quotation or clears the primary reference and updates the linked funnel value. Use Recall or Return to Draft when the intention is to edit an existing quotation rather than archive it.
 
 ## Managing Revisions
 
@@ -299,3 +299,7 @@ If an old quotation’s Attention contact was removed or belongs to neither perm
 ### Quotation date
 
 Draft quotations have an editable **Quotation date** beside **Valid until**. Select an earlier or later calendar date when needed for procurement. Save the draft to persist it; QM and QA previews and PDFs use this date. New quotations default to today. Older records without a saved quotation date display their creation date. Sent and approved quotations retain the existing editing restrictions; create a revision when needed. Revisions retain the source date; independent duplicates default to today.
+
+## Reviewed Void
+
+Use **Void** to request correction of any live quotation, including Accepted. The preview identifies linked projects/milestones that must be resolved first. Sales Admin reviews it in **Approvals → Record voids**. Approved voids preserve the quotation number, amounts, lines and attachments, remove it from active value, and reassign the funnel’s primary quote and derived products when needed. There is no direct Delete bypass or self-service Undo. See [Void records](07-void-records.md).

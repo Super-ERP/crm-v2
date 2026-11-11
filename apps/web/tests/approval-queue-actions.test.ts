@@ -1,9 +1,10 @@
 import {beforeEach,expect,it,vi} from 'vitest'
-const mocks=vi.hoisted(()=>({stage:vi.fn(),mine:vi.fn(),quotation:vi.fn(),lead:vi.fn(),voids:vi.fn()}))
+const mocks=vi.hoisted(()=>({stage:vi.fn(),mine:vi.fn(),quotation:vi.fn(),lead:vi.fn(),voids:vi.fn(),records:vi.fn()}))
 vi.mock('@/app/(app)/approvals/actions',()=>({listIncomingApprovals:mocks.stage,listMyApprovals:mocks.mine}))
 vi.mock('@/app/(app)/approvals/quotation-actions',()=>({listQuotationApprovals:mocks.quotation}))
 vi.mock('@/app/(app)/approvals/lead-conversion-actions',()=>({listLeadConversionApprovals:mocks.lead}))
 vi.mock('@/app/(app)/approvals/void-actions',()=>({listFunnelVoidApprovals:mocks.voids}))
+vi.mock('@/app/(app)/voids/actions',()=>({listUniversalVoidRequests:mocks.records}))
 import {listApprovalQueue} from '@/app/(app)/approvals/queue-actions'
 import {decodeApprovalCursor} from '@/lib/approval-queue'
 const id=(n:number)=>`00000000-0000-4000-8000-${n.toString().padStart(12,'0')}`
@@ -14,7 +15,7 @@ it('merges bounded candidates from existing scoped readers, oldest first across 
  mocks.lead.mockResolvedValue({rows:[{id:id(3),queueSortKey:'3000000'}],total:1})
  const page=await listApprovalQueue()
  expect(page.items.map(i=>i.kind)).toEqual(['quotation','stage','lead'])
- expect(page.counts).toEqual({stage:1,quotation:1,lead:1,void:0})
+ expect(page.counts).toEqual({stage:1,quotation:1,lead:1,void:0,record_void:0})
  expect(mocks.stage).toHaveBeenCalledWith(0,{order:'oldest',search:'',cursor:null})
 })
 it('returns 25 requests with a cursor for the last displayed request, not the lookahead',async()=>{

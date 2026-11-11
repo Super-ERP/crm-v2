@@ -57,11 +57,11 @@ integration("void duplicate PostgreSQL boundary", () => {
       create table funnels(id uuid primary key,tenant_id text,name text,account_id uuid,currency text,opportunity_id uuid,owner_member_id text,status text,current_stage_id uuid,estimated_amount numeric,deleted_at timestamptz,updated_at timestamptz);
       create table quotations(id uuid primary key,tenant_id text,funnel_id uuid,status text,is_primary boolean,deleted_at timestamptz,updated_at timestamptz);
       create table projects(id uuid primary key,tenant_id text,funnel_id uuid,quotation_id uuid,deleted_at timestamptz,owner_member_id text);
-      create table payment_milestones(id uuid primary key,tenant_id text,funnel_id uuid,quotation_id uuid,project_id uuid,status text,invoice_number text,invoice_date date,so_number text);
+      create table payment_milestones(id uuid primary key,tenant_id text,funnel_id uuid,quotation_id uuid,project_id uuid,status text,invoice_number text,invoice_date date,so_number text,deleted_at timestamptz);
       create table finance_docs(id uuid,tenant_id text,milestone_id uuid);
-      create table contracts(id uuid,tenant_id text,funnel_id uuid);
-      create table contract_years(id uuid,tenant_id text,funnel_id uuid);
-      create table deal_costs(id uuid,tenant_id text,funnel_id uuid);
+      create table contracts(id uuid,tenant_id text,funnel_id uuid,deleted_at timestamptz);
+      create table contract_years(id uuid,tenant_id text,funnel_id uuid,deleted_at timestamptz,status text default 'planned');
+      create table deal_costs(id uuid,tenant_id text,funnel_id uuid,deleted_at timestamptz);
       create table intercompany_deal_parties(id uuid,funnel_id uuid);
       create table intercompany_deals(id uuid,funnel_id uuid);
       create table stage_approval_requests(id uuid,tenant_id text,funnel_id uuid,status text,decided_at timestamptz,decision_note text,updated_at timestamptz);

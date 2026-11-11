@@ -1,4 +1,5 @@
 import "server-only"
+import { withBusinessMutation } from "@/lib/mutation-context"
 import { humanizeDenial } from "@/lib/permissions"
 import { resolveDenialContact, type DenialContact } from "@/lib/permission-denial"
 import { requireContext } from "@/lib/server-context"
@@ -76,7 +77,7 @@ export function createActionRunner(checkWriteAccess: BusinessWriteAccessCheck): 
     }
     try {
       await checkWriteAccess({ operation })
-      const data = await fn()
+      const data = await withBusinessMutation(fn)
       // A void-returning body yields `undefined` at runtime; normalize its type
       // to `undefined` so void actions satisfy the documented `Promise<ActionResult>`
       // (= ActionResult<undefined>) without each call site re-annotating ActionResult<void>.

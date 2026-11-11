@@ -84,7 +84,7 @@ Editing requires account-update permission plus ownership or authorized manageme
 
 ### Shared resellers and billing relationships
 
-Users with **Create contacts** permission can add contacts to a reseller account in the same entity without changing its owner. The new contact inherits the account owner and creation is audited. Editing or deleting existing contacts remains ownership-restricted. Only the account owner or an authorized manager/administrator can set a primary contact. Ordinary client accounts still require ownership or authorized management access.
+Users with **Create contacts** permission can add contacts to a reseller account in the same entity without changing its owner. The new contact inherits the account owner and creation is audited. Editing remains ownership-restricted; removal now uses the reviewed Void workflow with record access rechecked. Only the account owner or an authorized manager/administrator can set a primary contact. Ordinary client accounts still require ownership or authorized management access.
 
 Reseller accounts and their contacts are shared within the entity so account managers can select them when preparing quotations. Viewing a reseller does not grant permission to change its account data or view other salespeople's Funnels, Opportunities, Projects or Quotations.
 
@@ -168,3 +168,7 @@ Active project codes are clickable: open one to see its connected sales records.
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+## Reviewed archive / Void
+
+Use **Void** for a reviewed archive of an account or contact. Active child accounts, contacts, deals, projects, contracts and Bill To references must be resolved before an account can be archived. Contacts referenced by live quotations or opportunity/funnel contacts must be reassigned or resolved first. Primary-contact designation must be removed or reassigned first. Shared reseller history is never cascaded away automatically. See [Void records](07-void-records.md).

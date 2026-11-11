@@ -1,4 +1,5 @@
 "use server"
+import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { enrichTableRows } from "@/server/services/table-controls/dataset-fields"
@@ -6,7 +7,7 @@ import { enrichTableRows } from "@/server/services/table-controls/dataset-fields
 import { getTableFields } from "@/lib/table-controls/registry"
 import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
+import { ne, and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery, type RecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
 import { revalidatePath } from "next/cache"
@@ -294,10 +295,11 @@ export async function submitSalesOrderWithDocument(
   const stored = await storage.put(ctx.tenantId, file.name, buf)
 
   const result = await runInTenant(ctx.tenantId, async (tx) => {
+    await lockRecordVoidGraph(tx, ctx.tenantId)
     const [proj] = await tx
       .select({ id: projects.id, ownerMemberId: projects.ownerMemberId })
       .from(projects)
-      .where(eq(projects.id, projectId))
+      .where(and(eq(projects.id, projectId), isNull(projects.deletedAt), ne(projects.status, "cancelled")))
       .limit(1)
     if (!proj) throw new Error("Project not found")
 
@@ -367,12 +369,13 @@ export async function resubmitSalesOrder(
     "salesOrders",
     PERMISSIONS.SALES_ORDER_SUBMIT,
     async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       // Lock the SO row so a concurrent resubmit/approve can't double-act on it.
       const [so] = await tx
         .select({ status: salesOrders.status, projectId: salesOrders.projectId, ownerMemberId: projects.ownerMemberId })
         .from(salesOrders)
         .innerJoin(projects, eq(salesOrders.projectId, projects.id))
-        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt)))
+        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt), ne(projects.status, "cancelled")))
         .limit(1)
         .for("update", { of: salesOrders })
       if (!so) throw new Error("Sales order not found")
@@ -430,6 +433,7 @@ export async function approveSalesOrder(
     "salesOrders",
     PERMISSIONS.SALES_ORDER_APPROVE,
     async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       // Lock the SO row first: minting the official number and flipping the
       // status must be atomic so a concurrent approve can't burn a second
       // number or double the activity/audit trail.
@@ -437,7 +441,7 @@ export async function approveSalesOrder(
         .select({ status: salesOrders.status, projectId: salesOrders.projectId, ownerMemberId: projects.ownerMemberId })
         .from(salesOrders)
         .innerJoin(projects, eq(salesOrders.projectId, projects.id))
-        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt)))
+        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt), ne(projects.status, "cancelled")))
         .limit(1)
         .for("update", { of: salesOrders })
       if (!so) throw new Error("Sales order not found")
@@ -529,12 +533,13 @@ export async function rejectSalesOrder(
     "salesOrders",
     PERMISSIONS.SALES_ORDER_APPROVE,
     async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
       // Lock the SO row so a concurrent approve/reject can't double-act on it.
       const [so] = await tx
         .select({ status: salesOrders.status, projectId: salesOrders.projectId, ownerMemberId: projects.ownerMemberId })
         .from(salesOrders)
         .innerJoin(projects, eq(salesOrders.projectId, projects.id))
-        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt)))
+        .where(and(eq(salesOrders.id, id), isNull(projects.deletedAt), ne(projects.status, "cancelled")))
         .limit(1)
         .for("update", { of: salesOrders })
       if (!so) throw new Error("Sales order not found")
@@ -608,6 +613,7 @@ export async function listSubmittableProjects(): Promise<
       .where(
         and(
           isNull(projects.deletedAt),
+          ne(projects.status, "cancelled"),
           ownerScope(projects.ownerMemberId, visible)
         )
       )

@@ -48,6 +48,16 @@ const group=(...children:unknown[])=>({kind:'group',id:randomUUID(),logic:'and',
     [funnelA,quoteA,'pending_invoicing','2025-01-01',10,'entity'],[funnelA,quoteA,'invoiced','2026-01-01',20,'entity'],[funnelA,quoteUSD,'invoiced','2027-01-01',50,'entity'],
     [funnelB,quoteB,'pending_invoicing','2026-02-01',30,'entity'],[hiddenFunnel,quoteB,'invoiced','2026-01-01',9999,'entity'],[funnelB,quoteB,'invoiced','2026-01-01',8888,'other'],
    ])await client`insert into payment_milestones(id,tenant_id,funnel_id,quotation_id,title,status,due_date,amount) values(${randomUUID()},${tenant},${funnel},${quote},'Deposit',${status},${date},${amount})`
+   const archivedMilestone=randomUUID(),archivedCost=randomUUID(),archivedYear=randomUUID()
+   await client`insert into payment_milestones(id,tenant_id,funnel_id,quotation_id,title,status,due_date,amount,deleted_at) values(${archivedMilestone},'entity',${funnelA},${quoteA},'Voided','invoiced','2026-01-01',9999,now())`
+   await client`insert into deal_costs(id,tenant_id,funnel_id,amount,deleted_at) values(${archivedCost},'entity',${funnelA},9999,now())`
+   await client`insert into contract_years(id,tenant_id,funnel_id,amount,deleted_at) values(${archivedYear},'entity',${funnelA},9999,now())`
+   const retained=await projectRelationships(tx,ctx,'funnel',[funnelA],['related.costs.count','related.contractYears.count'],group())
+   expect(retained[funnelA]['related.costs.count']).toBe(0)
+   expect(retained[funnelA]['related.contractYears.count']).toBe(0)
+   expect(await client`select id from payment_milestones where id=${archivedMilestone}`).toHaveLength(1)
+   expect(await client`select id from deal_costs where id=${archivedCost}`).toHaveLength(1)
+   expect(await client`select id from contract_years where id=${archivedYear}`).toHaveLength(1)
    const sameChild=group(condition('related.milestones','some',group(condition('status','any-of',['pending_invoicing']),condition('dueDate','year',2026))))
    const registry=relationshipRegistry('accounts',sql`root.id`,scope)
    const rows=await tx.execute(sql`select root.id from accounts root where root.tenant_id='entity' and ${compileFilterTree(sameChild,registry,{now:new Date(),timezone:'UTC'})}`)

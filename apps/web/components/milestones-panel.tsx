@@ -1,25 +1,19 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { ChevronDown, ChevronUp, Plus, SplitIcon, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronUp, Plus, SplitIcon} from "lucide-react"
 import { MilestoneSplitDialog } from "@/components/milestone-split-dialog"
 import { EmptyState } from "@/components/empty-state"
 
+import { usePermissions } from "@/components/command-palette"
+import { PERMISSIONS } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
 import { showActionError } from "@/lib/show-action-error"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+
 import { InlineRename } from "@/components/inline-rename"
 import { InlineValue } from "@/components/inline-value"
 import {
@@ -71,7 +65,7 @@ export type MilestoneUpdateValues = {
  * Inline-editable payment milestone list + add-row form. Used for both
  * project-scoped milestones (app/(app)/projects/[id]/milestones-panel.tsx)
  * and funnel-scoped milestones (the funnel detail page's Payment Milestones
- * tab) — the parent supplies the create/update/delete/reorder callbacks
+ * tab) — the parent supplies the create/update/reorder callbacks
  * already bound to its own id, so this component stays entity-agnostic.
  */
 export function MilestonesPanel({
@@ -82,7 +76,6 @@ export function MilestonesPanel({
   canManage = true,
   onCreate,
   onUpdate,
-  onDelete,
   onReorder,
   onSplit,
 }: {
@@ -93,15 +86,17 @@ export function MilestonesPanel({
   valueCeilingLabel?: string
   currency: string
   /** When false the panel is read-only: no inline edits, status changes,
-   * reordering, deletes, or add-row (gated on the caller's manage permission). */
+   * reordering, or add-row (gated on the caller's manage permission). */
   canManage?: boolean
   onCreate: (values: MilestoneCreateValues) => Promise<ActionResult<unknown>>
   onUpdate: (id: string, values: MilestoneUpdateValues) => Promise<ActionResult<unknown>>
-  onDelete: (id: string) => Promise<ActionResult<unknown>>
   onReorder: (order: string[]) => Promise<ActionResult<unknown>>
   /** Configure an empty schedule or split an uninvoiced full-value row. */
   onSplit?: (parts: { title: string; amount: string }[]) => Promise<ActionResult<unknown>>
 }) {
+  const permissions = usePermissions()
+  const canRequestVoid = permissions.has(PERMISSIONS.PAYMENT_MILESTONE_MANAGE) && permissions.has(PERMISSIONS.PAYMENT_MILESTONE_VIEW)
+  const showActions = canManage || canRequestVoid
   const router = useRouter()
   const [splitOpen, setSplitOpen] = React.useState(false)
   const [pending, startTransition] = React.useTransition()
@@ -226,7 +221,7 @@ export function MilestonesPanel({
                 <TableHead>Due date</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Status</TableHead>
-                {canManage ? (
+                {showActions ? (
                   <TableHead className="w-28 text-right">Actions</TableHead>
                 ) : null}
               </TableRow>
@@ -313,64 +308,34 @@ export function MilestonesPanel({
                       <Button variant="ghost" size="sm" disabled={pending} onClick={() => save(() => onUpdate(m.id, { status: "invoiced" }))}>Mark invoiced</Button>
                     ) : null}
                   </TableCell>
-                  {canManage ? (
+                  {showActions ? (
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-0.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={pending || index === 0}
-                          aria-label="Move milestone up"
-                          onClick={() => move(index, -1)}
-                        >
-                          <ChevronUp className="size-4 text-muted-foreground" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={pending || index === sortedMilestones.length - 1}
-                          aria-label="Move milestone down"
-                          onClick={() => move(index, 1)}
-                        >
-                          <ChevronDown className="size-4 text-muted-foreground" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger
-                            render={
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon-sm"
-                                disabled={pending}
-                                aria-label="Delete milestone"
-                              >
-                                <Trash2 className="size-4 text-muted-foreground" />
-                              </Button>
-                            }
-                          />
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete this milestone?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                “{m.title}” ({formatMoney(m.amount, currency)}) will be
-                                removed from the payment schedule. This can’t be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                variant="destructive"
-                                onClick={() =>
-                                  run(() => onDelete(m.id), "Milestone deleted")
-                                }
-                              >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {canManage ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={pending || index === 0}
+                              aria-label="Move milestone up"
+                              onClick={() => move(index, -1)}
+                            >
+                              <ChevronUp className="size-4 text-muted-foreground" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              disabled={pending || index === sortedMilestones.length - 1}
+                              aria-label="Move milestone down"
+                              onClick={() => move(index, 1)}
+                            >
+                              <ChevronDown className="size-4 text-muted-foreground" />
+                            </Button>
+                          </>
+                        ) : null}
+                        {canRequestVoid ? <RecordVoidButton target={{ type: "payment_milestone", id: m.id }} /> : null}
                       </div>
                     </TableCell>
                   ) : null}
@@ -385,7 +350,7 @@ export function MilestonesPanel({
                 <TableCell className="text-right font-semibold tabular-nums">
                   {formatMoney(allocated, currency)}
                 </TableCell>
-                <TableCell colSpan={canManage ? 2 : 1} />
+                <TableCell colSpan={showActions ? 2 : 1} />
               </TableRow>
             </TableFooter>
           </Table>

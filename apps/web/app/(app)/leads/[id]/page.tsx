@@ -1,3 +1,7 @@
+
+import { RecordVoidButton } from "@/components/record-void-button"
+import { requireContext } from "@/lib/server-context"
+import { PERMISSIONS } from "@/lib/permissions"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -28,6 +32,7 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const ctx = await requireContext()
   const [data, pipelines] = await Promise.all([
     getLead(id),
     listFunnelsWithStages(),
@@ -143,6 +148,7 @@ export default async function LeadDetailPage({
               </Badge>
             ) : null}
             {!isConverted ? <LeadDetailActions lead={lead} /> : null}
+            {ctx.can(PERMISSIONS.LEAD_UPDATE) ? <RecordVoidButton target={{ type: "lead", id }} /> : null}
           </div>
         </div>
 

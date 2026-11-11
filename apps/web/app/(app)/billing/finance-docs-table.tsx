@@ -1,4 +1,5 @@
 "use client"
+import { RecordVoidButton } from "@/components/record-void-button"
 
 import * as React from "react"
 import Link from "next/link"
@@ -275,7 +276,7 @@ export function FinanceDocsTable({
     parent: FinanceDocRow
   } | null>(null)
 
-  async function move(doc: FinanceDocRow, next: "issued" | "settled" | "cancelled") {
+  async function move(doc: FinanceDocRow, next: "issued" | "settled") {
     const res = await setFinanceDocStatus(doc.id, next)
     if (!res.ok) {
       showActionError(res)
@@ -395,11 +396,10 @@ export function FinanceDocsTable({
                         <Button size="sm" onClick={() => move(r, "issued")}>
                           Issue
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => move(r, "cancelled")}>
-                          Cancel
-                        </Button>
+
                       </>
                     ) : null}
+                    {r.status !== "cancelled" ? <RecordVoidButton target={{ type: "finance_doc", id: r.id }} /> : null}
                     {r.status === "issued"
                       ? children.map((k) => (
                           <Button

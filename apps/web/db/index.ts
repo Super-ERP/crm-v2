@@ -1,5 +1,6 @@
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js"
 import postgres from "postgres"
+import { inBusinessMutation } from "@/lib/mutation-context"
 import { sql } from "drizzle-orm"
 import * as schema from "./schema"
 import { env, isProd } from "@/lib/env"
@@ -39,6 +40,9 @@ export async function runInTenant<T>(
     await tx.execute(
       sql`select set_config('app.current_tenant', ${tenantId}, true)`
     )
+    // All normal server-action writes participate in lifecycle serialization.
+    // Explicit lifecycle jobs acquire the same lock before graph mutations.
+    if (inBusinessMutation()) await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`crm:lifecycle:${tenantId}`},0))`)
     return fn(tx)
   }), options?.deadlockRetries ?? 0)
 }

@@ -209,16 +209,14 @@ When Projects is enabled, creating or relinking a delivery Project to a funnel r
 * [Back to start](https://jienweng.gitbook.io/q-app)
 
 
-## Void a duplicate Closed Won funnel
+## Void a funnel or Opportunity
 
-A duplicate Closed Won record is a data correction, not a lost sale. It cannot be moved backwards through the stage path.
+Select **Void** on the record, or open **Sales → Void a record**. Funnels can be requested at any stage, including Closed Won; a duplicate replacement record is no longer required. Enter a reason after reviewing the impact, then submit. Nothing is changed at submission.
 
-The salesperson opens their duplicate Funnel and selects **Void**, chooses the correct **Funnel to keep**, enters a reason, and selects **Submit request**. The retained Funnel must be another accessible Closed Won record in the same entity, for the same customer and currency. Submission does not archive anything. A second pending request for the same Funnel is blocked.
+Track the request in **Approvals → My requests**. Sales Admin reviews under **Needs my review → Record voids** with **Review record void requests (Sales Admin)** and current record access. Nobody may decide their own request. A rejection requires a reason. The request, reviewer, decision and captured impact stay in history.
 
-The request appears in **Approvals → My requests** for the salesperson and **Approvals → Needs my review → Funnel voids** for Sales Admin. Reviewers need **Approve funnel void requests (Sales Admin)** and record access to both Funnels. Owner/Admin roles receive this permission automatically; an administrator can grant it to a dedicated Sales Admin role. This is a shared review pool, not reporting-manager routing, and nobody can approve or reject their own request. If there is no other active reviewer, submission explains the missing configuration.
+Resolve downstream records first. A funnel with live quotations, projects, milestones, contracts, contract years, costs or intercompany relationships cannot be voided yet. An Opportunity with live funnels is also blocked. Each downstream record has its own reviewed Void request; an upstream approval does not silently cancel delivery or financial records. **Refresh impact** before approving after dependencies change.
 
-Sales Admin reviews the two Funnels and the reason, then selects **Approve void** or **Reject**. Rejection requires a note and leaves both Funnels unchanged; the salesperson can submit a corrected request. Approval rechecks the latest records and financial safeguards before archiving. Ownership changes or an inactive requester block approval and require rejection/resubmission. The decision, reviewer and note are visible in **My requests**. There is no direct-void bypass for managers or administrators.
+On approval, the funnel is archived, pending stage approvals are cancelled and its parent Opportunity totals are recalculated. Original stage, Won/Lost history, codes and amounts remain stored. This is a correction, not a move to Closed Lost or a financial refund. See [Void records and linked-record rules](07-void-records.md) for the complete module policy.
 
-The correction archives the duplicate Funnel and its quotations from active lists and normal reporting, hides its pending invoice schedules, and recalculates its parent Opportunity total. Original Won status, quotation numbers, amounts, schedules, line items, attachments and history remain stored. The retained Funnel's activity records the correction and reason, and a `funnel.duplicate_voided` event records the linkage in the audit log. This does not merge or move records into the retained Funnel, mark the duplicate Closed Lost, or reverse financial documents. The source parent Opportunity is retained even when its total becomes zero.
-
-The action is blocked when linked delivery projects/sales orders (including archived projects), invoiced or legacy-invoice milestones, finance documents, contracts, contract schedules, purchase costs, intercompany records, or cross-linked milestones require review. A Funnel already retained by a prior correction cannot itself be voided through this action. Ask an administrator and the relevant operations/finance owner to review these cases; there is no bypass button. Duplicate correction has no self-service Undo; any recovery needs controlled administrator review.
+Earlier duplicate-specific requests remain under **Earlier funnel voids** with their original retained-funnel rules. New requests use the universal flow.

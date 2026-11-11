@@ -1,9 +1,11 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus} from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTable } from "@/components/data-table"
@@ -22,7 +24,6 @@ import { showActionError } from "@/lib/show-action-error"
 import type { ActionResult } from "@/lib/action-result"
 import {
   createContractYear,
-  deleteContractYear,
   updateContractYear,
   type ContractYearRow,
 } from "../contract-actions"
@@ -181,18 +182,7 @@ export function ContractPanel({
             id: "actions",
             cell: ({ row }) => (
               <div className="text-right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={pending}
-                  aria-label="Delete year"
-                  onClick={() =>
-                    run(() => deleteContractYear(row.original.id), "Year removed")
-                  }
-                >
-                  <Trash2 className="size-4 text-muted-foreground" />
-                </Button>
+                <RecordVoidButton target={{ type: "contract_year", id: row.original.id }} />
               </div>
             ),
           },

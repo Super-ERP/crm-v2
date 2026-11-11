@@ -311,25 +311,10 @@ export async function updateProduct(
 
 export async function deleteProduct(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    await withTenant(PERMISSIONS.PRODUCT_DELETE, async (tx, ctx) => {
-      const [before] = await tx
-        .select()
-        .from(products)
-        .where(and(eq(products.id, id), isNull(products.deletedAt)))
-        .limit(1)
-      if (!before) throw new Error("Product not found")
-      await tx
-        .update(products)
-        .set({ deletedAt: new Date(), updatedAt: new Date() })
-        .where(eq(products.id, id))
-      await writeAudit(tx, ctx, {
-        action: "product.deleted",
-        entityType: "product",
-        entityId: id,
-        before,
-      })
+    void id
+    await withTenant(PERMISSIONS.PRODUCT_DELETE, async () => {
+      throw new Error("Use Void to request reviewed cancellation")
     })
-    revalidatePath("/products")
   })
 }
 

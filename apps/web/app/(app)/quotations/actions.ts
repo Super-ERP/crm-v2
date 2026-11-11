@@ -1,11 +1,12 @@
 "use server"
+import { reassignPrimaryAfterRemoval } from "@/server/services/quotation-primary"
 
 import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
 
 import { findManagerApprover, resolveApprovalRoute } from "@/server/services/approval-routing"
 
 import { canSelectBillToAccount, resolveQuotationBillingAccount, type QuotationBillingSnapshot } from "@/lib/quotation-billing"
-import { and, asc, desc, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -24,7 +25,6 @@ import {
   quotations,
   quotationLineItems,
   funnels,
-  opportunityProducts,
   projects,
   taxSettings,
   tenantSettings,
@@ -1712,74 +1712,6 @@ export async function rejectCustomerQuotation(id: string): Promise<ActionResult<
  * recent first) — or clear the pointer when none remain — then re-sync the
  * opportunity amount from the new primary's net.
  */
-async function reassignPrimaryAfterRemoval(
-  tx: Tx,
-  ctx: Parameters<typeof syncOpportunityAmount>[1],
-  funnelId: string,
-  removedQuotationId: string
-): Promise<void> {
-  const [opp] = await tx
-    .select({ primaryQuotationId: funnels.primaryQuotationId })
-    .from(funnels)
-    .where(eq(funnels.id, funnelId))
-    .limit(1)
-  if (opp?.primaryQuotationId !== removedQuotationId) return
-
-  const [candidate] = await tx
-    .select({ id: quotations.id })
-    .from(quotations)
-    .where(
-      and(
-        eq(quotations.funnelId, funnelId),
-        ne(quotations.id, removedQuotationId),
-        isNull(quotations.deletedAt),
-        notInArray(quotations.status, ["rejected", "expired", "void"])
-      )
-    )
-    .orderBy(desc(quotations.createdAt))
-    .limit(1)
-
-  if (candidate) {
-    await tx
-      .update(quotations)
-      .set({ isPrimary: false })
-      .where(
-        and(
-          eq(quotations.funnelId, funnelId),
-          ne(quotations.id, candidate.id)
-        )
-      )
-    await tx
-      .update(quotations)
-      .set({ isPrimary: true })
-      .where(eq(quotations.id, candidate.id))
-    await tx
-      .update(funnels)
-      .set({ primaryQuotationId: candidate.id, updatedAt: new Date() })
-      .where(eq(funnels.id, funnelId))
-    // Synced quote -> opportunity products (Salesforce Quote Line Item ->
-    // Opportunity Product behaviour).
-    await syncFunnelProductsFromQuote(tx, ctx.tenantId, funnelId, candidate.id)
-  } else {
-    // No live quote remains: clear the pointer AND reset the amount. Without
-    // this, syncOpportunityAmount short-circuits on the null pointer and the
-    // opportunity keeps reporting the removed quote's net in the forecast.
-    await tx
-      .update(funnels)
-      .set({ primaryQuotationId: null, amount: null, updatedAt: new Date() })
-      .where(eq(funnels.id, funnelId))
-    // No synced quote left to drive opportunity products either.
-    await tx
-      .delete(opportunityProducts)
-      .where(
-        and(
-          eq(opportunityProducts.tenantId, ctx.tenantId),
-          eq(opportunityProducts.funnelId, funnelId)
-        )
-      )
-  }
-  await syncOpportunityAmount(tx, ctx, funnelId)
-}
 
 /** Result of {@link setPrimaryQuotation}: the prior primary quote id (if any),
  *  so the client can offer an Undo that restores it. */
@@ -1856,55 +1788,10 @@ export async function setPrimaryQuotation(
 
 export async function deleteQuotation(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-  await withTenant(PERMISSIONS.QUOTATION_DELETE, async (tx, ctx) => {
-    const [existing] = await tx
-      .select({
-        funnelId: quotations.funnelId,
-        status: quotations.status,
-        oppOwner: funnels.ownerMemberId,
-      })
-      .from(quotations)
-      .leftJoin(funnels, eq(quotations.funnelId, funnels.id))
-      .where(and(eq(quotations.id, id), isNull(quotations.deletedAt)))
-      .limit(1)
-    if (!existing) throw new Error("Quotation not found")
-    const visible = await visibleMemberIds(tx, ctx)
-    if (!canManageAllRecords(ctx) && !ownsOrManages(visible, existing.oppOwner))
-      throw new Error("FORBIDDEN: not permitted on this quotation")
-    // An accepted quote is the basis for a won deal / project / sales order;
-    // soft-delete doesn't fire the FK set-null, so deleting it would dangle
-    // those references and corrupt the deal's historical value.
-    if (existing.status === "accepted")
-      throw new Error(
-        "An accepted quotation can't be deleted. Create a revision instead."
-      )
-    // Retained rows outlive module ownership. Always protect their references.
-    const [linkedProject] = await tx
-      .select({ id: projects.id })
-      .from(projects)
-      .where(and(eq(projects.quotationId, id), isNull(projects.deletedAt)))
-      .limit(1)
-    if (linkedProject)
-      throw new Error(
-        "This quotation can't be deleted because a project references it."
-      )
-    const [updated] = await tx
-      .update(quotations)
-      .set({ deletedAt: new Date(), isPrimary: false, updatedAt: new Date() })
-      .where(and(eq(quotations.id, id), isNull(quotations.deletedAt)))
-      .returning()
-    if (!updated) throw new Error("Quotation not found")
-    // If this was the opportunity's primary, promote another live quote (or
-    // clear the pointer) and re-sync so a deleted quote stops driving value.
-    await reassignPrimaryAfterRemoval(tx, ctx, existing.funnelId, id)
-    await writeAudit(tx, ctx, {
-      action: "quotation.deleted",
-      entityType: "quotation",
-      entityId: id,
+    void id
+    await withTenant(PERMISSIONS.QUOTATION_DELETE, async () => {
+      throw new Error("Use Void to request reviewed cancellation")
     })
-  })
-  revalidatePath("/quotations")
-  revalidatePath("/approvals")
   })
 }
 

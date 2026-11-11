@@ -23,3 +23,5 @@
 
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Frequently asked questions](help-center/faqs.md)
+
+* [Void records and linked-record rules](07-void-records.md)

@@ -1,4 +1,5 @@
 "use client"
+import { RecordVoidButton } from "@/components/record-void-button"
 
 import * as React from "react"
 import Link from "next/link"
@@ -66,7 +67,7 @@ export function SalesOrderDetailBody({
     {
       label: "SO number",
       value:
-        order.status === "approved" && order.soNumber ? (
+        order.soNumber ? (
           <span className="font-mono font-medium">{order.soNumber}</span>
         ) : (
           <span className="text-muted-foreground">Not issued yet</span>
@@ -265,8 +266,9 @@ export function SalesOrderDetailBody({
               </div>
             ) : null}
 
-            {showApprove || showResubmit ? (
+            {showApprove || showResubmit || ((canSubmit || canApprove) && order.status !== "void") ? (
               <div className="flex flex-wrap items-center gap-2 border-t pt-4">
+                {(canSubmit || canApprove) && order.status !== "void" ? <RecordVoidButton target={{ type: "sales_order", id: order.id }} /> : null}
                 {showApprove ? (
                   <>
                     <Button type="button" size="sm" onClick={() => setApproveOpen(true)}>

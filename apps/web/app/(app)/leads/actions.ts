@@ -338,32 +338,10 @@ export async function setLeadStatus(
 /** Soft delete — never hard DELETE. */
 export async function deleteLead(id: string): Promise<ActionResult<void>> {
   return runAction(async () => {
-    await withTenant(PERMISSIONS.LEAD_DELETE, async (tx, ctx) => {
-      const [before] = await tx
-        .select()
-        .from(leads)
-        .where(and(eq(leads.id, id), isNull(leads.deletedAt)))
-        .limit(1)
-      if (!before) throw new Error("Lead not found")
-
-      const visible = await visibleMemberIds(tx, ctx)
-      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, before.ownerMemberId))
-        throw new Error("FORBIDDEN: not permitted on this lead")
-
-      await tx
-        .update(leads)
-        .set({ deletedAt: new Date(), updatedAt: new Date() })
-        .where(eq(leads.id, id))
-
-      await writeAudit(tx, ctx, {
-        action: "lead.deleted",
-        entityType: "lead",
-        entityId: id,
-        before,
-      })
+    void id
+    await withTenant(PERMISSIONS.LEAD_DELETE, async () => {
+      throw new Error("Use Void to request reviewed cancellation")
     })
-
-    revalidatePath("/leads")
   })
 }
 

@@ -177,3 +177,7 @@ See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/referen
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](help-center/troubleshooting.md)
+
+## Record voids
+
+**Record voids** is a shared Sales Admin review pool rather than reporting-manager routing. Requests show their reason and captured impact. Open the current impact, resolve blockers downstream-first, then refresh it before approving. Rejection requires a note. Financial review requires the separate **Approve posted financial reversals** permission; Sales Order review also requires Sales Order approval rights. Both approve and reject enforce these permissions. **My requests** retains outcomes and notes. Earlier funnel-only requests remain supported separately.

@@ -52,7 +52,7 @@ export function tableFieldOptions(listKey: string, fieldId: string): TableFieldD
   if (['projects','account-projects','person-projects','funnel-projects','code-projects'].includes(listKey)) return PROJECT_STATUS_OPTIONS
   if (['payment-milestones','so-milestones'].includes(listKey)) return MILESTONE_STATUS_OPTIONS
   if (listKey === 'team-members') return choices(['active','invited','disabled'])
-  if (listKey === 'sales-orders') return choices(['submitted','approved','rejected'])
+  if (listKey === 'sales-orders') return choices(['submitted','approved','rejected','void'])
   if (['finance-sale','finance-purchase','so-finance-docs'].includes(listKey)) return choices(['draft','issued','settled','cancelled'])
   return undefined
 }

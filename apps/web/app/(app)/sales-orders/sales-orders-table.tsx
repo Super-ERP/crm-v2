@@ -251,7 +251,7 @@ export function SalesOrdersTable({
           type: "enum",
           columnId: "status",
           title: "Status",
-          options: ["submitted", "approved", "rejected"].map((value) => ({ value, label: value })),
+          options: ["submitted", "approved", "rejected", "void"].map((value) => ({ value, label: value })),
         }]}
         searchColumn="projectName"
         searchPlaceholder="Search by project…"

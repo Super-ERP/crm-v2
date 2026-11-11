@@ -26,3 +26,5 @@ export * from "./lead-conversion-approvals"
 export * from "./table-preferences"
 
 export * from "./funnel-void-approvals"
+
+export * from "./record-void-requests"

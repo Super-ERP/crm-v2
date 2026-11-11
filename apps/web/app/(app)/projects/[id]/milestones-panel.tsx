@@ -6,7 +6,6 @@ import {
 } from "@/components/milestones-panel"
 import {
   createMilestone,
-  deleteMilestone,
   reorderMilestones,
   updateMilestone,
   type MilestoneItem,
@@ -24,7 +23,7 @@ export function MilestonesPanel({
   projectValue: string | null
   currency: string
   /** When false the panel is read-only: no inline edits, status changes,
-   * reordering, deletes, or add-row (gated on project.update). */
+   * reordering, or add-row (gated on project.update). */
   canManage?: boolean
 }) {
   return (
@@ -36,7 +35,6 @@ export function MilestonesPanel({
       canManage={canManage}
       onCreate={(values) => createMilestone({ projectId, ...values })}
       onUpdate={(id, values) => updateMilestone(id, values)}
-      onDelete={(id) => deleteMilestone(id)}
       onReorder={(order) => reorderMilestones(projectId, order)}
     />
   )

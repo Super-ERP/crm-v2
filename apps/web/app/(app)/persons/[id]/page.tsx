@@ -1,3 +1,5 @@
+
+import { RecordVoidButton } from "@/components/record-void-button"
 import Link from "next/link"
 import { listRelatedProjectCodes } from "@/app/(app)/_shared/project-code-actions"
 import { ProjectCodePanel } from "@/app/(app)/_shared/project-code-panel"
@@ -108,6 +110,7 @@ export default async function PersonDetailPage({
         <div className="flex justify-end">
           <div className="flex flex-wrap items-center gap-2">
             <PersonEditButton person={person} accounts={accounts} />
+            {ctx.can(PERMISSIONS.PERSON_UPDATE) ? <RecordVoidButton target={{ type: "person", id }} /> : null}
           </div>
         </div>
 

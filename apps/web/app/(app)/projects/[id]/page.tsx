@@ -1,3 +1,5 @@
+
+import { RecordVoidButton } from "@/components/record-void-button"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -116,6 +118,7 @@ export default async function ProjectDetailPage({
       <PageBody>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
+            {canUpdate ? <RecordVoidButton target={{ type: "project", id }} /> : null}
             {canUpdate ? (
               <ProjectEditButton
                 project={project}

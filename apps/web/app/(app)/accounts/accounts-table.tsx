@@ -1,74 +1,39 @@
 "use client"
 
+import { RecordVoidButton } from "@/components/record-void-button"
+
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Building2, MoreHorizontal, Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
-import { toast } from "sonner"
 
 import { DataTable, SortableHeader, linkCell } from "@/components/data-table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { showActionError } from "@/lib/show-action-error"
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+
 import { formatDate } from "@/lib/format"
 import { useOpenOnNewParam } from "@/hooks/use-open-on-new-param"
 import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
 import type { Option, CountryOption } from "@/lib/lookups"
 import { AccountForm } from "./account-form"
-import { deleteAccount, restoreAccount, listAccountPage, type AccountListItem } from "./actions"
+import { listAccountPage, type AccountListItem } from "./actions"
 
 function RowActions({ account }: { account: AccountListItem }) {
   const router = useRouter()
   const perms = usePermissions()
   const canUpdate = perms.has(PERMISSIONS.ACCOUNT_UPDATE)
-  const canDelete = perms.has(PERMISSIONS.ACCOUNT_DELETE)
-  const [confirmOpen, setConfirmOpen] = React.useState(false)
-  async function onDelete() {
-    const res = await deleteAccount(account.id)
-    if (!res.ok) {
-      showActionError(res)
-      setConfirmOpen(false)
-      return
-    }
-    toast.success("Account deleted", {
-      action: {
-        label: "Undo",
-        onClick: async () => {
-          const r = await restoreAccount(account.id)
-          if (!r.ok) {
-            showActionError(r)
-            return
-          }
-          toast.success("Account restored")
-          router.refresh()
-        },
-      },
-    })
-    router.refresh()
-    setConfirmOpen(false)
-  }
 
   return (
-    <div className="flex justify-end">
+    <div className="flex items-center justify-end gap-2">
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -87,42 +52,11 @@ function RowActions({ account }: { account: AccountListItem }) {
               Edit
             </DropdownMenuItem>
           ) : null}
-          {canDelete ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setConfirmOpen(true)}
-              >
-                Delete
-              </DropdownMenuItem>
-            </>
-          ) : null}
+
         </DropdownMenuContent>
       </DropdownMenu>
+      {canUpdate ? <RecordVoidButton target={{ type: "account", id: account.id }} /> : null}
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete account?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This soft-deletes “{account.name}”. You must first remove its
-              contacts, close any Funnels or projects, and reassign any child
-              accounts or reseller links, otherwise the delete is blocked. You
-              can undo this right after.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={onDelete}
-              className="bg-destructive text-white hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }

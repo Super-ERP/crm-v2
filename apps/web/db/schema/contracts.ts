@@ -9,7 +9,7 @@ import {
 } from "drizzle-orm/pg-core"
 import { organization } from "./auth"
 import { funnels } from "./pipeline"
-import { timestamps } from "./_helpers"
+import { timestamps, softDelete } from "./_helpers"
 
 /**
  * A year of a multi-year contract on a (typically won) deal. A 5-year deal is
@@ -40,6 +40,7 @@ export const contractYears = pgTable(
     notes: text("notes"),
     sortOrder: integer("sort_order").notNull().default(0),
     ...timestamps,
+    ...softDelete,
   },
   (t) => [index("contract_years_opportunity_idx").on(t.tenantId, t.funnelId)]
 )
