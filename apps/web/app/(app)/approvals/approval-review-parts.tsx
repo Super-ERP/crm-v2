@@ -13,7 +13,7 @@ export function ApprovalReviewStatus({status}:{status:string}) {
 export function ApprovalReviewFrame({kind,title,subtitle,status,children,recordHref,recordLabel,actions}:{kind:ApprovalKind;title:string;subtitle?:React.ReactNode;status:string;children?:React.ReactNode;recordHref:string;recordLabel:string;actions?:React.ReactNode}) {
  return <section className="flex h-full min-h-0 min-w-0 flex-col" aria-label={`${APPROVAL_TYPE_LABELS[kind]} review`}>
   <header className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b p-5">
-   <div className="flex min-w-0 items-start gap-3"><ObjectTile kind={kind==='stage'?'funnel':kind==='lead'?'lead':'quotation'} className="size-9"/><div className="min-w-0 space-y-1"><h2 className="break-words text-lg font-semibold [overflow-wrap:anywhere]">{title}</h2><p className="text-sm text-muted-foreground">{APPROVAL_TYPE_LABELS[kind]}</p>{subtitle?<div className="text-sm">{subtitle}</div>:null}</div></div>
+   <div className="flex min-w-0 items-start gap-3"><ObjectTile kind={(kind==='stage'||kind==='void')?'funnel':kind==='lead'?'lead':'quotation'} className="size-9"/><div className="min-w-0 space-y-1"><h2 className="break-words text-lg font-semibold [overflow-wrap:anywhere]">{title}</h2><p className="text-sm text-muted-foreground">{APPROVAL_TYPE_LABELS[kind]}</p>{subtitle?<div className="text-sm">{subtitle}</div>:null}</div></div>
    <ApprovalReviewStatus status={status}/>
   </header>
   <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-5 [overflow-wrap:anywhere]">{children}</div>

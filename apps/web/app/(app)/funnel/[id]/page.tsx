@@ -29,7 +29,6 @@ import { listFunnelMilestones } from "@/app/(app)/payment-milestones/actions"
 import { listFunnelApprovalHistory } from "@/app/(app)/approvals/actions"
 import { buildStageGate } from "@/lib/stage-gate"
 import { VoidDuplicateDialog } from "../void-duplicate-dialog"
-import { canVoidDuplicateFunnel } from "@/server/services/void-duplicate-funnel"
 import { StageAdvanceDialog } from "../stage-advance-dialog"
 import { isTerminalKind, selectableTargets } from "../stage-transitions"
 import { listDealCosts } from "../cost-actions"
@@ -190,7 +189,7 @@ export default async function OpportunityDetailPage({
     <>
       <PageBody>
         <div className="flex flex-wrap items-center justify-end gap-2">
-            {opp.status === "won" && stage.kind === "WON" && canVoidDuplicateFunnel(ctx) ? <VoidDuplicateDialog funnelId={opp.id} name={opp.name} /> : null}
+            {opp.status === "won" && stage.kind === "WON" && canUpdate ? <VoidDuplicateDialog funnelId={opp.id} name={opp.name} /> : null}
             {canCreateQuote ? (
               <Button
                 variant="outline"

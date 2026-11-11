@@ -6,8 +6,8 @@ const funnelId = "11111111-1111-4111-8111-111111111111"
 const retainedFunnelId = "22222222-2222-4222-8222-222222222222"
 
 describe("duplicate Closed Won correction", () => {
-  it("requires both deletion and stage-approval capabilities", () => {
-    for (const permissions of [[], [PERMISSIONS.OPPORTUNITY_DELETE], [PERMISSIONS.STAGE_ADVANCE_APPROVE]]) {
+  it("requires dedicated Sales Admin approval capability", () => {
+    for (const permissions of [[], [PERMISSIONS.OPPORTUNITY_DELETE], [PERMISSIONS.STAGE_ADVANCE_APPROVE], [PERMISSIONS.OPPORTUNITY_DELETE, PERMISSIONS.STAGE_ADVANCE_APPROVE]]) {
       expect(canVoidDuplicateFunnel({ can: key => (permissions as string[]).includes(key) })).toBe(false)
     }
     expect(canVoidDuplicateFunnel({ can: () => true })).toBe(true)
