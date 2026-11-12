@@ -27,3 +27,8 @@ Refinement validation: 19 focused tests passed, including readonly/edit permissi
 - [x] Show account fields only in the left card; move Edit/Save/Cancel there.
 - [x] Remove Details tab and default related panel to Contacts. Switching related tabs preserves the account draft.
 - [x] Update render regression to require one copy of each editable field and one account value.
+
+## Approvals error and navigation cleanup
+- [x] Remove the separate Void a record sidebar entry; retain record-level actions.
+- [x] Reproduce production error373799017: Drizzle interpolated permissions as a row, causing PostgreSQL42846.
+- [x] Build an explicitly parameterized text array and test the real queue query on PostgreSQL with and without reversal grants.
