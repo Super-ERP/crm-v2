@@ -149,7 +149,7 @@ export function AccountDetailBody(props: AccountDetailData) {
   // deep-link the account's first funnel as the prefill.
   const firstFunnelId = pipelines[0]?.funnelId
 
-  const [tab, setTab] = React.useState("details")
+  const [tab, setTab] = React.useState("contacts")
   const searchParams = useSearchParams()
   const [editingDetails, setEditingDetails] = React.useState(canEdit && searchParams.get("edit") === "1")
   const [record, setRecord] = React.useState(savedRecord)
@@ -171,9 +171,7 @@ export function AccountDetailBody(props: AccountDetailData) {
     requestAnimationFrame(() => editButton.current?.focus())
   }
   const changeTab = (next: string) => {
-    if (next === tab || !confirmDiscard()) return
-    closeEditor()
-    setTab(next)
+    if (!detailsBusy) setTab(next)
   }
   const revalidate = `/accounts/${accountId}`
 
@@ -182,7 +180,6 @@ export function AccountDetailBody(props: AccountDetailData) {
   const beginEditor = () => {
     setRecord(savedRecord)
     draftRef.current = savedRecord
-    setTab("details")
     setEditingDetails(true)
   }
   const saveField = async (patch: Partial<AccountInput>): Promise<void> => {
@@ -504,6 +501,14 @@ export function AccountDetailBody(props: AccountDetailData) {
         <Card>
           <DetailCardHeader kind="account" eyebrow="Account" />
           <CardContent className="grid gap-5 text-sm">
+            {canEdit ? <div className="flex flex-wrap items-center justify-end gap-2">
+              {!editingDetails ? <Button ref={editButton} variant="outline" size="sm" onClick={beginEditor}>Edit</Button> : <>
+                <span role="status" className="text-sm text-muted-foreground">{detailsBusy ? "Saving changes…" : "Editing account"}</span>
+                <Button variant="outline" size="sm" disabled={detailsBusy} onClick={() => { if (confirmDiscard()) closeEditor() }}>Cancel</Button>
+                <Button size="sm" disabled={detailsBusy} onClick={saveDetails}>Save changes</Button>
+              </>}
+            </div> : null}
+            {editingDetails ? <p className="text-sm text-muted-foreground">Click a field to edit. Changes are saved together. Changing the owner also transfers related contacts and sales records.</p> : null}
             {sections.map((section) => (
               <FieldSection key={section.title} title={section.title}>
                 {section.fields.map(renderField)}
@@ -529,7 +534,6 @@ export function AccountDetailBody(props: AccountDetailData) {
       {/* Right column — tabbed related lists */}
       <DetailTabs value={tab} onValueChange={changeTab}>
         <TabsList>
-          <CountTab value="details">Details</CountTab>
           <CountTab value="contacts" count={contacts.length}>
             Contacts
           </CountTab>
@@ -556,24 +560,6 @@ export function AccountDetailBody(props: AccountDetailData) {
             Documents
           </CountTab>
         </TabsList>
-
-        <TabsContent value="details" className="mt-4">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-base font-semibold">Account details</h2>
-            {!editingDetails && canEdit ? <Button ref={editButton} variant="outline" size="sm" onClick={beginEditor}>Edit</Button> : null}
-            {editingDetails ? <div className="flex flex-wrap items-center gap-2">
-              <span role="status" className="text-sm text-muted-foreground">{detailsBusy ? "Saving changes…" : "Editing account"}</span>
-              <Button variant="outline" size="sm" disabled={detailsBusy} onClick={() => { if (confirmDiscard()) closeEditor() }}>Cancel</Button>
-              <Button size="sm" disabled={detailsBusy} onClick={saveDetails}>Save changes</Button>
-            </div> : null}
-          </div>
-          {editingDetails ? <p className="mb-4 text-sm text-muted-foreground">Click a field to edit. Changes are saved together. Changing the owner also transfers related contacts and sales records.</p> : null}
-          <div className="grid gap-6 sm:grid-cols-2">
-            {sections.map(section => <FieldSection key={section.title} title={section.title}>
-              {section.fields.map(renderField)}
-            </FieldSection>)}
-          </div>
-        </TabsContent>
 
         <TabsContent value="contacts" className="mt-4">
           <AccountContacts accountId={accountId} contacts={contacts} />

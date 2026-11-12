@@ -22,3 +22,8 @@ Validation: 22 focused unit tests and 8 actual PostgreSQL migration/lifecycle te
 References: https://www.checklist.design/web-app/single-item-detail and https://github.com/shadcn-ui/lint. Checklist page returned no readable checklist content; apply the user-approved view/edit flow without claiming unverified checklist details. Preserve shared component variants and theme tokens as recommended by shadcn lint.
 
 Refinement validation: 19 focused tests passed, including readonly/edit permissions and phone draft/country regressions. Final production build and lint passed. Independent review findings on phone drafts were fixed and re-reviewed with no remaining substantive findings. Browser visual QA blocked by host AppArmor.
+
+## Approved removal of duplicate details
+- [x] Show account fields only in the left card; move Edit/Save/Cancel there.
+- [x] Remove Details tab and default related panel to Contacts. Switching related tabs preserves the account draft.
+- [x] Update render regression to require one copy of each editable field and one account value.

@@ -31,12 +31,14 @@ describe("account detail view and edit modes", () => {
     expect(html).not.toContain("Click to edit name")
     expect(html).not.toContain("Click to change account type")
     expect(html).not.toContain("Save changes")
+    expect(html.match(/Sample/g)).toHaveLength(1)
+    expect(html).not.toContain("Account details</h2>")
   })
   it("enables in-place editors and shared Save/Cancel without a replacement form", () => {
     navigation.edit = true
     const html = render()
-    expect(html.match(/Click to edit name/g)).toHaveLength(2)
-    expect(html.match(/Click to change account type/g)).toHaveLength(2)
+    expect(html.match(/Click to edit name/g)).toHaveLength(1)
+    expect(html.match(/Click to change account type/g)).toHaveLength(1)
     expect(html).toContain("Save changes")
     expect(html).toContain("Cancel")
     expect(html).not.toContain("<form")
