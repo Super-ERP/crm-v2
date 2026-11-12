@@ -13,3 +13,12 @@ Architecture: reuse InlineCombobox, updateAccount and permission-based review; n
 Approved scope: user requested this checklist and implementation after approving the inline editor and Manager review behavior. Native execution in the existing isolated worktree.
 
 Validation: 22 focused unit tests and 8 actual PostgreSQL migration/lifecycle tests passed. Typecheck, targeted lint and independent review passed. Production build recorded in /tmp/account-type-void-build.log.
+
+## Approved refinement: explicit edit mode
+- [x] Default to read-only fields with working record links; no always-on pencils.
+- [x] Edit enables the same field positions in sidebar and Details, sharing one local draft.
+- [x] Save submits once; Cancel discards. Retain required field validation, errors, navigation guard and update permissions.
+- [x] Cover view/edit render states, document the revised flow and update PR 288.
+References: https://www.checklist.design/web-app/single-item-detail and https://github.com/shadcn-ui/lint. Checklist page returned no readable checklist content; apply the user-approved view/edit flow without claiming unverified checklist details. Preserve shared component variants and theme tokens as recommended by shadcn lint.
+
+Refinement validation: 19 focused tests passed, including readonly/edit permissions and phone draft/country regressions. Final production build and lint passed. Independent review findings on phone drafts were fixed and re-reviewed with no remaining substantive findings. Browser visual QA blocked by host AppArmor.

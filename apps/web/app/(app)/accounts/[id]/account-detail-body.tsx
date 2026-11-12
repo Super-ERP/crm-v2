@@ -4,7 +4,7 @@ import * as React from "react"
 import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { AccountForm } from "../account-form"
+import { AccountDraftPhone } from "./account-draft-phone"
 import { useUnsavedChanges } from "@/components/use-unsaved-changes"
 import type { AccountRow } from "../actions"
 import { Plus } from "lucide-react"
@@ -34,7 +34,7 @@ import {
   RelatedCard,
 } from "@/components/detail-page"
 import { useInlineSave } from "@/components/use-inline-save"
-import { InlinePhoneValue, PhoneNumberDisplay } from "@/components/phone-input"
+import { PhoneNumberDisplay } from "@/components/phone-input"
 import { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
 import type { MemberOption, Option, CountryOption } from "@/lib/lookups"
@@ -65,6 +65,8 @@ export type AccountAddressKey = keyof BillingAddress
 /** Raw scalar fields the page marks inline-editable (Salesforce-style). */
 export type AccountEditKey =
   | "name"
+  | "code"
+  | "endUserAccountId"
   | "accountType"
   | "owner"
   | "industry"
@@ -87,8 +89,7 @@ export type AccountDetailData = {
   editAccount: AccountRow
   countrySettings: CountryOption[]
   sections: AccountDetailSection[]
-  /** Raw field values — updateAccount is full-replace, so each inline save
-   *  merges the one edited field into this snapshot. */
+  /** Raw values used to initialize the account draft for an explicit save. */
   record: AccountInput
   /** Gates every inline editor (ACCOUNT_UPDATE, resolved server-side). */
   canEdit: boolean
@@ -121,11 +122,9 @@ export type AccountDetailData = {
 export function AccountDetailBody(props: AccountDetailData) {
   const {
     accountId,
-    editAccount,
-    countrySettings,
     projectCodes,projectCodeCount,
     sections,
-    record,
+    record: savedRecord,
     canEdit,
     industries,
     parentOptions,
@@ -153,6 +152,9 @@ export function AccountDetailBody(props: AccountDetailData) {
   const [tab, setTab] = React.useState("details")
   const searchParams = useSearchParams()
   const [editingDetails, setEditingDetails] = React.useState(canEdit && searchParams.get("edit") === "1")
+  const [record, setRecord] = React.useState(savedRecord)
+  const draftRef = React.useRef(savedRecord)
+  const [editSession, setEditSession] = React.useState(0)
   const [detailsDirty, setDetailsDirty] = React.useState(false)
   const [detailsBusy, setDetailsBusy] = React.useState(false)
   const confirmDiscard = useUnsavedChanges(detailsDirty, detailsBusy)
@@ -160,6 +162,9 @@ export function AccountDetailBody(props: AccountDetailData) {
   const editButton = React.useRef<HTMLButtonElement>(null)
   const closeEditor = () => {
     setEditingDetails(false)
+    setRecord(savedRecord)
+    draftRef.current = savedRecord
+    setEditSession(value => value + 1)
     setDetailsDirty(false)
     setDetailsBusy(false)
     if (searchParams.get("edit") === "1") router.replace(`/accounts/${accountId}`, { scroll: false })
@@ -173,11 +178,30 @@ export function AccountDetailBody(props: AccountDetailData) {
   const revalidate = `/accounts/${accountId}`
 
 
-  const { save } = useInlineSave((patch: Partial<AccountInput>) =>
-    updateAccount(accountId, { ...record, ...patch })
-  )
+  const { save } = useInlineSave((draft: AccountInput) => updateAccount(accountId, draft))
+  const beginEditor = () => {
+    setRecord(savedRecord)
+    draftRef.current = savedRecord
+    setTab("details")
+    setEditingDetails(true)
+  }
   const saveField = async (patch: Partial<AccountInput>): Promise<void> => {
-    await save(patch)
+    const next = { ...draftRef.current, ...patch }
+    draftRef.current = next
+    setRecord(next)
+    setDetailsDirty(true)
+  }
+  const saveDetails = async () => {
+    // Flush a text editor still focused when Save is activated.
+    const active = document.activeElement
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) active.blur()
+    setDetailsBusy(true)
+    const success = await save(draftRef.current)
+    setDetailsBusy(false)
+    if (success) {
+      closeEditor()
+      router.refresh()
+    }
   }
 
   const typeEditor = () => <InlineCombobox
@@ -212,7 +236,7 @@ export function AccountDetailBody(props: AccountDetailData) {
   /** Merge one edited billing-address subfield into the structured jsonb. */
   const saveAddress = (sub: AccountAddressKey, next: string) =>
     saveField({
-      billingAddress: { ...record.billingAddress, [sub]: next || null },
+      billingAddress: { ...draftRef.current.billingAddress, [sub]: next || null },
     })
 
   const opportunityColumns = React.useMemo<ColumnDef<AccountOpportunityItem>[]>(
@@ -350,8 +374,131 @@ export function AccountDetailBody(props: AccountDetailData) {
     []
   )
 
+  function renderField(d: AccountDetailSection["fields"][number]) {
+    if (d.editKey === "endUserAccountId" && (editingDetails ? record : savedRecord).accountType !== "reseller") return null
+
+    const key = canEdit && editingDetails ? d.editKey : undefined
+    const addressSub =
+      key && key.startsWith("address.")
+        ? (key.slice("address.".length) as AccountAddressKey)
+        : null
+    // What's left after the industry/owner/address branches below.
+    const scalarKey =
+        key &&
+        !addressSub &&
+        key !== "endUserAccountId" &&
+        key !== "accountType" &&
+        key !== "industry" &&
+        key !== "parent" &&
+        key !== "owner" &&
+        key !== "currency"
+        ? (key as "name" | "code" | "phone" | "website" | "registrationNumber")
+        : null
+    return (
+      <FieldRow key={`${editSession}-${d.label}`} label={d.label}>
+        {!key ? (
+          d.label === "Phone" ? <PhoneNumberDisplay value={savedRecord.phone} /> : d.value
+        ) : key === "accountType" ? typeEditor() : key === "endUserAccountId" ? (
+          <InlineCombobox value={record.endUserAccountId ?? ""}
+            display={parentOptions.find(option => option.id === record.endUserAccountId)?.name ?? "—"}
+            options={[{ value: "", label: "No default end user" }, ...parentOptions.map(option => ({ value: option.id, label: option.name }))]}
+            onSave={next => saveField({ endUserAccountId: next || null })}
+            title="Click to change default end user" />
+        ) : addressSub ? (
+          addressSub === "country" ? (
+            <InlineCombobox
+              value={record.billingAddress?.country ?? ""}
+              display={record.billingAddress?.country || "—"}
+              options={countryOptions}
+              onSave={(next) => saveAddress("country", next)}
+              searchPlaceholder="Search countries…"
+              emptyMessage="No countries configured."
+              title="Click to change country"
+            />
+          ) : (
+            <InlineValue
+              value={record.billingAddress?.[addressSub] ?? ""}
+              display={record.billingAddress?.[addressSub] || "—"}
+              title={`Click to edit ${d.label.toLowerCase()}`}
+              onSave={(next) => saveAddress(addressSub, next)}
+            />
+          )
+        ) : key === "industry" ? (
+          <InlineCombobox
+            value={record.industry ?? ""}
+            display={record.industry || "—"}
+            options={industryOptions}
+            onSave={(next) => saveField({ industry: next || null })}
+            searchPlaceholder="Search industries…"
+            emptyMessage="No industries configured."
+            title="Click to change industry"
+          />
+        ) : key === "owner" ? (
+          <InlineCombobox
+            value={record.ownerMemberId ?? ""}
+            display={ownerName}
+            options={memberOptions}
+            onSave={(next) =>
+              next ? saveField({ ownerMemberId: next }) : undefined
+            }
+            searchPlaceholder="Search members…"
+            emptyMessage="No members found."
+            title="Click to change owner"
+          />
+        ) : key === "parent" ? (
+          <InlineCombobox
+            value={record.parentAccountId ?? ""}
+            display={parentName}
+            options={[{ value: "", label: "No parent account" }, ...parentOptions.map((option) => ({
+              value: option.id,
+              label: option.name,
+            }))]}
+            onSave={(next) =>
+              saveField({ parentAccountId: next || null })
+            }
+            placeholder="No parent account"
+            searchPlaceholder="Search parent accounts…"
+            emptyMessage="No parent accounts found."
+            title="Click to change parent account"
+          />
+        ) : key === "currency" ? (
+          <InlineCombobox
+            value={record.currency}
+            display={record.currency}
+            options={currencyOptions}
+            onSave={(next) => saveField({ currency: next })}
+            searchPlaceholder="Search currencies…"
+            emptyMessage="No currencies configured."
+            title="Click to change currency"
+          />
+        ) : scalarKey === "phone" ? (
+          <AccountDraftPhone
+            value={record.phone}
+            defaultCountry={record.billingAddress?.country}
+            onChange={(next) => { void saveField({ phone: next || null }) }}
+          />
+        ) : scalarKey ? (
+          <InlineValue
+            value={record[scalarKey] ?? ""}
+            display={record[scalarKey] || "—"}
+            title={`Click to edit ${d.label.toLowerCase()}`}
+            onSave={(next) => {
+              // Keep required-field validation at the final server save.
+              if (scalarKey === "name") {
+                return saveField({ name: next })
+              }
+              return saveField({ [scalarKey]: next || null })
+            }}
+          />
+        ) : (
+          d.value
+        )}
+      </FieldRow>
+    )
+  }
+
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset aria-label="Account details" disabled={detailsBusy} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onFocusCapture={() => { if (editingDetails) setDetailsDirty(true) }}>
       {/* Left column — account highlights + related quick links */}
       <DetailAside>
         <Card>
@@ -359,121 +506,7 @@ export function AccountDetailBody(props: AccountDetailData) {
           <CardContent className="grid gap-5 text-sm">
             {sections.map((section) => (
               <FieldSection key={section.title} title={section.title}>
-                {section.fields.map((d) => {
-                  const key = canEdit && !editingDetails ? d.editKey : undefined
-                  const addressSub =
-                    key && key.startsWith("address.")
-                      ? (key.slice("address.".length) as AccountAddressKey)
-                      : null
-                  // What's left after the industry/owner/address branches below.
-                  const scalarKey =
-                      key &&
-                      !addressSub &&
-                      key !== "accountType" &&
-                      key !== "industry" &&
-                      key !== "parent" &&
-                      key !== "owner" &&
-                      key !== "currency"
-                      ? (key as "name" | "phone" | "website" | "registrationNumber")
-                      : null
-                  return (
-                    <FieldRow key={d.label} label={d.label}>
-                      {!key ? (
-                        d.label === "Phone" ? <PhoneNumberDisplay value={record.phone} /> : d.value
-                      ) : key === "accountType" ? typeEditor() : addressSub ? (
-                        addressSub === "country" ? (
-                          <InlineCombobox
-                            value={record.billingAddress?.country ?? ""}
-                            display={record.billingAddress?.country || "—"}
-                            options={countryOptions}
-                            onSave={(next) => saveAddress("country", next)}
-                            searchPlaceholder="Search countries…"
-                            emptyMessage="No countries configured."
-                            title="Click to change country"
-                          />
-                        ) : (
-                          <InlineValue
-                            value={record.billingAddress?.[addressSub] ?? ""}
-                            display={record.billingAddress?.[addressSub] || "—"}
-                            title={`Click to edit ${d.label.toLowerCase()}`}
-                            onSave={(next) => saveAddress(addressSub, next)}
-                          />
-                        )
-                      ) : key === "industry" ? (
-                        <InlineCombobox
-                          value={record.industry ?? ""}
-                          display={record.industry || "—"}
-                          options={industryOptions}
-                          onSave={(next) => saveField({ industry: next || null })}
-                          searchPlaceholder="Search industries…"
-                          emptyMessage="No industries configured."
-                          title="Click to change industry"
-                        />
-                      ) : key === "owner" ? (
-                        <InlineCombobox
-                          value={record.ownerMemberId ?? ""}
-                          display={ownerName}
-                          options={memberOptions}
-                          onSave={(next) =>
-                            next ? saveField({ ownerMemberId: next }) : undefined
-                          }
-                          searchPlaceholder="Search members…"
-                          emptyMessage="No members found."
-                          title="Click to change owner"
-                        />
-                      ) : key === "parent" ? (
-                        <InlineCombobox
-                          value={record.parentAccountId ?? ""}
-                          display={parentName}
-                          options={parentOptions.map((option) => ({
-                            value: option.id,
-                            label: option.name,
-                          }))}
-                          onSave={(next) =>
-                            saveField({ parentAccountId: next || null })
-                          }
-                          placeholder="No parent account"
-                          searchPlaceholder="Search parent accounts…"
-                          emptyMessage="No parent accounts found."
-                          title="Click to change parent account"
-                        />
-                      ) : key === "currency" ? (
-                        <InlineCombobox
-                          value={record.currency}
-                          display={record.currency}
-                          options={currencyOptions}
-                          onSave={(next) => saveField({ currency: next })}
-                          searchPlaceholder="Search currencies…"
-                          emptyMessage="No currencies configured."
-                          title="Click to change currency"
-                        />
-                      ) : scalarKey === "phone" ? (
-                        <InlinePhoneValue
-                          value={record.phone}
-                          defaultCountry={record.billingAddress?.country}
-                          title={`Click to edit ${d.label.toLowerCase()}`}
-                          onSave={(next) => saveField({ phone: next || null })}
-                        />
-                      ) : scalarKey ? (
-                        <InlineValue
-                          value={record[scalarKey] ?? ""}
-                          display={record[scalarKey] || "—"}
-                          title={`Click to edit ${d.label.toLowerCase()}`}
-                          onSave={(next) => {
-                            // Name is required — ignore an emptied draft.
-                            if (scalarKey === "name") {
-                              if (!next.trim()) return
-                              return saveField({ name: next })
-                            }
-                            return saveField({ [scalarKey]: next || null })
-                          }}
-                        />
-                      ) : (
-                        d.value
-                      )}
-                    </FieldRow>
-                  )
-                })}
+                {section.fields.map(renderField)}
               </FieldSection>
             ))}
           </CardContent>
@@ -527,20 +560,19 @@ export function AccountDetailBody(props: AccountDetailData) {
         <TabsContent value="details" className="mt-4">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-base font-semibold">Account details</h2>
-            {!editingDetails && canEdit ? <Button ref={editButton} variant="outline" size="sm" onClick={() => setEditingDetails(true)}>Edit details</Button> : null}
-            {editingDetails ? <span role="status" className="text-sm text-muted-foreground">{detailsBusy ? "Saving changes…" : detailsDirty ? "Unsaved changes" : "Editing account"}</span> : null}
+            {!editingDetails && canEdit ? <Button ref={editButton} variant="outline" size="sm" onClick={beginEditor}>Edit</Button> : null}
+            {editingDetails ? <div className="flex flex-wrap items-center gap-2">
+              <span role="status" className="text-sm text-muted-foreground">{detailsBusy ? "Saving changes…" : "Editing account"}</span>
+              <Button variant="outline" size="sm" disabled={detailsBusy} onClick={() => { if (confirmDiscard()) closeEditor() }}>Cancel</Button>
+              <Button size="sm" disabled={detailsBusy} onClick={saveDetails}>Save changes</Button>
+            </div> : null}
           </div>
-          {editingDetails ? <AccountForm
-            embedded account={editAccount} parentOptions={parentOptions} endUserOptions={parentOptions}
-            industries={industries} countries={countrySettings} currencies={currencies} members={members}
-            onDirtyChange={setDetailsDirty} onBusyChange={setDetailsBusy}
-            onCancel={() => { if (confirmDiscard()) closeEditor() }}
-            onSaved={() => { closeEditor(); router.refresh() }}
-          /> : <div className="grid gap-6 sm:grid-cols-2">
+          {editingDetails ? <p className="mb-4 text-sm text-muted-foreground">Click a field to edit. Changes are saved together. Changing the owner also transfers related contacts and sales records.</p> : null}
+          <div className="grid gap-6 sm:grid-cols-2">
             {sections.map(section => <FieldSection key={section.title} title={section.title}>
-              {section.fields.map(field => <FieldRow key={field.label} label={field.label}>{canEdit && field.editKey === "accountType" ? typeEditor() : field.value}</FieldRow>)}
+              {section.fields.map(renderField)}
             </FieldSection>)}
-          </div>}
+          </div>
         </TabsContent>
 
         <TabsContent value="contacts" className="mt-4">
@@ -669,6 +701,6 @@ export function AccountDetailBody(props: AccountDetailData) {
           />
         </TabsContent>
       </DetailTabs>
-    </div>
+    </fieldset>
   )
 }
