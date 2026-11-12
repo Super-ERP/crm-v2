@@ -1,6 +1,5 @@
 "use client"
 
-import { RecordVoidButton } from "@/components/record-void-button"
 
 import * as React from "react"
 import Link from "next/link"
@@ -55,7 +54,6 @@ function RowActions({ account }: { account: AccountListItem }) {
 
         </DropdownMenuContent>
       </DropdownMenu>
-      {canUpdate ? <RecordVoidButton target={{ type: "account", id: account.id }} /> : null}
 
     </div>
   )

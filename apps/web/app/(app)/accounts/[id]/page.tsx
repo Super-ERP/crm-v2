@@ -129,6 +129,7 @@ export default async function AccountDetailPage({
     { label: "Code", value: account.code ?? "—" },
     {
       label: "Type",
+      editKey: "accountType",
       value: (
         <Badge variant="outline">
           {isReseller ? "Reseller" : "Client"}

@@ -70,3 +70,14 @@ describe("record ownership scope", () => {
   })
 
 })
+
+ describe("Manager Void review grants", () => {
+  it("grants team Void approval without financial reversal or global access", () => {
+    const manager = ROLE_TEMPLATES.find(role => role.name === "Manager")!
+    expect(manager.permissions).toContain(PERMISSIONS.RECORD_VOID_APPROVE)
+    expect(manager.permissions).toContain(PERMISSIONS.RECORDS_VIEW_TEAM)
+    expect(manager.permissions).not.toContain(PERMISSIONS.FINANCE_REVERSE)
+    expect(manager.permissions).not.toContain(PERMISSIONS.RECORDS_MANAGE_ALL)
+    expect(manager.permissions).not.toContain(PERMISSIONS.RECORDS_VIEW_ALL)
+  })
+})

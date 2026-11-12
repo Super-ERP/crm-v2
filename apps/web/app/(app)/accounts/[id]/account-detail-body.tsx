@@ -65,6 +65,7 @@ export type AccountAddressKey = keyof BillingAddress
 /** Raw scalar fields the page marks inline-editable (Salesforce-style). */
 export type AccountEditKey =
   | "name"
+  | "accountType"
   | "owner"
   | "industry"
   | "parent"
@@ -178,6 +179,14 @@ export function AccountDetailBody(props: AccountDetailData) {
   const saveField = async (patch: Partial<AccountInput>): Promise<void> => {
     await save(patch)
   }
+
+  const typeEditor = () => <InlineCombobox
+    value={record.accountType === "reseller" ? "reseller" : "client"}
+    display={<Badge variant="outline">{record.accountType === "reseller" ? "Reseller" : "Client"}</Badge>}
+    options={[{ value: "client", label: "Client" }, { value: "reseller", label: "Reseller" }]}
+    onSave={(next) => saveField({ accountType: next, ...(next === "client" ? { endUserAccountId: null } : {}) })}
+    title="Click to change account type"
+  />
 
   const industryOptions = React.useMemo(
     () => industries.map((i) => ({ value: i, label: i })),
@@ -360,6 +369,7 @@ export function AccountDetailBody(props: AccountDetailData) {
                   const scalarKey =
                       key &&
                       !addressSub &&
+                      key !== "accountType" &&
                       key !== "industry" &&
                       key !== "parent" &&
                       key !== "owner" &&
@@ -370,7 +380,7 @@ export function AccountDetailBody(props: AccountDetailData) {
                     <FieldRow key={d.label} label={d.label}>
                       {!key ? (
                         d.label === "Phone" ? <PhoneNumberDisplay value={record.phone} /> : d.value
-                      ) : addressSub ? (
+                      ) : key === "accountType" ? typeEditor() : addressSub ? (
                         addressSub === "country" ? (
                           <InlineCombobox
                             value={record.billingAddress?.country ?? ""}
@@ -528,7 +538,7 @@ export function AccountDetailBody(props: AccountDetailData) {
             onSaved={() => { closeEditor(); router.refresh() }}
           /> : <div className="grid gap-6 sm:grid-cols-2">
             {sections.map(section => <FieldSection key={section.title} title={section.title}>
-              {section.fields.map(field => <FieldRow key={field.label} label={field.label}>{field.value}</FieldRow>)}
+              {section.fields.map(field => <FieldRow key={field.label} label={field.label}>{canEdit && field.editKey === "accountType" ? typeEditor() : field.value}</FieldRow>)}
             </FieldSection>)}
           </div>}
         </TabsContent>

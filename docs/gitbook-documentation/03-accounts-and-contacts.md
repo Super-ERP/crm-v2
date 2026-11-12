@@ -76,6 +76,8 @@ Opening any Account presents a comprehensive 360-degree customer view:
 
 ### Edit account details
 
+Click the **Type** value (with its pencil icon) in the account sidebar or **Details** tab to switch between **Client** and **Reseller** in place. Switching to Client clears the optional default end-user link. The Accounts list keeps its View/Edit menu; Void is available on the record page instead of on every list row.
+
 Open an account and use the **Details** tab. Click **Edit details** to change its company information, Client/Reseller type, optional default end user, owner, parent, currency, contact details and billing address directly in the tab. The Accounts list’s **Edit** action opens this editor too. Creating an account still uses the existing creation dialog.
 
 Use **Save changes** to save the form together or **Cancel** to discard it. Validation errors keep your changes available for correction. Switching tabs, following a normal page link, or reloading/closing warns about unsaved changes; browsers supporting the Navigation API also guard in-app back/forward navigation. Save/Cancel are disabled while a save is running. Changing the account owner also transfers related records under the existing ownership rules.
