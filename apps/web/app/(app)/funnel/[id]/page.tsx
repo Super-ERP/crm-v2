@@ -1,5 +1,4 @@
 
-import { RecordVoidButton } from "@/components/record-void-button"
 import { isPaymentMilestoneEligible } from "@/lib/payment-milestone-lifecycle"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -186,11 +185,9 @@ export default async function OpportunityDetailPage({
   const canCreateProject =
     modules.projects && ctx.can(PERMISSIONS.PROJECT_CREATE)
 
-  return (
-    <>
-      <PageBody>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-            {canUpdate ? <RecordVoidButton target={{ type: "funnel", id: opp.id }} /> : null}
+  const workflowActions = (
+        <div className="flex flex-wrap items-center justify-end gap-2" aria-label="Workflow actions">
+            <span className="mr-auto text-sm font-semibold">Workflow actions</span>
             {canCreateQuote ? (
               <Button
                 variant="outline"
@@ -245,6 +242,12 @@ export default async function OpportunityDetailPage({
               />
             )}
         </div>
+  )
+
+  return (
+    <>
+      <PageBody>
+
 
         {pendingApproval ? (
           <StatusCallout tone="warning" className="flex flex-wrap items-center gap-2 p-3">
@@ -264,6 +267,7 @@ export default async function OpportunityDetailPage({
         ) : null}
 
         <FunnelDetailBody
+          workflowActions={workflowActions}
           crmProjectCode={detail.container?.projectCode}
           projectCode={opp.projectCode}
           crossDealProjectCode={opp.crossDealProjectCode}

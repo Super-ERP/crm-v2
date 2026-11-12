@@ -1,5 +1,7 @@
 "use server"
 
+import { updateOpportunityContainerInTransaction, type OpportunityContainerUpdateInput } from "@/server/services/update-opportunity-container"
+
 import { getTableFields } from "@/lib/table-controls/registry"
 
 import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
@@ -600,10 +602,10 @@ export async function createOpportunity(
 
 export async function updateOpportunity(
   id: string,
-  input: Partial<OpportunityInput>
+  input: Partial<OpportunityInput> & { opportunityFields?: OpportunityContainerUpdateInput }
 ): Promise<ActionResult> {
   return runAction(async () => {
-  await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
+  const linkedOpportunityId = await withTenant(PERMISSIONS.OPPORTUNITY_UPDATE, async (tx, ctx) => {
     const visible = await visibleMemberIds(tx, ctx)
     const [existing] = await tx
       .select()
@@ -614,6 +616,12 @@ export async function updateOpportunity(
     if (!existing) throw new Error("Funnel not found")
     if (!canManageAllRecords(ctx) && !ownsOrManages(visible, existing.ownerMemberId))
       throw new Error("FORBIDDEN: not permitted on this Funnel")
+    // The container cascades its compatibility snapshots first; the explicit
+    // Funnel patch below must remain final when both include project nature.
+    if (input.opportunityFields && Object.keys(input.opportunityFields).length) {
+      if (!existing.opportunityId) throw new Error("Funnel has no linked Opportunity")
+      await updateOpportunityContainerInTransaction(tx, ctx, existing.opportunityId, input.opportunityFields)
+    }
     const resolvedCurrency = await tenantCurrencyForRecord(
       tx,
       ctx.tenantId,
@@ -827,7 +835,9 @@ export async function updateOpportunity(
       )
       await syncIntercompanyMirror(tx, id)
     }
+    return existing.opportunityId
   })
+  if (linkedOpportunityId && input.opportunityFields) revalidatePath(`/opportunities/${linkedOpportunityId}`)
   revalidatePath("/funnel")
   revalidatePath(`/funnel/${id}`)
   })

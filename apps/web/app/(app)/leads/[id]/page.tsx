@@ -1,5 +1,4 @@
 
-import { RecordVoidButton } from "@/components/record-void-button"
 import { requireContext } from "@/lib/server-context"
 import { PERMISSIONS } from "@/lib/permissions"
 import Link from "next/link"
@@ -139,21 +138,14 @@ export default async function LeadDetailPage({
   return (
     <>
       <PageBody>
-        {conversion ? <LeadConversionApprovalCard row={conversion} incoming={incomingConversions.rows.length > 0} /> : null}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {stageName ? (
-              <Badge variant="outline" className="font-normal">
-                {stageName}
-              </Badge>
-            ) : null}
-            {!isConverted ? <LeadDetailActions lead={lead} /> : null}
-            {ctx.can(PERMISSIONS.LEAD_UPDATE) ? <RecordVoidButton target={{ type: "lead", id }} /> : null}
-          </div>
-        </div>
-
         <LeadDetailBody
           leadId={id}
+          workflowActions={<>
+            {conversion ? <LeadConversionApprovalCard row={conversion} incoming={incomingConversions.rows.length > 0} /> : null}
+            {stageName ? <Badge variant="outline" className="font-normal">{stageName}</Badge> : null}
+            {!isConverted ? <LeadDetailActions lead={lead} /> : null}
+          </>}
+          canVoid={ctx.can(PERMISSIONS.LEAD_UPDATE)}
           status={lead.status}
           sections={sections}
           record={record}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { VoidImpactDetails } from '@/components/record-void-button'
 import type { VoidImpact } from '@/lib/record-void'
-import { previewRecordVoid,decideUniversalVoid,type UniversalVoidRow } from '../voids/actions'
+import { previewRecordVoid,decideUniversalVoid,type UniversalVoidRow } from '@/app/(app)/record-void-actions'
 import { ApprovalReviewFrame } from './approval-review-parts'
 import { formatDate } from '@/lib/format'
 
@@ -29,7 +29,7 @@ export function RecordVoidReview({row,incoming}:{row:UniversalVoidRow;incoming:b
   }catch{setError('Could not save the decision. Refresh the impact and try again.')}
   finally{setBusy(false)}
  }
- return <ApprovalReviewFrame kind="record_void" title={row.impact.target.label} status={row.status} recordHref={row.status==='approved'?'/voids':row.impact.target.href??'/voids'} recordLabel={row.status==='approved'?'Void another record':'Open record'} actions={incoming&&row.status==='pending'?<><Button variant="outline" disabled={busy||!note.trim()} onClick={()=>void decide(false)}>Reject</Button><Button variant="destructive" disabled={busy||loading||!impact||!!impact.blockers.length} onClick={()=>void decide(true)}>{busy?'Saving…':'Approve void'}</Button></>:undefined}>
+ return <ApprovalReviewFrame kind="record_void" title={row.impact.target.label} status={row.status} recordHref={row.status==='approved'?'/approvals?tab=mine':row.impact.target.href??'/approvals?tab=mine'} recordLabel={row.status==='approved'||!row.impact.target.href?'Request history':'Open record'} actions={incoming&&row.status==='pending'?<><Button variant="outline" disabled={busy||!note.trim()} onClick={()=>void decide(false)}>Reject</Button><Button variant="destructive" disabled={busy||loading||!impact||!!impact.blockers.length} onClick={()=>void decide(true)}>{busy?'Saving…':'Approve void'}</Button></>:undefined}>
  <div><p className="text-sm font-medium">Reason</p><p className="whitespace-pre-wrap text-sm">{row.reason}</p></div>
  <p className="text-sm text-muted-foreground">Requested by {row.requesterName??'Unknown'} · {formatDate(row.requestedAt)}</p>
  {row.decidedAt?<p className="text-sm">Decided by {row.deciderName??'Reviewer'} · {formatDate(row.decidedAt)}</p>:null}

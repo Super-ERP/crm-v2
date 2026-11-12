@@ -1,5 +1,5 @@
 "use client"
-import { RecordVoidButton } from "@/components/record-void-button"
+import { RecordHeaderActions } from "@/components/record-header-actions"
 
 import * as React from "react"
 import Link from "next/link"
@@ -197,7 +197,7 @@ export function SalesOrderDetailBody({
       {/* Left — sales-order details + related quick links */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="salesOrder" eyebrow="Sales order" />
+          <DetailCardHeader kind="salesOrder" eyebrow="Sales order" actions={<RecordHeaderActions canEdit={false} voidTarget={(canSubmit || canApprove) && order.status !== "void" ? { type: "sales_order", id: order.id } : undefined} />} />
           <CardContent className="grid gap-3 text-sm">
             {fields.map((d) => (
               <FieldRow key={d.label} label={d.label}>
@@ -266,9 +266,9 @@ export function SalesOrderDetailBody({
               </div>
             ) : null}
 
-            {showApprove || showResubmit || ((canSubmit || canApprove) && order.status !== "void") ? (
+            {showApprove || showResubmit ? (
               <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-                {(canSubmit || canApprove) && order.status !== "void" ? <RecordVoidButton target={{ type: "sales_order", id: order.id }} /> : null}
+                <span className="w-full text-sm font-semibold">Workflow actions</span>
                 {showApprove ? (
                   <>
                     <Button type="button" size="sm" onClick={() => setApproveOpen(true)}>

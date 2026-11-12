@@ -47,18 +47,23 @@ export function DetailCardHeader({
   kind,
   eyebrow,
   title = "Details",
+  actions,
 }: {
   kind: ObjectKind
   eyebrow: string
   title?: string
+  actions?: React.ReactNode
 }) {
   return (
-    <CardHeader className="flex flex-row items-center gap-2.5 space-y-0">
+    <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
       <ObjectTile kind={kind} />
-      <div className="grid">
+      <div className="grid min-w-0">
         <span className="text-xs text-muted-foreground">{eyebrow}</span>
         <CardTitle className="text-base">{title}</CardTitle>
       </div>
+      </div>
+      {actions}
     </CardHeader>
   )
 }
@@ -101,7 +106,7 @@ export function TabsCard({
 /** TabsCard placed as the standard two-thirds right column. */
 export function DetailTabs(props: React.ComponentProps<typeof TabsCard>) {
   return (
-    <div className="lg:col-span-2">
+    <div className="min-w-0 lg:col-span-2">
       <TabsCard {...props} />
     </div>
   )
@@ -154,7 +159,7 @@ export function FieldRow({
       )}
     >
       <span className="text-sm leading-5 text-muted-foreground">{label}</span>
-      <span className="min-w-0 text-sm leading-5">{children}</span>
+      <span className="min-w-0 text-sm leading-5 [overflow-wrap:anywhere]">{children}</span>
     </div>
   )
 }

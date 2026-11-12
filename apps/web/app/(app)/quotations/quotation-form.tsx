@@ -1,6 +1,8 @@
 "use client"
 
-import { RecordVoidButton } from "@/components/record-void-button"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { DetailCardHeader } from "@/components/detail-page"
+import { useUnsavedChanges } from "@/components/use-unsaved-changes"
 
 import { canSetQuotationPrimary } from "@/lib/quotation-primary"
 import { toDateString } from "@/lib/dates"
@@ -25,7 +27,7 @@ import { Combobox } from "@/components/ui/combobox"
 import { Badge } from "@/components/ui/badge"
 import type { ProductOption } from "@/lib/lookups"
 import { StatusBadge } from "@/components/status-badge"
-import { ObjectTile, RelatedQuickLinks } from "@/components/object-tile"
+import { RelatedQuickLinks } from "@/components/object-tile"
 import { DocumentsSection, type SectionDocument } from "@/components/documents-section"
 import { Separator } from "@/components/ui/separator"
 import { showActionError } from "@/lib/show-action-error"
@@ -186,7 +188,8 @@ export function QuotationForm({
   const isSent = quotation.status === "sent"
   const isAccepted = quotation.status === "accepted"
   // A draft is only editable when the user also holds the update permission.
-  const canEditDraft = isDraft && perms.canUpdate
+  const [editing, setEditing] = React.useState(false)
+  const canEditDraft = isDraft && perms.canUpdate && editing
   const createProjectHref = `/projects/new?funnelId=${quotation.funnelId}`
   const [busy, setBusy] = React.useState(false)
   const [approvalReason, setApprovalReason] = React.useState("")
@@ -219,7 +222,7 @@ export function QuotationForm({
   const showSetPrimary = canSetQuotationPrimary(quotation, perms.canUpdate)
   const showVoid = perms.canUpdate && !quotation.deletedAt
   const hasAnyAction =
-    showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary || showVoid
+    showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -259,6 +262,15 @@ export function QuotationForm({
             ],
     },
   })
+
+  const watchedForm = useWatch({ control: form.control })
+  const savedValues = React.useRef(form.getValues())
+  const confirmDiscard = useUnsavedChanges(editing && JSON.stringify(watchedForm) !== JSON.stringify(savedValues.current), busy)
+  function cancelEditing() {
+    if (!confirmDiscard()) return
+    form.reset(savedValues.current)
+    setEditing(false)
+  }
 
   // Product picker items + a helper that fills a line from the chosen product.
   const NO_PRODUCT = "__custom__"
@@ -481,6 +493,9 @@ export function QuotationForm({
       setBusy(false)
       return
     }
+    savedValues.current = values
+    form.reset(values)
+    setEditing(false)
     toast.success("Quotation saved")
     setBusy(false)
   }
@@ -586,6 +601,7 @@ export function QuotationForm({
       <div className="lg:order-2 lg:col-span-2">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSave)} className="grid gap-6">
+            <fieldset disabled={busy} className="contents">
             {!isDraft ? (
               <div className="rounded-lg border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
                 {isPendingApproval
@@ -1030,26 +1046,20 @@ export function QuotationForm({
               </CardContent>
             </Card>
 
-            {canEditDraft ? (
-              <div className="flex justify-end">
-                <Button type="submit" disabled={busy || billingLoading}>
-                  {busy ? "Saving…" : "Save draft"}
-                </Button>
-              </div>
-            ) : null}
+            </fieldset>
           </form>
         </Form>
       </div>
 
       <div className="grid h-fit gap-6 lg:order-1 lg:sticky lg:top-4 lg:self-start">
         <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <ObjectTile kind="quotation" />
-              <CardTitle>{quotation.quoteNumber}</CardTitle>
-            </div>
-            <StatusBadge status={quotation.status} className="capitalize" />
-          </CardHeader>
+          <DetailCardHeader kind="quotation" eyebrow="Quotation" title={quotation.quoteNumber}
+            actions={<div className="flex min-w-0 flex-wrap items-center gap-2">
+              <StatusBadge status={quotation.status} className="capitalize" />
+              <RecordHeaderActions canEdit={isDraft && perms.canUpdate} editing={editing} saving={busy || billingLoading}
+                onEdit={() => setEditing(true)} onSave={form.handleSubmit(onSave)} onCancel={cancelEditing}
+                voidTarget={showVoid ? { type: "quotation", id: quotation.id } : undefined} />
+            </div>} />
           <CardContent className="grid gap-2 text-sm">
             <Row label="Subtotal" value={formatMoney(display.subtotal, quotation.currency)} />
             <Row
@@ -1091,10 +1101,10 @@ export function QuotationForm({
           </CardContent>
         </Card>
 
-        {hasAnyAction ? (
+        {hasAnyAction && !editing ? (
         <Card>
           <CardHeader>
-            <CardTitle>Actions</CardTitle>
+            <CardTitle>Workflow actions</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2">
             {showSubmit ? (
@@ -1373,7 +1383,6 @@ export function QuotationForm({
               </div>
             ) : null}
 
-            {showVoid ? <RecordVoidButton target={{ type: "quotation", id: quotation.id }} /> : null}
           </CardContent>
         </Card>
         ) : null}

@@ -2,6 +2,8 @@
 
 import { ProjectCodeLink } from "@/components/project-code-link"
 import * as React from "react"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { useRecordEditor } from "@/components/use-record-editor"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Plus, PencilIcon, CopyPlus } from "lucide-react"
@@ -30,7 +32,6 @@ import {
   TabsCard,
   RelatedCard,
   CountTab,
-  useSaveField,
   FieldRow,
 } from "@/components/detail-page"
 import { ActivityTimeline } from "@/components/activity/activity-timeline"
@@ -58,7 +59,6 @@ import {
 } from "@/components/milestones-panel"
 import { updateOpportunity } from "../actions"
 import {
-  updateOpportunityContainer,
   type OpportunityContainerUpdateInput,
 } from "@/app/(app)/opportunities/actions"
 import { createQuotationRevision } from "@/app/(app)/quotations/actions"
@@ -105,6 +105,7 @@ const INVOICE_MONTHS = [
 type StageLite = OpportunityDetail["funnelStagesList"][number]
 
 export type FunnelDetailData = {
+  workflowActions?: React.ReactNode
   projectCode?: string | null
   crmProjectCode?: string | null
   crossDealProjectCode?: string | null
@@ -208,6 +209,15 @@ export type FunnelDetailData = {
  *  plus a tabbed panel of related lists on the right (each top-5 + search). */
 export function FunnelDetailBody(props: FunnelDetailData) {
   const router = useRouter()
+  const editor = useRecordEditor({
+    initial: { funnel: props, patch: {} as Partial<OpportunityInput>, containerPatch: {} as Partial<OpportunityContainerUpdateInput> },
+    onSave: async (draft) => {
+      if (Object.keys(draft.patch).length || Object.keys(draft.containerPatch).length) {
+        return updateOpportunity(props.funnelId, { ...draft.patch, opportunityFields: draft.containerPatch })
+      }
+      return { ok: true }
+    },
+  })
   const {
     funnelId,
     currentStageId,
@@ -260,7 +270,6 @@ export function FunnelDetailBody(props: FunnelDetailData) {
     canManageCosts,
     canCreateQuote,
     canCreateProject,
-    canEdit,
     financeEnabled,
     projectsEnabled,
     contractYears,
@@ -272,18 +281,31 @@ export function FunnelDetailBody(props: FunnelDetailData) {
     documents,
     milestones,
     canManageMilestones,
-  } = props
+  } = editor.record.funnel
+  const canEdit = props.canEdit && editor.editing && !editor.saving
 
-  // updateOpportunity is patch-style: send only the changed field.
-  const saveField = useSaveField((patch: Partial<OpportunityInput>) =>
-    updateOpportunity(funnelId, patch)
-  )
-  const saveContainerField = useSaveField(
-    (patch: Partial<OpportunityContainerUpdateInput>) =>
-      container
-        ? updateOpportunityContainer(container.id, patch)
-        : Promise.resolve({ ok: true, data: undefined })
-  )
+  function saveField(patch: Partial<OpportunityInput>) {
+    const aliases: Record<string, string> = { primaryPersonId: "personId", projectNatures: "projectNatureCodes", customFields: "customValues" }
+    const funnel = { ...editor.record.funnel }
+    for (const [key, value] of Object.entries(patch)) {
+      if (["vision", "pain", "value", "control"].includes(key)) {
+        if (funnel.container) funnel.container = { ...funnel.container, [key]: value }
+      } else Object.assign(funnel, { [aliases[key] ?? key]: value })
+    }
+    if (patch.projectNatures) {
+      funnel.projectNatureNames = props.projectNatureCatalog.filter(nature => patch.projectNatures?.includes(nature.code)).map(nature => nature.name)
+      funnel.projectNatureName = funnel.projectNatureNames.join(", ") || null
+    }
+    if (patch.accountId) funnel.accountName = props.accountOptions.find(option => option.id === patch.accountId)?.name ?? null
+    if ("primaryPersonId" in patch) funnel.personName = props.persons.find(person => person.id === patch.primaryPersonId)?.name ?? null
+    editor.stage({ funnel, patch: { ...editor.record.patch, ...patch } })
+  }
+  function saveContainerField(patch: Partial<OpportunityContainerUpdateInput>) {
+    editor.stage({
+      funnel: { ...editor.record.funnel, container: container ? { ...container, ...patch } : null },
+      containerPatch: { ...editor.record.containerPatch, ...patch },
+    })
+  }
 
   const contactOptions = React.useMemo(
     () =>
@@ -840,12 +862,12 @@ export function FunnelDetailBody(props: FunnelDetailData) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset disabled={editor.saving} className="grid min-w-0 gap-4 border-0 p-0 lg:grid-cols-3 lg:items-start">
       {/* Left column — funnel highlights + related quick links */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="funnel" eyebrow="Funnel" />
-          <CardContent className="grid gap-3 text-sm">
+          <DetailCardHeader kind="funnel" eyebrow="Funnel" actions={<RecordHeaderActions canEdit={props.canEdit} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={props.canEdit ? { type: "funnel", id: funnelId } : undefined} />} />
+          <CardContent key={editor.session} onChangeCapture={editor.markDirty} className="grid gap-3 text-sm">
             {/* Salesforce "Opportunity Information" section (SPEC §4). */}
             <h3 className="text-sm font-semibold">Opportunity Information</h3>
             <FieldRow label="Account">
@@ -1105,7 +1127,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                       )
                     })
                   )}
-                  {canEdit ? (
+                  {props.canEdit && !editor.editing ? (
                     <IntercompanyDialog
                       funnelId={funnelId}
                       isIntercompany={isIntercompany}
@@ -1120,7 +1142,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                           className="h-6 justify-self-start px-1.5 text-xs text-muted-foreground"
                         >
                           <PencilIcon className="size-3" />
-                          Edit
+                          Configure partners
                         </Button>
                       }
                     />
@@ -1305,8 +1327,9 @@ export function FunnelDetailBody(props: FunnelDetailData) {
 
       {/* Right column — stage path + tabbed related lists */}
       <div className="grid gap-4 lg:col-span-2">
+        <fieldset disabled={editor.editing || editor.saving} className="min-w-0 border-0 p-0">{props.workflowActions}</fieldset>
         <Card>
-          <CardContent className="grid gap-4 pt-6">
+          <CardContent key={editor.session} onChangeCapture={editor.markDirty} className="grid gap-4 pt-6">
             <StagePath
               currentStageId={currentStageId}
               stages={stages}
@@ -1493,7 +1516,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
               </TabsContent>
         </TabsCard>
       </div>
-    </div>
+    </fieldset>
   )
 }
 

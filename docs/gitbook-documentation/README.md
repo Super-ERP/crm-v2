@@ -39,3 +39,9 @@ New to Q-App? Start with [Quick start by role](https://jienweng.gitbook.io/q-app
 * [Permissions and approval routing](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals): why an action appears and who approves it.
 * [Troubleshooting](help-center/troubleshooting.md): what to check when an action is blocked.
 * [Product changelog](https://jienweng.gitbook.io/q-app/changelog): recent application changes.
+
+## Record page actions
+
+Record details use a common left-card header. **Edit** enables the existing fields; **Save changes** submits one draft, and **Cancel** discards it. **More (⋯) → Void** starts the reviewed correction flow. Related records, activity and documents remain in the right-hand panel. Pending Save disables fields to avoid losing later edits; validation failures keep the draft available.
+
+Workflow actions such as Convert, Send, Issue, stage changes and approval stay in a separate **Workflow actions** area and wait until detail editing finishes. Approved/sent/posted records retain their existing edit restrictions. Quotation Edit includes line items and uses the quotation form's existing validation. A Funnel save that includes parent Opportunity fields is transactional.

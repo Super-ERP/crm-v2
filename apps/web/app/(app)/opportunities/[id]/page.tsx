@@ -1,5 +1,4 @@
 
-import { RecordVoidButton } from "@/components/record-void-button"
 import { notFound } from "next/navigation"
 import { PageBody } from "@/components/page-header"
 import { requireContext } from "@/lib/server-context"
@@ -86,7 +85,6 @@ export default async function OpportunityDetailPage({
   return (
     <>
       <PageBody>
-        {canUpdate ? <div className="flex justify-end"><RecordVoidButton target={{ type: "opportunity", id }} /></div> : null}
         <OpportunityDetailBody
           detail={detail}
           activity={activity}

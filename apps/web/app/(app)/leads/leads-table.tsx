@@ -1,6 +1,5 @@
 "use client"
 
-import { RecordVoidButton } from "@/components/record-void-button"
 
 import * as React from "react"
 import Link from "next/link"
@@ -341,7 +340,6 @@ export function LeadsTable({
 
                 </DropdownMenuContent>
               </DropdownMenu>
-              {canUpdate ? <RecordVoidButton target={{ type: "lead", id: lead.id }} /> : null}
             </div>
           )
         },

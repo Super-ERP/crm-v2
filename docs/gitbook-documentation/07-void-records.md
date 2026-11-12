@@ -2,7 +2,7 @@
 
 **Void** is a reviewed correction across CRM modules. It preserves historical values, numbers, links and evidence. It does not mark a sale Lost, execute a bank refund, cancel an external tax invoice or silently change another entity's books.
 
-1. Open the record and select **Void**. The sidebar no longer has a separate **Void a record** entry.
+1. Open the record and choose **More (⋯) → Void** in its left-card header. Embedded records use the same More menu in their row or panel. There is no separate Void finder page.
 2. Review the impact and linked-record blockers, enter a reason and submit.
 3. Track the request in **Approvals → My requests**.
 4. An authorised Manager, Sales Admin or Admin reviews **Needs my review → Record voids**. Resolve downstream records first and use **Refresh impact**. Approve only when the preview has no blockers; reject with a note otherwise.

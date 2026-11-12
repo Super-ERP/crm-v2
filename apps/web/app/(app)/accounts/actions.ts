@@ -1,5 +1,7 @@
 "use server"
 
+import { normalizeAccountCode as normalizeCode } from "@/lib/account-code"
+
 import { getTableFields } from "@/lib/table-controls/registry"
 
 import { revalidatePath } from "next/cache"
@@ -294,19 +296,6 @@ function cleanAddress(a?: BillingAddress | null): BillingAddress | null {
 }
 
 /**
- * Normalize an account code: trim + uppercase, treating empty/whitespace as
- * null (the code is optional). When provided it must be 2–6 letters/digits.
- */
-function normalizeCode(code?: string | null): string | null {
-  const trimmed = (code ?? "").trim().toUpperCase()
-  if (!trimmed) return null
-  if (!/^[A-Z0-9]{2,6}$/.test(trimmed)) {
-    throw new Error("Account code must be 2–6 characters")
-  }
-  return trimmed
-}
-
-/**
  * Derive a short (3–5 char) upper-case alphanumeric base code from an account
  * name. Falls back to "ACC" when the name has no usable characters. Mirrors
  * db/backfill-project-codes.ts so manually-created and backfilled accounts get
@@ -590,7 +579,7 @@ export async function updateAccount(
         throw new Error("FORBIDDEN: not permitted on this account")
       }
 
-      const code = normalizeCode(input.code)
+      const code = normalizeCode(input.code, before.code)
       if (code) await assertCodeUnique(tx, ctx.tenantId, code, id)
       const parentAccountId = input.parentAccountId || null
       // Reject multi-level cycles (A→B→A) before persisting the new parent.

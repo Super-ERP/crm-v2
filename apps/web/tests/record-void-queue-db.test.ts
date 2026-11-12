@@ -12,7 +12,7 @@ vi.mock('@/lib/action-result', () => ({ runAction: vi.fn() }))
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/modules.server', () => ({ getEntitledModuleMap: async () => ({finance: false, projects: false, salesOrders: false}), requireEntitledModule: vi.fn() }))
 vi.mock('@/lib/access-scope', () => ({ visibleMemberIds: async () => null, canManageAllRecords: () => true, ownsOrManages: () => true }))
-import { listUniversalVoidRequests } from '@/app/(app)/voids/actions'
+import { listUniversalVoidRequests } from '@/app/(app)/record-void-actions'
 const url = process.env.TEST_DATABASE_ADMIN_URL
 ;(url ? describe : describe.skip)('record void queue on PostgreSQL', () => {
   let admin: Sql, pg: Sql, database: string

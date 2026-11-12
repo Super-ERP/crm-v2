@@ -9,7 +9,7 @@ import { humanizeDenial } from '@/lib/permissions'
 import type { ActionResult } from '@/lib/action-result'
 import { runAction } from '@/lib/action-result'
 import { VOID_ENTITY_TYPES,voidTargetSchema,type VoidTarget,type VoidImpact,type VoidEntityType } from '@/lib/record-void'
-import { voidEntityCatalog,canRequestRecordVoid } from '@/server/services/record-void-registry'
+import { voidEntityCatalog } from '@/server/services/record-void-registry'
 import { getRecordVoidImpact,requestRecordVoid,decideRecordVoid } from '@/server/services/record-void'
 import { lockRecordVoidGraph } from '@/server/services/record-void-lock'
 import { canManageAllRecords,visibleMemberIds } from '@/lib/access-scope'
@@ -70,15 +70,18 @@ export async function listUniversalVoidRequests(tab:'mine'|'incoming',queue:Appr
   return {rows:rows.filter(row=>row.id),total:Number(rows[0]?.queueTotal??0)}
  })
 }
-export async function findVoidRecords(input:{type:VoidEntityType;search:string}) {
- const value=z.object({type:z.enum(VOID_ENTITY_TYPES),search:z.string().trim().max(200)}).parse(input)
- const ctx=await requireContext(),d=voidEntityCatalog[value.type],modules=await getEntitledModuleMap()
- if(!ctx.can(d.view)||!canRequestRecordVoid(ctx,value.type)||d.module&&!modules[d.module])return []
- return runInTenant(ctx.tenantId,async tx=>{
-  const visible=await visibleMemberIds(tx,ctx)
-  const scoped=value.type==='product'||canManageAllRecords(ctx)||visible===null?sql`true`:visible.length?sql`${sql.raw(d.owner)} in (${sql.join(visible.map(id=>sql`${id}`),sql`,`)})`:sql`false`
-  const pattern=`%${value.search.replace(/[\\%_]/g,'\\$&')}%`
-  const label=sql`coalesce(to_jsonb(t)->>'quote_number',to_jsonb(t)->>'so_number',to_jsonb(t)->>'number',to_jsonb(t)->>'name',to_jsonb(t)->>'title',to_jsonb(t)->>'contract_number',to_jsonb(t)->>'supplier_name',concat_ws(' ',to_jsonb(t)->>'first_name',to_jsonb(t)->>'last_name'))`
-  return tx.execute<{id:string;label:string}>(sql`select t.id,${label} as label from ${sql.identifier(d.table)} t where t.tenant_id=${ctx.tenantId} and ${scoped} and (to_jsonb(t)->>'deleted_at') is null and coalesce(to_jsonb(t)->>'status','') <> 'void' and (${value.type}<>'finance_doc' or coalesce(to_jsonb(t)->>'status','')<>'cancelled') and ${label} ilike ${pattern} order by ${label},t.id limit 30`)
- })
+
+/** Contextual cleanup for linked legacy records that have no detail page. */
+export async function listRelatedVoidRecords(input: unknown): Promise<ActionResult<{
+ rows: import('@/lib/record-void').VoidRecord[]
+ nextCursor: import('@/server/services/related-void-records').RelatedVoidCursor | null
+}>> {
+ try {
+  const { relatedVoidReadSchema, listRelatedVoidRecords: read } = await import('@/server/services/related-void-records')
+  const parsed = relatedVoidReadSchema.parse(input)
+  const ctx = await requireContext()
+  return { ok: true, data: await runInTenant(ctx.tenantId, tx => read(tx, ctx, parsed.parent, parsed.after)) }
+ } catch (error) {
+  return { ok: false, error: humanizeDenial(normalizeActionError(error).message) }
+ }
 }

@@ -1,5 +1,5 @@
 "use client"
-import { RecordVoidButton } from "@/components/record-void-button"
+import { RecordHeaderActions } from "@/components/record-header-actions"
 
 import * as React from "react"
 import Link from "next/link"
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DetailTabs, FieldRow } from "@/components/detail-page"
+import { DetailAside, DetailCardHeader, DetailTabs, FieldRow } from "@/components/detail-page"
 import { StatusBadge } from "@/components/status-badge"
 import { ActivityTimeline } from "@/components/activity/activity-timeline"
 import { DocumentsSection } from "@/components/documents-section"
@@ -90,14 +90,12 @@ export function DocDetailBody({
   const [tab, setTab] = React.useState("documents")
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <div className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start">
       {/* Left: facts + actions */}
-      <div className="grid h-fit gap-4">
+      <DetailAside>
         <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <CardTitle className="font-mono">{doc.number}</CardTitle>
-            <StatusBadge status={doc.status} />
-          </CardHeader>
+          <DetailCardHeader kind="document" eyebrow={meta.label} title={doc.number}
+            actions={<div className="flex min-w-0 flex-wrap items-center gap-2"><StatusBadge status={doc.status} /><RecordHeaderActions canEdit={false} voidTarget={canManage && doc.status !== "cancelled" ? { type: "finance_doc", id: doc.id } : undefined} /></div>} />
           <CardContent className="grid gap-2.5">
             <FieldRow inline label="Type">
               <Badge variant="outline">{meta.label}</Badge>
@@ -179,10 +177,10 @@ export function DocDetailBody({
           </CardContent>
         </Card>
 
-        {canManage ? (
+        {canManage && (doc.status === "draft" || doc.status === "issued") ? (
           <Card>
             <CardHeader>
-              <CardTitle>Actions</CardTitle>
+              <CardTitle>Workflow actions</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-2">
               {doc.status === "draft" ? (
@@ -213,7 +211,6 @@ export function DocDetailBody({
 
                 </>
               ) : null}
-              {doc.status !== "cancelled" ? <RecordVoidButton target={{ type: "finance_doc", id: doc.id }} /> : null}
               {needsProof && doc.attachCount === 0 ? (
                 <p className="w-full text-xs text-warning">
                   Attach the payment proof (Documents tab) to enable Issue.
@@ -286,7 +283,7 @@ export function DocDetailBody({
             onOpenChange={(o) => !o && setChildKind(null)}
           />
         ) : null}
-      </div>
+      </DetailAside>
 
       {/* Right: documents + activity */}
       <DetailTabs value={tab} onValueChange={setTab}>

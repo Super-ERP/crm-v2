@@ -1,5 +1,4 @@
 
-import { RecordVoidButton } from "@/components/record-void-button"
 import Link from "next/link"
 import { listRelatedProjectCodes } from "@/app/(app)/_shared/project-code-actions"
 import { ProjectCodePanel } from "@/app/(app)/_shared/project-code-panel"
@@ -14,7 +13,6 @@ import { listAccountOptions } from "@/lib/lookups"
 import { listEntityTimeline } from "../../_shared/activity-actions"
 import { listEntityDocuments } from "../../_shared/attachment-actions"
 import { getPerson } from "../actions"
-import { PersonEditButton } from "./person-edit-button"
 import { PersonDetailBody, type PersonDetailSection } from "./person-detail-body"
 
 export default async function PersonDetailPage({
@@ -107,13 +105,6 @@ export default async function PersonDetailPage({
   return (
     <>
       <PageBody>
-        <div className="flex justify-end">
-          <div className="flex flex-wrap items-center gap-2">
-            <PersonEditButton person={person} accounts={accounts} />
-            {ctx.can(PERMISSIONS.PERSON_UPDATE) ? <RecordVoidButton target={{ type: "person", id }} /> : null}
-          </div>
-        </div>
-
         <PersonDetailBody
           projectCodes={projectCodes ? <ProjectCodePanel kind="person" recordId={id} initialPage={projectCodes} /> : null}
           projectCodeCount={projectCodes?.total}

@@ -142,7 +142,7 @@ flowchart TD
 **Revision is a separate record:** an eligible historical quotation creates a new Draft copy. The original Sent or Accepted quote does not change back to Draft when you revise it.
 
 ### `Draft`
-The sales rep drafts and edits line items, notes, and pricing.
+The sales rep selects **Edit** in the left quotation header to change Draft line items, notes and pricing. **Save changes** validates and saves the full form; **Cancel** restores its saved values. Workflow actions are unavailable while that draft is being edited.
 
 ### `Pending Approval`
 A draft must be approved before it can be sent:
