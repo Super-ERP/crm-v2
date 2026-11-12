@@ -126,32 +126,17 @@ export default async function AccountDetailPage({
   const accountInformation: AccountDetailSection["fields"] = [
     { label: "Name", value: account.name, editKey: "name" },
     { label: "Currency", value: account.currency, editKey: "currency" },
-    { label: "Code", value: account.code ?? "—" },
+    { label: "Code", value: account.code ?? "—", editKey: "code" },
     {
       label: "Type",
+      editKey: "accountType",
       value: (
         <Badge variant="outline">
           {isReseller ? "Reseller" : "Client"}
         </Badge>
       ),
     },
-    ...(isReseller
-      ? [
-          {
-            label: "End user",
-            value: endUserAccount ? (
-              <Link
-                href={`/accounts/${endUserAccount.id}`}
-                className="link"
-              >
-                {endUserAccount.name}
-              </Link>
-            ) : (
-              "—"
-            ),
-          },
-        ]
-      : []),
+    { label: "Default end user", editKey: "endUserAccountId", value: endUserAccount ? <Link href={`/accounts/${endUserAccount.id}`} className="link">{endUserAccount.name}</Link> : "—" },
     { label: "Industry", value: account.industry ?? "—", editKey: "industry" },
     { label: "Phone", value: account.phone ?? "—", editKey: "phone" },
     { label: "Account owner", value: ownerName ?? "—", editKey: "owner" },

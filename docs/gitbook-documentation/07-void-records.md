@@ -2,10 +2,10 @@
 
 **Void** is a reviewed correction across CRM modules. It preserves historical values, numbers, links and evidence. It does not mark a sale Lost, execute a bank refund, cancel an external tax invoice or silently change another entity's books.
 
-1. Open **Void a record**, or select **Void** beside the record.
+1. Open the record and select **Void**. The sidebar no longer has a separate **Void a record** entry.
 2. Review the impact and linked-record blockers, enter a reason and submit.
 3. Track the request in **Approvals → My requests**.
-4. Sales Admin reviews **Needs my review → Record voids**. Resolve downstream records first and use **Refresh impact**. Approve only when the preview has no blockers; reject with a note otherwise.
+4. An authorised Manager, Sales Admin or Admin reviews **Needs my review → Record voids**. Resolve downstream records first and use **Refresh impact**. Approve only when the preview has no blockers; reject with a note otherwise.
 
 Requests can be submitted with blockers so the reviewer can coordinate correction. Approval always recomputes the impact, requester/reviewer access and source ownership. A changed preview must be refreshed; an ownership change requires rejection and resubmission. No self-review or direct Delete/Cancel bypass is available.
 
@@ -28,7 +28,7 @@ Requests can be submitted with blockers so the reviewer can coordinate correctio
 
 Receipt/payment reversal recomputes the remaining live payments in the same transaction. A previously Settled parent reopens as Issued if those payments no longer cover it. Finance changes do not automatically toggle payment milestones or project completion.
 
-Posted financial records and invoice-history schedules require **Approve posted financial reversals** in addition to **Review record void requests (Sales Admin)**, record access and applicable module permissions. Sales Order review requires Sales Order approval; finance-document review requires Finance manage. Owner/Admin receive the new capabilities on migration. Custom Sales Admin roles receive general review; financial reversal must be intentionally granted. An eligible reviewer other than the requester must exist before submission.
+Posted financial records and invoice-history schedules require **Approve posted financial reversals** in addition to **Review record void requests (Manager / Sales Admin)**, record access and applicable module permissions. Sales Order review requires Sales Order approval; finance-document review requires Finance manage. Owner/Admin receive the new capabilities on migration. Managers receive general record-void review within their existing record access scope, without financial reversal or global access. Custom Sales Admin roles receive general review; financial reversal must be intentionally granted. An eligible reviewer other than the requester must exist before submission.
 
 Intercompany documents and relationships remain blocked until both entities reconcile them. Legacy auto-mirror origin links are insufficient to infer a safe cross-entity reversal. This flow never guesses a partner's financial intent.
 

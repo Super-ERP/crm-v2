@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { randomUUID,randomBytes } from 'node:crypto'
 import { resolve } from 'node:path'
 import postgres,{type Sql} from 'postgres'
@@ -160,6 +161,15 @@ integration('universal void with actual migrations and PostgreSQL lifecycle guar
    await tx`select set_config('app.current_tenant','another-tenant',true)`
    expect(await tx`select id from record_void_requests`).toHaveLength(0)
   })
+ })
+
+ it('backfills existing Manager review permission idempotently without financial reversal',async()=>{
+  const [manager]=await pg`insert into roles(tenant_id,name) values (${tenant},'Manager') returning id`
+  const migration=readFileSync(resolve(process.cwd(),'db/migrations/0104_manager_record_void_approval.sql'),'utf8')
+  await pg.unsafe(migration)
+  await pg.unsafe(migration)
+  const grants=await pg`select p.key from role_permissions rp join permissions p on p.id=rp.permission_id where rp.role_id=${manager.id}`
+  expect(grants.map(row=>row.key)).toEqual(['record.void.approve'])
  })
 
 })

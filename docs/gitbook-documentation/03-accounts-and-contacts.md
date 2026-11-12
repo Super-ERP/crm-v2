@@ -76,9 +76,11 @@ Opening any Account presents a comprehensive 360-degree customer view:
 
 ### Edit account details
 
-Open an account and use the **Details** tab. Click **Edit details** to change its company information, Client/Reseller type, optional default end user, owner, parent, currency, contact details and billing address directly in the tab. The Accounts list’s **Edit** action opens this editor too. Creating an account still uses the existing creation dialog.
+Account details open in **view mode**: values are read-only, and linked records open their corresponding pages.
 
-Use **Save changes** to save the form together or **Cancel** to discard it. Validation errors keep your changes available for correction. Switching tabs, following a normal page link, or reloading/closing warns about unsaved changes; browsers supporting the Navigation API also guard in-app back/forward navigation. Save/Cancel are disabled while a save is running. Changing the account owner also transfers related records under the existing ownership rules.
+Account details appear once, in the left-hand card. Click **Edit** in that card to enable pencil controls in the existing field positions. The right side contains related records, activity and documents; there is no duplicate Details tab. Click a field to change it. **Type** lets you switch between **Client** and **Reseller**; switching to Client clears the optional default end-user link. Code, owner, parent, currency, contact details and billing address remain editable. The layout stays the same; there is no replacement edit form.
+
+Changes remain in one local draft until **Save changes**. **Cancel** discards the draft. Validation failures keep edit mode and the draft available for correction. Leaving with unsaved changes prompts before discarding; saving disables the controls. Changing the owner transfers related contacts and sales records under the existing ownership rules. The Accounts list’s **Edit** action opens this same mode; the record page retains **Void**, without repeated Void buttons on list rows. Creating an account still uses the creation dialog.
 
 Editing requires account-update permission plus ownership or authorized management access. Shared reseller visibility alone does not allow editing. System and historical values remain read-only.
 

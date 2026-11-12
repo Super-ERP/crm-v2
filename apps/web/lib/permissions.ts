@@ -129,6 +129,7 @@ const REP_BASE: PermissionKey[] = [
 ]
 
 const MANAGER: PermissionKey[] = [
+  PERMISSIONS.RECORD_VOID_APPROVE,
   ...REP_BASE,
   PERMISSIONS.LEAD_CONVERT_APPROVE,
   PERMISSIONS.RECORDS_VIEW_TEAM,
@@ -215,7 +216,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
       { key: PERMISSIONS.OPPORTUNITY_CREATE, label: "Create pipelines" },
       { key: PERMISSIONS.OPPORTUNITY_UPDATE, label: "Edit pipelines" },
       { key: PERMISSIONS.OPPORTUNITY_DELETE, label: "Delete pipelines" },
-      { key: PERMISSIONS.RECORD_VOID_APPROVE, label: "Review record void requests (Sales Admin)" },
+      { key: PERMISSIONS.RECORD_VOID_APPROVE, label: "Review record void requests (Manager / Sales Admin)" },
       { key: PERMISSIONS.FINANCE_REVERSE, label: "Approve posted financial reversals" },
       { key: PERMISSIONS.FUNNEL_VOID_APPROVE, label: "Approve funnel void requests (Sales Admin)" },
       { key: PERMISSIONS.STAGE_ADVANCE, label: "Advance stages" },
