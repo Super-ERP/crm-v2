@@ -1,6 +1,5 @@
 "use client"
 
-import { RecordVoidButton } from "@/components/record-void-button"
 
 import * as React from "react"
 import Link from "next/link"
@@ -78,7 +77,6 @@ function RowActions({
 
         </DropdownMenuContent>
       </DropdownMenu>
-      {canUpdate ? <RecordVoidButton target={{ type: "product", id: product.id }} /> : null}
 
     </div>
   )

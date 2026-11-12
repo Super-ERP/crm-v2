@@ -1,6 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { useRecordEditor } from "@/components/use-record-editor"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TabsContent, TabsList } from "@/components/ui/tabs"
@@ -13,24 +17,27 @@ import {
   RelatedCard,
   CountTab,
   FieldRow,
-  useSaveField,
 } from "@/components/detail-page"
-import { InlineValue } from "@/components/inline-value"
+import type { InlineValue } from "@/components/inline-value"
+import { PROJECT_STATUS_OPTIONS } from "@/lib/status-meta"
 import { formatDate } from "@/lib/format"
 import { ProjectSalesOrders } from "@/app/(app)/sales-orders/project-sales-orders"
-import { updateProject, type ProjectUpdateInput } from "../actions"
+import { updateProject } from "../actions"
 import { MilestonesPanel } from "./milestones-panel"
 import { BillingPanel } from "./billing-panel"
 import type { ProjectBillingSummary } from "@/app/(app)/billing/actions"
 
 /** Raw scalar fields the page marks inline-editable (Salesforce-style). */
-export type ProjectEditKey = "name" | "startDate"
+type ProjectRecord = { name: string; startDate: string | null; value: string | null; status: string; quotationId: string | null; notes: string | null }
+
+export type ProjectEditKey = "name" | "startDate" | "value" | "status" | "quotationId"
 
 export type ProjectDetailData = {
   projectId: string
   fields: { label: string; value: React.ReactNode; editKey?: ProjectEditKey }[]
   /** Raw values behind the inline-editable fields (updateProject is patch-style). */
-  record: { name: string; startDate: string | null }
+  record: ProjectRecord
+  quotationOptions: { id: string; quoteNumber: string }[]
   notes: string | null
   milestones: React.ComponentProps<typeof MilestonesPanel>["milestones"]
   projectValue: string | null
@@ -52,8 +59,9 @@ export type ProjectDetailData = {
 export function ProjectDetailBody({
   projectId,
   fields,
-  record,
-  notes,
+  record: initialRecord,
+  notes: initialNotes,
+  quotationOptions,
   milestones,
   projectValue,
   currency,
@@ -69,27 +77,40 @@ export function ProjectDetailBody({
   const [tab, setTab] = React.useState("milestones")
   const revalidate = `/projects/${projectId}`
 
-  // updateProject is patch-style: send only the changed field.
-  const saveField = useSaveField((patch: ProjectUpdateInput) =>
-    updateProject(projectId, patch)
-  )
+  const editor = useRecordEditor<ProjectRecord>({ initial: { ...initialRecord, notes: initialNotes }, onSave: (_draft, changes) => updateProject(projectId, changes) })
+  const record = editor.record
+  const notes = record.notes
+  const saveField = editor.stage
 
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset key={editor.session} disabled={editor.saving} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onInputCapture={editor.markDirty}>
       {/* Left column — project details */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="project" eyebrow="Project" />
+          <DetailCardHeader kind="project" eyebrow="Project" actions={<RecordHeaderActions canEdit={canManage} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canManage ? { type: "project", id: projectId } : undefined} />} />
+          {editor.error ? <p role="alert" className="px-6 text-sm text-destructive">{editor.error}</p> : null}
           <CardContent className="grid gap-3 text-sm">
             {fields.map((d) => {
-              const key = canManage ? d.editKey : undefined
+              const key = canManage && editor.editing ? d.editKey : undefined
               return (
                 <FieldRow key={d.label} label={d.label}>
                   {!key ? (
                     d.value
+                  ) : key === "status" ? (
+                    <select aria-label="Status" className="h-9 rounded-md border bg-background px-3" value={record.status} onChange={event => saveField({ status: event.target.value })}>
+                      {PROJECT_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    </select>
+                  ) : key === "quotationId" ? (
+                    <select aria-label="Quotation" className="h-9 rounded-md border bg-background px-3" value={record.quotationId ?? ""} onChange={event => saveField({ quotationId: event.target.value || null })}>
+                      <option value="">No quotation</option>
+                      {record.quotationId && !quotationOptions.some(option => option.id === record.quotationId) ? <option value={record.quotationId}>Current quotation</option> : null}
+                      {quotationOptions.map(option => <option key={option.id} value={option.id}>{option.quoteNumber}</option>)}
+                    </select>
+                  ) : key === "value" ? (
+                    <DraftValue value={record.value ?? ""} display={record.value ?? "—"} type="number" title="Click to edit value" onSave={next => saveField({ value: next || null })} />
                   ) : key === "startDate" ? (
-                    <InlineValue
+                    <DraftValue
                       value={record.startDate ?? ""}
                       display={formatDate(record.startDate)}
                       formatDraft={(v) => (v ? formatDate(v) : "—")}
@@ -98,12 +119,11 @@ export function ProjectDetailBody({
                       onSave={(next) => saveField({ startDate: next || null })}
                     />
                   ) : (
-                    <InlineValue
+                    <DraftValue
                       value={record.name}
                       display={record.name}
                       title="Click to edit name"
                       onSave={(next) => {
-                        if (!next.trim()) return
                         return saveField({ name: next })
                       }}
                     />
@@ -130,8 +150,8 @@ export function ProjectDetailBody({
               <CardTitle className="text-base">Notes</CardTitle>
             </CardHeader>
             <CardContent>
-              {canManage ? (
-                <InlineValue
+              {canManage && editor.editing ? (
+                <DraftValue
                   value={notes ?? ""}
                   multiline
                   display={
@@ -221,6 +241,12 @@ export function ProjectDetailBody({
           />
         </TabsContent>
       </DetailTabs>
-    </div>
+    </fieldset>
   )
+}
+
+/** Controlled scalar input: all edits belong to the record's Save/Cancel draft. */
+function DraftValue({ value, type = "text", multiline, title, onSave }: React.ComponentProps<typeof InlineValue>) {
+  const props = { value, "aria-label": title?.replace(/^Click to (edit|change) /, ""), onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { void onSave(event.target.value) } }
+  return multiline ? <Textarea {...props} rows={3} /> : <Input {...props} type={type} step={type === "number" ? "0.01" : undefined} />
 }

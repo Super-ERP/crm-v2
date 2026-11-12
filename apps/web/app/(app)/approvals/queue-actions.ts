@@ -1,6 +1,6 @@
 "use server"
 
-import { listUniversalVoidRequests } from '../voids/actions'
+import { listUniversalVoidRequests } from '@/app/(app)/record-void-actions'
 import { listFunnelVoidApprovals } from './void-actions'
 import { listIncomingApprovals,listMyApprovals } from './actions'
 import { listQuotationApprovals } from './quotation-actions'

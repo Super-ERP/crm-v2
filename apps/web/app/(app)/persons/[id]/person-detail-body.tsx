@@ -1,6 +1,11 @@
 "use client"
 
 import * as React from "react"
+import { useRecordEditor } from "@/components/use-record-editor"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { RecordPhoneField } from "@/components/record-phone-field"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -25,10 +30,9 @@ import {
   FieldRow,
   FieldSection,
   RelatedCard,
-  useSaveField,
 } from "@/components/detail-page"
-import { InlinePhoneValue, PhoneNumberDisplay } from "@/components/phone-input"
-import { InlineValue } from "@/components/inline-value"
+import { PhoneNumberDisplay } from "@/components/phone-input"
+import type { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
 import { StageBadge } from "@/app/(app)/funnel/stage-badge"
 import {
@@ -80,7 +84,7 @@ export function PersonDetailBody({
   personId,
   projectCodes,projectCodeCount,
   sections,
-  record,
+  record: initialRecord,
   canEdit,
   accounts,
   funnels,
@@ -92,9 +96,9 @@ export function PersonDetailBody({
   const revalidate = `/persons/${personId}`
 
 
-  const saveField = useSaveField((patch: Partial<PersonInput>) =>
-    updatePerson(personId, { ...record, ...patch })
-  )
+  const editor = useRecordEditor<PersonInput>({ initial: initialRecord, onSave: draft => updatePerson(personId, draft) })
+  const record = editor.record
+  const saveField = editor.stage
 
   const accountOptions = React.useMemo(
     () => accounts.map((a) => ({ value: a.id, label: a.name })),
@@ -166,16 +170,17 @@ export function PersonDetailBody({
   )
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset key={editor.session} disabled={editor.saving} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onInputCapture={editor.markDirty}>
       {/* Left column — contact highlights + related quick links */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="contact" eyebrow="Contact" />
+          <DetailCardHeader kind="contact" eyebrow="Contact" actions={<RecordHeaderActions canEdit={canEdit} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canEdit ? { type: "person", id: personId } : undefined} />} />
+          {editor.error ? <p role="alert" className="px-6 text-sm text-destructive">{editor.error}</p> : null}
           <CardContent className="grid gap-5 text-sm">
             {sections.map((section) => (
               <FieldSection key={section.title} title={section.title}>
                 {section.fields.map((d) => {
-                  const key = canEdit ? d.editKey : undefined
+                  const key = canEdit && editor.editing ? d.editKey : undefined
                   return (
                     <FieldRow key={d.label} label={d.label}>
                       {!key ? (
@@ -200,20 +205,18 @@ export function PersonDetailBody({
                           title="Click to change account"
                         />
                       ) : key === "phone" ? (
-                        <InlinePhoneValue
+                        <RecordPhoneField
                           value={record.phone}
-                          title={`Click to edit ${d.label.toLowerCase()}`}
-                          onSave={(next) => saveField({ phone: next || null })}
+                          onChange={(next) => saveField({ phone: next || null })}
                         />
                       ) : (
-                        <InlineValue
+                        <DraftValue
                           value={record[key] ?? ""}
                           display={record[key] || "—"}
                           title={`Click to edit ${d.label.toLowerCase()}`}
                           onSave={(next) => {
-                            // First name is required — ignore an emptied draft.
+                            // Keep invalid drafts so Save can surface server validation.
                             if (key === "firstName") {
-                              if (!next.trim()) return
                               return saveField({ firstName: next })
                             }
                             return saveField({ [key]: next || null })
@@ -300,6 +303,12 @@ export function PersonDetailBody({
           />
         </TabsContent>
       </DetailTabs>
-    </div>
+    </fieldset>
   )
+}
+
+/** Controlled scalar input: all edits belong to the record's Save/Cancel draft. */
+function DraftValue({ value, type = "text", multiline, title, onSave }: React.ComponentProps<typeof InlineValue>) {
+  const props = { value, "aria-label": title?.replace(/^Click to (edit|change) /, ""), onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { void onSave(event.target.value) } }
+  return multiline ? <Textarea {...props} rows={3} /> : <Input {...props} type={type} step={type === "number" ? "0.01" : undefined} />
 }

@@ -17,6 +17,7 @@ export const OPTIONAL_TABLE_FIELDS: Record<string, readonly OptionalTableField[]
   funnel: [owner, field('stageName', 'Funnel stage', 'enum'), currency, ...dates],
   quotations: [owner, ...funnel, field('quoteDate', 'Quotation date', 'date', true), currency, ...dates],
   products: [currency, ...dates],
+  'product-usage': [field('createdAt', 'Created date', 'date')],
   projects: [owner, ...funnel, field('quoteNumber', 'Quotation number'), field('startDate', 'Start date', 'date', true), currency, ...dates],
   'payment-milestones': [field('description', 'Description'), field('dueDate', 'Payment due date', 'date', true), ...funnel, field('quotationStatus', 'Quotation → Status', 'enum'), field('customerName', 'Funnel → Customer', 'relation'), owner, field('projectName', 'Delivery project', 'relation'), currency, ...dates],
   'sales-orders': [field('projectCode', 'Project code'), field('funnelName', 'Funnel', 'relation'), ...funnel, field('quoteNumber', 'Quotation number'), field('reviewedByName', 'Reviewed by', 'relation'), field('reviewedAt', 'Reviewed date', 'date'), field('documentKind', 'Document kind'), field('paymentTerm', 'Payment terms'), ...dates],

@@ -2,6 +2,10 @@
 
 import { ProjectCodeLink, ProjectCodeSummary } from "@/components/project-code-link"
 import * as React from "react"
+import { useRecordEditor } from "@/components/use-record-editor"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -24,11 +28,10 @@ import {
   DetailTabs,
   RelatedCard,
   CountTab,
-  useSaveField,
   FieldRow,
 } from "@/components/detail-page"
 import { DocumentsSection } from "@/components/documents-section"
-import { InlineValue } from "@/components/inline-value"
+import type { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
 import { OpportunityAnalysis } from "@/components/opportunity-analysis"
 import { ActivityTimeline } from "@/components/activity/activity-timeline"
@@ -78,12 +81,9 @@ export function OpportunityDetailBody({
   const [tab, setTab] = React.useState(
     initialTab && TABS.includes(initialTab) ? initialTab : "funnels"
   )
-  const o = detail.opportunity
-
-  // updateOpportunityContainer is patch-style: send only the changed field.
-  const saveField = useSaveField((patch: OpportunityContainerUpdateInput) =>
-    updateOpportunityContainer(o.id, patch)
-  )
+  const editor = useRecordEditor<OpportunityContainerDetail["opportunity"]>({ initial: detail.opportunity, onSave: (_draft, changes) => updateOpportunityContainer(detail.opportunity.id, changes) })
+  const o = editor.record
+  const saveField = async (patch: OpportunityContainerUpdateInput) => { editor.stage(patch) }
 
   const revalidate = `/opportunities/${o.id}`
 
@@ -232,11 +232,12 @@ export function OpportunityDetailBody({
   )
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset key={editor.session} disabled={editor.saving} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onInputCapture={editor.markDirty}>
       {/* Left column — opportunity highlights */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="opportunity" eyebrow="Opportunity" />
+          <DetailCardHeader kind="opportunity" eyebrow="Opportunity" actions={<RecordHeaderActions canEdit={canEdit} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canEdit ? { type: "opportunity", id: detail.opportunity.id } : undefined} />} />
+          {editor.error ? <p role="alert" className="px-6 text-sm text-destructive">{editor.error}</p> : null}
           <CardContent className="grid gap-3 text-sm">
             <FieldRow inline label="Name">
               <span className="font-medium">{o.name}</span>
@@ -248,7 +249,7 @@ export function OpportunityDetailBody({
             </FieldRow>
             <FieldRow inline label="Account owner">{detail.ownerName ?? "—"}</FieldRow>
             <FieldRow inline label="Opportunity Nature">
-              {canEdit ? (
+              {canEdit && editor.editing ? (
                 projectNatures.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
                     No project natures configured. Add them in Settings.
@@ -282,10 +283,10 @@ export function OpportunityDetailBody({
               )}
             </FieldRow>
             <FieldRow inline label="Opportunity Owner Contact">
-              {canEdit ? (
+              {canEdit && editor.editing ? (
                 <InlineCombobox
                   value={o.ownerContactId ?? ""}
-                  display={detail.ownerContact?.name ?? "—"}
+                  display={contactOptions.find(option => option.value === o.ownerContactId)?.label ?? "—"}
                   options={contactOptions}
                   onSave={(next) => saveField({ ownerContactId: next || null })}
                   placeholder="Optional"
@@ -296,13 +297,13 @@ export function OpportunityDetailBody({
               ) : (
                 detail.ownerContact?.name ?? "—"
               )}
-              {detail.ownerContact?.designation ? (
+              {detail.ownerContact?.designation && o.ownerContactId === detail.opportunity.ownerContactId ? (
                 <span className="text-muted-foreground"> · {detail.ownerContact.designation}</span>
               ) : null}
             </FieldRow>
             <FieldRow inline label="Opportunity Owner Budget Limit">
-              {canEdit ? (
-                <InlineValue
+              {canEdit && editor.editing ? (
+                <DraftValue
                   value={o.ownerBudgetLimit ?? ""}
                   display={formatMoney(o.ownerBudgetLimit, o.currency)}
                   formatDraft={(v) => formatMoney(v || "0", o.currency)}
@@ -418,7 +419,7 @@ export function OpportunityDetailBody({
                   opportunity={o}
                   contact={detail.powerSponsorContact}
                   contactOptions={contactOptions}
-                  canEdit={canEdit}
+                  canEdit={canEdit && editor.editing}
                   onSave={saveField}
                 />
               </TabsContent>
@@ -430,7 +431,7 @@ export function OpportunityDetailBody({
                       <div className="text-xs font-medium text-muted-foreground">
                         Renewal Opportunity?
                       </div>
-                      {canEdit ? (
+                      {canEdit && editor.editing ? (
                         <Switch
                           checked={o.isRenewal}
                           onCheckedChange={(v) => saveField({ isRenewal: v })}
@@ -443,7 +444,7 @@ export function OpportunityDetailBody({
                       <div className="text-xs font-medium text-muted-foreground">
                         Show Dashboards
                       </div>
-                      {canEdit ? (
+                      {canEdit && editor.editing ? (
                         <Switch
                           checked={o.showDashboards}
                           onCheckedChange={(v) => saveField({ showDashboards: v })}
@@ -457,8 +458,8 @@ export function OpportunityDetailBody({
                         Assigned Presales
                       </div>
                       <div className="text-sm">
-                        {canEdit ? (
-                          <InlineValue
+                        {canEdit && editor.editing ? (
+                          <DraftValue
                             value={o.assignedPresales ?? ""}
                             display={o.assignedPresales || "—"}
                             title="Click to edit assigned presales"
@@ -472,8 +473,8 @@ export function OpportunityDetailBody({
                     <div>
                       <div className="text-xs font-medium text-muted-foreground">Competitor</div>
                       <div className="text-sm">
-                        {canEdit ? (
-                          <InlineValue
+                        {canEdit && editor.editing ? (
+                          <DraftValue
                             value={o.competitor ?? ""}
                             display={o.competitor || "—"}
                             title="Click to edit competitor"
@@ -497,6 +498,12 @@ export function OpportunityDetailBody({
                 />
               </TabsContent>
       </DetailTabs>
-    </div>
+    </fieldset>
   )
+}
+
+/** Controlled scalar input: all edits belong to the record's Save/Cancel draft. */
+function DraftValue({ value, type = "text", multiline, title, onSave }: React.ComponentProps<typeof InlineValue>) {
+  const props = { value, "aria-label": title?.replace(/^Click to (edit|change) /, ""), onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { void onSave(event.target.value) } }
+  return multiline ? <Textarea {...props} rows={3} /> : <Input {...props} type={type} step={type === "number" ? "0.01" : undefined} />
 }

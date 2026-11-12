@@ -5,7 +5,7 @@ import type { LeadConversionApprovalRow } from '@/app/(app)/approvals/lead-conve
 
 import type { FunnelVoidApprovalRow } from '@/app/(app)/approvals/void-actions'
 
-import type { UniversalVoidRow } from '@/app/(app)/voids/actions'
+import type { UniversalVoidRow } from '@/app/(app)/record-void-actions'
 
 export const APPROVAL_KINDS = ['lead','quotation','stage','void','record_void'] as const
 export type ApprovalKind = typeof APPROVAL_KINDS[number]

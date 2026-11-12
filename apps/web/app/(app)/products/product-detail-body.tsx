@@ -1,6 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { useRecordEditor } from "@/components/use-record-editor"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -23,18 +27,14 @@ import {
   RelatedCard,
   CountTab,
   FieldRow,
-  FieldSection,
-  useSaveField,
 } from "@/components/detail-page"
-import { InlineValue } from "@/components/inline-value"
+import type { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
 import { formatMoney } from "@/lib/format"
-import { cn } from "@/lib/utils"
 import type { ProductCategory } from "@/app/(app)/settings/constants"
 import {
   listProductUsagePage,
   updateProduct,
-  type ProductInput,
   type ProductRow,
   type ProductUsageRow,
   type ProductDealRow,
@@ -48,8 +48,8 @@ import {
  * and the quotations this product appears in (top 5, searchable).
  */
 export function ProductDetailBody({
-  product,
-  codeName,
+  product: initialProduct,
+  codeName: initialCodeName,
   usage,
   deals,
   productCodes,
@@ -64,13 +64,12 @@ export function ProductDetailBody({
   /** Gates every inline editor (PRODUCT_UPDATE, resolved server-side). */
   canEdit: boolean
 }) {
-  const loadUsage = React.useCallback((query:import("@/lib/table-pagination").ServerTableQuery)=>listProductUsagePage(product.id,query),[product.id])
-  const [tab, setTab] = React.useState("details")
-
-  // updateProduct is full-replace; the product row carries every input field.
-  const saveField = useSaveField((patch: Partial<ProductInput>) =>
-    updateProduct(product.id, { ...product, ...patch })
-  )
+  const editor = useRecordEditor<ProductRow>({ initial: initialProduct, onSave: draft => updateProduct(initialProduct.id, draft) })
+  const product = editor.record
+  const codeName = productCodes.find(category => category.code === product.productCode)?.name ?? initialCodeName
+  const saveField = editor.stage
+  const loadUsage = React.useCallback((query:import("@/lib/table-pagination").ServerTableQuery)=>listProductUsagePage(initialProduct.id,query),[initialProduct.id])
+  const [tab, setTab] = React.useState("usage")
 
   const codeOptions = React.useMemo(
     () => productCodes.map((c) => ({ value: c.code, label: `${c.code} · ${c.name}` })),
@@ -184,15 +183,16 @@ export function ProductDetailBody({
   )
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset key={editor.session} disabled={editor.saving} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onInputCapture={editor.markDirty}>
       {/* Left column — the price + key facts, in plain language */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="product" eyebrow="Product" title="Price" />
+          <DetailCardHeader kind="product" eyebrow="Product" title="Details" actions={<RecordHeaderActions canEdit={canEdit} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canEdit ? { type: "product", id: initialProduct.id } : undefined} />} />
+          {editor.error ? <p role="alert" className="px-6 text-sm text-destructive">{editor.error}</p> : null}
           <CardContent className="grid gap-3">
             <div>
-              {canEdit ? (
-                <InlineValue
+              {canEdit && editor.editing ? (
+                <DraftValue
                   value={product.standardPrice}
                   display={
                     <span className="text-2xl font-semibold tabular-nums">
@@ -206,7 +206,7 @@ export function ProductDetailBody({
                   )}
                   type="number"
                   title="Click to edit standard price"
-                  onSave={(next) => saveField({ standardPrice: next || null })}
+                  onSave={(next) => saveField({ standardPrice: next })}
                 />
               ) : (
                 <div className="text-2xl font-semibold tabular-nums">
@@ -219,7 +219,7 @@ export function ProductDetailBody({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {canEdit ? (
+              {canEdit && editor.editing ? (
                 <Switch
                   checked={product.isActive}
                   onCheckedChange={(v) => saveField({ isActive: v })}
@@ -240,8 +240,15 @@ export function ProductDetailBody({
             <CardTitle className="text-base">At a glance</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
+            <FieldRow label="Product name">
+              {canEdit && editor.editing ? <DraftValue value={product.name} display={product.name} title="Click to edit name" onSave={next => saveField({ name: next })} /> : product.name}
+            </FieldRow>
+            <FieldRow label="Currency">{product.currency}</FieldRow>
+            <FieldRow label="Description">
+              {canEdit && editor.editing ? <DraftValue value={product.description ?? ""} display={product.description || "—"} multiline title="Click to edit description" onSave={next => saveField({ description: next || null })} /> : <span className="whitespace-pre-wrap text-muted-foreground">{product.description || "No description added."}</span>}
+            </FieldRow>
             <FieldRow label="Product line">
-              {canEdit ? (
+              {canEdit && editor.editing ? (
                 <InlineCombobox
                   value={product.productCode ?? ""}
                   display={
@@ -276,7 +283,7 @@ export function ProductDetailBody({
               )}
             </FieldRow>
             <FieldRow label="Subcategory">
-              {canEdit ? (
+              {canEdit && editor.editing ? (
                 <InlineCombobox
                   value={product.subcategory ?? ""}
                   display={
@@ -311,8 +318,8 @@ export function ProductDetailBody({
               )}
             </FieldRow>
             <FieldRow label="Unit (UOM)">
-              {canEdit ? (
-                <InlineValue
+              {canEdit && editor.editing ? (
+                <DraftValue
                   value={product.uom ?? ""}
                   display={product.uom || "—"}
                   title="Click to edit unit"
@@ -346,7 +353,6 @@ export function ProductDetailBody({
       {/* Right column — tabbed full details */}
       <DetailTabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <CountTab value="details">Details</CountTab>
           <CountTab value="usage" count={usage.length}>
             Used in quotes
           </CountTab>
@@ -354,114 +360,6 @@ export function ProductDetailBody({
             On opportunities
           </CountTab>
         </TabsList>
-
-        <TabsContent value="details" className="mt-4 grid gap-6">
-          {/* Salesforce "Product Information" section — field order mirrors
-              the reference: Name / Category / Subcategory · UOM / Currency /
-              Active. */}
-          <FieldSection title="Product Information">
-            <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-              <FieldRow label="Product name">
-                {canEdit ? (
-                  <InlineValue
-                    value={product.name}
-                    display={product.name}
-                    title="Click to edit name"
-                    onSave={(next) => {
-                      if (!next.trim()) return
-                      return saveField({ name: next })
-                    }}
-                  />
-                ) : (
-                  product.name
-                )}
-              </FieldRow>
-              <FieldRow label="Unit (UOM)">
-                {canEdit ? (
-                  <InlineValue
-                    value={product.uom ?? ""}
-                    display={product.uom || "—"}
-                    title="Click to edit unit"
-                    onSave={(next) => saveField({ uom: next || null })}
-                  />
-                ) : (
-                  (product.uom ?? "—")
-                )}
-              </FieldRow>
-              <FieldRow label="Product category">
-                {product.productCode ? (
-                  <span>
-                    <span className="font-mono text-xs">
-                      {product.productCode}
-                    </span>
-                    {codeName ? (
-                      <span className="text-muted-foreground">
-                        {" "}· {codeName}
-                      </span>
-                    ) : null}
-                  </span>
-                ) : (
-                  "—"
-                )}
-              </FieldRow>
-              <FieldRow label="Currency">{product.currency}</FieldRow>
-              <FieldRow label="Product subcategory">
-                {canEdit ? (
-                  <InlineCombobox
-                    value={product.subcategory ?? ""}
-                    display={product.subcategory || "—"}
-                    options={subcategoryOptions}
-                    searchPlaceholder="Search subcategories…"
-                    emptyMessage="No subcategories configured for this category."
-                    title="Click to change subcategory"
-                    onSave={(next) => saveField({ subcategory: next || null })}
-                  />
-                ) : (
-                  (product.subcategory ?? "—")
-                )}
-              </FieldRow>
-              <FieldRow label="Active">
-                {product.isActive ? (
-                  <Badge variant="secondary">Active</Badge>
-                ) : (
-                  <Badge variant="outline">Inactive</Badge>
-                )}
-              </FieldRow>
-              <FieldRow label="Standard price">
-                {formatMoney(product.standardPrice, product.currency)}
-              </FieldRow>
-            </div>
-          </FieldSection>
-
-          <FieldSection title="Description Information">
-            {canEdit ? (
-              <InlineValue
-                value={product.description ?? ""}
-                multiline
-                display={
-                  <span
-                    className={cn(
-                      "text-sm whitespace-pre-wrap text-muted-foreground",
-                      !product.description && "italic"
-                    )}
-                  >
-                    {product.description || "No description added."}
-                  </span>
-                }
-                title="Click to edit description"
-                onSave={(next) => saveField({ description: next || null })}
-              />
-            ) : product.description ? (
-              <p className="text-sm whitespace-pre-wrap text-muted-foreground">
-                {product.description}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No description added.
-              </p>
-            )}
-          </FieldSection>
-        </TabsContent>
 
         <TabsContent value="usage" className="mt-4">
           <DataTable
@@ -488,6 +386,12 @@ export function ProductDetailBody({
           />
         </TabsContent>
       </DetailTabs>
-    </div>
+    </fieldset>
   )
+}
+
+/** Controlled scalar input: all edits belong to the record's Save/Cancel draft. */
+function DraftValue({ value, type = "text", multiline, title, onSave }: React.ComponentProps<typeof InlineValue>) {
+  const props = { value, "aria-label": title?.replace(/^Click to (edit|change) /, ""), onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { void onSave(event.target.value) } }
+  return multiline ? <Textarea {...props} rows={3} /> : <Input {...props} type={type} step={type === "number" ? "0.01" : undefined} />
 }

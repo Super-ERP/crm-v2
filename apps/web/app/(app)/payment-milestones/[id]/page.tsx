@@ -1,5 +1,4 @@
 
-import { RecordVoidButton } from "@/components/record-void-button"
 import { notFound } from "next/navigation"
 
 import { PageBody } from "@/components/page-header"
@@ -28,11 +27,11 @@ export default async function PaymentMilestoneDetailPage({
   return (
     <>
       <PageBody>
-        {ctx.can(PERMISSIONS.PAYMENT_MILESTONE_MANAGE) ? <div className="flex justify-end"><RecordVoidButton target={{ type: "payment_milestone", id }} /></div> : null}
 
         <PaymentMilestoneDetailBody
           milestone={milestone}
           canManage={canManage}
+          canVoid={ctx.can(PERMISSIONS.PAYMENT_MILESTONE_MANAGE)}
         />
       </PageBody>
     </>

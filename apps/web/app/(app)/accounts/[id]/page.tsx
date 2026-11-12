@@ -1,5 +1,4 @@
 
-import { RecordVoidButton } from "@/components/record-void-button"
 import Link from "next/link"
 import { listRelatedProjectCodes } from "@/app/(app)/_shared/project-code-actions"
 import { ProjectCodePanel } from "@/app/(app)/_shared/project-code-panel"
@@ -215,7 +214,6 @@ export default async function AccountDetailPage({
   return (
     <>
       <PageBody>
-        {data.canEdit && ctx.can(PERMISSIONS.ACCOUNT_UPDATE) ? <div className="flex justify-end"><RecordVoidButton target={{ type: "account", id }} /></div> : null}
         <AccountDetailBody
           projectCodes={projectCodes ? <ProjectCodePanel kind="account" recordId={id} initialPage={projectCodes} /> : null}
           projectCodeCount={projectCodes?.total}
@@ -225,6 +223,7 @@ export default async function AccountDetailPage({
           sections={sections}
           record={record}
           canEdit={data.canEdit}
+          canVoidRelated={ctx.can(PERMISSIONS.OPPORTUNITY_VIEW) && ctx.can(PERMISSIONS.OPPORTUNITY_UPDATE)}
           industries={industries}
           parentOptions={parentOptions}
           currencies={currencies}

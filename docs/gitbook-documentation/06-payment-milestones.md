@@ -142,4 +142,4 @@ After billing, the supported manual status transition is **Pending invoicing →
 
 ## Void instead of deleting history
 
-Select **Void** on a milestone row or its detail page. The record and invoice snapshot are retained after approval and stop consuming active project/quotation allocation. Invoiced or legacy-invoice milestones require an authorised financial reversal reviewer, and any linked live finance documents must be resolved first. Voiding a schedule does not cancel an external invoice or refund money. Splitting a schedule preserves archived rows. See [Void records](07-void-records.md).
+Select **More (⋯) → Void** on a milestone row or in its detail header. The record and invoice snapshot are retained after approval and stop consuming active project/quotation allocation. Invoiced or legacy-invoice milestones require an authorised financial reversal reviewer, and any linked live finance documents must be resolved first. Voiding a schedule does not cancel an external invoice or refund money. Splitting a schedule preserves archived rows. See [Void records](07-void-records.md).

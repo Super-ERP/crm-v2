@@ -5,7 +5,8 @@ import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AccountDraftPhone } from "./account-draft-phone"
-import { useUnsavedChanges } from "@/components/use-unsaved-changes"
+import { useRecordEditor } from "@/components/use-record-editor"
+import { RecordHeaderActions } from "@/components/record-header-actions"
 import type { AccountRow } from "../actions"
 import { Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -33,7 +34,6 @@ import {
   FieldSection,
   RelatedCard,
 } from "@/components/detail-page"
-import { useInlineSave } from "@/components/use-inline-save"
 import { PhoneNumberDisplay } from "@/components/phone-input"
 import { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
@@ -93,6 +93,7 @@ export type AccountDetailData = {
   record: AccountInput
   /** Gates every inline editor (ACCOUNT_UPDATE, resolved server-side). */
   canEdit: boolean
+  canVoidRelated?: boolean
   industries: string[]
   parentOptions: Option[]
   currencies: string[]
@@ -126,6 +127,7 @@ export function AccountDetailBody(props: AccountDetailData) {
     sections,
     record: savedRecord,
     canEdit,
+    canVoidRelated,
     industries,
     parentOptions,
     currencies,
@@ -151,55 +153,17 @@ export function AccountDetailBody(props: AccountDetailData) {
 
   const [tab, setTab] = React.useState("contacts")
   const searchParams = useSearchParams()
-  const [editingDetails, setEditingDetails] = React.useState(canEdit && searchParams.get("edit") === "1")
-  const [record, setRecord] = React.useState(savedRecord)
-  const draftRef = React.useRef(savedRecord)
-  const [editSession, setEditSession] = React.useState(0)
-  const [detailsDirty, setDetailsDirty] = React.useState(false)
-  const [detailsBusy, setDetailsBusy] = React.useState(false)
-  const confirmDiscard = useUnsavedChanges(detailsDirty, detailsBusy)
   const router = useRouter()
-  const editButton = React.useRef<HTMLButtonElement>(null)
-  const closeEditor = () => {
-    setEditingDetails(false)
-    setRecord(savedRecord)
-    draftRef.current = savedRecord
-    setEditSession(value => value + 1)
-    setDetailsDirty(false)
-    setDetailsBusy(false)
-    if (searchParams.get("edit") === "1") router.replace(`/accounts/${accountId}`, { scroll: false })
-    requestAnimationFrame(() => editButton.current?.focus())
-  }
-  const changeTab = (next: string) => {
-    if (!detailsBusy) setTab(next)
-  }
+  const editor = useRecordEditor({ initial: savedRecord,
+    initialEditing: canEdit && searchParams.get("edit") === "1",
+    onSave: (draft) => updateAccount(accountId, draft) })
+  const { record, editing: editingDetails, saving: detailsBusy, session: editSession } = editor
+  const clearEditParam = () => { if (searchParams.get("edit") === "1") router.replace(`/accounts/${accountId}`, { scroll: false }) }
+  const closeEditor = () => { if (editor.cancel()) clearEditParam() }
+  const saveDetails = async () => { if (await editor.save()) clearEditParam() }
+  const changeTab = (next: string) => { if (!detailsBusy) setTab(next) }
   const revalidate = `/accounts/${accountId}`
-
-
-  const { save } = useInlineSave((draft: AccountInput) => updateAccount(accountId, draft))
-  const beginEditor = () => {
-    setRecord(savedRecord)
-    draftRef.current = savedRecord
-    setEditingDetails(true)
-  }
-  const saveField = async (patch: Partial<AccountInput>): Promise<void> => {
-    const next = { ...draftRef.current, ...patch }
-    draftRef.current = next
-    setRecord(next)
-    setDetailsDirty(true)
-  }
-  const saveDetails = async () => {
-    // Flush a text editor still focused when Save is activated.
-    const active = document.activeElement
-    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) active.blur()
-    setDetailsBusy(true)
-    const success = await save(draftRef.current)
-    setDetailsBusy(false)
-    if (success) {
-      closeEditor()
-      router.refresh()
-    }
-  }
+  const saveField = async (patch: Partial<AccountInput>): Promise<void> => { editor.stage(patch) }
 
   const typeEditor = () => <InlineCombobox
     value={record.accountType === "reseller" ? "reseller" : "client"}
@@ -233,7 +197,7 @@ export function AccountDetailBody(props: AccountDetailData) {
   /** Merge one edited billing-address subfield into the structured jsonb. */
   const saveAddress = (sub: AccountAddressKey, next: string) =>
     saveField({
-      billingAddress: { ...draftRef.current.billingAddress, [sub]: next || null },
+      billingAddress: { ...record.billingAddress, [sub]: next || null },
     })
 
   const opportunityColumns = React.useMemo<ColumnDef<AccountOpportunityItem>[]>(
@@ -495,20 +459,18 @@ export function AccountDetailBody(props: AccountDetailData) {
   }
 
   return (
-    <fieldset aria-label="Account details" disabled={detailsBusy} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onFocusCapture={() => { if (editingDetails) setDetailsDirty(true) }}>
+    <fieldset aria-label="Account details" disabled={detailsBusy} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onInputCapture={editor.markDirty}>
       {/* Left column — account highlights + related quick links */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="account" eyebrow="Account" />
+          <DetailCardHeader kind="account" eyebrow="Account" actions={<RecordHeaderActions
+            canEdit={canEdit} editing={editingDetails} saving={detailsBusy}
+            onEdit={editor.start} onSave={saveDetails} onCancel={closeEditor}
+            voidTarget={canEdit ? { type: "account", id: accountId } : undefined}
+            relatedTarget={canVoidRelated ? { type: "account", id: accountId } : undefined} />} />
           <CardContent className="grid gap-5 text-sm">
-            {canEdit ? <div className="flex flex-wrap items-center justify-end gap-2">
-              {!editingDetails ? <Button ref={editButton} variant="outline" size="sm" onClick={beginEditor}>Edit</Button> : <>
-                <span role="status" className="text-sm text-muted-foreground">{detailsBusy ? "Saving changes…" : "Editing account"}</span>
-                <Button variant="outline" size="sm" disabled={detailsBusy} onClick={() => { if (confirmDiscard()) closeEditor() }}>Cancel</Button>
-                <Button size="sm" disabled={detailsBusy} onClick={saveDetails}>Save changes</Button>
-              </>}
-            </div> : null}
-            {editingDetails ? <p className="text-sm text-muted-foreground">Click a field to edit. Changes are saved together. Changing the owner also transfers related contacts and sales records.</p> : null}
+            {editor.error ? <p role="alert" className="text-sm text-destructive">{editor.error}</p> : null}
+            {editingDetails ? <p className="text-sm text-muted-foreground">Click a field to edit. Changing the owner also transfers related contacts and sales records.</p> : null}
             {sections.map((section) => (
               <FieldSection key={section.title} title={section.title}>
                 {section.fields.map(renderField)}

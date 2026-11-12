@@ -4,7 +4,7 @@ vi.mock('@/app/(app)/approvals/actions',()=>({listIncomingApprovals:mocks.stage,
 vi.mock('@/app/(app)/approvals/quotation-actions',()=>({listQuotationApprovals:mocks.quotation}))
 vi.mock('@/app/(app)/approvals/lead-conversion-actions',()=>({listLeadConversionApprovals:mocks.lead}))
 vi.mock('@/app/(app)/approvals/void-actions',()=>({listFunnelVoidApprovals:mocks.voids}))
-vi.mock('@/app/(app)/voids/actions',()=>({listUniversalVoidRequests:mocks.records}))
+vi.mock('@/app/(app)/record-void-actions',()=>({listUniversalVoidRequests:mocks.records}))
 import {listApprovalQueue} from '@/app/(app)/approvals/queue-actions'
 import {decodeApprovalCursor} from '@/lib/approval-queue'
 const id=(n:number)=>`00000000-0000-4000-8000-${n.toString().padStart(12,'0')}`

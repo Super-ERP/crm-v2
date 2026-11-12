@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { useRecordEditor } from "@/components/use-record-editor"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +16,6 @@ import {
   useSaveField,
 } from "@/components/detail-page"
 import { InlineValue } from "@/components/inline-value"
-import { StatusBadge } from "@/components/status-badge"
 import { StagePathView, type PathStep } from "@/components/stage-path-view"
 import { formatDate, formatMoney } from "@/lib/format"
 import { paymentMilestoneStatus } from "@/db/schema"
@@ -32,17 +33,22 @@ const STATUS_LABELS: Record<(typeof STATUS_ORDER)[number], string> = {
 
 /** Planning-only milestone detail. Finance documents are intentionally absent. */
 export function PaymentMilestoneDetailBody({
-  milestone,
+  milestone: initial,
   canManage,
+  canVoid,
 }: {
   milestone: PaymentMilestoneDetail
   canManage: boolean
+  canVoid: boolean
 }) {
-  const saveField = useSaveField((patch: FunnelMilestoneUpdateInput) =>
+  const editor = useRecordEditor({ initial, onSave: async (_draft, changes) => updateFunnelMilestone(initial.id, changes) })
+  const milestone = editor.record
+  const saveField = (patch: Partial<Pick<PaymentMilestoneDetail, "amount" | "title" | "dueDate" | "description">>) => { editor.stage(patch) }
+  const saveStatus = useSaveField((patch: FunnelMilestoneUpdateInput) =>
     updateFunnelMilestone(milestone.id, patch)
   )
   const [pending, startTransition] = React.useTransition()
-  const canEditAmount = canManage && milestone.status !== "invoiced"
+  const canEditAmount = canManage && editor.editing && milestone.status !== "invoiced"
   const currentIndex = STATUS_ORDER.indexOf(milestone.status)
   const steps: PathStep[] = STATUS_ORDER.map((status, index) => ({
     id: status,
@@ -57,15 +63,16 @@ export function PaymentMilestoneDetailBody({
   }))
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset disabled={editor.saving} className="grid min-w-0 gap-4 border-0 p-0 lg:grid-cols-3 lg:items-start">
       <DetailAside>
         <Card>
           <DetailCardHeader
             kind="milestone"
             eyebrow="Payment milestone"
             title={milestone.title}
+            actions={<RecordHeaderActions canEdit={canManage} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canVoid ? { type: "payment_milestone", id: milestone.id } : undefined} />}
           />
-          <CardContent className="grid gap-3">
+          <CardContent key={editor.session} onChangeCapture={editor.markDirty} className="grid gap-3">
             {canEditAmount ? (
               <InlineValue
                 value={milestone.amount}
@@ -81,7 +88,7 @@ export function PaymentMilestoneDetailBody({
                 )}
                 type="number"
                 title="Click to edit amount"
-                onSave={(next) => saveField({ amount: next || null })}
+                onSave={(next) => saveField({ amount: next })}
               />
             ) : (
               <div
@@ -95,27 +102,6 @@ export function PaymentMilestoneDetailBody({
                 {formatMoney(milestone.amount)}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Highlights</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
-            <FieldRow label="Quote number">
-              {milestone.quotationId && milestone.quoteNumber ? (
-                <Link href={`/quotations/${milestone.quotationId}`} className="link">
-                  {milestone.quoteNumber}
-                </Link>
-              ) : (
-                "—"
-              )}
-            </FieldRow>
-            <FieldRow label="Amount">{formatMoney(milestone.amount)}</FieldRow>
-            <FieldRow label="Status">
-              <StatusBadge status={milestone.status} />
-            </FieldRow>
           </CardContent>
         </Card>
 
@@ -137,12 +123,12 @@ export function PaymentMilestoneDetailBody({
       <div className="grid gap-4 lg:col-span-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Milestone status</CardTitle>
+            <CardTitle className="text-base">Workflow actions</CardTitle>
           </CardHeader>
           <CardContent>
             <StagePathView steps={steps} />
             {canManage && milestone.status === "pending_invoicing" ? (
-              <Button className="mt-4" disabled={pending} onClick={() => startTransition(async () => { await saveField({ status: "invoiced" }) })}>Mark invoiced</Button>
+              <Button className="mt-4" disabled={pending || editor.editing} onClick={() => startTransition(async () => { await saveStatus({ status: "invoiced" }) })}>Mark invoiced</Button>
             ) : null}
           </CardContent>
         </Card>
@@ -151,12 +137,12 @@ export function PaymentMilestoneDetailBody({
           <CardHeader>
             <CardTitle className="text-base">Planning details</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent key={editor.session} onChangeCapture={editor.markDirty}>
             <div className="grid gap-6">
               <FieldSection title="Payment Milestone">
                 <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
                   <FieldRow label="Name">
-                    {canManage ? (
+                    {canManage && editor.editing ? (
                       <InlineValue
                         value={milestone.title}
                         display={milestone.title}
@@ -195,7 +181,7 @@ export function PaymentMilestoneDetailBody({
                     )}
                   </FieldRow>
                   <FieldRow label="Due date">
-                    {canManage ? (
+                    {canManage && editor.editing ? (
                       <InlineValue
                         value={milestone.dueDate ?? ""}
                         display={formatDate(milestone.dueDate)}
@@ -209,7 +195,7 @@ export function PaymentMilestoneDetailBody({
                     )}
                   </FieldRow>
                   <FieldRow label="Remarks" className="sm:col-span-2">
-                    {canManage ? (
+                    {canManage && editor.editing ? (
                       <InlineValue
                         value={milestone.description ?? ""}
                         multiline
@@ -233,6 +219,6 @@ export function PaymentMilestoneDetailBody({
           </CardContent>
         </Card>
       </div>
-    </div>
+    </fieldset>
   )
 }

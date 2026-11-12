@@ -1,5 +1,4 @@
 
-import { RecordVoidButton } from "@/components/record-void-button"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -16,7 +15,6 @@ import { formatDate, formatMoney } from "@/lib/format"
 import { getProject, listMilestones, listQuotationLinkOptions } from "../actions"
 import { listProjectSalesOrders } from "@/app/(app)/sales-orders/actions"
 import { getProjectBillingSummary } from "@/app/(app)/billing/actions"
-import { ProjectEditButton } from "./project-edit-button"
 import { ProjectDetailBody, type ProjectDetailData } from "./project-detail-body"
 
 export default async function ProjectDetailPage({
@@ -63,10 +61,12 @@ export default async function ProjectDetailPage({
     { label: "Name", value: project.name, editKey: "name" },
     {
       label: "Status",
+      editKey: "status",
       value: <StatusBadge status={project.status} />,
     },
     {
       label: "Value",
+      editKey: "value",
       value: (
         <span className="font-semibold tabular-nums">
           {project.value ? formatMoney(project.value, project.currency) : "—"}
@@ -99,6 +99,7 @@ export default async function ProjectDetailPage({
     },
     {
       label: "Quotation",
+      editKey: "quotationId",
       value: project.quotationId ? (
         <Link
           href={`/quotations/${project.quotationId}`}
@@ -116,22 +117,11 @@ export default async function ProjectDetailPage({
   return (
     <>
       <PageBody>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {canUpdate ? <RecordVoidButton target={{ type: "project", id }} /> : null}
-            {canUpdate ? (
-              <ProjectEditButton
-                project={project}
-                quotationOptions={quotationOptions}
-              />
-            ) : null}
-          </div>
-        </div>
-
         <ProjectDetailBody
           projectId={id}
           fields={fields}
-          record={{ name: project.name, startDate: project.startDate }}
+          record={{ name: project.name, startDate: project.startDate, value: project.value, status: project.status, quotationId: project.quotationId, notes: project.notes }}
+          quotationOptions={quotationOptions}
           notes={project.notes}
           milestones={milestones}
           projectValue={project.value}

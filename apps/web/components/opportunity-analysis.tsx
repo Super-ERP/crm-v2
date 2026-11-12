@@ -4,8 +4,8 @@ import * as React from "react"
 import { ChevronDownIcon } from "lucide-react"
 
 import { FieldRow } from "@/components/detail-page"
-import { InlineCombobox } from "@/components/inline-combobox"
-import { InlineValue } from "@/components/inline-value"
+import { Combobox } from "@/components/ui/combobox"
+import { Input } from "@/components/ui/input"
 import { formatDate, formatMoney } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { OpportunityContainerDetail, OpportunityContainerUpdateInput } from "@/app/(app)/opportunities/actions"
@@ -86,15 +86,14 @@ export function OpportunityAnalysis({
       <AnalysisSection title="1-P: Power Sponsor (PS)">
         <AnalysisRow label="Power Sponsor Contact">
           {canEdit ? (
-            <InlineCombobox
+            <Combobox
               value={o.powerSponsorContactId ?? ""}
-              display={contactDisplay}
               options={contactOptions}
-              onSave={(next) => onSave({ powerSponsorContactId: next || null })}
+              onChange={(next) => onSave({ powerSponsorContactId: next || null })}
               placeholder="Optional"
               searchPlaceholder="Search contacts…"
               emptyMessage="No contacts for this account."
-              title="Click to change power sponsor contact"
+              aria-label="Power sponsor contact"
             />
           ) : (
             contactDisplay
@@ -105,14 +104,7 @@ export function OpportunityAnalysis({
         </AnalysisRow>
         <AnalysisRow label="Power Sponsor Budget Limit">
           {canEdit ? (
-            <InlineValue
-              value={o.powerSponsorBudgetLimit ?? ""}
-              display={formatMoney(o.powerSponsorBudgetLimit, o.currency)}
-              formatDraft={(value) => formatMoney(value || "0", o.currency)}
-              type="number"
-              title="Click to edit power sponsor budget limit"
-              onSave={(next) => onSave({ powerSponsorBudgetLimit: next || null })}
-            />
+            <Input aria-label="power sponsor budget limit" type="number" value={o.powerSponsorBudgetLimit ?? ""} onChange={event => void onSave({ powerSponsorBudgetLimit: event.target.value || null })} />
           ) : (
             formatMoney(o.powerSponsorBudgetLimit, o.currency)
           )}
@@ -122,12 +114,7 @@ export function OpportunityAnalysis({
       <AnalysisSection title="2-P: Pain (Objective)">
         <AnalysisRow label="Objective">
           {canEdit ? (
-            <InlineValue
-              value={o.pain ?? ""}
-              display={o.pain || "—"}
-              title="Click to edit objective"
-              onSave={(next) => onSave({ pain: next || null })}
-            />
+            <Input aria-label="objective" type="text" value={o.pain ?? ""} onChange={event => void onSave({ pain: event.target.value || null })} />
           ) : (
             o.pain || "—"
           )}
@@ -137,12 +124,7 @@ export function OpportunityAnalysis({
       <AnalysisSection title="3-V: Vision">
         <AnalysisRow label="Vision">
           {canEdit ? (
-            <InlineValue
-              value={o.vision ?? ""}
-              display={o.vision || "—"}
-              title="Click to edit vision"
-              onSave={(next) => onSave({ vision: next || null })}
-            />
+            <Input aria-label="vision" type="text" value={o.vision ?? ""} onChange={event => void onSave({ vision: event.target.value || null })} />
           ) : (
             o.vision || "—"
           )}
@@ -152,12 +134,7 @@ export function OpportunityAnalysis({
       <AnalysisSection title="4-V: Value">
         <AnalysisRow label="Value">
           {canEdit ? (
-            <InlineValue
-              value={o.value ?? ""}
-              display={o.value || "—"}
-              title="Click to edit value"
-              onSave={(next) => onSave({ value: next || null })}
-            />
+            <Input aria-label="value" type="text" value={o.value ?? ""} onChange={event => void onSave({ value: event.target.value || null })} />
           ) : (
             o.value || "—"
           )}
@@ -167,28 +144,14 @@ export function OpportunityAnalysis({
       <AnalysisSection title="5-C: Control">
         <AnalysisRow label="Estimated Budget">
           {canEdit ? (
-            <InlineValue
-              value={o.estimatedBudget ?? ""}
-              display={formatMoney(o.estimatedBudget, o.currency)}
-              formatDraft={(value) => formatMoney(value || "0", o.currency)}
-              type="number"
-              title="Click to edit estimated budget"
-              onSave={(next) => onSave({ estimatedBudget: next || null })}
-            />
+            <Input aria-label="estimated budget" type="number" value={o.estimatedBudget ?? ""} onChange={event => void onSave({ estimatedBudget: event.target.value || null })} />
           ) : (
             formatMoney(o.estimatedBudget, o.currency)
           )}
         </AnalysisRow>
         <AnalysisRow label="Estimated Close Date">
           {canEdit ? (
-            <InlineValue
-              value={o.estimatedCloseDate ?? ""}
-              display={formatDate(o.estimatedCloseDate)}
-              formatDraft={(value) => (value ? formatDate(value) : "—")}
-              type="date"
-              title="Click to edit estimated close date"
-              onSave={(next) => onSave({ estimatedCloseDate: next || null })}
-            />
+            <Input aria-label="estimated close date" type="date" value={o.estimatedCloseDate ?? ""} onChange={event => void onSave({ estimatedCloseDate: event.target.value || null })} />
           ) : (
             formatDate(o.estimatedCloseDate)
           )}

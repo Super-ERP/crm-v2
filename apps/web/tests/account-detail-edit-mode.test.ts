@@ -14,7 +14,7 @@ vi.mock("@/components/ui/tabs", () => {
 })
 vi.mock("@/components/detail-page", () => {
   const container = ({children}: {children: ReactNode}) => createElement("div", null, children)
-  return { DetailAside: container, DetailTabs: container, FieldSection: container, FieldRow: container, CountTab: container, RelatedCard: () => null, DetailCardHeader: () => null }
+  return { DetailAside: container, DetailTabs: container, FieldSection: container, FieldRow: container, CountTab: container, RelatedCard: () => null, DetailCardHeader: ({actions}: {actions: ReactNode}) => createElement("header", null, actions) }
 })
 import { AccountDetailBody, type AccountDetailData } from "@/app/(app)/accounts/[id]/account-detail-body"
 const data = {

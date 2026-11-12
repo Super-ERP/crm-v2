@@ -60,6 +60,10 @@ describe("change-tracking guardrail", () => {
     "app/(app)/projects/actions.ts",
   ]
   it.each(UPDATE_ACTIONS)("%s routes updates through recordChanges", (p) => {
-    expect(readFileSync(p, "utf8")).toContain("recordChanges")
+    const action = readFileSync(p, "utf8")
+    if (p === "app/(app)/opportunities/actions.ts") {
+      expect(action).toContain("updateOpportunityContainerInTransaction(tx, ctx, id, input)")
+      expect(readFileSync("server/services/update-opportunity-container.ts", "utf8")).toContain("await recordChanges(tx, ctx,")
+    } else expect(action).toContain("recordChanges")
   })
 })

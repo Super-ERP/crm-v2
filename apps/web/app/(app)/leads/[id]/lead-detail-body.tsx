@@ -1,6 +1,11 @@
 "use client"
 
 import * as React from "react"
+import { useRecordEditor } from "@/components/use-record-editor"
+import { RecordHeaderActions } from "@/components/record-header-actions"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { RecordPhoneField } from "@/components/record-phone-field"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -16,10 +21,9 @@ import {
   FieldSection,
   RelatedCard,
   TabsCard,
-  useSaveField,
 } from "@/components/detail-page"
-import { InlineValue } from "@/components/inline-value"
-import { InlinePhoneValue, PhoneNumberDisplay } from "@/components/phone-input"
+import type { InlineValue } from "@/components/inline-value"
+import { PhoneNumberDisplay } from "@/components/phone-input"
 import { usePermissions } from "@/components/command-palette"
 import { PERMISSIONS } from "@/lib/permissions"
 import { type ProgressStep } from "@/components/stage-progress"
@@ -69,6 +73,8 @@ export type LeadDetailSection = {
 
 export type LeadDetailData = {
   leadId: string
+  canVoid: boolean
+  workflowActions?: React.ReactNode
   status: string
   sections: LeadDetailSection[]
   /** Raw field values — updateLead is full-replace, so each inline save
@@ -87,9 +93,11 @@ export type LeadDetailData = {
  *  progress and tabbed Activity/Documents on the right. */
 export function LeadDetailBody({
   leadId,
+  canVoid,
+  workflowActions,
   status,
   sections,
-  record,
+  record: initialRecord,
   leadSteps,
   leadNote,
   funnelSteps,
@@ -113,6 +121,7 @@ export function LeadDetailBody({
   const STATUS_SETTABLE = ["new", "contacted", "qualified"]
 
   async function changeStatus(next: string) {
+    if (!workflowInteractive) return
     const res = await setLeadStatus(leadId, next)
     if (!res.ok) {
       showActionError(res)
@@ -122,11 +131,13 @@ export function LeadDetailBody({
     router.refresh()
   }
 
-  const saveField = useSaveField((patch: Partial<LeadInput>) =>
-    updateLead(leadId, { ...record, ...patch })
-  )
+  const editor = useRecordEditor<LeadInput>({ initial: initialRecord, onSave: draft => updateLead(leadId, draft) })
+  const record = editor.record
+  const saveField = editor.stage
+  const workflowInteractive = interactive && !editor.editing && !editor.saving
 
   async function changeFunnelStage(stageId: string) {
+    if (!workflowInteractive) return
     const res = await setLeadStage(leadId, stageId)
     if (!res.ok) {
       showActionError(res)
@@ -139,25 +150,26 @@ export function LeadDetailBody({
   const leadPathSteps = toPathSteps(
     leadSteps,
     (id, state) =>
-      interactive && STATUS_SETTABLE.includes(id) && state !== "current"
+      workflowInteractive && STATUS_SETTABLE.includes(id) && state !== "current"
   )
   const funnelPathSteps = funnelSteps
-    ? toPathSteps(funnelSteps, (_id, state) => interactive && state !== "current")
+    ? toPathSteps(funnelSteps, (_id, state) => workflowInteractive && state !== "current")
     : null
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+    <fieldset key={editor.session} disabled={editor.saving} className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start" onInputCapture={editor.markDirty}>
       {/* Left column — details + conversion links */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="lead" eyebrow="Lead" />
+          <DetailCardHeader kind="lead" eyebrow="Lead" actions={<RecordHeaderActions canEdit={interactive} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canVoid ? { type: "lead", id: leadId } : undefined} />} />
+          {editor.error ? <p role="alert" className="px-6 text-sm text-destructive">{editor.error}</p> : null}
           <CardContent className="grid gap-5 text-sm">
             {sections.map((section) => (
               <FieldSection key={section.title} title={section.title}>
                 {section.fields.map((d) => {
                   // Terminal (converted/disqualified) leads are locked, like
                   // the status path above.
-                  const key = interactive ? d.editKey : undefined
+                  const key = interactive && editor.editing ? d.editKey : undefined
                   return (
                     <FieldRow key={d.label} label={d.label}>
                       {!key ? (
@@ -167,22 +179,20 @@ export function LeadDetailBody({
                           d.value
                         )
                       ) : key === "phone" ? (
-                        <InlinePhoneValue
+                        <RecordPhoneField
                           value={record.phone}
-                          title={`Click to edit ${d.label.toLowerCase()}`}
-                          onSave={(next) => saveField({ phone: next || null })}
+                          onChange={(next) => saveField({ phone: next || null })}
                         />
                       ) : (
-                        <InlineValue
+                        <DraftValue
                           value={record[key] ?? ""}
                           display={
                             record[key] || "—"
                           }
                           title={`Click to edit ${d.label.toLowerCase()}`}
                           onSave={(next) => {
-                            // Name + email are required on leads — ignore an emptied draft.
+                            // Keep invalid drafts so Save can surface server validation.
                             if (key === "name" || key === "email") {
-                              if (!next.trim()) return
                               return saveField({ [key]: next })
                             }
                             return saveField({ [key]: next || null })
@@ -238,6 +248,12 @@ export function LeadDetailBody({
 
       {/* Right column — progress + tabbed Activity / Documents */}
       <div className="grid gap-4 lg:col-span-2">
+        {workflowActions ? <Card>
+          <CardHeader><CardTitle className="text-base">Workflow actions</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-2">
+            {editor.editing ? <p className="text-sm text-muted-foreground">Save or cancel record changes to use workflow actions.</p> : workflowActions}
+          </CardContent>
+        </Card> : null}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Progress</CardTitle>
@@ -247,11 +263,11 @@ export function LeadDetailBody({
               steps={leadPathSteps}
               note={leadNote}
               hint={
-                interactive && !leadNote
+                workflowInteractive && !leadNote
                   ? "Click a stage to update the lead status."
                   : undefined
               }
-              onStepClick={interactive ? changeStatus : undefined}
+              onStepClick={workflowInteractive ? changeStatus : undefined}
             />
             {funnelPathSteps ? (
               <div className="border-t pt-6">
@@ -259,11 +275,11 @@ export function LeadDetailBody({
                   steps={funnelPathSteps}
                   note={funnelNote}
                   hint={
-                    interactive && !funnelNote
+                    workflowInteractive && !funnelNote
                       ? "Click a stage to move the lead's funnel."
                       : undefined
                   }
-                  onStepClick={interactive ? changeFunnelStage : undefined}
+                  onStepClick={workflowInteractive ? changeFunnelStage : undefined}
                 />
               </div>
             ) : null}
@@ -297,6 +313,12 @@ export function LeadDetailBody({
           </TabsContent>
         </TabsCard>
       </div>
-    </div>
+    </fieldset>
   )
+}
+
+/** Controlled scalar input: all edits belong to the record's Save/Cancel draft. */
+function DraftValue({ value, type = "text", multiline, title, onSave }: React.ComponentProps<typeof InlineValue>) {
+  const props = { value, "aria-label": title?.replace(/^Click to (edit|change) /, ""), onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => { void onSave(event.target.value) } }
+  return multiline ? <Textarea {...props} rows={3} /> : <Input {...props} type={type} step={type === "number" ? "0.01" : undefined} />
 }
