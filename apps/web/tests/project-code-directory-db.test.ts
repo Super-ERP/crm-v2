@@ -5,8 +5,8 @@ import { sql as query } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 import type { Tx, ServerContext } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
-import { funnels } from "@/db/schema"
-import { visibleProjectCode } from "@/server/services/project-code-visibility"
+import { funnels, opportunities } from "@/db/schema"
+import { visibleProjectCode, displayedFunnelProjectCode } from "@/server/services/project-code-visibility"
 const scope = vi.hoisted(() => ({ members: ["rep"] as string[] | null, tx: null as unknown as Tx, ctx: null as unknown as ServerContext }))
 vi.mock("@/lib/modules.server", () => ({ requireEntitledModule: async () => { throw new Error("Module disabled") } }))
 vi.mock("@/db", () => ({ runInTenant: async (_tenant: string, work: (tx: Tx) => Promise<unknown>) => work(scope.tx) }))
@@ -64,6 +64,38 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
   })
   afterAll(async () => { await client?.end(); await admin?.unsafe(`drop database "${database}" with (force)`); await admin?.end() })
   beforeEach(() => { scope.members = ["rep"] })
+  it("resolves a missing Funnel code from the visible parent without renumbering", async () => {
+    const read = async (visible: string[] | null = ["rep"]) => (await tx.select({code: displayedFunnelProjectCode(visible)})
+      .from(funnels).innerJoin(opportunities, query`${opportunities.id} = ${funnels.opportunityId}`)
+      .where(query`${funnels.id} = ${active}`))[0].code
+    const original = (await read())
+    expect(original).toBe("A/a & #1")
+    await client`update funnels set project_code = null where id = ${active}`
+    try {
+      expect(await read()).toBe("INTERNAL")
+      await client`update funnels set project_code = '' where id = ${active}`
+      expect(await read()).toBe("INTERNAL")
+      expect(await read([])).toBeNull()
+      await client`update opportunities set owner_member_id = 'other' where id = ${parent}`
+      expect(await read()).toBeNull()
+      expect(await read(null)).toBe("INTERNAL")
+      await client`update opportunities set owner_member_id = 'rep', deleted_at = now() where id = ${parent}`
+      expect(await read()).toBeNull()
+      await client`update opportunities set deleted_at = null where id = ${parent}`
+      await client`update funnels set current_stage_id = ${stage.early} where id = ${active}`
+      expect(await read()).toBeNull()
+      await client`update funnels set current_stage_id = ${stage.won}, status = 'won' where id = ${active}`
+      expect(await read()).toBe("INTERNAL")
+      const code = displayedFunnelProjectCode(["rep"])
+      const matching = await tx.select({id: funnels.id, code}).from(funnels)
+        .innerJoin(opportunities, query`${opportunities.id} = ${funnels.opportunityId}`)
+        .where(query`${funnels.id} = ${active} and ${code} = 'INTERNAL'`).orderBy(code)
+      expect(matching).toEqual([{id:active,code:"INTERNAL"}])
+    } finally {
+      await client`update funnels set project_code = ${original}, current_stage_id = ${stage.commit}, status = 'open' where id = ${active}`
+      await client`update opportunities set owner_member_id = 'rep', deleted_at = null where id = ${parent}`
+    }
+  })
   it("groups literal primary and cross-deal codes and excludes early, hidden and foreign rows", async () => {
     const result = await listProjectCodes(tx, ctx, {})
     expect(result.rows.map(r => r.code)).toEqual(["A/a & #1", "CROSS", "INTERNAL", "SECOND"])

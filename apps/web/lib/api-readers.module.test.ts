@@ -130,6 +130,22 @@ describe("module-owned nested API readers", () => {
     expect(detail?.container?.projectCode).toBeNull()
   })
 
+  it("uses the detail-page parent fallback for Funnel cards, filtering and sorting", async () => {
+    const tx = tableTx([[funnels, [[], [{count:0}]]]])
+    await funnelsList(tx, ctx, {limit:25,offset:0, query:{search:'',selections:{},
+      sorting:[{id:'projectCode',desc:false}], filterTree:{kind:'group',id:'r',logic:'and',children:[
+        {kind:'condition',id:'c',fieldId:'projectCode',operator:'equals',value:'PARENT-CODE'}]}}})
+    const dialect = new PgDialect()
+    const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls.find(([fields]) => fields?.projectCode)?.[0]
+    for (const expression of [selection.projectCode, tx.orderCalls[0][0],
+      ...tx.whereCalls.filter(call=>call.table===funnels).map(call=>call.condition as SQL)]) {
+      const compiled = dialect.sqlToQuery(expression)
+      expect(compiled.sql).toContain('coalesce')
+      expect(compiled.sql).toContain('"opportunities"."project_code"')
+      expect(compiled.sql).toContain('"opportunities"."deleted_at"')
+    }
+  })
+
   it("does not query or return project rows from a core person detail", async () => {
     const tx = tableTx([
       [persons, [[{ person: { id: "person-1" }, accountName: "Acme", accountOwner: "member-1" }]]],
