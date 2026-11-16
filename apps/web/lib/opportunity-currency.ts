@@ -7,8 +7,8 @@ export function formatOpportunityEstimatedTotals(
   totals: OpportunityCurrencyTotal[],
   fallbackCurrency: string
 ): string {
-  if (totals.length === 0) return `${fallbackCurrency} ${formatMoney("0", fallbackCurrency)}`
+  if (totals.length === 0) return formatMoney("0", fallbackCurrency)
   return totals
-    .map(({ currency, total }) => `${currency} ${formatMoney(total, currency)}`)
+    .map(({ currency, total }) => formatMoney(total, currency))
     .join(" · ")
 }
