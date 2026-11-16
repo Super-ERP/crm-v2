@@ -48,14 +48,14 @@ for package_pin in \
   musl-utils=1.2.5-r24 \
   zlib=1.4-r0 \
   ca-certificates=20261020-r0 \
-  libpq=18.6-r0 \
+  libpq=18.7-r0 \
   libcrypto3=3.5.9-r0 \
   libssl3=3.5.9-r0 \
   libncursesw=6.5_p20251123-r0 \
   lz4-libs=1.10.0-r0 \
   ncurses-terminfo-base=6.5_p20251123-r0 \
   postgresql-common=1.2-r2 \
-  postgresql17-client=17.11-r0 \
+  postgresql17-client=17.12-r0 \
   readline=8.3.1-r0 \
   rsync=3.5.2-r1 \
   openssh-client-default=10.2_p1-r1 \
