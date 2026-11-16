@@ -59,8 +59,8 @@ describe.skipIf(!databaseUrl)("Opportunity currency rollup migration", () => {
       const [updated] = await sql`SELECT total_estimated_funnel_amount::text AS scalar,
         estimated_totals_by_currency AS totals FROM opportunities WHERE id = '00000000-0000-0000-0000-000000000001'`
       expect(updated).toMatchObject({ scalar: "120.00", totals: [{ currency: "MYR", total: "120.00" }] })
-      expect(formatOpportunityEstimatedTotals(rows[0].totals, "MYR")).toContain("USD")
-      expect(formatOpportunityEstimatedTotals([], "MYR")).toContain("MYR")
+      expect(formatOpportunityEstimatedTotals(rows[0].totals, "MYR")).toContain("US$")
+      expect(formatOpportunityEstimatedTotals([], "MYR")).toContain("RM")
     } finally {
       await sql.unsafe("SET search_path TO public")
       await sql.unsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`)
