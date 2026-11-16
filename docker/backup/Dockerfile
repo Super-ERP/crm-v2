@@ -4,9 +4,9 @@ ARG ALPINE_IMAGE=alpine:3.23@sha256:fd791d74b68913cbb027c6546007b3f0d3bc45125f79
 
 FROM ${ALPINE_IMAGE}
 
-ARG POSTGRESQL_CLIENT_VERSION=17.11-r0
+ARG POSTGRESQL_CLIENT_VERSION=17.12-r0
 ARG CA_CERTIFICATES_VERSION=20261020-r0
-ARG LIBPQ_VERSION=18.6-r0
+ARG LIBPQ_VERSION=18.7-r0
 ARG LIBCRYPTO3_VERSION=3.5.9-r0
 ARG LIBSSL3_VERSION=3.5.9-r0
 ARG LIBNCURSESW_VERSION=6.5_p20251123-r0
@@ -57,7 +57,7 @@ ENV HOME=/var/lib/backup \
 LABEL org.opencontainers.image.title="Quandatics backup runtime" \
   org.opencontainers.image.description="Source-free PostgreSQL backup and SSH offsite-copy runtime" \
   org.opencontainers.image.source="https://github.com/Super-ERP/crm-v2" \
-  com.quandatics.postgresql-client.version="17.11-r0" \
+  com.quandatics.postgresql-client.version="17.12-r0" \
   com.quandatics.rsync.version="3.5.2-r1"
 
 WORKDIR /var/lib/backup/work
