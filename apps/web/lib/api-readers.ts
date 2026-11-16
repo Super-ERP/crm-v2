@@ -4,7 +4,7 @@ import { enrichTableRows } from "@/server/services/table-controls/dataset-fields
 import { recordFilterRelated, recordSort } from "@/server/services/table-controls/record-filter"
 import type { FilterGroup } from "@/lib/table-controls/types"
 import "server-only"
-import { activeProjectCodeFunnel, visibleProjectCode } from "@/server/services/project-code-visibility"
+import { activeProjectCodeFunnel, visibleProjectCode, displayedFunnelProjectCode } from "@/server/services/project-code-visibility"
 import { isProjectCodeActive } from "@/lib/project-code-policy"
 import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm"
 import { alias } from "drizzle-orm/pg-core"
@@ -914,7 +914,7 @@ export async function funnelsList(
   const validStatuses = ["open", "won", "lost", "on_hold"] as const
   const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
   const relatedFields=await relatedQueryRegistry(tx,ctx,"funnel",query?.filterTree,query?.sorting)
-  const tableFieldColumns = {id:funnels.name,accountId:funnels.accountId,projectCode:visibleProjectCode(funnels.projectCode),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:funnels.opportunityId,accountOwnerMemberId:accounts.ownerMemberId,amount:sql`coalesce(${funnels.estimatedAmount},${funnels.amount},0)`,expectedCloseDate:funnels.expectedCloseDate,stageId:funnels.currentStageId,status:funnels.status}
+  const tableFieldColumns = {id:funnels.name,accountId:funnels.accountId,projectCode:displayedFunnelProjectCode(visible),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:funnels.opportunityId,accountOwnerMemberId:accounts.ownerMemberId,amount:sql`coalesce(${funnels.estimatedAmount},${funnels.amount},0)`,expectedCloseDate:funnels.expectedCloseDate,stageId:funnels.currentStageId,status:funnels.status}
     const where = and(
     recordFilterRelated("funnel",query?.filterTree,tableFieldColumns,relatedFields,{currency:funnels.currency,dateOnly:['expectedCloseDate'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name}}),
     isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible),
@@ -939,7 +939,7 @@ export async function funnelsList(
         id: funnels.id,
         opportunityId: funnels.opportunityId,
         name: funnels.name,
-      projectCode: visibleProjectCode(funnels.projectCode),
+      projectCode: displayedFunnelProjectCode(visible),
       crossDealProjectCode: visibleProjectCode(funnels.crossDealProjectCode),
         accountId: funnels.accountId,
         accountName: accounts.name,
