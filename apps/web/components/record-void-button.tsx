@@ -17,7 +17,7 @@ export function VoidImpactDetails({impact}:{impact:VoidImpact}) {
 }
 
 /** Record-local More menu. The same reviewed Void dialog handles every target. */
-export function RecordVoidButton({target,allowVoid=true,allowRelated=target.type==='account'||target.type==='funnel'}:{target:VoidTarget;allowVoid?:boolean;allowRelated?:boolean}) {
+export function RecordVoidButton({target,allowVoid=true,allowRelated=target.type==='account'||target.type==='funnel',menuItems,actionLabel='More record actions'}:{target:VoidTarget;allowVoid?:boolean;allowRelated?:boolean;menuItems?:React.ReactNode;actionLabel?:string}) {
  const router=useRouter()
  const [open,setOpen]=React.useState(false)
  const [dialogTarget,setDialogTarget]=React.useState(target)
@@ -69,8 +69,10 @@ export function RecordVoidButton({target,allowVoid=true,allowRelated=target.type
  }
  return <>
   <DropdownMenu>
-   <DropdownMenuTrigger render={<Button ref={moreButton} variant="ghost" size="icon-sm" aria-label="More record actions" title="More record actions"/>}><MoreHorizontal className="size-4"/></DropdownMenuTrigger>
+   <DropdownMenuTrigger render={<Button ref={moreButton} variant="ghost" size="icon-sm" aria-label={actionLabel} title={actionLabel}/>}><MoreHorizontal className="size-4"/></DropdownMenuTrigger>
    <DropdownMenuContent align="end">
+    {menuItems}
+    {menuItems && (allowVoid || allowRelated) ? <DropdownMenuSeparator/> : null}
     {allowVoid?<DropdownMenuItem variant="destructive" onClick={()=>openVoid(target)}>Void…</DropdownMenuItem>:null}
     {allowRelated?<>{allowVoid?<DropdownMenuSeparator/>:null}<DropdownMenuItem onClick={showRelated}>Related records…</DropdownMenuItem></>:null}
    </DropdownMenuContent>

@@ -128,6 +128,17 @@ describe("EntityQuotationDocument", () => {
       template: "cc",
     }))
     expect(html.match(/data-quotation-line-group/g)).toHaveLength(6)
-    expect(html.indexOf("Service 6")).toBeLessThan(html.indexOf("Total (excl. of SST)"))
+    expect(html.indexOf("Service 6")).toBeLessThan(html.indexOf("Net excluding tax"))
   })
 })
+
+for (const template of ["qar", "cc"] as const) {
+  it(`${template} reconciles header discount and net before tax`, () => {
+    const discounted = { ...doc, quotation: { ...doc.quotation, subtotal: "1000.00", discountTotal: "100.00", taxTotal: "54.00", total: "954.00" } }
+    const html = renderToStaticMarkup(createElement(EntityQuotationDocument, { doc: discounted, template }))
+    expect(html).toContain("Header discount")
+    expect(html).toContain("Net excluding tax")
+    expect(html).toContain("900.00")
+    expect(html).toContain("954.00")
+  })
+}

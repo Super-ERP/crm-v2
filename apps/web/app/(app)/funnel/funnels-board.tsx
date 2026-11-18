@@ -1,5 +1,8 @@
 "use client"
+import { requiresCommitSetup } from "@/lib/commit-stage"
 
+import { RecordReference } from "@/components/record-reference"
+import { DealValue } from "@/components/deal-value"
 import { ProjectCodeSummary } from "@/components/project-code-link"
 import * as React from "react"
 import Link from "next/link"
@@ -61,15 +64,13 @@ function CardBody({ c }: { c: OpportunityListRow }) {
     <>
       <Link href={`/funnel/${c.id}`} className="block truncate text-sm font-medium hover:underline">{c.name}</Link>
       {c.projectCode || c.crossDealProjectCode ? <ProjectCodeSummary code={c.projectCode} crossDealCode={c.crossDealProjectCode} /> : null}
-      <p className="truncate text-xs text-muted-foreground">{c.accountName}</p>
+      <p className="truncate text-xs text-muted-foreground"><RecordReference href={`/accounts/${c.accountId}`} label={c.accountName} available={c.accountCanView} /></p>
       <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
         <span className="min-w-0 truncate text-sm font-semibold tabular-nums">
-          {(c.estimatedAmount ?? c.amount)
-            ? formatMoney((c.estimatedAmount ?? c.amount)!, c.currency)
-            : "—"}
+          <DealValue row={c} />
         </span>
-        <span className="max-w-[45%] min-w-0 truncate text-right text-xs text-muted-foreground" title={c.ownerName ?? undefined}>
-          {c.ownerName ?? ""}
+        <span className="max-w-[45%] min-w-0 truncate text-right text-xs text-muted-foreground" title={`Salesperson / Funnel owner: ${c.ownerName ?? "Not set"}`}>
+          <span className="block">Salesperson</span>{c.ownerName ?? "Not set"}
         </span>
       </div>
     </>
@@ -114,7 +115,7 @@ function StageColumn({
   cards,
   draggable,
   total,
-  valueTotal,
+  valueTotalsByCurrency,
   loading,
   loadingMore,
   error,
@@ -124,7 +125,7 @@ function StageColumn({
   cards: OpportunityListRow[]
   draggable: boolean
   total: number
-  valueTotal: string
+  valueTotalsByCurrency: Array<{currency: string; total: string}>
   loading: boolean
   loadingMore: boolean
   error: boolean
@@ -158,7 +159,8 @@ function StageColumn({
       </div>
 
       <div className="text-xs text-muted-foreground tabular-nums">
-        {formatMoney(valueTotal)}
+        <p>Deal value (excl. tax) · all matching deals</p>
+        {valueTotalsByCurrency.length ? valueTotalsByCurrency.map(bucket => <p key={bucket.currency}>{formatMoney(bucket.total, bucket.currency)}</p>) : <p>—</p>}
       </div>
 
       <div className="flex min-h-2 flex-col gap-2">
@@ -178,7 +180,7 @@ function StageColumn({
         {error ? <Button type="button" variant="outline" size="sm" onClick={onMore}>Retry loading</Button> : null}
         {!loading && !error && cards.length === 0 ? (
           <p className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
-            No pipelines
+            No deals
           </p>
         ) : null}
       </div>
@@ -210,7 +212,7 @@ export function OpportunitiesBoard({
 
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [selectedPipelineId, setSelectedPipelineId] = React.useState(() => pipelines.find((pipeline) => pipeline.isDefault)?.id ?? pipelines[0]?.id ?? "")
-  type StagePage = { rows: OpportunityListRow[]; total: number; valueTotal: string; loadingMore?: boolean; error?: boolean }
+  type StagePage = { rows: OpportunityListRow[]; total: number; valueTotalsByCurrency: Array<{currency: string; total: string}>; loadingMore?: boolean; error?: boolean }
   const [stagePages, setStagePages] = React.useState<Record<string, StagePage>>({})
   const [reloadKey, setReloadKey] = React.useState(0)
   const scrollRef = React.useRef<HTMLDivElement>(null)
@@ -262,7 +264,7 @@ export function OpportunitiesBoard({
       try {
         return [stageId, await listFunnelStagePage({ ...stageQuery, stageId })]
       } catch {
-        return [stageId, { rows: [], total: 0, valueTotal: "0", error: true }]
+        return [stageId, { rows: [], total: 0, valueTotalsByCurrency: [], error: true }]
       }
     })).then((pages) => {
       if (!cancelled) setStagePages(Object.fromEntries(pages))
@@ -273,14 +275,14 @@ export function OpportunitiesBoard({
   async function loadMore(stageId: string) {
     const current = stagePages[stageId]
     if (current?.loadingMore) return
-    setStagePages((pages) => ({ ...pages, [stageId]: { ...(pages[stageId] ?? { rows: [], total: 0, valueTotal: "0" }), loadingMore: true, error: false } }))
+    setStagePages((pages) => ({ ...pages, [stageId]: { ...(pages[stageId] ?? { rows: [], total: 0, valueTotalsByCurrency: [] }), loadingMore: true, error: false } }))
     try {
       const page = await listFunnelStagePage({ ...stageQuery, stageId, pageIndex: Math.floor((current?.rows.length ?? 0) / 25) })
       setStagePages((pages) => ({ ...pages, [stageId]: {
         ...page, rows: [...(pages[stageId]?.rows ?? []), ...page.rows], loadingMore: false,
       } }))
     } catch {
-      setStagePages((pages) => ({ ...pages, [stageId]: { ...(pages[stageId] ?? { rows: [], total: 0, valueTotal: "0" }), loadingMore: false, error: true } }))
+      setStagePages((pages) => ({ ...pages, [stageId]: { ...(pages[stageId] ?? { rows: [], total: 0, valueTotalsByCurrency: [] }), loadingMore: false, error: true } }))
     }
   }
 
@@ -359,6 +361,7 @@ export function OpportunitiesBoard({
 
     // Approval- or reason-gated transition: open dialog before moving.
     if (
+      requiresCommitSetup(fromStage, toStage, stages) ||
       requiresApprovalForTransition(fromStage, toStage) ||
       requiresTransitionReason(fromStage, toStage)
     ) {
@@ -438,7 +441,7 @@ export function OpportunitiesBoard({
                 cards={byStage.get(stage.id) ?? []}
                 draggable={canAdvance}
                 total={stagePages[stage.id]?.total ?? 0}
-                valueTotal={stagePages[stage.id]?.valueTotal ?? "0"}
+                valueTotalsByCurrency={stagePages[stage.id]?.valueTotalsByCurrency ?? []}
                 loading={!stagePages[stage.id]}
                 loadingMore={!!stagePages[stage.id]?.loadingMore}
                 error={!!stagePages[stage.id]?.error}

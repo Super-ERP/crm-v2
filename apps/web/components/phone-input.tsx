@@ -128,6 +128,7 @@ export function PhoneInput({
   standalone?: boolean
   onCountryChange?: (country: string) => void
 }) {
+  const standaloneId = React.useId()
   const initialCountry = normalizePhoneCountry(defaultCountry) ?? "MY"
   const [country, setCountry] = React.useState<string>(initialCountry)
   const [touched, setTouched] = React.useState(false)
@@ -181,6 +182,8 @@ export function PhoneInput({
 
   const input = (
     <PhoneInputInner
+      inputId={standalone ? standaloneId : undefined}
+      inputLabel={label || "Phone number"}
       value={displayValue}
       onChange={onChange}
       country={country}
@@ -204,7 +207,7 @@ export function PhoneInput({
     return (
       <div className={cn("grid gap-2", className)}>
         {label ? (
-          <label className="text-sm font-medium">
+          <label htmlFor={standaloneId} className="text-sm font-medium">
             {label}
             {required && <span className="ml-0.5 text-destructive">*</span>}
           </label>
@@ -350,6 +353,8 @@ export function InlinePhoneValue({
 // ─── PhoneInputInner (raw input, no FormItem) ───────────────────────────────
 
 export function PhoneInputInner({
+  inputId,
+  inputLabel = "Phone number",
   value,
   onChange,
   country,
@@ -362,6 +367,8 @@ export function PhoneInputInner({
   onBlur,
   className,
 }: {
+  inputId?: string
+  inputLabel?: string
   value?: string
   onChange?: (value: string) => void
   country: string
@@ -470,6 +477,8 @@ export function PhoneInputInner({
 
       {/* Number input */}
       <input
+        id={inputId}
+        aria-label={inputLabel}
         type="tel"
         value={value ?? ""}
         onChange={(e) => onChange?.(e.target.value)}

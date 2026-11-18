@@ -1,6 +1,9 @@
 import "server-only"
+import { requiresCommitSetup, type ProjectCodeChoice } from "@/lib/commit-stage"
+import { assertFunnelCodeAccess, assignFunnelProjectCode, assertCommitNature } from "./project-code-assignment"
+import { assertBillingScheduleForFunnel, saveBillingSchedule, type BillingScheduleInput } from "./billing-schedule"
 import { findManagerApprover, resolveApprovalRoute } from "./approval-routing"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, isNull, sql } from "drizzle-orm"
 import { runInTenant, type Tx } from "@/db"
 import {
   funnels,
@@ -12,7 +15,6 @@ import {
   tenantSettings,
 } from "@/db/schema"
 import {
-  ensureOpportunityProjectCode,
   recomputeOpportunityTotal,
 } from "@/server/services/opportunity-container"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -270,8 +272,11 @@ async function applyStageMove(
     })
     .where(eq(funnels.id, opp.id))
 
-  if (shouldAllocateOpportunityProjectCode(toStage.code)) {
-    await ensureOpportunityProjectCode(tx, opp.opportunityId, ctx)
+  const commitStage = await tx.select({sortOrder:pipelineStages.sortOrder}).from(pipelineStages).where(and(eq(pipelineStages.pipelineId,opp.pipelineId),eq(pipelineStages.code,"4a"))).limit(1)
+  if (toStage.kind === "WON" || (toStage.kind === "OPEN" && commitStage[0] && toStage.sortOrder >= commitStage[0].sortOrder)) {
+    await assertCommitNature(tx, ctx, opp)
+    if (!opp.projectCode?.trim()) throw new Error("Choose a project code before advancing to 4a.")
+    await assertBillingScheduleForFunnel(tx, opp.id)
   }
 
   // ── Salesforce "Closed Won" automations (core) ─────────────────────────────
@@ -346,16 +351,13 @@ export async function requestStageAdvance(
     customFields?: Record<string, string>
     /** Kanban moves do not require PPVVC completion before stage change. */
     skipPpvvc?: boolean
+    projectCodeChoice?: ProjectCodeChoice
+    billingSchedule?: BillingScheduleInput[]
   }
 ): Promise<AdvanceOutcome> {
+  if (!ctx.can(PERMISSIONS.STAGE_ADVANCE)) throw new Error("FORBIDDEN: missing stage.advance")
   return runInTenant(ctx.tenantId, async (tx) => {
-    const [opp] = await tx
-      .select()
-      .from(funnels)
-      .where(and(eq(funnels.id, input.funnelId), isNull(funnels.deletedAt)))
-      .limit(1)
-      .for("update")
-    if (!opp) throw new Error("Funnel not found")
+    const opp = await assertFunnelCodeAccess(tx, ctx, input.funnelId)
 
     // The SF-parity validation rules read the parent Opportunity CONTAINER's
     // live fields (e.g. `Opportunity__r.Vision__c`), not the funnel's cascaded
@@ -390,6 +392,23 @@ export async function requestStageAdvance(
     // Enforce the stage state machine before anything else.
     assertTransitionAllowed(from, target)
     const rollback = isRollbackTransition(from, target)
+    if (!rollback && requiresCommitSetup(from, target, allStages)) {
+      await assertCommitNature(tx, ctx, opp)
+      if (!input.projectCodeChoice || !["new", "existing"].includes(input.projectCodeChoice.mode)) throw new Error("Choose Generate new project code or Select existing project code before advancing to 4a.")
+      opp.projectCode = await assignFunnelProjectCode(tx, ctx, opp.id, input.projectCodeChoice)
+      if (input.billingSchedule !== undefined) {
+        if (!ctx.can(PERMISSIONS.PAYMENT_MILESTONE_MANAGE)) throw new Error("FORBIDDEN: missing payment_milestone.manage")
+        await saveBillingSchedule(tx, { funnelId: opp.id, rows: input.billingSchedule })
+      }
+      await assertBillingScheduleForFunnel(tx, opp.id)
+      // Compatibility fields summarize the earliest scheduled invoice, while the
+      // schedule remains the authoritative per-row forecast.
+      const rows = await tx.execute<{month:string;year:number}>(sql`select expected_invoice_month as month, expected_invoice_year as year from payment_milestones where funnel_id=${opp.id} and tenant_id=${ctx.tenantId} and deleted_at is null order by expected_invoice_year, array_position(ARRAY['January','February','March','April','May','June','July','August','September','October','November','December'],expected_invoice_month),sort_order limit 1`)
+      if (rows[0]) {
+        opp.expectedInvoiceMonth=rows[0].month; opp.expectedInvoiceYear=rows[0].year
+        await tx.update(funnels).set({expectedInvoiceMonth:opp.expectedInvoiceMonth,expectedInvoiceYear:opp.expectedInvoiceYear}).where(eq(funnels.id,opp.id))
+      }
+    }
 
     const [settings] = await tx
       .select()

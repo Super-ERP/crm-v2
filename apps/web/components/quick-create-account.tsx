@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 
+import { usePermissions } from "@/components/command-palette"
+import { PERMISSIONS } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { showActionError } from "@/lib/show-action-error"
@@ -29,6 +31,7 @@ import { createAccount } from "@/app/(app)/accounts/actions"
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
+  code: z.string().regex(/^[A-Za-z0-9]{2,6}$/, "Account code must be 2–6 letters/digits"),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -51,19 +54,20 @@ export function AccountQuickCreate({
   defaultName?: string
   onCreated: (rec: { id: string; name: string; ownerMemberId: string | null }) => void
 }) {
+  const canManageCode = usePermissions().has(PERMISSIONS.ACCOUNT_CODE_MANAGE)
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: defaultName ?? "" },
+    defaultValues: { name: defaultName ?? "", code: "" },
   })
 
   // Re-seed with the typed text each time the dialog opens.
   React.useEffect(() => {
-    if (open) form.reset({ name: defaultName ?? "" })
+    if (open) form.reset({ name: defaultName ?? "", code: "" })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultName])
 
   async function onSubmit(values: FormValues) {
-    const res = await createAccount({ name: values.name })
+    const res = await createAccount({ name: values.name, currency: "", code: values.code })
     if (!res.ok) {
       showActionError(res)
       return
@@ -79,8 +83,7 @@ export function AccountQuickCreate({
         <DialogHeader>
           <DialogTitle>New account</DialogTitle>
           <DialogDescription>
-            Create a customer account with just a name — add the rest later on
-            the account page.
+            {canManageCode ? "Create an account with a manually assigned unique code." : "Ask Sales Admin to create the account, or submit a Lead conversion for review."}
           </DialogDescription>
         </DialogHeader>
 
@@ -99,6 +102,7 @@ export function AccountQuickCreate({
                 </FormItem>
               )}
             />
+            {canManageCode ? <FormField control={form.control} name="code" render={({ field }) => <FormItem><FormLabel required>Account code</FormLabel><FormControl><Input {...field} maxLength={6} className="uppercase" /></FormControl><FormMessage /></FormItem>} /> : null}
             <DialogFooter>
               <Button
                 type="button"
@@ -107,7 +111,7 @@ export function AccountQuickCreate({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={!canManageCode || form.formState.isSubmitting}>
                 Create account
               </Button>
             </DialogFooter>

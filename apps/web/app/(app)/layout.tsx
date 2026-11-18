@@ -1,3 +1,4 @@
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import { BusinessTimezoneProvider } from "@/components/table-controls/business-timezone"
 import type { CSSProperties } from "react"
 import { redirect } from "next/navigation"
@@ -132,7 +133,7 @@ export default async function AppLayout({
           </StatusCallout>
         ) : null}
         <HeaderActionsProvider permissions={[...ctx.permissions]} modules={modules}>
-          <BusinessTimezoneProvider identity={`${ctx.tenantId}:${ctx.memberId}`} timezone={process.env.TZ || "UTC"}>{children}</BusinessTimezoneProvider>
+          <div className="min-w-0 [&:has([data-site-header])>.mobile-record-navigation]:hidden"><div className="mobile-record-navigation flex items-center gap-2 border-b px-4 py-2 md:hidden"><SidebarTrigger /><span className="text-sm font-medium">Workspace navigation</span></div><BusinessTimezoneProvider identity={`${ctx.tenantId}:${ctx.memberId}`} timezone={process.env.TZ || "UTC"}>{children}</BusinessTimezoneProvider></div>
         </HeaderActionsProvider>
       </SidebarInset>
     </SidebarProvider>

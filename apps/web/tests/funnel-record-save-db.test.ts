@@ -32,6 +32,7 @@ integration("atomic Funnel and linked Opportunity record save", () => {
     await migrate(db, { migrationsFolder: resolve(process.cwd(), "db/migrations") })
     runtime.transaction.mockImplementation((work: (tx: Tx, context: ServerContext) => Promise<unknown>) => db.transaction(tx => work(tx as unknown as Tx, ctx)))
     await pg`insert into organization(id,name,slug) values (${tenant},'Atomic tests',${tenant})`
+    await pg`insert into tenant_settings(organization_id,product_types) values (${tenant}, ${JSON.stringify([{ code: "WEB", name: "Web" }])}::jsonb)`
     await pg`insert into "user"(id,name,email) values ('owner','Owner','atomic@example.invalid')`
     await pg`insert into member(id,organization_id,user_id) values ('owner',${tenant},'owner')`
     await pg`insert into accounts(id,tenant_id,name,owner_member_id) values (${account},${tenant},'Customer','owner')`

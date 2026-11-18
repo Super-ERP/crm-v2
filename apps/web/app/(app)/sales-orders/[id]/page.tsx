@@ -38,6 +38,7 @@ export default async function SalesOrderDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{order.soNumber}</h1>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <Button
             variant="outline"

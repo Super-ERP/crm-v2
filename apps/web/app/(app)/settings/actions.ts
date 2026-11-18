@@ -1,5 +1,7 @@
 "use server"
 
+import { locationCountry } from "@/server/services/locations"
+
 import { and, asc, eq, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import type {
@@ -754,6 +756,7 @@ export async function updateSettings(
   }
 
   const view = await runInTenant(ctx.tenantId, async (tx) => {
+    if (values.defaultCountry && values.defaultCountry !== (await tx.select({value:tenantSettings.defaultCountry}).from(tenantSettings).where(eq(tenantSettings.organizationId,ctx.tenantId)).limit(1))[0]?.value && !await locationCountry(tx,values.defaultCountry)) throw new Error("Select a Country from the location catalogue.")
     // Rename the entity (organization). The name lives on the better-auth
     // `organization` row, not tenant_settings.
     await tx
@@ -993,60 +996,10 @@ export async function updateIndustries(
  * names are de-duplicated (case-insensitive); each country's states are trimmed
  * and de-duplicated within that country.
  */
-export async function updateCountries(
-  countries: { name: string; states: string[] }[]
-): Promise<ActionResult<{ name: string; states: string[] }[]>> {
-  return runAction(async () => {
-    const ctx = await requireContext()
-    assertCan(ctx, PERMISSIONS.TENANT_SETTINGS)
-
-    const cleaned: { name: string; states: string[] }[] = []
-    const seenCountry = new Set<string>()
-    for (const raw of countries) {
-      const name = (raw?.name ?? "").trim()
-      if (!name) continue
-      const key = name.toLowerCase()
-      if (seenCountry.has(key)) continue
-      seenCountry.add(key)
-      const states: string[] = []
-      const seenState = new Set<string>()
-      for (const s of raw.states ?? []) {
-        const st = (s ?? "").trim()
-        if (!st) continue
-        const sk = st.toLowerCase()
-        if (seenState.has(sk)) continue
-        seenState.add(sk)
-        states.push(st)
-      }
-      states.sort((a, b) => a.localeCompare(b))
-      cleaned.push({ name, states })
-    }
-    cleaned.sort((a, b) => a.name.localeCompare(b.name))
-
-    const saved = await runInTenant(ctx.tenantId, async (tx) => {
-      const [updated] = await tx
-        .insert(tenantSettings)
-        .values({ organizationId: ctx.tenantId, status: "active", countries: cleaned })
-        .onConflictDoUpdate({
-          target: tenantSettings.organizationId,
-          set: { countries: cleaned, updatedAt: new Date() },
-        })
-        .returning()
-      await writeAudit(tx, ctx, {
-        action: "settings.countries_updated",
-        entityType: "tenant_settings",
-        entityId: ctx.tenantId,
-        after: { countries: cleaned },
-      })
-      return updated.countries ?? []
-    })
-
-    revalidatePath("/settings")
-    return saved
-  })
+export async function updateCountries(_countries: { name: string; states: string[] }[]): Promise<ActionResult<{ name: string; states: string[] }[]>> {
+  return runAction<{ name: string; states: string[] }[]>(async () => { const ctx=await requireContext(); assertCan(ctx,PERMISSIONS.TENANT_SETTINGS); throw new Error("Countries and States use the shared location catalogue. Add verified missing cities in Settings.") })
 }
 
-/** Replace the tenant's project-nature picklist (used in project codes). */
 export async function updateProjectNatures(
   projectNatures: ProjectNature[]
 ): Promise<ActionResult<ProjectNature[]>> {

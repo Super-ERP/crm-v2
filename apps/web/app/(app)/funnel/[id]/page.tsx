@@ -247,6 +247,7 @@ export default async function OpportunityDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{opp.name}</h1>
 
 
         {pendingApproval ? (
@@ -337,6 +338,7 @@ export default async function OpportunityDetailPage({
           canManageMilestones={canManageMilestones}
           milestoneValueCeiling={acceptedQuotation?.netValue ?? null}
           milestoneEligible={milestoneEligible}
+          canViewMilestones={ctx.can(PERMISSIONS.PAYMENT_MILESTONE_VIEW)}
         />
 
         <div>

@@ -28,7 +28,7 @@ function QuotationDecision({ row, action }: { row: QuotationApprovalRow; action:
         <AlertDialogDescription>{row.quoteNumber}{action === "approve" ? " will be approved." : " will return to Draft for editing."}</AlertDialogDescription>
       </AlertDialogHeader>
       {action === "reject" ? <div className="grid gap-2">
-        <Label htmlFor={`reject-${row.id}`}>Rejection reason (required)</Label>
+        <Label required htmlFor={`reject-${row.id}`}>Rejection reason</Label>
         <Textarea id={`reject-${row.id}`} value={reason} onChange={e => setReason(e.target.value)} rows={3} />
       </div> : null}
       <AlertDialogFooter>

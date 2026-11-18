@@ -232,3 +232,7 @@ CREATE POLICY tenant_isolation ON table_preferences
  USING (organization_id = current_setting('app.current_tenant', true))
  WITH CHECK (organization_id = current_setting('app.current_tenant', true));
 GRANT SELECT, INSERT, UPDATE, DELETE ON table_preferences TO crm_app;
+
+-- GeoNames is shared public reference data; only the privileged migrator may change it.
+REVOKE INSERT, UPDATE, DELETE ON location_catalogue, location_catalogue_imports FROM crm_app;
+REVOKE UPDATE, DELETE ON location_localities FROM crm_app;

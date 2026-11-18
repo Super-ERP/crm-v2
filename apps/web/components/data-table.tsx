@@ -115,6 +115,7 @@ export interface DataTableProps<TData, TValue> {
   emptyAction?: React.ReactNode
   toolbar?: React.ReactNode
   /** Render a second view using the same filtered rows and toolbar state. */
+  renderRowDetails?: (row: TData) => React.ReactNode
   renderFilteredView?: (rows: TData[], query: ServerTableQuery) => React.ReactNode
   pageSize?: number
   /** Typed, datatype-aware column filters. */
@@ -210,6 +211,7 @@ export function DataTable<TData, TValue>({
   emptyAction,
   toolbar,
   renderFilteredView,
+  renderRowDetails,
   pageSize = 25,
   filters,
   facets,
@@ -722,7 +724,7 @@ export function DataTable<TData, TValue>({
   }, [pageSize,fieldDefinitions])
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-w-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
         {showSearch ? (
           <div className="relative w-full max-w-xs">
@@ -790,7 +792,7 @@ export function DataTable<TData, TValue>({
           ) : null}
         </div>
 
-        <div className={cn("ml-auto flex flex-wrap items-center justify-end gap-2", renderFilteredView && "order-2 shrink-0")}>
+        <div className={cn("flex w-full min-w-0 flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:justify-end", renderFilteredView && "order-2")}>
           {advancedEnabled&&renderFilteredView?<AdvancedFilterEditor fields={filterFields} value={effectiveFilters.tree} timezone={businessTimezone} onApply={tree=>{setColumnFilters(current=>current.filter(filter=>!fieldDefinitions.some(field=>field.id===filter.id)));setFilterTree(tree);setFilterError('');setPagination(current=>({...current,pageIndex:0}))}}/>:null}
           {toolbar}
           {tableId && savedViews && preferencesReady ? (
@@ -838,7 +840,7 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {[...headerGroup.headers].sort((a,b)=>{const rank=(c:Column<TData,unknown>)=>c.getIsPinned()==='left'?0:c.getIsPinned()==='right'?2:1;return rank(a.column)-rank(b.column)}).map((header) => (
-                  <TableHead key={header.id} style={columnStyle(header.column)} className="relative">
+                  <TableHead title={fieldDefinitions.find(field => field.id === header.column.id)?.description} aria-sort={header.column.getIsSorted() === "asc" ? "ascending" : header.column.getIsSorted() === "desc" ? "descending" : header.column.getCanSort() ? "none" : undefined} aria-label={header.column.getIsSorted() ? `${fieldDefinitions.find(field => field.id === header.column.id)?.label ?? header.column.id}, sort priority ${header.column.getSortIndex() + 1}` : undefined} key={header.id} style={columnStyle(header.column)} className="relative">
                     {header.isPlaceholder
                       ? null
                       : advancedEnabled && filterFields.find(field=>field.id===header.column.id)?.operators.length ? <AdvancedFilterEditor
@@ -859,13 +861,15 @@ export function DataTable<TData, TValue>({
               <TableRow><TableCell colSpan={columns.length} className="py-8 text-center text-muted-foreground">Loading records…</TableCell></TableRow>
             ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <React.Fragment key={row.id}><TableRow data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id} style={columnStyle(cell.column)} title={typeof cell.getValue() === "string" ? cell.getValue() as string : undefined}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
+                {renderRowDetails ? (() => { const details = renderRowDetails(row.original); return details ? <TableRow><TableCell colSpan={row.getVisibleCells().length} className="bg-muted/20">{details}</TableCell></TableRow> : null })() : null}
+                </React.Fragment>
               ))
             ) : (
               <TableRow>
@@ -897,7 +901,7 @@ export function DataTable<TData, TValue>({
             value={String(table.getState().pagination.pageSize)}
             onValueChange={(v) => table.setPageSize(Number(v))}
           >
-            <SelectTrigger className="h-8 w-[4.5rem]">
+            <SelectTrigger aria-label="Rows per page" className="h-8 w-[4.5rem]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

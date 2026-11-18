@@ -192,13 +192,13 @@ There is currently no central Contract directory or visible multi-year Contract 
 
 Click a code in the directory, a Funnel, Opportunity, Quotation, Account or Contact to open its central page. The page groups accessible funnels using that exact code and labels **Primary**, **Cross-deal** and **CRM** relationships separately. It also links to accessible Opportunities, Quotations, end-user and bill-to Accounts, and explicitly linked Contacts. Delivery Projects appear when the Projects module is enabled and you can view them. The central page uses the same highlights, Related quick links and tabbed tables as Opportunity details. Funnel rows include their stage, estimated amount, expected close date, account, Opportunity and owner where accessible; quotation tables show status and amount. Funnel results are paginated; related-record lists use the full accessible code relationship, independently of the current funnel page.
 
-### Available from Commit (4A)
+### Visible as soon as assigned
 
-Codes are active only for funnels at **Commit (4A)** or **Closed Won**, with an open or won funnel status. Earlier stages, Closed Lost and KIV do not contribute codes to the directory, global search, related-code panels or code fields on sales records. A code shared with another eligible funnel can remain active through that other funnel.
+Assigned codes are visible immediately for accessible open or Closed Won Funnels, including before 4a. Closed Lost, KIV and void records do not contribute active codes. A code shared with another active Funnel remains available through that Funnel.
 
-Moving a funnel below 4A hides its stored identifiers; it does not delete them. Returning to an eligible stage exposes the same codes again. Historical Salesforce codes already imported against earlier-stage funnels remain stored for this purpose. Viewing a code never grants access to another user's records: sales representatives see their own records, and managers see their permitted team scope.
+Moving a Funnel back to an earlier open stage keeps its assigned code visible. This does not generate a code automatically; code assignment is still required before advancing to 4a or Won. Viewing a code never grants access to another user's records: sales representatives see their own records, and managers see their permitted team scope.
 
-Salesforce `Opportunity.Project_Code__c` maps to the funnel's **Project code**; `Project_Code_For_Cross_Deal__c` is preserved separately in storage. Sales lists and related tabs show one main **Project code**, with a clickable **Cross-deal reference** beneath it only when it differs. The separate reference column is hidden by default, remains available under Columns, and retains its filters and saved layout choices. Historical text and punctuation are preserved. The generated Opportunity **CRM project code** remains a separate internal identifier, allocated on the first entry to 4A or Won without creating a delivery Project. It is not shown as an additional code in the normal Funnel or Account/Contact display; the Funnel board, table, CSV export and detail page use it as the main code when an original code is absent and the parent Opportunity is accessible. Project-code filtering and sorting on the Funnel list use that same displayed value. Multiple distinct child-funnel codes are not collapsed into one parent code.
+Salesforce `Opportunity.Project_Code__c` maps to the funnel's **Project code**; `Project_Code_For_Cross_Deal__c` is preserved separately in storage. Sales lists and related tabs show one main **Project code**, with a clickable **Cross-deal reference** beneath it only when it differs. The separate reference column is hidden by default, remains available under Columns, and retains its filters and saved layout choices. Historical text and punctuation are preserved. The generated Opportunity **CRM project code** remains a separate internal identifier, assigned through the explicit new/existing code choice before entry to 4A or Won, without creating a delivery Project. It is not shown as an additional code in the normal Funnel or Account/Contact display; the Funnel board, table, CSV export and detail page use it as the main code when an original code is absent and the parent Opportunity is accessible. Project-code filtering and sorting on the Funnel list use that same displayed value. Multiple distinct child-funnel codes are not collapsed into one parent code.
 
 When Projects is enabled, creating or relinking a delivery Project to a funnel requires the source funnel to be at 4A or Won. A coded source reuses its code. An accessible existing delivery Project with that code and account is reused; conflicting links are rejected. If an eligible uncoded funnel creates a delivery Project, its chosen code is saved back to the funnel. Enabling Projects alone does not create any Project records.
 
@@ -220,3 +220,27 @@ Resolve downstream records first. A funnel with live quotations, projects, miles
 On approval, the funnel is archived, pending stage approvals are cancelled and its parent Opportunity totals are recalculated. Original stage, Won/Lost history, codes and amounts remain stored. This is a correction, not a move to Closed Lost or a financial refund. See [Void records and linked-record rules](07-void-records.md) for the complete module policy.
 
 Earlier duplicate-specific requests remain under **Earlier funnel voids** with their original retained-funnel rules. New requests use the universal flow.
+
+## Reading deal values and related records
+
+The Funnel board and list show **Deal value (excl. tax)**. A manual estimate takes precedence; otherwise the stored quoted value is used. Each row identifies **Estimated**, its source quotation, or **Stored deal value** for older records without a primary quotation. Stage totals cover all matching deals and remain separated by currency. The parent Opportunity **Child estimate total** sums manual child estimates by currency across all non-deleted stages; it is not invoiced or received money. Missing budgets/estimates display **Not set**, while explicit zero remains zero.
+
+**End customer**, **Parent Opportunity**, **Account owner**, **Opportunity owner** and **Salesperson / Funnel owner** describe different relationships. Accessible related names open their records; unavailable destinations keep readable labels. Creating a quotation or Project from an Account requires an explicit Funnel selection. Contact related panels explain whether the person is the primary contact. Record tabs can be shared/bookmarked; unavailable tabs fall back to a valid panel.
+
+Forecast own rows use the manual estimate multiplied by stage probability; inbound partner rows use their allocated deal basis. **Our weighted share** is a commercial allocation, not cash received or an accounting revenue-recognition event.
+
+
+### Commit setup and shared project codes
+
+Before moving to **4a** (or skipping forward into Won), choose **Generate new project code** or **Select existing project code**. Multiple Funnels can share an existing code; record access still applies. During Funnel editing, use the pencil beside Project code to reassign or enter its code. This changes that Funnel’s link, not sibling Funnels or historical document identifiers.
+
+Project Nature must be configured and Account Code assigned. Every payment schedule row needs an expected invoice month and year. Prepare the plan on the primary quotation’s **Payment milestones** tab or in the stage dialog. The server rechecks these requirements during approval; dragging cards cannot bypass them. Funnel **Payment Milestones** also shows prepared schedules before4a. Quoted amounts explicitly exclude tax.
+
+
+### Sharing or amending a Project Code
+
+Open a Funnel and choose **Link code** (or **Change**) beside Project code. In **Link existing**, search for a Project Code; select the same code on another Funnel to group them. Choose a generated or manually entered different code to change this Funnel's assignment.
+
+**Rename shared Project Code** is a separate action on the Project Code detail and within the Funnel code editor. Only Admin/Owner and Superadmin may rename or manually enter Project Codes; Sales Admin and sales roles cannot. Shared rename also requires opportunity-update and manage-all-records permissions, previews the affected Funnels and parent Opportunities, and renames their active references together. It cannot merge into another existing code. Existing documents retain their recorded identifiers. Primary assignment and historical parent/cross-deal references remain distinct relationships.
+
+The Opportunity summary shows every distinct accessible child Funnel Project Code as a clickable link. Multiple Funnels sharing one code show that code once.

@@ -1,0 +1,19 @@
+{
+  "license": "CC BY 4.0",
+  "attribution": "GeoNames \u2014 https://www.geonames.org/",
+  "files": {
+    "countryInfo.txt": {
+      "url": "https://download.geonames.org/export/dump/countryInfo.txt",
+      "sha256": "79f8f59ea01cbb40438bf1856dd6c2ff201f03f8fc72d0530b2646aaf603ef04"
+    },
+    "admin1CodesASCII.txt": {
+      "url": "https://download.geonames.org/export/dump/admin1CodesASCII.txt",
+      "sha256": "2e4867f5397acb056ea26377601b57af37cb4c81399770225018e9e439e91ad3"
+    },
+    "cities500.zip": {
+      "url": "https://download.geonames.org/export/dump/cities500.zip",
+      "sha256": "750455a31c0690d643455a64f5c812c35cf9d3ad083eb497a22113b64e5eb2c9"
+    }
+  },
+  "snapshotSha256": "e2211c000c3ebd23744f8c5be69220bb7182118e66c50e72835e8908bfd50c6c"
+}

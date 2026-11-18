@@ -2,6 +2,8 @@
 import { RecordHeaderActions } from "@/components/record-header-actions"
 
 import * as React from "react"
+import { RecordReference } from "@/components/record-reference"
+import { useRecordTab } from "@/components/use-record-tab"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -87,7 +89,7 @@ export function DocDetailBody({
     (k) => FINANCE_KINDS[k].parents.includes(doc.kind as FinanceDocKind)
   )
   const [childKind, setChildKind] = React.useState<FinanceDocKind | null>(null)
-  const [tab, setTab] = React.useState("documents")
+  const [tab, setTab] = useRecordTab<string>("documents", ["documents", "activity"])
 
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-3 lg:items-start">
@@ -100,11 +102,12 @@ export function DocDetailBody({
             <FieldRow inline label="Type">
               <Badge variant="outline">{meta.label}</Badge>
             </FieldRow>
-            <FieldRow inline label="Amount">
+            <FieldRow inline label="Document total (as recorded)">
               <span className="font-semibold tabular-nums">
                 {formatMoney(doc.amount, doc.currency)}
               </span>
             </FieldRow>
+            <p className="text-xs text-muted-foreground">Currency: {doc.currency}. Tax basis is not separately recorded.</p>
             <FieldRow inline label={meta.direction === "sale" ? "Customer" : "Supplier"}>
               {doc.partyName ?? "—"}
             </FieldRow>
@@ -140,19 +143,17 @@ export function DocDetailBody({
 
             <FieldRow inline label="Project">
               {doc.projectId ? (
-                <Link href={`/projects/${doc.projectId}`} className="link">
-                  {detail.projectName ?? doc.projectCode ?? "Project"}
-                </Link>
+                <RecordReference href={`/projects/${doc.projectId}`} label={detail.projectName ?? doc.projectCode ?? "Project"} available={detail.references?.project === true} />
               ) : (
                 "—"
               )}
             </FieldRow>
-            <FieldRow inline label="Sales order">{doc.soNumber ?? "—"}</FieldRow>
+            <FieldRow inline label="Sales order">{doc.salesOrderId ? <RecordReference href={`/sales-orders/${doc.salesOrderId}`} label={doc.soNumber ?? "Sales order"} available={detail.references?.salesOrder === true} /> : "—"}</FieldRow>
             {detail.quoteNumber ? (
-              <FieldRow inline label="Quotation">{detail.quoteNumber}</FieldRow>
+              <FieldRow inline label="Quotation">{detail.quotationId ? <RecordReference href={`/quotations/${detail.quotationId}`} label={detail.quoteNumber} available={detail.references?.quotation === true} /> : detail.quoteNumber}</FieldRow>
             ) : null}
             {detail.milestoneTitle ? (
-              <FieldRow inline label="Milestone">{detail.milestoneTitle}</FieldRow>
+              <FieldRow inline label="Milestone">{doc.milestoneId ? <RecordReference href={`/payment-milestones/${doc.milestoneId}`} label={detail.milestoneTitle} available={detail.references?.milestone === true} /> : detail.milestoneTitle}</FieldRow>
             ) : null}
             {doc.intercompanyDealId ? (
               <FieldRow inline label="Intercompany">

@@ -16,10 +16,11 @@ import {
 } from "@/components/ui/dialog"
 import { showActionError } from "@/lib/show-action-error"
 import { formatMoney } from "@/lib/format"
+import { BILLING_MONTHS } from "@/lib/billing-schedule"
 import { cn } from "@/lib/utils"
 import type { ActionResult } from "@/lib/action-result"
 
-type Part = { title: string; amount: string }
+type Part = { title: string; amount: string; expectedInvoiceMonth?: string; expectedInvoiceYear?: number }
 
 /**
  * Guided split: break the current single "full amount" milestone into N
@@ -102,13 +103,14 @@ function SplitForm({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!matches) return
+    if (parts.some(p => !p.expectedInvoiceMonth || !p.expectedInvoiceYear)) { toast.error("Every part needs an expected invoice month and year"); return }
     if (parts.some((p) => !p.title.trim())) {
       toast.error("Every part needs a title")
       return
     }
     setPending(true)
     const res = await onSplit(
-      parts.map((p) => ({ title: p.title.trim(), amount: p.amount || "0" }))
+      parts.map((p) => ({ ...p, title: p.title.trim(), amount: p.amount || "0" }))
     )
     setPending(false)
     if (!res.ok) {
@@ -125,9 +127,10 @@ function SplitForm({
         {parts.map((p, i) => (
           <div
             key={i}
-            className="grid grid-cols-[1fr_auto_auto] items-center gap-2"
+            className="grid grid-cols-2 items-center gap-2"
           >
             <Input
+              aria-label={`Part ${i + 1} title`}
               value={p.title}
               onChange={(e) => updatePart(i, { title: e.target.value })}
               placeholder={`Part ${i + 1}`}
@@ -137,11 +140,14 @@ function SplitForm({
               type="number"
               step="0.01"
               min="0"
+              aria-label={`Part ${i + 1} amount (${currency}, excluding tax)`}
               value={p.amount}
               onChange={(e) => updatePart(i, { amount: e.target.value })}
               placeholder="0.00"
               className="w-28 text-right tabular-nums"
             />
+            <select aria-label={`Part ${i + 1} expected invoice month`} className="h-9 rounded border px-2 text-sm" value={p.expectedInvoiceMonth ?? ""} onChange={e => updatePart(i, { expectedInvoiceMonth: e.target.value })}><option value="">Expected month</option>{BILLING_MONTHS.map(month => <option key={month}>{month}</option>)}</select>
+            <Input aria-label={`Part ${i + 1} expected invoice year`} type="number" min="1900" max="9999" placeholder="Expected year" value={p.expectedInvoiceYear ?? ""} onChange={e => updatePart(i, { expectedInvoiceYear: Number(e.target.value) })} />
             <Button
               type="button"
               variant="ghost"

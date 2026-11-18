@@ -1,0 +1,4 @@
+before keyboard false
+after Space {"open":true,"focus":"SUMMARY","ring":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(55.1124 -4.33153 -53.7148) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"}
+search tested {"value":"Coaching","rows":1,"open":1}
+search empty true

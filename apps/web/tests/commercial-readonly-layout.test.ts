@@ -46,6 +46,7 @@ vi.mock("@/lib/modules.server", () => ({
 vi.mock("@/components/ui/sidebar", () => ({
   SidebarInset: vi.fn(),
   SidebarProvider: vi.fn(),
+  SidebarTrigger: vi.fn(),
 }))
 vi.mock("@/components/app-sidebar", () => ({ AppSidebar: vi.fn() }))
 vi.mock("@/components/create-entity-dialog", () => ({ CreateFirstEntity: vi.fn() }))

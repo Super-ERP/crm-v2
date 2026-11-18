@@ -21,13 +21,10 @@ import { OpportunityDetailBody } from "./opportunity-detail-body"
 
 export default async function OpportunityDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string }>
 }) {
   const { id } = await params
-  const { tab } = await searchParams
   const [
     ctx,
     detail,
@@ -85,6 +82,7 @@ export default async function OpportunityDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{detail.opportunity.name}</h1>
         <OpportunityDetailBody
           detail={detail}
           activity={activity}
@@ -93,7 +91,6 @@ export default async function OpportunityDetailPage({
           newFunnelButton={newFunnelButton}
           persons={persons}
           canEdit={canUpdate}
-          initialTab={tab}
         />
       </PageBody>
     </>

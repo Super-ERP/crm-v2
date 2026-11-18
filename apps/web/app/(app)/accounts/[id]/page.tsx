@@ -183,10 +183,10 @@ export default async function AccountDetailPage({
   const addressInformation: AccountDetailSection["fields"] = [
     { label: "Street line 1", value: billing?.line1 ?? "—", editKey: "address.line1" },
     { label: "Street line 2", value: billing?.line2 ?? "—", editKey: "address.line2" },
-    { label: "City", value: billing?.city ?? "—", editKey: "address.city" },
-    { label: "State", value: billing?.state ?? "—", editKey: "address.state" },
-    { label: "Postcode", value: billing?.postcode ?? "—", editKey: "address.postcode" },
     { label: "Country", value: billing?.country ?? "—", editKey: "address.country" },
+    { label: "State/Province", value: billing?.state ?? "—", editKey: "address.state" },
+    { label: "City/Town", value: billing?.city ?? "—", editKey: "address.city" },
+    { label: "Postcode", value: billing?.postcode ?? "—", editKey: "address.postcode" },
   ]
 
   const sections: AccountDetailSection[] = [
@@ -214,6 +214,7 @@ export default async function AccountDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{account.name}</h1>
         <AccountDetailBody
           projectCodes={projectCodes ? <ProjectCodePanel kind="account" recordId={id} initialPage={projectCodes} /> : null}
           projectCodeCount={projectCodes?.total}

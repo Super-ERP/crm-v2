@@ -1,9 +1,11 @@
 "use client"
 
+import { useConversionDuplicateCheck } from "@/components/use-conversion-duplicate-check"
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog"
@@ -15,19 +17,30 @@ function ConversionDecision({ row, decision }: { row: LeadConversionApprovalRow;
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [reason, setReason] = React.useState("")
+  const [accountCode, setAccountCode] = React.useState("")
   const [pending, startTransition] = React.useTransition()
+  const needsNewAccount = !row.inputSnapshot.existingAccountId
+  const validCode = /^[A-Z0-9]{2,6}$/.test(accountCode.trim())
+  const duplicate = useConversionDuplicateCheck(row.leadId, row.inputSnapshot.newAccount?.registrationNumber ?? "", validCode ? accountCode : undefined, open && decision === "approved" && needsNewAccount)
+  const codeMessage = !accountCode ? "" : !validCode ? "Use 2–6 letters or digits." : duplicate.checking ? "Checking…" : duplicate.error ? "Could not check. Close and reopen to retry." : duplicate.codeDuplicate ? "Account code already exists." : "Account code is available."
   const label = decision === "approved" ? "Approve conversion" : decision === "rejected" ? "Reject" : "Cancel request"
   return <AlertDialog open={open} onOpenChange={setOpen}>
     <AlertDialogTrigger render={<Button className="min-h-10 max-sm:min-h-11" variant={decision === "approved" ? "default" : "outline"}>{label}</Button>} />
     <AlertDialogContent><AlertDialogHeader>
       <AlertDialogTitle>{label}</AlertDialogTitle>
-      <AlertDialogDescription>{decision === "approved" ? `Convert ${row.leadName} using the submitted details. The account, contact and requested opportunity will be created now.` : `The conversion request for ${row.leadName} will be ${decision}.`}</AlertDialogDescription>
+      {decision !== "approved" ? <AlertDialogDescription>{`The conversion request for ${row.leadName} will be ${decision}.`}</AlertDialogDescription> : null}
     </AlertDialogHeader>
-    {decision === "rejected" ? <div className="grid gap-2"><Label htmlFor={`lead-reject-${row.id}`}>Rejection reason (required)</Label><Textarea id={`lead-reject-${row.id}`} value={reason} onChange={e => setReason(e.target.value)} /></div> : null}
-    <AlertDialogFooter><AlertDialogCancel className="min-h-11" disabled={pending}>Back</AlertDialogCancel><AlertDialogAction className="min-h-11" variant={decision === "rejected" ? "destructive" : "default"} disabled={pending || (decision === "rejected" && !reason.trim())} onClick={e => {
+    {decision === "approved" ? <div className="grid gap-3">
+      <p className="text-sm">SSM registration number: {row.inputSnapshot.newAccount?.registrationNumber || row.registrationNumber || "Registration number missing — update the account before approval"}</p>
+      {needsNewAccount ? <p role="status" className={`text-sm ${duplicate.registrationDuplicate || duplicate.error ? "text-destructive" : "text-muted-foreground"}`}>{duplicate.checking ? "Checking SSM…" : duplicate.error ? "Could not check SSM. Close and reopen to retry." : duplicate.registrationDuplicate ? "SSM already exists. Cancel and resubmit using the existing account." : "No existing account matches this SSM."}</p> : null}
+      {needsNewAccount ? <p role="status" className="text-sm text-muted-foreground">{duplicate.checking ? "Checking company name…" : duplicate.error ? "Company name check unavailable." : duplicate.similarName ? "Similar company name found — review the existing accounts before approving." : "No similar company name found."}</p> : null}
+      {!row.inputSnapshot.existingAccountId ? <div className="grid gap-2"><Label required htmlFor={`review-code-${row.id}`}>Assign account code</Label><Input id={`review-code-${row.id}`} value={accountCode} onChange={e => setAccountCode(e.target.value.toUpperCase())} maxLength={6} aria-invalid={!!duplicate.codeDuplicate || (!!accountCode && !validCode)} aria-describedby={`review-code-status-${row.id}`} /><p id={`review-code-status-${row.id}`} role="status" className={`text-sm ${duplicate.codeDuplicate || duplicate.error || (!!accountCode && !validCode) ? "text-destructive" : "text-muted-foreground"}`}>{codeMessage}</p></div> : null}
+    </div> : null}
+    {decision === "rejected" ? <div className="grid gap-2"><Label required htmlFor={`lead-reject-${row.id}`}>Rejection reason</Label><Textarea id={`lead-reject-${row.id}`} value={reason} onChange={e => setReason(e.target.value)} /></div> : null}
+    <AlertDialogFooter><AlertDialogCancel className="min-h-11" disabled={pending}>Back</AlertDialogCancel><AlertDialogAction className="min-h-11" variant={decision === "rejected" ? "destructive" : "default"} disabled={pending || (decision === "rejected" && !reason.trim()) || (decision === "approved" && (duplicate.blocked || (!row.inputSnapshot.existingAccountId && !/^[A-Z0-9]{2,6}$/.test(accountCode.trim()))))} onClick={e => {
       e.preventDefault()
       startTransition(async () => {
-        const result = await decideLeadConversionAction(row.id, decision, reason)
+        const result = await decideLeadConversionAction(row.id, decision, reason, { accountCode })
         if (!result.ok) { showActionError(result); return }
         toast.success(decision === "approved" ? "Lead converted" : decision === "rejected" ? "Conversion rejected" : "Conversion request cancelled")
         setOpen(false)
@@ -46,9 +59,9 @@ export function LeadConversionApprovalCard({ row, incoming }: { row: LeadConvers
     <details open className="rounded-md border p-3 text-sm"><summary className="cursor-pointer font-medium">Submitted conversion details</summary><dl className="mt-2 grid gap-1 text-muted-foreground">
       <div><dt className="inline">Contact: </dt><dd className="inline">{row.leadName} · {row.email ?? "No email"}{row.phone ? ` · ${row.phone}` : ""}</dd></div>
       <div><dt className="inline">Account: </dt><dd className="inline">{input.existingAccountId ? "Existing account" : "Create new account"} · {row.accountName}</dd></div>
-      {!input.existingAccountId ? <><div><dt className="inline">Company code: </dt><dd className="inline">{input.newAccount?.code}</dd></div><div><dt className="inline">Account type: </dt><dd className="inline">{input.newAccount?.accountType ?? "client"}</dd></div><div><dt className="inline">Account phone: </dt><dd className="inline">{input.newAccount?.phone ?? "—"}</dd></div><div><dt className="inline">Billing address: </dt><dd className="inline">{address || "—"}</dd></div></> : null}
+      {!input.existingAccountId ? <><div><dt className="inline">SSM registration number: </dt><dd className="inline">{input.newAccount?.registrationNumber || "Missing — cancel and resubmit"}</dd></div><div><dt className="inline">Account type: </dt><dd className="inline">{input.newAccount?.accountType ?? "client"}</dd></div><div><dt className="inline">Account phone: </dt><dd className="inline">{input.newAccount?.phone ?? "—"}</dd></div><div><dt className="inline">Billing address: </dt><dd className="inline">{address || "—"}</dd></div></> : null}
       <div><dt className="inline">Create opportunity: </dt><dd className="inline">{input.createOpportunity ? "Yes" : "No"}</dd></div>
-      {input.createOpportunity ? <><div><dt className="inline">Opportunity: </dt><dd className="inline">{input.opportunityName || `${row.companyName || row.leadName} opportunity`}</dd></div><div><dt className="inline">Funnel: </dt><dd className="inline">{input.funnelName || input.opportunityName || `${row.companyName || row.leadName} opportunity`}</dd></div><div><dt className="inline">Expected close: </dt><dd className="inline">{input.expectedCloseDate || "—"}</dd></div></> : null}
+      {input.createOpportunity ? <><div><dt className="inline">Project Nature: </dt><dd className="inline">{input.projectNatureCode || "Missing — cancel and resubmit"}</dd></div><div><dt className="inline">Opportunity: </dt><dd className="inline">{input.opportunityName || `${row.companyName || row.leadName} opportunity`}</dd></div><div><dt className="inline">Funnel: </dt><dd className="inline">{input.funnelName || input.opportunityName || `${row.companyName || row.leadName} opportunity`}</dd></div><div><dt className="inline">Expected close: </dt><dd className="inline">{input.expectedCloseDate || "—"}</dd></div></> : null}
     </dl></details>
 
   <ApprovalRequestMetadata row={row} incoming={incoming}/>

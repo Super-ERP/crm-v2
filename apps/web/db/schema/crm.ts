@@ -9,10 +9,12 @@ import {
   jsonb,
   timestamp,
   unique,
+  uniqueIndex,
   index,
   foreignKey,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 import { organization, member } from "./auth"
 import { timestamps, softDelete } from "./_helpers"
 
@@ -75,7 +77,8 @@ export const accounts = pgTable(
     ...timestamps,
     ...softDelete,
   },
-  (t) => [unique("accounts_tenant_id_uq").on(t.tenantId, t.id)]
+  (t) => [unique("accounts_tenant_id_uq").on(t.tenantId, t.id),
+    uniqueIndex("accounts_active_code_unique").on(t.tenantId, sql`upper(btrim(${t.code}))`).where(sql`${t.deletedAt} IS NULL AND nullif(btrim(${t.code}), '') IS NOT NULL`)]
 )
 
 /** Contacts — a person always lives under an account. */

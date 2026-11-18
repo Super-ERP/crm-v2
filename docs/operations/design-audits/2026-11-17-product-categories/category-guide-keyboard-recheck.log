@@ -1,0 +1,6 @@
+add accordion keyboard {"open":true,"ring":"rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, lab(55.1124 -4.33153 -53.7148) 0px 0px 0px 2px, rgba(0, 0, 0, 0) 0px 0px 0px 0px"}
+dialog opens {"dialog":true,"focus":"Back"}
+dialog tab trap true
+Escape {"dialog":false,"focus":"Cancel"}
+after width 1440 false
+after width 375 false

@@ -36,6 +36,7 @@ export function AutoJoinCard({
   domains: string[]
   role: string | null
 }) {
+  const fieldId = React.useId()
   const [items, setItems] = React.useState<string[]>(domains)
   const [roleName, setRoleName] = React.useState<string>(role ?? "Rep")
   const [draft, setDraft] = React.useState("")
@@ -85,13 +86,13 @@ export function AutoJoinCard({
       </CardHeader>
       <CardContent className="grid gap-4">
         <div className="grid gap-1.5 sm:max-w-xs">
-          <label className="text-xs text-muted-foreground">Default role</label>
+          <label htmlFor={`${fieldId}-role`} className="text-xs text-muted-foreground">Default role</label>
           <Select
             value={roleName}
             onValueChange={(v) => setRoleName(v || "Rep")}
             items={roleItems}
           >
-            <SelectTrigger width="full">
+            <SelectTrigger id={`${fieldId}-role`} width="full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -105,11 +106,12 @@ export function AutoJoinCard({
         </div>
 
         <div className="grid gap-1.5">
-          <label className="text-xs text-muted-foreground">
+          <label htmlFor={`${fieldId}-domain`} className="text-xs text-muted-foreground">
             Allowed email domains
           </label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
+              id={`${fieldId}-domain`}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {

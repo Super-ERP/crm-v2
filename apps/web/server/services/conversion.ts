@@ -1,10 +1,12 @@
+import { validateLocationAddress } from "@/server/services/locations"
 import "server-only"
 import { and, asc, eq, isNull, sql } from "drizzle-orm"
 import { runInTenant, type Tx } from "@/db"
 import { PERMISSIONS } from "@/lib/permissions"
-import { resolveApprovalRoute, findManagerApprover } from "./approval-routing"
-import { assertConversionSnapshot, validateConversionInput, type LeadConversionInput } from "@/lib/lead-conversion-approval"
+import { leadConversionReviewPoolQuery } from "./lead-conversion-review-pool"
+import { assertConversionSnapshot, validateConversionInput, validateConversionReview, normalizeRegistrationNumber, type LeadConversionInput, type LeadConversionReview } from "@/lib/lead-conversion-approval"
 import {
+  tenantSettings,
   leads,
   accounts,
   persons,
@@ -88,14 +90,14 @@ export async function convertLead(ctx: ServerContext, input: LeadConversionInput
     await validateLeadAndAccount(tx, ctx, lead, input)
     const pending = await tx.execute(sql`SELECT id FROM lead_conversion_approval_requests WHERE tenant_id = ${ctx.tenantId} AND lead_id = ${lead.id} AND status = 'pending'`)
     if (pending.length) throw new Error("A conversion request is already pending for this lead")
-    const route = await resolveApprovalRoute(tx, ctx, PERMISSIONS.LEAD_CONVERT_APPROVE)
-    if (route.direct) return executeConversion(tx, ctx, input)
+    const pool = await tx.execute<{ memberId: string }>(leadConversionReviewPoolQuery(ctx.tenantId))
+    if (!pool.some(p => p.memberId !== ctx.memberId)) throw new Error("No independent Sales Admin reviewer is available. Ask an administrator to configure the review pool.")
     if (!ctx.memberId) throw new Error("A tenant membership is required")
     const [request] = await tx.execute<{ id: string }>(sql`
       INSERT INTO lead_conversion_approval_requests (tenant_id, lead_id, requester_member_id, approver_member_id, input_snapshot, lead_snapshot)
-      VALUES (${ctx.tenantId}, ${lead.id}, ${ctx.memberId}, ${route.approverMemberId}, ${JSON.stringify(input)}::jsonb, ${JSON.stringify(lead)}::jsonb) RETURNING id
+      VALUES (${ctx.tenantId}, ${lead.id}, ${ctx.memberId}, ${null}, ${JSON.stringify(input)}::jsonb, ${JSON.stringify(lead)}::jsonb) RETURNING id
     `)
-    await writeAudit(tx, ctx, { action: "lead.conversion_requested", entityType: "lead", entityId: lead.id, after: { requestId: request.id, input, approverMemberId: route.approverMemberId } })
+    await writeAudit(tx, ctx, { action: "lead.conversion_requested", entityType: "lead", entityId: lead.id, after: { requestId: request.id, input, approverMemberId: null } })
     return { accountId: null, personId: null, opportunityId: null, pending: true as const, requestId: request.id }
   })
 }
@@ -104,16 +106,30 @@ async function validateLeadAndAccount(tx: Tx, ctx: ServerContext, lead: typeof l
   if (lead.status === "converted") throw new Error("Lead already converted")
   if (lead.status === "disqualified") throw new Error("Disqualified leads cannot be converted")
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lead.email?.trim() ?? "")) throw new Error("Add a valid email before converting")
+  if (input.createOpportunity) {
+    const [settings] = await tx.select({ natures: tenantSettings.projectNatures }).from(tenantSettings).where(eq(tenantSettings.organizationId, ctx.tenantId)).limit(1)
+    if (!settings?.natures.some(n => n.code === input.projectNatureCode)) throw new Error("Choose a configured Project Nature")
+  }
+  if (!input.existingAccountId) {
+    await validateLocationAddress(tx, ctx.tenantId, input.newAccount?.address)
+    const registration = normalizeRegistrationNumber(input.newAccount?.registrationNumber)
+    // A tenant lock serializes registration checks with other account writes.
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${ctx.tenantId + ':account-identities'}, 0))`)
+    const duplicate = await tx.execute<{ id: string }>(sql`SELECT id FROM accounts WHERE tenant_id = ${ctx.tenantId} AND deleted_at IS NULL AND regexp_replace(upper(coalesce(registration_number, '')), '[^A-Z0-9]', '', 'g') = ${registration} LIMIT 1`)
+    if (duplicate.length) throw new Error("An account with this SSM registration number already exists. Select the existing account.")
+  }
   if (input.existingAccountId) {
     const [account] = await tx.select().from(accounts).where(and(eq(accounts.id, input.existingAccountId), isNull(accounts.deletedAt))).limit(1).for("share")
     if (!account) throw new Error("Account not found")
     const visible = await visibleMemberIds(tx, ctx)
     if (!canManageAllRecords(ctx) && !ownsOrManages(visible, account.ownerMemberId)) throw new Error("FORBIDDEN: not permitted on this account")
+    if (!normalizeRegistrationNumber(account.registrationNumber)) throw new Error("Add the existing account SSM registration number before conversion")
+    if (!account.code?.trim()) throw new Error("Assign the existing account code before conversion")
     if (!account.ownerMemberId) throw new Error("Assign an account owner before converting this lead.")
   }
 }
 
-export async function decideLeadConversion(ctx: ServerContext, requestId: string, decision: "approved" | "rejected" | "cancelled", reason?: string) {
+export async function decideLeadConversion(ctx: ServerContext, requestId: string, decision: "approved" | "rejected" | "cancelled", reason?: string, review?: LeadConversionReview) {
   if (!["approved", "rejected", "cancelled"].includes(decision)) throw new Error("Invalid decision")
   if (decision !== "cancelled" && !ctx.can(PERMISSIONS.LEAD_CONVERT_APPROVE)) throw new Error("FORBIDDEN: missing lead.convert.approve")
   if (decision === "rejected" && !reason?.trim()) throw new Error("A rejection reason is required")
@@ -122,9 +138,11 @@ export async function decideLeadConversion(ctx: ServerContext, requestId: string
     if (!request || request.status !== "pending") throw new Error("Pending request not found")
     if (decision === "cancelled") {
       if (ctx.memberId !== request.requester_member_id) throw new Error("Only the requester can cancel this request")
-    } else if (!ctx.isSuperadmin) {
-      if (ctx.memberId === request.requester_member_id || await findManagerApprover(tx, request.requester_member_id, PERMISSIONS.LEAD_CONVERT_APPROVE) !== ctx.memberId)
-        throw new Error("FORBIDDEN: only the assigned reporting manager can decide")
+    } else {
+      if (ctx.memberId === request.requester_member_id) throw new Error("Cannot decide your own request")
+      if (!ctx.can(PERMISSIONS.ACCOUNT_CODE_MANAGE)) throw new Error("FORBIDDEN: missing account.code.manage")
+      const pool = await tx.execute<{ memberId: string }>(leadConversionReviewPoolQuery(ctx.tenantId))
+      if (!ctx.isSuperadmin && !pool.some(p => p.memberId === ctx.memberId)) throw new Error("FORBIDDEN: only the active Sales Admin review pool can decide")
     }
     if (decision !== "cancelled") {
       if (ctx.memberId === request.requester_member_id) throw new Error("Cannot decide your own request")
@@ -138,7 +156,8 @@ export async function decideLeadConversion(ctx: ServerContext, requestId: string
       const [lead] = await tx.select().from(leads).where(and(eq(leads.id, request.lead_id), isNull(leads.deletedAt))).limit(1).for("update")
       if (!lead) throw new Error("Lead not found")
       assertConversionSnapshot(request.lead_snapshot, lead)
-      validateConversionInput(request.input_snapshot)
+      const reviewedInput = validateConversionReview(request.input_snapshot, review)
+      validateConversionInput(reviewedInput)
       // Re-evaluate the requester's current membership, permission and owner scope.
       const permissions = await tx.execute<{ key: string; userId: string }>(sql`
         SELECT DISTINCT perm.key, m.user_id AS "userId" FROM membership_profiles profile
@@ -154,12 +173,12 @@ export async function decideLeadConversion(ctx: ServerContext, requestId: string
       if (!requesterCtx.can(PERMISSIONS.LEAD_CONVERT)) throw new Error("Requester no longer has permission to convert leads")
       const requesterVisible = await visibleMemberIds(tx, requesterCtx)
       if (!canManageAllRecords(requesterCtx) && !ownsOrManages(requesterVisible, lead.ownerMemberId)) throw new Error("Requester no longer has access to this lead")
-      await validateLeadAndAccount(tx, requesterCtx, lead, request.input_snapshot)
-      await validateLeadAndAccount(tx, ctx, lead, request.input_snapshot)
-      result = await executeConversion(tx, ctx, request.input_snapshot, request.requester_member_id)
+      await validateLeadAndAccount(tx, requesterCtx, lead, reviewedInput)
+      await validateLeadAndAccount(tx, ctx, lead, reviewedInput)
+      result = await executeConversion(tx, ctx, reviewedInput, request.requester_member_id)
     }
     await tx.execute(sql`UPDATE lead_conversion_approval_requests SET status = ${decision}, decision_note = ${reason?.trim() || null}, decided_at = now(), decided_by_member_id = ${ctx.memberId} WHERE tenant_id = ${ctx.tenantId} AND id = ${requestId}`)
-    await writeAudit(tx, ctx, { action: `lead.conversion_${decision}`, entityType: "lead", entityId: request.lead_id, after: { requestId, reason: reason?.trim(), result } })
+    await writeAudit(tx, ctx, { action: `lead.conversion_${decision}`, entityType: "lead", entityId: request.lead_id, after: { requestId, reason: reason?.trim(), review: decision === "approved" ? review : undefined, result } })
     return { leadId: request.lead_id, result }
   })
 }
@@ -220,7 +239,7 @@ async function executeConversion(tx: Tx, ctx: ServerContext, input: LeadConversi
         .where(
           and(
             eq(accounts.tenantId, ctx.tenantId),
-            eq(sql`upper(${accounts.code})`, code),
+            eq(sql`upper(btrim(${accounts.code}))`, code),
             isNull(accounts.deletedAt)
           )
         )
@@ -249,6 +268,7 @@ async function executeConversion(tx: Tx, ctx: ServerContext, input: LeadConversi
             input.newAccount?.accountType === "reseller" ? "reseller" : "client",
           phone: input.newAccount?.phone?.trim() || null,
           billingAddress,
+          registrationNumber: input.newAccount?.registrationNumber?.trim() || null,
         })
         .returning()
       accountId = acc.id
@@ -331,6 +351,8 @@ async function executeConversion(tx: Tx, ctx: ServerContext, input: LeadConversi
           : null,
         currency,
         primaryPersonId: person.id,
+        projectNatureCode: input.projectNatureCode!,
+        projectNatures: [input.projectNatureCode!],
       })
       containerId = container.id
       const [opp] = await tx
@@ -346,6 +368,8 @@ async function executeConversion(tx: Tx, ctx: ServerContext, input: LeadConversi
           ownerMemberId,
           currency,
           expectedCloseDate: input.expectedCloseDate ?? null,
+          projectNatureCode: input.projectNatureCode!,
+          projectNatures: [input.projectNatureCode!],
         })
         .returning()
       await tx.insert(funnelStageHistory).values({

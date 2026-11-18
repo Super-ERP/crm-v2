@@ -114,6 +114,7 @@ export type LeadDetail = {
   lead: LeadRow
   stageName: string | null
   funnelName: string | null
+  convertedOpportunityLabel: string | null
   accountName: string | null
   personName: string | null
 }
@@ -172,7 +173,14 @@ export async function leadsGet(
     if (p) personName = [p.firstName, p.lastName].filter(Boolean).join(" ")
   }
 
-  return { lead, stageName, funnelName, accountName, personName }
+  let convertedOpportunityLabel: string | null = null
+  if (lead.convertedOpportunityId && ctx.can(PERMISSIONS.OPPORTUNITY_VIEW)) {
+    const [converted] = await tx.select({name: opportunities.name, code: opportunities.code})
+      .from(opportunities).where(and(eq(opportunities.id, lead.convertedOpportunityId),
+        isNull(opportunities.deletedAt), ownerScope(opportunities.ownerMemberId, visible))).limit(1)
+    if (converted) convertedOpportunityLabel = [...new Set([converted.code, converted.name].filter(Boolean))].join(" — ")
+  }
+  return { lead, stageName, funnelName, convertedOpportunityLabel, accountName, personName }
 }
 
 // ---------------------------------------------------------------------------
@@ -527,6 +535,7 @@ export type OpportunityContainerRow = {
   name: string
   accountId: string
   accountName: string
+  accountCanView?: boolean
   accountCode: string | null
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
@@ -546,7 +555,7 @@ export async function opportunitiesList(
   const accountOwnerMember = alias(member, "opportunity_account_owner_member")
   const accountOwnerUser = alias(user, "opportunity_account_owner_user")
   const relatedFields=await relatedQueryRegistry(tx,ctx,"opportunities",query?.filterTree,query?.sorting)
-  const tableFieldColumns = {name:opportunities.name,accountId:opportunities.accountId,accountOwnerMemberId:accounts.ownerMemberId,totalEstimatedFunnelAmount:opportunities.totalEstimatedFunnelAmount,funnelCount:sql`(select count(*) from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,projectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.projectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,crossDealProjectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.crossDealProjectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`}
+  const tableFieldColumns = {name:opportunities.name,accountId:opportunities.accountId,accountOwnerMemberId:accounts.ownerMemberId,totalEstimatedFunnelAmount:opportunities.totalEstimatedFunnelAmount,funnelCount:sql`(select count(*) from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,projectCodes:sql`ARRAY(select distinct ${displayedFunnelProjectCode(visible)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`,crossDealProjectCodes:sql`ARRAY(select distinct ${visibleProjectCode(funnels.crossDealProjectCode)} from ${funnels} where ${funnels.opportunityId}=${opportunities.id} and ${funnels.deletedAt} is null and ${ownerScope(funnels.ownerMemberId,visible) ?? sql`true`})`}
     const where = and(
     recordFilterRelated("opportunities",query?.filterTree,tableFieldColumns,relatedFields,{currency:opportunities.currency,moneyBuckets:{totalEstimatedFunnelAmount:opportunities.estimatedTotalsByCurrency},arrays:['projectCodes','crossDealProjectCodes'],relationNames:{accountId:accounts.name,accountOwnerMemberId:accountOwnerUser.name}}),
     isNull(opportunities.deletedAt),
@@ -577,6 +586,7 @@ export async function opportunitiesList(
         name: opportunities.name,
         accountId: opportunities.accountId,
         accountName: accounts.name,
+        accountCanView: sql<boolean>`${ctx.can(PERMISSIONS.ACCOUNT_VIEW)} and ${accounts.deletedAt} is null and (${accountReadScope(visible) ?? sql`true`})`,
         accountCode: accounts.code,
         accountOwnerMemberId: accounts.ownerMemberId,
         accountOwnerName: accountOwnerUser.name,
@@ -607,17 +617,18 @@ export async function opportunitiesList(
     .select({
       opportunityId: funnels.opportunityId,
       n: sql<number>`count(*)::int`,
-      projectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.projectCode} order by ${funnels.projectCode}) filter (where ${activeProjectCodeFunnel()} and ${funnels.projectCode} is not null), ARRAY[]::text[])`,
+      projectCodes: sql<string[]>`coalesce(array_agg(distinct ${displayedFunnelProjectCode(visible)}) filter (where ${displayedFunnelProjectCode(visible)} is not null), ARRAY[]::text[])`,
       crossDealProjectCodes: sql<string[]>`coalesce(array_agg(distinct ${funnels.crossDealProjectCode} order by ${funnels.crossDealProjectCode}) filter (where ${activeProjectCodeFunnel()} and ${funnels.crossDealProjectCode} is not null), ARRAY[]::text[])`,
     })
     .from(funnels)
+    .innerJoin(opportunities,and(eq(opportunities.id,funnels.opportunityId),eq(opportunities.tenantId,funnels.tenantId),isNull(opportunities.deletedAt)))
     .where(
       and(isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible), inArray(funnels.opportunityId, rows.map((r) => r.id)))
     )
     .groupBy(funnels.opportunityId)
   const countBy = new Map(counts.map((c) => [c.opportunityId, c]))
   return {
-    rows: await enrichTableRows(tx, "opportunities", rows.map((r) => ({ ...r, funnelCount: countBy.get(r.id)?.n ?? 0, projectCodes: countBy.get(r.id)?.projectCodes ?? [], crossDealProjectCodes: countBy.get(r.id)?.crossDealProjectCodes ?? [] })), ctx.tenantId),
+    rows: await enrichTableRows(tx, "opportunities", rows.map((r) => ({ ...r, funnelCount: countBy.get(r.id)?.n ?? 0, projectCodes: [...(countBy.get(r.id)?.projectCodes ?? [])].sort(), crossDealProjectCodes: countBy.get(r.id)?.crossDealProjectCodes ?? [] })), ctx.tenantId),
     total: countOf(totalRows),
   }
 }
@@ -644,6 +655,7 @@ export type OpportunityContainerDetail = {
   accountName: string
   accountCurrency: string
   ownerName: string | null
+  accountOwnerName: string | null
   ownerContact: ContactRef | null
   powerSponsorContact: ContactRef | null
   funnels: {
@@ -693,7 +705,7 @@ export async function opportunitiesGet(
   if (!ownsOrManages(visible, opp.ownerMemberId)) return null
 
   const [acct] = await tx
-    .select({ name: accounts.name, currency: accounts.currency })
+    .select({ name: accounts.name, currency: accounts.currency, ownerMemberId: accounts.ownerMemberId })
     .from(accounts)
     .where(eq(accounts.id, opp.accountId))
     .limit(1)
@@ -703,6 +715,10 @@ export async function opportunitiesGet(
     .innerJoin(user, eq(member.userId, user.id))
     .where(eq(member.id, opp.ownerMemberId))
     .limit(1)
+
+  const [accountOwner] = acct?.ownerMemberId ? await tx.select({name: user.name})
+    .from(member).innerJoin(user, eq(member.userId,user.id))
+    .where(eq(member.id,acct.ownerMemberId)).limit(1) : []
 
   // Owner/Power Sponsor Contact — resolved with "Designation" (a Salesforce
   // formula field derived live from persons.title, never stored).
@@ -733,7 +749,7 @@ export async function opportunitiesGet(
     .select({
       id: funnels.id,
       name: funnels.name,
-      projectCode: visibleProjectCode(funnels.projectCode),
+      projectCode: displayedFunnelProjectCode(visible),
       crossDealProjectCode: visibleProjectCode(funnels.crossDealProjectCode),
       status: funnels.status,
       estimatedAmount: funnels.estimatedAmount,
@@ -743,6 +759,7 @@ export async function opportunitiesGet(
       stageCode: pipelineStages.code,
     })
     .from(funnels)
+    .innerJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
     .leftJoin(pipelineStages, eq(funnels.currentStageId, pipelineStages.id))
     .where(and(eq(funnels.opportunityId, id), isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible)))
     .orderBy(desc(funnels.createdAt))
@@ -789,6 +806,7 @@ export async function opportunitiesGet(
     accountName: acct?.name ?? "—",
     accountCurrency: acct?.currency ?? "MYR",
     ownerName: owner?.name ?? null,
+    accountOwnerName: accountOwner?.name ?? null,
     ownerContact,
     powerSponsorContact,
     funnels: children,
@@ -867,6 +885,8 @@ export type OpportunityListRow = {
   name: string
   accountId: string
   accountName: string
+  accountCanView?: boolean
+  opportunityCanView?: boolean
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
   opportunityName: string
@@ -891,6 +911,7 @@ export type OpportunityListRow = {
   pipelineId: string
   pipelineIsDefault: boolean
   primaryQuotationId: string | null
+  primaryQuotationNumber?: string | null
   projectNatureCode: string | null
   projectNatures: string[] | null
   pain: string | null
@@ -905,7 +926,7 @@ export async function funnelsList(
   tx: Tx,
   ctx: ServerContext,
   { limit, offset, query, stageId }: PagingOpts & { query?: RecordListQuery; stageId?: string }
-): Promise<ReadResult<OpportunityListRow> & { valueTotal: string }> {
+): Promise<ReadResult<OpportunityListRow> & { valueTotalsByCurrency: Array<{currency: string; total: string}> }> {
   const financeEnabled = (await getEntitledModuleMap()).finance
   const accountOwnerMember = alias(member, "funnel_account_owner_member")
   const accountOwnerUser = alias(user, "funnel_account_owner_user")
@@ -914,7 +935,7 @@ export async function funnelsList(
   const validStatuses = ["open", "won", "lost", "on_hold"] as const
   const statuses = query?.selections.status?.filter((value): value is (typeof validStatuses)[number] => validStatuses.includes(value as (typeof validStatuses)[number]))
   const relatedFields=await relatedQueryRegistry(tx,ctx,"funnel",query?.filterTree,query?.sorting)
-  const tableFieldColumns = {id:funnels.name,accountId:funnels.accountId,projectCode:displayedFunnelProjectCode(visible),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:funnels.opportunityId,accountOwnerMemberId:accounts.ownerMemberId,amount:sql`coalesce(${funnels.estimatedAmount},${funnels.amount},0)`,expectedCloseDate:funnels.expectedCloseDate,stageId:funnels.currentStageId,status:funnels.status}
+  const tableFieldColumns = {id:funnels.name,accountId:funnels.accountId,projectCode:displayedFunnelProjectCode(visible),crossDealProjectCode:visibleProjectCode(funnels.crossDealProjectCode),opportunityId:funnels.opportunityId,accountOwnerMemberId:accounts.ownerMemberId,amount:sql`coalesce(${funnels.estimatedAmount},${funnels.amount})`,expectedCloseDate:funnels.expectedCloseDate,stageId:funnels.currentStageId,status:funnels.status}
     const where = and(
     recordFilterRelated("funnel",query?.filterTree,tableFieldColumns,relatedFields,{currency:funnels.currency,dateOnly:['expectedCloseDate'],relationNames:{accountId:accounts.name,opportunityId:opportunities.name,accountOwnerMemberId:accountOwnerUser.name}}),
     isNull(funnels.deletedAt), ownerScope(funnels.ownerMemberId, visible),
@@ -930,7 +951,7 @@ export async function funnelsList(
     statuses?.length ? inArray(funnels.status, statuses) : undefined,
     stageId ? eq(funnels.currentStageId, stageId) : undefined
   )
-  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  id: funnels.name, accountId: accounts.name, opportunityId: opportunities.name, accountOwnerMemberId: accountOwnerUser.name, stageId: pipelineStages.name, amount: sql`coalesce(${funnels.estimatedAmount}, ${funnels.amount}, 0)`, expectedCloseDate: funnels.expectedCloseDate, ownerMemberId: user.name, status: funnels.status }
+  const sortColumns = { ...relationshipSortColumns(relatedFields), ...tableFieldColumns,  id: funnels.name, accountId: accounts.name, opportunityId: opportunities.name, accountOwnerMemberId: accountOwnerUser.name, stageId: pipelineStages.name, amount: sql`coalesce(${funnels.estimatedAmount}, ${funnels.amount})`, expectedCloseDate: funnels.expectedCloseDate, ownerMemberId: user.name, status: funnels.status }
   const sortColumn = query?.sort?.id ? sortColumns[query.sort.id as keyof typeof sortColumns] : undefined
   const ordering = sortColumn ? query?.sort?.desc ? desc(sortColumn) : asc(sortColumn) : desc(funnels.createdAt)
   const [rows, totalRows] = await Promise.all([
@@ -943,6 +964,8 @@ export async function funnelsList(
       crossDealProjectCode: visibleProjectCode(funnels.crossDealProjectCode),
         accountId: funnels.accountId,
         accountName: accounts.name,
+        accountCanView: sql<boolean>`${ctx.can(PERMISSIONS.ACCOUNT_VIEW)} and ${accounts.deletedAt} is null and (${accountReadScope(visible) ?? sql`true`})`,
+        opportunityCanView: sql<boolean>`${ctx.can(PERMISSIONS.OPPORTUNITY_VIEW)} and ${opportunities.deletedAt} is null and (${ownerScope(opportunities.ownerMemberId, visible) ?? sql`true`})`,
         accountOwnerMemberId: accounts.ownerMemberId,
         accountOwnerName: accountOwnerUser.name,
         opportunityName: opportunities.name,
@@ -966,6 +989,7 @@ export async function funnelsList(
         pipelineId: funnels.pipelineId,
         pipelineIsDefault: pipelines.isDefault,
         primaryQuotationId: funnels.primaryQuotationId,
+        primaryQuotationNumber: sql<string | null>`(select ${quotations.quoteNumber} from ${quotations} where ${ctx.can(PERMISSIONS.QUOTATION_VIEW)} and ${quotations.id} = ${funnels.primaryQuotationId} and ${quotations.funnelId} = ${funnels.id} and ${quotations.deletedAt} is null limit 1)`,
         projectNatureCode: funnels.projectNatureCode,
         projectNatures: funnels.projectNatures,
         pain: opportunities.pain,
@@ -989,7 +1013,7 @@ export async function funnelsList(
       .limit(limit)
       .offset(offset),
     tx
-      .select({ count: sql<number>`count(*)::int`, valueTotal: sql<string>`coalesce(sum(coalesce(${funnels.estimatedAmount}, ${funnels.amount}, 0)), 0)::text` })
+      .select({ currency: funnels.currency, count: sql<number>`count(*)::int`, valueTotal: sql<string>`coalesce(sum(coalesce(${funnels.estimatedAmount}, ${funnels.amount}, 0)), 0)::text` })
       .from(funnels)
       .innerJoin(opportunities, eq(funnels.opportunityId, opportunities.id))
       .innerJoin(accounts, eq(funnels.accountId, accounts.id))
@@ -999,7 +1023,7 @@ export async function funnelsList(
       .leftJoin(user, eq(member.userId, user.id))
       .leftJoin(accountOwnerMember, eq(accounts.ownerMemberId, accountOwnerMember.id))
       .leftJoin(accountOwnerUser, eq(accountOwnerMember.userId, accountOwnerUser.id))
-      .where(where),
+      .where(where).groupBy(funnels.currency).orderBy(asc(funnels.currency)),
   ])
 
   const partiesByOpp = financeEnabled
@@ -1010,8 +1034,8 @@ export async function funnelsList(
     : new Map<string, PartyRow[]>()
   return {
     rows: await enrichTableRows(tx, "funnel", rows.map((r) => ({ ...r, parties: partiesByOpp.get(r.id) ?? [] })), ctx.tenantId),
-    total: countOf(totalRows),
-    valueTotal: totalRows[0]?.valueTotal ?? "0",
+    total: totalRows.reduce((sum, row) => sum + Number(row.count), 0),
+    valueTotalsByCurrency: totalRows.filter(row => row.currency).map(row => ({currency: row.currency, total: row.valueTotal})),
   }
 }
 
@@ -1166,11 +1190,11 @@ export async function funnelsGet(
   // Resolve the primary quotation's number so the summary can show that the
   // net deal value derives "from quotation <quoteNumber>".
   let quoteNumber: string | null = null
-  if (opp.primaryQuotationId) {
+  if (opp.primaryQuotationId && ctx.can(PERMISSIONS.QUOTATION_VIEW)) {
     const [pq] = await tx
       .select({ quoteNumber: quotations.quoteNumber })
       .from(quotations)
-      .where(eq(quotations.id, opp.primaryQuotationId))
+      .where(and(eq(quotations.id, opp.primaryQuotationId), eq(quotations.funnelId, id), isNull(quotations.deletedAt)))
       .limit(1)
     quoteNumber = pq?.quoteNumber ?? null
   }

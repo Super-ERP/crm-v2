@@ -282,7 +282,7 @@ If Projects is enabled, the linked delivery project can be found through its exp
 
 ### Open a project code
 
-Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
+Active project codes are clickable: open one to see its connected sales records. Assigned codes appear for accessible open or Closed Won Funnels, including before 4a. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
 
 ## Continue
 
@@ -303,3 +303,9 @@ Draft quotations have an editable **Quotation date** beside **Valid until**. Sel
 ## Reviewed Void
 
 Use **Void** to request correction of any live quotation, including Accepted. The preview identifies linked projects/milestones that must be resolved first. Sales Admin reviews it in **Approvals → Record voids**. Approved voids preserve the quotation number, amounts, lines and attachments, remove it from active value, and reassign the funnel’s primary quote and derived products when needed. There is no direct Delete bypass or self-service Undo. See [Void records](07-void-records.md).
+
+## Amounts and primary-quotation help
+
+Quotation totals distinguish subtotal, header discount, net excluding tax, tax and final total. QAR/CC documents expose the header discount so their arithmetic reconciles. Fallback line totals are labelled **Line total incl. tax** and include allocated header discount.
+
+The **?** help control sits inside the **Set primary** outline, with its own focus/click target. Opening help does not set the quotation primary. Setting primary updates quoted net value; it does not replace a manual estimate or approve/send the quotation. Own-entity forecast remains estimate-based.

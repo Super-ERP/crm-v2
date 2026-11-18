@@ -65,7 +65,7 @@ export default async function ProjectDetailPage({
       value: <StatusBadge status={project.status} />,
     },
     {
-      label: "Value",
+      label: "Project value (excl. tax)",
       editKey: "value",
       value: (
         <span className="font-semibold tabular-nums">
@@ -117,6 +117,7 @@ export default async function ProjectDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{detail.project.name}</h1>
         <ProjectDetailBody
           projectId={id}
           fields={fields}

@@ -1,6 +1,8 @@
 "use client"
+import { useRecordTab } from "@/components/use-record-tab"
 
 import { RecordHeaderActions } from "@/components/record-header-actions"
+import { SetPrimaryQuotationButton } from "./set-primary-quotation-button"
 import { DetailCardHeader } from "@/components/detail-page"
 import { useUnsavedChanges } from "@/components/use-unsaved-changes"
 
@@ -162,6 +164,8 @@ export function QuotationForm({
   contacts = [],
   project = null,
   documents = [],
+  billingSchedule,
+  billingScheduleCount = 0,
   perms = ALL_QUOTATION_PERMS,
 }: {
   detail: QuotationDetail
@@ -177,6 +181,8 @@ export function QuotationForm({
   /** The delivery project created from this quotation, if any. */
   project?: { id: string; projectCode: string } | null
   /** Files attached to this quotation (shown in the Documents tab). */
+  billingSchedule?: React.ReactNode
+  billingScheduleCount?: number
   documents?: SectionDocument[]
   perms?: QuotationPerms
 }) {
@@ -195,7 +201,7 @@ export function QuotationForm({
   const [approvalReason, setApprovalReason] = React.useState("")
   // "Build" = the editor; "Preview" = the finished quotation document (toggle
   // like the funnel board/list).
-  const [view, setView] = React.useState("build")
+  const [view, setView] = useRecordTab<string>("build", billingSchedule ? ["build","preview","documents","milestones"] : ["build","preview","documents"])
 
   // Whether the Actions card has anything to show for this user/status.
   const quotationActions = quotationActionsFor(quotation.status, {
@@ -241,6 +247,7 @@ export function QuotationForm({
       lines:
         lines.length > 0
           ? lines.map((l) => ({
+              lineId: l.id,
               productId: l.productId ?? "",
               projectNatureCode: l.projectNatureCode ?? "",
               uom: l.uom ?? "",
@@ -479,6 +486,7 @@ export function QuotationForm({
           : values.attentionContactId || null,
       headerDiscount: values.headerDiscount || "0",
       lines: values.lines.map((l) => ({
+        lineId: l.lineId,
         productId: l.productId || null,
         projectNatureCode: l.projectNatureCode || null,
         uom: l.uom || null,
@@ -493,8 +501,9 @@ export function QuotationForm({
       setBusy(false)
       return
     }
-    savedValues.current = values
-    form.reset(values)
+    const saved = { ...values, lines: values.lines.map((line,index)=>({...line,lineId:res.data.lineIds[index]})) }
+    savedValues.current = saved
+    form.reset(saved)
     setEditing(false)
     toast.success("Quotation saved")
     setBusy(false)
@@ -593,8 +602,10 @@ export function QuotationForm({
         <TabsTrigger value="build">Build</TabsTrigger>
         <TabsTrigger value="preview">Preview</TabsTrigger>
         <TabsTrigger value="documents">Documents</TabsTrigger>
+        {billingSchedule ? <TabsTrigger value="milestones">Payment milestones ({billingScheduleCount})</TabsTrigger> : null}
       </TabsList>
 
+      {billingSchedule ? <TabsContent value="milestones">{billingSchedule}</TabsContent> : null}
       <TabsContent value="build" className="grid gap-6 lg:grid-cols-3">
       {/* Facts/Actions/Related sit on the LEFT (house record anatomy);
           the build form takes the wide right column. */}
@@ -916,7 +927,7 @@ export function QuotationForm({
                             Unit Price
                           </th>
                           <th className="w-28 py-2 pr-2 text-right font-medium">Discount ({quotation.currency})</th>
-                          <th className="w-28 py-2 pr-2 text-right font-medium">Line total</th>
+                          <th className="w-28 py-2 pr-2 text-right font-medium">Line total incl. tax</th>
                           {canEditDraft ? <th className="w-8 py-2" /> : null}
                         </tr>
                       </thead>
@@ -1043,6 +1054,7 @@ export function QuotationForm({
                     </table>
                   </div>
                 )}
+                <p className="text-xs text-muted-foreground">Line totals include tax and allocated header discount.</p>
               </CardContent>
             </Card>
 
@@ -1066,6 +1078,7 @@ export function QuotationForm({
               label="Discount"
               value={formatMoney(display.discountTotal, quotation.currency)}
             />
+            <Row label="Quoted amount (excl. tax)" value={formatMoney(Number(display.subtotal) - Number(display.discountTotal), quotation.currency)} />
             <Row
               label={`Tax${labelTaxInclusive ? " (incl.)" : ""}`}
               value={formatMoney(display.taxTotal, quotation.currency)}
@@ -1093,8 +1106,8 @@ export function QuotationForm({
                   Primary quotation
                 </Badge>
                 <InfoHint label="What is the primary quotation?">
-                  The primary quotation drives the funnel’s value and its
-                  weighted forecast.
+                  The primary quotation supplies the Funnel’s quoted net value.
+                  Manual estimates take precedence in Deal value; own forecast uses estimates.
                 </InfoHint>
               </div>
             ) : null}
@@ -1366,21 +1379,7 @@ export function QuotationForm({
               </AlertDialog>
             ) : null}
             {showSetPrimary ? (
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  disabled={busy}
-                  onClick={onSetPrimary}
-                >
-                  Set primary
-                </Button>
-                <InfoHint label="What does setting a primary quotation do?">
-                  The primary quotation sets the funnel’s value — making this
-                  one primary re-values the funnel and shifts the weighted
-                  forecast. You can undo it right after.
-                </InfoHint>
-              </div>
+              <SetPrimaryQuotationButton disabled={busy} onSetPrimary={onSetPrimary} />
             ) : null}
 
           </CardContent>
@@ -1409,6 +1408,7 @@ export function QuotationForm({
                       },
                     ]
                   : []),
+                ...(billingSchedule ? [{kind:"milestone" as const,label:"Payment milestones",count:billingScheduleCount,onSelect:()=>setView("milestones")}] : []),
                 {
                   kind: "product" as const,
                   label: "Products",
@@ -1504,7 +1504,7 @@ export function QuotationForm({
                     <th className="py-2 pr-2 text-right font-medium">Quantity</th>
                     <th className="py-2 pr-2 text-right font-medium">Unit Price</th>
                     <th className="py-2 pr-2 text-right font-medium">Item Discount</th>
-                    <th className="py-2 pr-2 text-right font-medium">Sub-total</th>
+                    <th className="py-2 pr-2 text-right font-medium">Line total incl. tax</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1548,6 +1548,7 @@ export function QuotationForm({
               </table>
             </div>
 
+            <p className="text-xs text-zinc-500">Line totals include tax and allocated header discount.</p>
             <div className="ml-auto grid w-full max-w-xs gap-1 text-sm">
               <DocRow
                 label="Subtotal"

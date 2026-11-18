@@ -1,4 +1,5 @@
 import "dotenv/config"
+import { importLocationCatalogue } from "./import-location-catalogue"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import postgres from "postgres"
@@ -29,10 +30,15 @@ async function main() {
   ) as unknown
   console.log("→ applying drizzle migrations…")
   await publishAfterSuccessfulMigration(
-    () => migrate(db, { migrationsFolder }),
+    async () => {
+      await migrate(db, { migrationsFolder })
+      console.log("→ importing pinned GeoNames catalogue…")
+      await importLocationCatalogue(sql)
+    },
     () => readActualAppliedMigrationVersion(sql, journal),
     (version) => publishAppliedMigrationVersion(sql, version),
   )
+
 
   // pg_trgm powers the fuzzy duplicate-account warnings (similarity()).
   // Requires superuser, which this job runs as; idempotent.

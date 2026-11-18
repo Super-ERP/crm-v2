@@ -1,4 +1,5 @@
 import "server-only"
+import { assertProjectNatures } from "@/lib/project-nature"
 import { and, eq, isNull, sql } from "drizzle-orm"
 import type { Tx } from "@/db"
 import { opportunities, funnels, accounts, tenantSettings } from "@/db/schema"
@@ -72,7 +73,7 @@ export async function createOpportunityContainer(
     )
   const n = (maxRow?.max ?? 0) + 1
   const [settings] = await tx
-    .select({ organizationCode: tenantSettings.entityCode })
+    .select({ organizationCode: tenantSettings.entityCode, natures: tenantSettings.projectNatures })
     .from(tenantSettings)
     .where(eq(tenantSettings.organizationId, ctx.tenantId))
     .limit(1)
@@ -83,6 +84,7 @@ export async function createOpportunityContainer(
   })
   const ppvvc = pickPpvvc(input.ppvvc)
   const nature = pickNature(input)
+  assertProjectNatures(nature.projectNatures?.length ? nature.projectNatures : nature.projectNatureCode ? [nature.projectNatureCode] : [], settings?.natures ?? [])
 
   const [created] = await tx
     .insert(opportunities)

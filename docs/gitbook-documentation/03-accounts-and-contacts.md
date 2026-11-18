@@ -45,7 +45,7 @@ Click **+ New Account**.
 Fill in the organization details:
 
 * **Company Name**: Official registered company name.
-* **Account Code**: Optional identifier, unique within the organization: 2–6 letters or digits (e.g., `ACME01`). Leaving it blank generates a code from the name.
+* **Account Code**: Required manual identifier, unique within the organization: 2–6 letters or digits (e.g., `ACME01`). Only Sales Admin, Admin and above with the code-management permission can assign or change it. Sales users request new accounts through Lead conversion review.
 * **Account Type**: Select **Client** or **Reseller**.
 * **Currency**: Select the standard ISO Currency (e.g., `MYR`, `USD`, `SGD`, `EUR`).
 * **Phone & Website**: Primary office contact channels.
@@ -159,11 +159,11 @@ Account and Contact details include a **Project codes** panel, independently of 
 
 Accounts show codes from their end-user funnels and, when you can view quotations, funnels whose quotations bill that account. Contacts show explicit funnel/opportunity contact relationships and, when quotation viewing is permitted, quotation attention-contact links. Merely sharing a company does not assign all its project codes to a contact.
 
-The **Project codes** tab in the existing related-record block shows one main clickable Project code per funnel, with a quieter **Cross-deal reference** only when the Salesforce reference differs. The internal CRM code is used as the main code only when no original Project code exists. Funnel and Opportunity links remain available. Only funnels at Commit (4A) or Closed Won contribute codes. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
+The **Project codes** tab in the existing related-record block shows one main clickable Project code per funnel, with a quieter **Cross-deal reference** only when the Salesforce reference differs. The internal CRM code is used as the main code only when no original Project code exists. Funnel and Opportunity links remain available. Accessible open and Closed Won Funnels contribute assigned codes immediately. It is paginated and respects sales-record ownership/team scope, including on shared reseller accounts. Seeing a reseller account does not reveal other salespeople's project-code relationships.
 
 ### Open a project code
 
-Active project codes are clickable: open one to see its connected sales records. Codes appear only for linked funnels at Commit (4A) or Closed Won; earlier-stage historical values stay stored but hidden. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
+Active project codes are clickable: open one to see its connected sales records. Assigned codes appear for accessible open or Closed Won Funnels, including before 4a. The **Sales → Project Codes** directory and the **Project Codes** group in global search are available without the Projects module. See [Project codes across sales records](04-opportunities-and-funnel.md#project-codes-across-sales-records).
 
 ## Continue
 
@@ -174,3 +174,9 @@ Active project codes are clickable: open one to see its connected sales records.
 ## Reviewed archive / Void
 
 Use **Void** for a reviewed archive of an account or contact. Active child accounts, contacts, deals, projects, contracts and Bill To references must be resolved before an account can be archived. Contacts referenced by live quotations or opportunity/funnel contacts must be reassigned or resolved first. Primary-contact designation must be removed or reassigned first. Shared reseller history is never cascaded away automatically. See [Void records](07-void-records.md).
+
+### Address locations
+
+Country and State/Province use searchable A–Z location selections. Select Country first; changing it clears State and City. City/Town accepts custom text (up to 120 characters). Street and Postcode also remain text fields.
+
+Existing imported addresses remain readable. Changing Country or State requires a valid catalogue entry; City text can be updated independently. Country/State data uses GeoNames (CC BY 4.0).

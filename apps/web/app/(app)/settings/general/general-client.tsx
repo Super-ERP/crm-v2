@@ -1,5 +1,7 @@
 "use client"
 
+import { LocationField } from "@/components/location-fields"
+
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -313,19 +315,8 @@ function GeneralForm({
               name="defaultCountry"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Default country</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Malaysia"
-                      list="default-country-options"
-                    />
-                  </FormControl>
-                  <datalist id="default-country-options">
-                    {settings.countries.map((c) => (
-                      <option key={c.name} value={c.name} />
-                    ))}
-                  </datalist>
+                  <FormLabel htmlFor="default-country">Default Country</FormLabel>
+                  <LocationField kind="country" id="default-country" value={{country:field.value}} onChange={next=>field.onChange(next.country ?? "")}/>
                   <FormDescription>
                     Prefilled on new account addresses.
                   </FormDescription>
@@ -509,13 +500,13 @@ function CompanyProfileCard({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="grid gap-1.5 sm:col-span-2">
-            <label className="text-xs text-muted-foreground">Company legal name</label>
-            <Input value={values.legalName} onChange={set("legalName")} placeholder="QUANDATICS (M) SDN BHD" />
+            <label htmlFor="profile-legalName" className="text-xs text-muted-foreground">Company legal name</label>
+            <Input id="profile-legalName" value={values.legalName} onChange={set("legalName")} placeholder="QUANDATICS (M) SDN BHD" />
           </div>
           <div className="grid gap-1.5 sm:col-span-2">
-            <label className="text-xs text-muted-foreground">Quotation template</label>
+            <label htmlFor="profile-quotation-template" className="text-xs text-muted-foreground">Quotation template</label>
             <select
-              aria-label="Quotation template"
+              id="profile-quotation-template"
               className="h-9 rounded-md border border-input bg-background px-3 text-sm"
               value={values.quotationTemplateCode}
               onChange={(event) => setValues((current) => ({ ...current, quotationTemplateCode: event.target.value }))}
@@ -529,30 +520,31 @@ function CompanyProfileCard({
             <p className="text-xs text-muted-foreground">Used for new quotations unless the account has its own template.</p>
           </div>
           <div className="grid gap-1.5 sm:col-span-2">
-            <label className="text-xs text-muted-foreground">Address</label>
+            <label htmlFor="profile-address" className="text-xs text-muted-foreground">Address</label>
             <Textarea
               rows={3}
-              value={values.address}
+              id="profile-address" value={values.address}
               onChange={set("address")}
               placeholder={"Level 10, Menara …\n50450 Kuala Lumpur, Malaysia"}
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs text-muted-foreground">
+            <label htmlFor="profile-registrationNo" className="text-xs text-muted-foreground">
               Registration no.
             </label>
             <Input
-              value={values.registrationNo}
+              id="profile-registrationNo" value={values.registrationNo}
               onChange={set("registrationNo")}
               placeholder="202001012345 (1234567-X)"
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs text-muted-foreground">SST registration no.</label>
-            <Input value={values.sstRegistrationNo} onChange={set("sstRegistrationNo")} placeholder="W10-1808-31033978" />
+            <label htmlFor="profile-sstRegistrationNo" className="text-xs text-muted-foreground">SST registration no.</label>
+            <Input id="profile-sstRegistrationNo" value={values.sstRegistrationNo} onChange={set("sstRegistrationNo")} placeholder="W10-1808-31033978" />
           </div>
           <div className="grid gap-1.5">
             <PhoneInput
+              label="Phone number"
               value={values.phone}
               onChange={(v) => setValues((prev) => ({ ...prev, phone: v }))}
               placeholder="03 1234 5678"
@@ -561,39 +553,39 @@ function CompanyProfileCard({
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs text-muted-foreground">Email</label>
+            <label htmlFor="profile-email" className="text-xs text-muted-foreground">Email</label>
             <Input
-              value={values.email}
+              id="profile-email" value={values.email}
               onChange={set("email")}
               placeholder="hello@company.com"
             />
           </div>
           <div className="grid gap-1.5">
-            <label className="text-xs text-muted-foreground">Website</label>
+            <label htmlFor="profile-website" className="text-xs text-muted-foreground">Website</label>
             <Input
-              value={values.website}
+              id="profile-website" value={values.website}
               onChange={set("website")}
               placeholder="www.company.com"
             />
           </div>
           <div className="grid gap-1.5 sm:col-span-2">
-            <label className="text-xs text-muted-foreground">
+            <label htmlFor="profile-bankDetails" className="text-xs text-muted-foreground">
               Bank / payment details
             </label>
             <Textarea
               rows={3}
-              value={values.bankDetails}
+              id="profile-bankDetails" value={values.bankDetails}
               onChange={set("bankDetails")}
               placeholder={"Bank: …\nAccount name: …\nAccount no: …"}
             />
           </div>
           <div className="grid gap-1.5 sm:col-span-2">
-            <label className="text-xs text-muted-foreground">
+            <label htmlFor="profile-quoteFooter" className="text-xs text-muted-foreground">
               Document footer / terms
             </label>
             <Textarea
               rows={3}
-              value={values.quoteFooter}
+              id="profile-quoteFooter" value={values.quoteFooter}
               onChange={set("quoteFooter")}
               placeholder="Payment due within 30 days of invoice…"
             />

@@ -158,7 +158,7 @@ function AddMemberDialog({ roles }: { roles: TeamRoleView[] }) {
             />
           </div>
           <div className="grid gap-2">
-            <Label>
+            <Label htmlFor="add-member-role">
               Role
               <span aria-hidden="true" className="text-destructive">
                 {" "}
@@ -166,7 +166,7 @@ function AddMemberDialog({ roles }: { roles: TeamRoleView[] }) {
               </span>
             </Label>
             <Select value={roleId} onValueChange={onRoleChange} items={roleItems}>
-              <SelectTrigger width="full">
+              <SelectTrigger id="add-member-role" width="full">
                 <SelectValue placeholder="Pick a role" />
               </SelectTrigger>
               <SelectContent>
@@ -307,13 +307,13 @@ function EditMemberDialog({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Manager</Label>
+            <Label htmlFor="team-member-manager">Manager</Label>
             <Select
               value={managerId}
               onValueChange={(v) => setManagerId(v ?? "none")}
               items={managerItems}
             >
-              <SelectTrigger width="full">
+              <SelectTrigger id="team-member-manager" width="full">
                 <SelectValue placeholder="No manager" />
               </SelectTrigger>
               <SelectContent>

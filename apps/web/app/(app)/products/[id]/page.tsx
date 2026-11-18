@@ -30,6 +30,7 @@ export default async function ProductDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{product.name}</h1>
         <ProductDetailBody
           product={product}
           codeName={codeName}

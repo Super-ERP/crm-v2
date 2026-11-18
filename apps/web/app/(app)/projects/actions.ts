@@ -1,4 +1,5 @@
 "use server"
+import { validateBillingSchedule } from "@/lib/billing-schedule"
 
 import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
@@ -16,6 +17,7 @@ import { milestoneStatusForFunnel } from "@/server/services/milestone-status"
 import { getTableColumns, and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
+import { revalidateMilestoneViews } from "@/lib/revalidate-milestone-views"
 import { revalidatePath } from "next/cache"
 import { withModule, type Tx } from "@/lib/actions"
 import { requireEntitledModule } from "@/lib/modules.server"
@@ -746,6 +748,9 @@ export type MilestoneItem = {
   projectId: string | null
   quotationId: string | null
   title: string
+  description?: string | null
+  expectedInvoiceMonth?: string | null
+  expectedInvoiceYear?: number | null
   amount: string
   dueDate: string | null
   status: MilestoneStatus
@@ -755,12 +760,18 @@ export type MilestoneItem = {
 export type MilestoneCreateInput = {
   projectId: string
   title: string
+  description?: string | null
+  expectedInvoiceMonth?: string | null
+  expectedInvoiceYear?: number | null
   amount?: string | null
   dueDate?: string | null
 }
 
 export type MilestoneUpdateInput = {
   title?: string
+  description?: string | null
+  expectedInvoiceMonth?: string | null
+  expectedInvoiceYear?: number | null
   amount?: string | null
   dueDate?: string | null
   status?: string
@@ -817,6 +828,9 @@ export async function listMilestones(
         projectId: paymentMilestones.projectId,
         quotationId: paymentMilestones.quotationId,
         title: paymentMilestones.title,
+        description: paymentMilestones.description,
+        expectedInvoiceMonth: paymentMilestones.expectedInvoiceMonth,
+        expectedInvoiceYear: paymentMilestones.expectedInvoiceYear,
         amount: paymentMilestones.amount,
         dueDate: paymentMilestones.dueDate,
         status: paymentMilestones.status,
@@ -869,6 +883,7 @@ export async function createMilestone(
       // Milestones are split by exact amount.
       const amount = input.amount != null && input.amount !== "" ? input.amount : "0"
 
+      validateBillingSchedule([{title,amount,expectedInvoiceMonth:input.expectedInvoiceMonth??'',expectedInvoiceYear:input.expectedInvoiceYear??0}])
       // Reconciliation: total milestone amounts may not exceed the project
       // value (the quotation-derived source of value). Skipped when no value.
       // Only block when this addition actually pushes the total higher (a $0
@@ -903,6 +918,9 @@ export async function createMilestone(
           status,
           title,
           amount,
+          description: input.description || null,
+          expectedInvoiceMonth: input.expectedInvoiceMonth,
+          expectedInvoiceYear: input.expectedInvoiceYear,
           dueDate: input.dueDate || null,
           sortOrder: Number(maxSort) + 1,
         })
@@ -925,6 +943,7 @@ export async function createMilestone(
     }
   )
   revalidatePath(`/projects/${input.projectId}`)
+  revalidateMilestoneViews()
   return created
   })
 }
@@ -974,6 +993,11 @@ export async function updateMilestone(
             ? input.amount
             : "0"
 
+      if(input.expectedInvoiceMonth!==undefined || input.expectedInvoiceYear!==undefined) validateBillingSchedule([{title:input.title??existing.title,amount:nextAmount,expectedInvoiceMonth:input.expectedInvoiceMonth??existing.expectedInvoiceMonth??'',expectedInvoiceYear:input.expectedInvoiceYear??existing.expectedInvoiceYear??0}])
+      if(input.amount!==undefined && cents(Number(nextAmount))!==cents(Number(existing.amount))) {
+        const linked=await tx.execute(sql`select 1 from finance_docs where milestone_id=${id} and tenant_id=${ctx.tenantId} limit 1`)
+        if(existing.status==='invoiced' || linked.length) throw new Error('Amounts with invoice history cannot be changed.')
+      }
       // Reconciliation: block edits that push the milestone total over the
       // project value. Edits that don't raise the total (title/date/status, or
       // lowering an amount) are always allowed, even if already over-allocated.
@@ -1014,6 +1038,9 @@ export async function updateMilestone(
         .set({
           title: nextTitle,
           amount: nextAmount,
+          description: input.description===undefined?existing.description:input.description||null,
+          expectedInvoiceMonth: input.expectedInvoiceMonth===undefined?existing.expectedInvoiceMonth:input.expectedInvoiceMonth,
+          expectedInvoiceYear: input.expectedInvoiceYear===undefined?existing.expectedInvoiceYear:input.expectedInvoiceYear,
           dueDate:
             input.dueDate === undefined
               ? existing.dueDate
@@ -1045,6 +1072,7 @@ export async function updateMilestone(
     }
   )
   revalidatePath(`/projects/${projectId}`)
+  revalidateMilestoneViews()
   })
 }
 
@@ -1099,5 +1127,6 @@ export async function reorderMilestones(
     })
   })
   revalidatePath(`/projects/${projectId}`)
+  revalidateMilestoneViews()
   })
 }

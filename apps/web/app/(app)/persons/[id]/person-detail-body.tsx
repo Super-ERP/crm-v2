@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { contactRecordTabs } from "@/lib/crm-record-tabs"
+import { useRecordTab } from "@/components/use-record-tab"
 import { useRecordEditor } from "@/components/use-record-editor"
 import { RecordHeaderActions } from "@/components/record-header-actions"
 import { Input } from "@/components/ui/input"
@@ -17,7 +19,6 @@ import {
   DataTable,
   SortableHeader,
   linkCell,
-  moneyCell,
   rightHeader,
 } from "@/components/data-table"
 import { ActivityTimeline } from "@/components/activity/activity-timeline"
@@ -34,6 +35,7 @@ import {
 import { PhoneNumberDisplay } from "@/components/phone-input"
 import type { InlineValue } from "@/components/inline-value"
 import { InlineCombobox } from "@/components/inline-combobox"
+import { formatMoney } from "@/lib/format"
 import { StageBadge } from "@/app/(app)/funnel/stage-badge"
 import {
   updatePerson,
@@ -92,7 +94,8 @@ export function PersonDetailBody({
   activity,
   documents,
 }: PersonDetailData) {
-  const [tab, setTab] = React.useState("pipelines")
+  const availableTabs = contactRecordTabs(!!projectCodes)
+  const [tab, setTab] = useRecordTab<string>("pipelines", availableTabs)
   const revalidate = `/persons/${personId}`
 
 
@@ -136,11 +139,8 @@ export function PersonDetailBody({
       },
       {
         accessorKey: "amount",
-        header: rightHeader("Value"),
-        cell: moneyCell(
-          (r) => r.amount,
-          (r) => r.currency
-        ),
+        header: rightHeader("Estimated deal value (excl. tax)"),
+        cell: ({row}) => row.original.amount === null ? "Not set" : <span className="tabular-nums">{formatMoney(row.original.amount, row.original.currency)}</span>,
       },
     ],
     []
@@ -248,7 +248,7 @@ export function PersonDetailBody({
           <CountTab value="projects" count={projects.length}>
             Projects
           </CountTab>
-          {projectCodes ? <CountTab value="project-codes" count={projectCodeCount}>Project codes</CountTab> : null}
+          {availableTabs.includes("project-codes") ? <CountTab value="project-codes" count={projectCodeCount}>Project codes</CountTab> : null}
           <CountTab value="activity">Activity</CountTab>
           <CountTab value="documents" count={documents.length}>
             Documents
@@ -256,20 +256,22 @@ export function PersonDetailBody({
         </TabsList>
 
         <TabsContent value="pipelines" className="mt-4">
+          <p className="mb-3 text-xs text-muted-foreground">Funnels where this person is the primary contact. Account membership, owner-contact and sponsor roles do not add rows here.</p>
           <DataTable
             columns={funnelColumns}
             data={funnels}
             tableId="person-pipelines"
             searchColumn="name"
             searchPlaceholder="Search pipelines…"
-            emptyMessage="No pipelines for this contact yet."
-            emptyDescription="Funnels are created on the contact's account."
+            emptyMessage="No Funnels with this person as primary contact."
+            emptyDescription="Only the Funnel primary-contact relationship counts here."
             emptyAction={accountLink}
             pageSize={5}
           />
         </TabsContent>
 
         <TabsContent value="projects" className="mt-4">
+          <p className="mb-3 text-xs text-muted-foreground">Projects from Funnels where this person is the primary contact.</p>
           <DataTable
             columns={projectColumns}
             data={projects}
@@ -277,13 +279,13 @@ export function PersonDetailBody({
             searchColumn="name"
             searchPlaceholder="Search projects…"
             emptyMessage="No projects for this contact yet."
-            emptyDescription="Projects are created from a funnel on the contact's account."
+            emptyDescription="Only Projects from this person’s primary-contact Funnels appear here."
             emptyAction={accountLink}
             pageSize={5}
           />
         </TabsContent>
 
-        {projectCodes ? <TabsContent value="project-codes" className="mt-4">{projectCodes}</TabsContent> : null}
+        {availableTabs.includes("project-codes") ? <TabsContent value="project-codes" className="mt-4">{projectCodes}</TabsContent> : null}
 
         <TabsContent value="activity" className="mt-4">
           <ActivityTimeline

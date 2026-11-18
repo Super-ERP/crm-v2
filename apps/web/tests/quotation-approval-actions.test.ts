@@ -336,7 +336,7 @@ describe("quotation approval actions", () => {
     })
   })
 
-  it("accepts Sent without changing Funnel or creating a Project", async () => {
+  it.each(["open", "won", "lost", "kiv"])("accepts Sent on a %s Funnel and syncs the primary quote without changing stage or creating a Project", async (status) => {
     const fixture = txWithSelects([
       [{
         id: "quote-1",
@@ -347,7 +347,7 @@ describe("quotation approval actions", () => {
         quoteNumber: "Q-1",
         total: "100.00",
       }],
-      [{ ownerMemberId: "rep", status: "open", accountId: "account-1" }],
+      [{ ownerMemberId: "rep", status, accountId: "account-1" }],
       [],
     ])
     currentTx = fixture.tx
@@ -359,11 +359,12 @@ describe("quotation approval actions", () => {
       data: { funnelId: "funnel-1", accountId: "account-1" },
     })
     expect(fixture.tx.select).toHaveBeenCalledTimes(3)
-    expect(fixture.updates).not.toContainEqual(
-      expect.objectContaining({ primaryQuotationId: expect.anything() })
+    expect(fixture.updates).toContainEqual(
+      expect.objectContaining({ primaryQuotationId: "quote-1" })
     )
-    expect(mocks.syncOpportunityAmount).not.toHaveBeenCalled()
-    expect(mocks.syncFunnelProductsFromQuote).not.toHaveBeenCalled()
+    expect(fixture.updates.some(value => "currentStageId" in (value as object))).toBe(false)
+    expect(mocks.syncOpportunityAmount).toHaveBeenCalledWith(fixture.tx, expect.anything(), "funnel-1")
+    expect(mocks.syncFunnelProductsFromQuote).toHaveBeenCalledWith(fixture.tx, "tenant-1", "funnel-1", "quote-1")
     expect(mocks.seedDefaultFunnelMilestone).not.toHaveBeenCalled()
     expect(JSON.stringify(result)).not.toContain("project")
     expect(mocks.findManagerApprover).not.toHaveBeenCalled()

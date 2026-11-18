@@ -13,6 +13,7 @@ const isNumber = (v: string) => v.trim() !== "" && Number.isFinite(Number(v))
 
 /** qty ≥ 0, unitPrice ≥ 0, discountAmount ≥ 0 (absolute money, ≤ line total). */
 export const quotationLineSchema = z.object({
+  lineId: z.string().uuid().optional(),
   /** Optional link to a catalog product the line was created from. */
   productId: z.string().optional(),
   /** Optional project-nature code this line bills under (per-nature split). */

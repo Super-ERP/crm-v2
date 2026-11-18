@@ -1,5 +1,7 @@
 "use client"
 
+import { usePermissions } from "@/components/command-palette"
+import { PERMISSIONS } from "@/lib/permissions"
 import * as React from "react"
 import Link from "next/link"
 import { CreditCard } from "lucide-react"
@@ -16,6 +18,8 @@ export function PaymentMilestonesTable({
 }: {
   initialPage: { rows: PaymentMilestoneListItem[]; total: number }
 }) {
+  const permissions = usePermissions()
+  const canViewQuote = permissions.has(PERMISSIONS.QUOTATION_VIEW)
   const columns = React.useMemo<ColumnDef<PaymentMilestoneListItem>[]>(
     () => [
       {
@@ -35,11 +39,11 @@ export function PaymentMilestonesTable({
       {
         accessorKey: "amount",
         header: ({ column }) => (
-          <SortableHeader column={column} title="Amount" />
+          <SortableHeader column={column} title="Planned amount (excl. tax)" />
         ),
         cell: ({ row }) => (
           <span className="tabular-nums">
-            {formatMoney(row.original.amount,row.original.currency ?? undefined)}
+            {row.original.currency ? formatMoney(row.original.amount, row.original.currency) : `${row.original.amount} (currency unavailable)`}
           </span>
         ),
       },
@@ -47,7 +51,7 @@ export function PaymentMilestonesTable({
         accessorKey: "quoteNumber",
         header: "Quotation",
         cell: ({ row }) =>
-          row.original.quotationId && row.original.quoteNumber ? (
+          canViewQuote && row.original.quotationId && row.original.quoteNumber ? (
             <Link href={`/quotations/${row.original.quotationId}`} className="link">
               <span className="font-mono text-xs">{row.original.quoteNumber}</span>
             </Link>
@@ -55,6 +59,8 @@ export function PaymentMilestonesTable({
             <span className="text-muted-foreground">Not linked</span>
           ),
       },
+      { accessorKey: "expectedInvoiceMonth", header: "Expected invoice month" },
+      { accessorKey: "expectedInvoiceYear", header: "Expected invoice year" },
       {
         accessorKey: "status",
         header: "Status",
@@ -73,7 +79,7 @@ export function PaymentMilestonesTable({
           ),
       },
     ],
-    []
+    [canViewQuote]
   )
 
   return (

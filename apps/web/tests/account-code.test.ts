@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeAccountCode } from '@/lib/account-code'
+import { normalizeAccountCode, authorizeAccountCode } from '@/lib/account-code'
 describe('account code editing',()=>{
  it('preserves an unchanged imported code when saving other account fields',()=>{
   expect(normalizeAccountCode('MERIDIAN','MERIDIAN')).toBe('MERIDIAN')
@@ -14,5 +14,22 @@ describe('account code editing',()=>{
   expect(normalizeAccountCode(null,'MERIDIAN')).toBeNull()
   expect(normalizeAccountCode(' ')).toBeNull()
   expect(normalizeAccountCode(' qa ')).toBe('QA')
+ })
+})
+
+describe('account code allocation authorization', () => {
+ it('denies allocation by sales even with account create or update access', () => {
+  expect(() => authorizeAccountCode('ACME', undefined, false)).toThrow('account.code.manage')
+  expect(() => authorizeAccountCode('ACME', null, false)).toThrow('account.code.manage')
+  expect(() => authorizeAccountCode('NEXT', 'OLD', false)).toThrow('account.code.manage')
+ })
+ it('allows unrelated saves retaining current legacy identifiers', () => {
+  expect(() => authorizeAccountCode('LEGACY-123', 'LEGACY-123', false)).not.toThrow()
+  expect(() => authorizeAccountCode(null, null, false)).not.toThrow()
+ })
+ it('requires manual allocation and prevents clearing assigned identifiers', () => {
+  expect(() => authorizeAccountCode(null, undefined, true)).toThrow('required')
+  expect(() => authorizeAccountCode(null, 'OLD', true)).toThrow('required')
+  expect(() => authorizeAccountCode('NEW', 'OLD', true)).not.toThrow()
  })
 })

@@ -49,7 +49,7 @@ describe.skipIf(!databaseUrl)("lead conversion PostgreSQL approval boundary", ()
         INSERT INTO organization VALUES ('tenant'), ('other');
         INSERT INTO member VALUES ('rep','tenant','rep-user'), ('manager','tenant','manager-user');
         INSERT INTO membership_profiles VALUES ('tenant','rep','manager','active','rep-role'), ('tenant','manager',null,'active','manager-role');
-        INSERT INTO roles VALUES ('rep-role','tenant','Sales Rep'), ('manager-role','tenant','Manager');
+        INSERT INTO roles VALUES ('rep-role','tenant','Sales Rep'), ('manager-role','tenant','Sales Admin');
         INSERT INTO permissions(key) VALUES ('lead.convert'), ('lead.view'), ('records.view_team');
         INSERT INTO role_permissions SELECT 'tenant','rep-role',id FROM permissions WHERE key IN ('lead.convert','lead.view');
         INSERT INTO role_permissions SELECT 'tenant','manager-role',id FROM permissions;
@@ -57,6 +57,8 @@ describe.skipIf(!databaseUrl)("lead conversion PostgreSQL approval boundary", ()
       for (const table of [schema.leads, schema.accounts, schema.persons]) await client.unsafe(fixtureTable(table))
       const migration = await readFile(new URL("../db/migrations/0098_lead_conversion_approval.sql", import.meta.url), "utf8")
       for (const statement of migration.split("--> statement-breakpoint")) await client.unsafe(statement)
+      const controlsMigration = await readFile(new URL("../db/migrations/0105_account_review_controls.sql", import.meta.url), "utf8")
+      for (const statement of controlsMigration.split("--> statement-breakpoint")) await client.unsafe(statement)
       await client.unsafe(`GRANT USAGE ON SCHEMA "${namespace}" TO "${role}"; GRANT ALL ON ALL TABLES IN SCHEMA "${namespace}" TO "${role}"`)
       await client`INSERT INTO leads (id,tenant_id,name,email,status,owner_member_id) VALUES (${leadId},'tenant','Alice','alice@example.com','qualified','rep')`
       const db = drizzle(client, { schema })
@@ -68,7 +70,8 @@ describe.skipIf(!databaseUrl)("lead conversion PostgreSQL approval boundary", ()
       mocks.audit.mockResolvedValue(undefined)
       const rep = { tenantId: "tenant", memberId: "rep", userId: "rep-user", isSuperadmin: false, can: (p: string) => ["lead.convert", "lead.view"].includes(p) } as ServerContext
       const manager = { ...rep, memberId: "manager", userId: "manager-user", can: () => true } as ServerContext
-      const input = { leadId, newAccount: { code: "ACME" }, createOpportunity: false }
+      const input = { leadId, newAccount: { registrationNumber: "2026-123 (A)" }, createOpportunity: false }
+      const review = { accountCode: "ACME", registrationChecked: true, independentAccountConfirmed: true }
       const request = await convertLead(rep, input)
       expect(request.pending).toBe(true)
       if (!request.pending) throw new Error("Expected queued request")
@@ -80,19 +83,33 @@ describe.skipIf(!databaseUrl)("lead conversion PostgreSQL approval boundary", ()
       const hidden = await mocks.runInTenant("other", (tx: { execute: (q: unknown) => unknown }) => tx.execute(drizzleSql`SELECT id FROM lead_conversion_approval_requests`))
       expect(hidden).toHaveLength(0)
       await client`UPDATE leads SET name='Edited' WHERE id=${leadId}`
-      await expect(decideLeadConversion(manager, request.requestId, "approved")).rejects.toThrow("changed")
+      await expect(decideLeadConversion(manager, request.requestId, "approved", undefined, review)).rejects.toThrow("changed")
       expect(await client`SELECT id FROM accounts`).toHaveLength(0)
       await decideLeadConversion(rep, request.requestId, "cancelled")
       const second = await convertLead(rep, input)
       if (!second.pending) throw new Error("Expected queued request")
+      // A company added after submission must be detected again at approval.
+      const collisionId = randomUUID()
+      await client`INSERT INTO accounts (id,tenant_id,name,code,registration_number,owner_member_id) VALUES (${collisionId},'tenant','Other company','OTHER','2026123a','rep')`
+      await expect(decideLeadConversion(manager, second.requestId, "approved", undefined, review)).rejects.toThrow("SSM registration number already exists")
+      expect((await client`SELECT status FROM lead_conversion_approval_requests WHERE id=${second.requestId}`)[0].status).toBe("pending")
+      await client`DELETE FROM accounts WHERE id=${collisionId}`
+      // The code must be checked against current accounts at approval, not only the review checkboxes.
+      await client`INSERT INTO accounts (id,tenant_id,name,code,registration_number,owner_member_id) VALUES (${collisionId},'tenant','Code already assigned',' acme ','DIFFERENT-SSM','rep')`
+      await expect(decideLeadConversion(manager, second.requestId, "approved", undefined, review)).rejects.toThrow("Company code already used by another account")
+      expect((await client`SELECT status FROM lead_conversion_approval_requests WHERE id=${second.requestId}`)[0].status).toBe("pending")
+      expect((await client`SELECT status FROM leads WHERE id=${leadId}`)[0].status).toBe("qualified")
+      expect(await client`SELECT id FROM persons`).toHaveLength(0)
+      await client`DELETE FROM accounts WHERE id=${collisionId}`
       // Failure after actual records have been inserted must roll back both records and decision.
       mocks.audit.mockRejectedValueOnce(new Error("audit write failed"))
-      await expect(decideLeadConversion(manager, second.requestId, "approved")).rejects.toThrow("audit write failed")
+      await expect(decideLeadConversion(manager, second.requestId, "approved", undefined, review)).rejects.toThrow("audit write failed")
       expect(await client`SELECT id FROM accounts`).toHaveLength(0)
       expect(await client`SELECT id FROM persons`).toHaveLength(0)
       expect((await client`SELECT status FROM lead_conversion_approval_requests WHERE id=${second.requestId}`)[0].status).toBe("pending")
-      await decideLeadConversion(manager, second.requestId, "approved")
+      await decideLeadConversion(manager, second.requestId, "approved", undefined, review)
       expect(await client`SELECT id FROM accounts`).toHaveLength(1)
+      await expect(client`INSERT INTO accounts (id,tenant_id,name,code) VALUES (${randomUUID()},'tenant','Code conflict',' acme ')`).rejects.toMatchObject({ code: "23505" })
       expect(await client`SELECT id FROM persons`).toHaveLength(1)
       expect((await client`SELECT status FROM leads WHERE id=${leadId}`)[0].status).toBe("converted")
       expect((await client`SELECT status FROM lead_conversion_approval_requests WHERE id=${second.requestId}`)[0].status).toBe("approved")
@@ -102,16 +119,19 @@ describe.skipIf(!databaseUrl)("lead conversion PostgreSQL approval boundary", ()
       const existingRequest = await convertLead(rep, { leadId: anotherLeadId, existingAccountId: accountId })
       if (!existingRequest.pending) throw new Error("Expected queued request")
       await client`UPDATE accounts SET owner_member_id='outsider' WHERE id=${accountId}`
-      await expect(decideLeadConversion(manager, existingRequest.requestId, "approved")).rejects.toThrow("not permitted on this account")
+      await expect(decideLeadConversion(manager, existingRequest.requestId, "approved", undefined, review)).rejects.toThrow("not permitted on this account")
       expect(await client`SELECT id FROM persons`).toHaveLength(1)
       await decideLeadConversion(rep, existingRequest.requestId, "cancelled")
+      // Registration normalization prevents another account for the same SSM entity.
+      await expect(convertLead(rep, { leadId: anotherLeadId, newAccount: { registrationNumber: "2026123a" } })).rejects.toThrow("SSM registration number already exists")
+      // The reporting hierarchy is irrelevant: the active review pool remains available.
       await client`UPDATE membership_profiles SET manager_member_id=null WHERE member_id='rep'`
-      await expect(convertLead(rep, { leadId: anotherLeadId, newAccount: { code: "BOB" } })).rejects.toThrow("No eligible manager")
-      // A top manager is explicitly permitted to perform immediate conversion.
-      const direct = await convertLead(manager, { leadId: anotherLeadId, newAccount: { code: "BOB" } })
-      expect(direct.pending).not.toBe(true)
-      expect(await client`SELECT id FROM accounts`).toHaveLength(2)
-      expect(await client`SELECT id FROM persons`).toHaveLength(2)
+      const third = await convertLead(rep, { leadId: anotherLeadId, newAccount: { registrationNumber: "BOB-123" } })
+      expect(third.pending).toBe(true)
+      if (!third.pending) throw new Error("Expected pooled review")
+      await expect(decideLeadConversion({ ...rep, can: () => true }, third.requestId, "approved", undefined, review)).rejects.toThrow("own request")
+      await client`UPDATE membership_profiles SET status='disabled' WHERE member_id='manager'`
+      await expect(decideLeadConversion(manager, third.requestId, "approved", undefined, review)).rejects.toThrow("active Sales Admin")
     } finally {
       await client.unsafe(`RESET ROLE; SET search_path TO public; DROP SCHEMA IF EXISTS "${namespace}" CASCADE; DROP ROLE IF EXISTS "${role}"`)
       await client.end()

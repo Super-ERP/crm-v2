@@ -1,6 +1,10 @@
 name: deploy-staging
 
 on:
+  workflow_run:
+    workflows: [release-images]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_run_id:
@@ -19,13 +23,15 @@ permissions:
 
 jobs:
   deploy-staging:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'workflow_dispatch' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)
+    timeout-minutes: 30
     runs-on: self-hosted
     environment: staging
     env:
-      RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+      RELEASE_RUN_ID: ${{ github.event.workflow_run.id || inputs.release_run_id }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - name: Resolve immutable release images
+      - name: Resolve completed release bundle
         shell: bash
         run: |
           set -euo pipefail
@@ -39,30 +45,12 @@ jobs:
           ' >/dev/null || { echo "release run is not a successful main release" >&2; exit 1; }
           artifact_json="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}/artifacts?per_page=100")"
           release_tag="$(printf '%s' "$artifact_json" | jq -er '
-            [.artifacts[] | select(.expired == false and (.name | startswith("release-manifest-v"))) | .name]
-            | if length == 1 then .[0] else error("expected exactly one release manifest") end
-            | sub("^release-manifest-"; "")
+            [.artifacts[] | select(.expired == false and (.name | startswith("client-deployment-bundle-v"))) | .name]
+            | if length == 1 then .[0] else error("expected exactly one signed deployment bundle") end
+            | sub("^client-deployment-bundle-"; "")
           ')"
           [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid release tag" >&2; exit 1; }
-          manifest_dir="$(mktemp -d)"
-          gh run download "$RELEASE_RUN_ID" \
-            --repo "$GITHUB_REPOSITORY" \
-            --name "release-manifest-${release_tag}" \
-            --dir "$manifest_dir"
-          manifest="$manifest_dir/release-manifest.json"
-          jq -e '
-            (.source_commit | test("^[0-9a-f]{40}$")) and
-            (.images | length == 4) and
-            all(.images[]; (.image_ref | test("^ghcr.io/super-erp/crm-[a-z-]+@sha256:[0-9a-f]{64}$")))
-          ' "$manifest" >/dev/null
-          source_sha="$(jq -er '.source_commit' "$manifest")"
-          web_image="$(jq -er '.images[] | select(.name == "web") | .image_ref' "$manifest")"
-          migrator_image="$(jq -er '.images[] | select(.name == "migrator") | .image_ref' "$manifest")"
-          echo "DEPLOY_SHA=$source_sha" >> "$GITHUB_ENV"
           echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
-          echo "WEB_IMAGE=$web_image" >> "$GITHUB_ENV"
-          echo "MIGRATOR_IMAGE=$migrator_image" >> "$GITHUB_ENV"
-          rm -rf -- "$manifest_dir"
       - name: Test signed production bundle locally
         env:
           VENDOR_ENTITLEMENT_TRUST_SET: ${{ secrets.STAGING_VENDOR_ENTITLEMENT_TRUST_SET }}
@@ -81,9 +69,31 @@ jobs:
             --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
             "$TEMP_DIR/client-deployment-bundle.tar.gz"
           tar -xzf "$TEMP_DIR/client-deployment-bundle.tar.gz" -C "$TEMP_DIR"
+          jq -e --arg tag "$RELEASE_TAG" '
+            .release_tag == $tag and
+            (.source_commit | test("^[0-9a-f]{40}$")) and
+            ([.images[].name] | sort == ["agent", "backup", "migrator", "web"]) and
+            all(.images[]; (.image_ref | test("^ghcr.io/super-erp/crm-[a-z-]+@sha256:[0-9a-f]{64}$")))
+          ' "$TEMP_DIR/client/release-manifest.json" >/dev/null
           node "$TEMP_DIR/client/ops/smoke-release.mjs" "$TEMP_DIR/client"
+          checksum="$(sha256sum "$TEMP_DIR/client-deployment-bundle.tar.gz" | cut -d " " -f 1)"
+          echo "BUNDLE_SHA256=$checksum" >> "$GITHUB_ENV"
       - name: Promote verified release to production
-        run: gh workflow run deploy.yml --ref main -f release_tag="$RELEASE_TAG"
-      - name: Publish deployment summary
         run: |
-          echo "Local production-bundle smoke passed for $RELEASE_TAG; production deployment queued." >> "$GITHUB_STEP_SUMMARY"
+          gh workflow run deploy.yml --ref main \
+            -f release_tag="$RELEASE_TAG" \
+            -f release_run_id="$RELEASE_RUN_ID" \
+            -f bundle_sha256="$BUNDLE_SHA256"
+      - name: Publish deployment summary
+        if: always()
+        env:
+          STAGING_RESULT: ${{ job.status }}
+        run: |
+          echo "### Staging smoke: $STAGING_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release: ${RELEASE_TAG:-unresolved}; image run: $RELEASE_RUN_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Image build and evidence]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RELEASE_RUN_ID)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$STAGING_RESULT" = "success" ]; then
+            echo "Signed production bundle passed; production deployment queued with the same release tag." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Smoke/promotion failed. Review the failed step; retry staging with this release run ID after fixing the cause." >> "$GITHUB_STEP_SUMMARY"
+          fi

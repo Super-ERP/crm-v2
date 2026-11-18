@@ -1,9 +1,11 @@
 "use server"
 
-import { normalizeAccountCode as normalizeCode } from "@/lib/account-code"
+import { normalizeRegistrationNumber } from "@/lib/lead-conversion-approval"
+import { normalizeAccountCode as normalizeCode, authorizeAccountCode } from "@/lib/account-code"
 
 import { getTableFields } from "@/lib/table-controls/registry"
 
+import { validateLocationAddress } from "@/server/services/locations"
 import { revalidatePath } from "next/cache"
 import { and, or, asc, desc, eq, isNull, ne, sql } from "drizzle-orm"
 import { withTenant } from "@/lib/actions"
@@ -56,6 +58,7 @@ export type AccountListItem = AccountRow & {
 export type BillingAddress = {
   line1?: string | null
   line2?: string | null
+  locationCityId?: string | null
   city?: string | null
   state?: string | null
   postcode?: string | null
@@ -295,65 +298,11 @@ function cleanAddress(a?: BillingAddress | null): BillingAddress | null {
   return entries.length ? Object.fromEntries(entries) : null
 }
 
-/**
- * Derive a short (3–5 char) upper-case alphanumeric base code from an account
- * name. Falls back to "ACC" when the name has no usable characters. Mirrors
- * db/backfill-project-codes.ts so manually-created and backfilled accounts get
- * codes from the same algorithm.
- */
-function baseCodeFromName(name: string): string {
-  const cleaned = (name || "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9\s]/g, " ")
-    .trim()
-  const words = cleaned.split(/\s+/).filter(Boolean)
-  if (words.length === 0) return "ACC"
-  // Single word → first 3–5 chars. Multiple words → first word padded with the
-  // leading chars of following words until we reach ~5, keeping it readable.
-  let base = words[0].slice(0, 5)
-  for (let i = 1; i < words.length && base.length < 3; i++) {
-    base += words[i].slice(0, 3 - base.length)
-  }
-  base = base.slice(0, 5)
-  if (base.length < 3) base = (base + "ACC").slice(0, 3)
-  return base
-}
-
-/** Make `base` unique within `used` (per-tenant) by appending 2, 3, … */
-function uniqueCode(base: string, used: Set<string>): string {
-  if (!used.has(base)) {
-    used.add(base)
-    return base
-  }
-  for (let n = 2; ; n++) {
-    const candidate = `${base}${n}`
-    if (!used.has(candidate)) {
-      used.add(candidate)
-      return candidate
-    }
-  }
-}
-
-/**
- * Auto-generate a tenant-unique account code from the name, used when the user
- * leaves the code blank. Seeds the "used" set from the tenant's existing
- * non-deleted codes (case-insensitive) so the result never collides — matching
- * the uniqueness guarantee assertCodeUnique enforces on user-entered codes.
- */
-async function generateAccountCode(
-  tx: Tx,
-  tenantId: string,
-  name: string
-): Promise<string> {
-  const rows = await tx
-    .select({ code: accounts.code })
-    .from(accounts)
-    .where(and(eq(accounts.tenantId, tenantId), isNull(accounts.deletedAt)))
-  const used = new Set<string>()
-  for (const r of rows) {
-    if (r.code && r.code.trim()) used.add(r.code.trim().toUpperCase())
-  }
-  return uniqueCode(baseCodeFromName(name), used)
+async function assertRegistrationUnique(tx: Tx, tenantId: string, registrationNumber?: string | null, selfId?: string): Promise<void> {
+  const registration = normalizeRegistrationNumber(registrationNumber)
+  if (!registration) return
+  const duplicate = await tx.execute(sql`SELECT id FROM accounts WHERE tenant_id = ${tenantId} AND deleted_at IS NULL AND regexp_replace(upper(coalesce(registration_number, '')), '[^A-Z0-9]', '', 'g') = ${registration} AND ${selfId ? sql`id <> ${selfId}` : sql`true`} LIMIT 1`)
+  if (duplicate.length) throw new Error("An account with this SSM registration number already exists")
 }
 
 /**
@@ -373,7 +322,7 @@ async function assertCodeUnique(
     .where(
       and(
         eq(accounts.tenantId, tenantId),
-        eq(sql`upper(${accounts.code})`, code),
+        eq(sql`upper(btrim(${accounts.code}))`, code),
         isNull(accounts.deletedAt),
         selfId ? ne(accounts.id, selfId) : undefined
       )
@@ -482,6 +431,8 @@ export async function createAccount(
     const accountInput = inputWithCurrency as AccountInput
     const normalized = normalizeAccountInput(inputWithCurrency)
     const row = await withTenant(PERMISSIONS.ACCOUNT_CREATE, async (tx, ctx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${ctx.tenantId + ":account-identities"}, 0))`)
+      await assertRegistrationUnique(tx, ctx.tenantId, normalized.registrationNumber)
       // Duplicate guard: an exact (case-insensitive) name match almost always
       // means the account already exists — block with a pointer instead of
       // silently forking the customer's history across two records.
@@ -501,12 +452,11 @@ export async function createAccount(
         )
       }
 
-      // User-entered code is validated + uniqueness-checked; a blank code is
-      // auto-generated from the name so accounts.code is always populated (it
-      // feeds the project code).
-      let code = normalizeCode(accountInput.code)
-      if (code) await assertCodeUnique(tx, ctx.tenantId, code)
-      else code = await generateAccountCode(tx, ctx.tenantId, normalized.name)
+      // Only authorized reviewers manually allocate customer identifiers.
+      const code = normalizeCode(accountInput.code)
+      authorizeAccountCode(code, undefined, ctx.can(PERMISSIONS.ACCOUNT_CODE_MANAGE))
+      if (!code) throw new Error("Account code is required")
+      await assertCodeUnique(tx, ctx.tenantId, code)
       const parentAccountId = accountInput.parentAccountId || null
       if (parentAccountId) await assertParentValid(tx, parentAccountId)
       const { accountType, endUserAccountId } = resolveAccountType(accountInput)
@@ -517,6 +467,7 @@ export async function createAccount(
         inputWithCurrency.currency
       )
 
+      await validateLocationAddress(tx, ctx.tenantId, accountInput.billingAddress)
       const [created] = await tx
         .insert(accounts)
         .values({
@@ -579,7 +530,10 @@ export async function updateAccount(
         throw new Error("FORBIDDEN: not permitted on this account")
       }
 
-      const code = normalizeCode(input.code, before.code)
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${ctx.tenantId + ":account-identities"}, 0))`)
+      if (normalized.registrationNumber !== before.registrationNumber) await assertRegistrationUnique(tx, ctx.tenantId, normalized.registrationNumber, id)
+      const code = input.code === undefined ? before.code : normalizeCode(input.code, before.code)
+      authorizeAccountCode(code, before.code, ctx.can(PERMISSIONS.ACCOUNT_CODE_MANAGE))
       if (code) await assertCodeUnique(tx, ctx.tenantId, code, id)
       const parentAccountId = input.parentAccountId || null
       // Reject multi-level cycles (A→B→A) before persisting the new parent.
@@ -613,6 +567,7 @@ export async function updateAccount(
         if (!targetOwner) throw new Error("Owner must be a member of this organization.")
       }
 
+      await validateLocationAddress(tx, ctx.tenantId, input.billingAddress, before.billingAddress as BillingAddress | null)
       const updated = {
         name: normalized.name,
         currency,

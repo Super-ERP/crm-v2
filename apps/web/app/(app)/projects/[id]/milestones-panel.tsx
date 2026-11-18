@@ -29,6 +29,7 @@ export function MilestonesPanel({
   return (
     <SharedMilestonesPanel
       milestones={milestones as MilestoneItemBase[]}
+      linkRecords={false}
       valueCeiling={projectValue}
       valueCeilingLabel="net project value, ex-tax"
       currency={currency}

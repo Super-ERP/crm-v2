@@ -223,13 +223,25 @@ jobs:
           if-no-files-found: error
           retention-days: 90
 
+      - name: Image result summary
+        if: always()
+        env:
+          IMAGE_RESULT: ${{ job.status }}
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
+          IMAGE_LABEL: ${{ matrix.name }}
+        run: |
+          echo "### $IMAGE_LABEL: $IMAGE_RESULT" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release: $TARGET_REF; source: $SOURCE_COMMIT" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image: ${IMAGE_REF:-not built}" >> "$GITHUB_STEP_SUMMARY"
+          echo "On failure, inspect the first failed build, scan or signing step. Deployment requires all four images to pass." >> "$GITHUB_STEP_SUMMARY"
+
   # Tag validation includes exact-commit quality evidence.
   manifest:
     needs: [build, validate-tag]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      actions: write
+      actions: read
       contents: write
       id-token: write
     env:
@@ -314,7 +326,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release view "$TARGET_REF" >/dev/null 2>&1 || gh release create "$TARGET_REF" --verify-tag --generate-notes --title "$TARGET_REF"
-      - name: Deploy signed release to staging
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run deploy-staging.yml --ref main -f release_run_id="$GITHUB_RUN_ID"
+      - name: Release handoff summary
+        shell: bash
+        run: |
+          echo "### Signed release $TARGET_REF" >> "$GITHUB_STEP_SUMMARY"
+          echo "Source: $SOURCE_COMMIT" >> "$GITHUB_STEP_SUMMARY"
+          echo "Four scanned and signed images; immutable manifest and client bundle uploaded." >> "$GITHUB_STEP_SUMMARY"
+          echo "Staging starts automatically after this run succeeds. Failed staging can be retried with release run ID $GITHUB_RUN_ID." >> "$GITHUB_STEP_SUMMARY"

@@ -1,5 +1,6 @@
 "use client"
 
+import { CRM_TERMS } from "@/lib/crm-terminology"
 
 import * as React from "react"
 import Link from "next/link"
@@ -116,7 +117,7 @@ export function ProductsTable({
     () => [
       {
         accessorKey: "name",
-        header: ({ column }) => <SortableHeader column={column} title="Name" />,
+        header: ({ column }) => <SortableHeader column={column} title={CRM_TERMS.productName} />,
         cell: linkCell(
           (r) => `/products/${r.id}`,
           (r) => r.name
@@ -136,7 +137,7 @@ export function ProductsTable({
       },
       {
         accessorKey: "productCode",
-        header: "Product code",
+        header: CRM_TERMS.productCategory,
         cell: ({ row }) =>
           row.original.productCode ? (
             <span>
@@ -153,7 +154,7 @@ export function ProductsTable({
       },
       {
         accessorKey: "subcategory",
-        header: "Subcategory",
+        header: CRM_TERMS.productSubcategory,
         cell: ({ row }) => {
           if (!row.original.subcategory) return "—"
           return (
@@ -170,7 +171,7 @@ export function ProductsTable({
       },
       {
         accessorKey: "uom",
-        header: "UOM",
+        header: CRM_TERMS.unitOfMeasure,
         cell: ({ row }) => row.original.uom ?? "—",
       },
       {
@@ -186,7 +187,7 @@ export function ProductsTable({
       },
       {
         accessorKey: "isActive",
-        header: "Status",
+        header: "Active",
         cell: ({ row }) =>
           row.original.isActive ? (
             <Badge variant="secondary">Active</Badge>
@@ -217,8 +218,8 @@ export function ProductsTable({
       server={{ total: initialPage.total, loadPage: listProductPage }}
       tableId="products"
       filters={[
-        { type: "relation", columnId: "productCode", title: "Product code", options: productCodes.map((option) => ({ value: option.code, label: option.name })) },
-        { type: "boolean", columnId: "isActive", title: "Status" },
+        { type: "relation", columnId: "productCode", title: CRM_TERMS.productCategory, options: productCodes.map((option) => ({ value: option.code, label: option.name })) },
+        { type: "boolean", columnId: "isActive", title: "Active" },
       ]}
       searchColumn="name"
       searchPlaceholder="Search products…"

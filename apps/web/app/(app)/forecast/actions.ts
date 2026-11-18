@@ -14,6 +14,7 @@ import { partyShare } from "@/lib/interco-share"
 
 /** One row of the weighted billing forecast (per OPEN opportunity). */
 export type ForecastRow = {
+  detailHref: string | null
   funnelId: string
   opportunityName: string
   accountId: string | null
@@ -76,6 +77,7 @@ export async function getForecast(): Promise<ForecastRow[]> {
     )
     const rows = result as unknown as Record<string, unknown>[]
     const own: ForecastRow[] = rows.map((r) => ({
+      detailHref: ctx.can(PERMISSIONS.OPPORTUNITY_VIEW) ? `/funnel/${encodeURIComponent(String(r.funnel_id))}` : null,
       funnelId: String(r.funnel_id),
       opportunityName: String(r.opportunity_name ?? ""),
       accountId: r.account_id == null ? null : String(r.account_id),
@@ -148,6 +150,7 @@ export async function getForecast(): Promise<ForecastRow[]> {
         : null
       return [
         {
+          detailHref: "/intercompany",
           funnelId: d.id,
           opportunityName: d.name,
           accountId: null,

@@ -2,6 +2,7 @@
 import { RecordVoidButton } from "@/components/record-void-button"
 
 import * as React from "react"
+import { RecordReference } from "@/components/record-reference"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -84,6 +85,9 @@ export function CreateDocDialog({
   const [busy, setBusy] = React.useState(false)
 
   const meta = FINANCE_KINDS[kind]
+  const selectedOrder = sources.salesOrders.find(s => s.id === salesOrderId)
+  const selectedParent = sources.docs.find(d => d.id === parentId)
+  const documentCurrency = selectedParent?.currency ?? preset?.parent.currency ?? selectedOrder?.currency
   const soOptions = sources.salesOrders.map((s) => ({
     value: s.id,
     label: `${s.soNumber} · ${s.projectName ?? "—"}`,
@@ -189,8 +193,10 @@ export function CreateDocDialog({
           ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
+            <p className="text-xs text-muted-foreground">Enter the total shown on the document. Tax basis is not separately recorded; do not compare this total as a percentage of net project value.</p>
+            {selectedOrder ? <p className="text-xs text-muted-foreground">End customer: {selectedOrder.accountName ?? "Not set"} · Bill To: {selectedOrder.billToName ?? selectedOrder.accountName ?? "Not set"} · Invoice attention: {selectedOrder.attentionName ?? "Not set"}. An entered customer overrides the default.</p> : null}
             <div className="grid gap-2">
-              <Label htmlFor="fd-amount">Amount</Label>
+              <Label htmlFor="fd-amount">Document total (as recorded){documentCurrency ? ` (${documentCurrency})` : " — select a source for currency"}</Label>
               <Input
                 id="fd-amount"
                 type="number"
@@ -208,7 +214,7 @@ export function CreateDocDialog({
                 id="fd-party"
                 value={partyName}
                 onChange={(e) => setPartyName(e.target.value)}
-                placeholder={meta.direction === "sale" ? "Prefilled from the project" : "Supplier name"}
+                placeholder={meta.direction === "sale" ? selectedOrder?.billToName ?? selectedOrder?.accountName ?? "Inherited from source document" : "Supplier name"}
               />
             </div>
             <div className="grid gap-2">
@@ -312,9 +318,7 @@ export function FinanceDocsTable({
         cell: ({ row }) => {
           const r = row.original
           return (
-            <span className="font-mono text-xs text-muted-foreground">
-              {r.parentNumber ?? r.soNumber ?? "—"}
-            </span>
+            r.parentId ? <Link href={`/billing/${r.parentId}`} className="font-mono text-xs link">{r.parentNumber ?? "Source document"}</Link> : r.salesOrderId ? <RecordReference href={`/sales-orders/${r.salesOrderId}`} label={r.soNumber ?? "Sales order"} available={r.salesOrderAvailable === true} /> : <span className="text-muted-foreground">—</span>
           )
         },
       },
@@ -324,9 +328,7 @@ export function FinanceDocsTable({
         header: "Project",
         cell: ({ row }) =>
           row.original.projectId ? (
-            <Link href={`/projects/${row.original.projectId}`} className="font-mono text-xs link">
-              {row.original.projectCode}
-            </Link>
+            <RecordReference href={`/projects/${row.original.projectId}`} label={row.original.projectCode ?? "Project"} available={row.original.projectAvailable === true} />
           ) : (
             <span className="text-muted-foreground">—</span>
           ),
@@ -341,7 +343,7 @@ export function FinanceDocsTable({
       {
         id: "amount",
         accessorFn: (r) => Number(r.amount),
-        header: ({ column }) => <SortableHeader column={column} title="Amount" />,
+        header: ({ column }) => <SortableHeader column={column} title="Document total (as recorded)" />,
         cell: ({ row }) => (
           <span className="tabular-nums">
             {formatMoney(row.original.amount, row.original.currency)}

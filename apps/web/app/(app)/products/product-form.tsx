@@ -1,5 +1,6 @@
 "use client"
 
+import { CRM_TERMS } from "@/lib/crm-terminology"
 import * as React from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -210,7 +211,7 @@ export function ProductForm({
                 name="productCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product category</FormLabel>
+                    <FormLabel>{CRM_TERMS.productCategory}</FormLabel>
                     <Select
                       value={field.value}
                       onValueChange={(value) => {
@@ -241,7 +242,7 @@ export function ProductForm({
                 name="subcategory"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Subcategory</FormLabel>
+                    <FormLabel>{CRM_TERMS.productSubcategory}</FormLabel>
                     <Select
                       value={field.value || NONE}
                       onValueChange={field.onChange}
@@ -250,7 +251,7 @@ export function ProductForm({
                     >
                       <FormControl>
                         <SelectTrigger width="full">
-                          <SelectValue placeholder="Select a subcategory" />
+                          <SelectValue placeholder="Select a product subcategory" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -276,7 +277,7 @@ export function ProductForm({
                 name="uom"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>UOM</FormLabel>
+                    <FormLabel>{CRM_TERMS.unitOfMeasure}</FormLabel>
                     <FormControl>
                       <Input placeholder="Day" {...field} />
                     </FormControl>

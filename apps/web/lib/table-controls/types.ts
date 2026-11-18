@@ -7,7 +7,7 @@ export type TableLayout = { visibility: Record<string, boolean>; order: string[]
 export type TableStateV2 = { version: 2; filterTree: FilterGroup; layout: TableLayout }
 export type FilterContext = { now: Date; timezone: string }
 export type TableFieldDefinition = {
-  id: string; label: string; type: TableFieldType; operators: readonly FilterOperator[]
+  id: string; label: string; description?: string; type: TableFieldType; operators: readonly FilterOperator[]
   sortable: boolean; defaultVisible: boolean; minWidth: number; defaultWidth: number; required?: boolean
   filterOnly?: boolean
   relationship?: {entity:string;fields:readonly TableFieldDefinition[]}

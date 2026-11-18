@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest"
 import { isProjectCodeActive, projectCodeHref } from "@/lib/project-code-policy"
 
 describe("active project codes", () => {
-  it.each(["0e", "1d", "2c", "3b", "lost", "kiv", null])("keeps %s inactive", code => {
-    expect(isProjectCodeActive({ stageCode: code, stageKind: code === "lost" ? "LOST" : code === "kiv" ? "PARKED" : "OPEN", status: "open" })).toBe(false)
+  it.each(["0e", "1d", "2c", "3b", "4a"])("shows assigned codes at open stage %s", code => {
+    expect(isProjectCodeActive({stageCode:code,stageKind:"OPEN",status:"open"})).toBe(true)
+  })
+  it.each(["lost","kiv",null])("keeps inconsistent or closed stage %s inactive",code=>{
+    expect(isProjectCodeActive({stageCode:code,stageKind:code==='lost'?'LOST':code==='kiv'?'PARKED':'OPEN',status:'open'})).toBe(false)
   })
   it("activates Commit and Won, but fails closed for inconsistent states", () => {
     expect(isProjectCodeActive({ stageCode: "4a", stageKind: "OPEN", status: "open" })).toBe(true)

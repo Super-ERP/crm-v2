@@ -54,10 +54,10 @@ integration("void duplicate PostgreSQL boundary", () => {
       create table funnel_void_requests(id uuid primary key default gen_random_uuid(),tenant_id text,funnel_id uuid,retained_funnel_id uuid,requester_member_id text,owner_member_id text,reason text,status approval_status default 'pending',decision_note text,decided_by_member_id text,requested_at timestamptz default now(),decided_at timestamptz);
       create unique index funnel_void_one_pending on funnel_void_requests(tenant_id,funnel_id) where status='pending';
       create table pipeline_stages(id uuid primary key,tenant_id text,kind text,code text default 'won');
-      create table funnels(id uuid primary key,tenant_id text,name text,account_id uuid,currency text,opportunity_id uuid,owner_member_id text,status text,current_stage_id uuid,estimated_amount numeric,deleted_at timestamptz,updated_at timestamptz);
+      create table funnels(id uuid primary key,tenant_id text,name text,account_id uuid,currency text,opportunity_id uuid,owner_member_id text,status text,primary_quotation_id uuid,current_stage_id uuid,estimated_amount numeric,deleted_at timestamptz,updated_at timestamptz);
       create table quotations(id uuid primary key,tenant_id text,funnel_id uuid,status text,is_primary boolean,deleted_at timestamptz,updated_at timestamptz);
       create table projects(id uuid primary key,tenant_id text,funnel_id uuid,quotation_id uuid,deleted_at timestamptz,owner_member_id text);
-      create table payment_milestones(id uuid primary key,tenant_id text,funnel_id uuid,quotation_id uuid,project_id uuid,status text,invoice_number text,invoice_date date,so_number text,deleted_at timestamptz);
+      create table payment_milestones(id uuid primary key,tenant_id text,funnel_id uuid,quotation_id uuid,project_id uuid,expected_invoice_month text,expected_invoice_year integer,status text,invoice_number text,invoice_date date,so_number text,deleted_at timestamptz);
       create table finance_docs(id uuid,tenant_id text,milestone_id uuid);
       create table contracts(id uuid,tenant_id text,funnel_id uuid,deleted_at timestamptz);
       create table contract_years(id uuid,tenant_id text,funnel_id uuid,deleted_at timestamptz,status text default 'planned');

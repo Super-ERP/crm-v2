@@ -1,4 +1,5 @@
 "use server"
+import { financeReferenceAccess } from "@/server/services/finance-reference-access"
 import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
@@ -62,6 +63,11 @@ export type SalesOrderRow = {
   amount: string | null
   currency: string
   /** Source funnel (the deal this project came from), if any. */
+  funnelAvailable?: boolean
+  quotationAvailable?: boolean
+  projectAvailable?: boolean
+  funnelId?: string | null
+  quotationId?: string | null
   funnelName: string | null
   /** Reference of the accepted quotation this project was based on, if any. */
   quoteNumber: string | null
@@ -121,6 +127,11 @@ type RawRow = {
   reviewedAt: Date | null
   amount: string | null
   currency: string
+  funnelAvailable?: boolean
+  quotationAvailable?: boolean
+  projectAvailable?: boolean
+  funnelId?: string | null
+  quotationId?: string | null
   funnelName: string | null
   quoteNumber: string | null
 }
@@ -165,6 +176,8 @@ async function fetchRows(
       reviewedAt: salesOrders.reviewedAt,
       amount: projects.value,
       currency: projects.currency,
+      funnelId: projects.funnelId,
+      quotationId: projects.quotationId,
       funnelName: funnels.name,
       quoteNumber: quotations.quoteNumber,
     })
@@ -192,7 +205,12 @@ async function fetchRows(
     reviewedAt: Date | null
     amount: string | null
     currency: string
-    funnelName: string | null
+    funnelAvailable?: boolean
+  quotationAvailable?: boolean
+  projectAvailable?: boolean
+  funnelId?: string | null
+  quotationId?: string | null
+  funnelName: string | null
     quoteNumber: string | null
   }>
 
@@ -219,6 +237,7 @@ async function fetchRows(
     rows.map((r) => r.id)
   )
 
+  const references = await financeReferenceAccess(tx, ctx, rows)
   return rows.map((r): SalesOrderRow => {
     const raw: RawRow = {
       id: r.id,
@@ -239,6 +258,11 @@ async function fetchRows(
       reviewedAt: r.reviewedAt,
       amount: r.amount,
       currency: r.currency,
+      funnelAvailable: !!r.funnelId && references.funnels.has(r.funnelId),
+      quotationAvailable: !!r.quotationId && references.quotations.has(r.quotationId),
+      projectAvailable: references.projects.has(r.projectId),
+      funnelId: r.funnelId,
+      quotationId: r.quotationId,
       funnelName: r.funnelName,
       quoteNumber: r.quoteNumber,
     }

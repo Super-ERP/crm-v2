@@ -722,5 +722,30 @@
         "loader": "listTeamMembers"
       }
     }
+  },
+  {
+    "file": "apps/web/components/payment-milestone-table.tsx",
+    "keys": [
+      "funnel-milestones",
+      "project-milestones"
+    ],
+    "fields": [
+      "title",
+      "quotationItemDescription",
+      "expectedInvoice",
+      "amount",
+      "status",
+      "actions"
+    ],
+    "adapters": {
+      "funnel-milestones": {
+        "mode": "complete-client",
+        "loader": "MilestonesPanel authorized parent rows"
+      },
+      "project-milestones": {
+        "mode": "complete-client",
+        "loader": "MilestonesPanel authorized parent rows"
+      }
+    }
   }
 ]

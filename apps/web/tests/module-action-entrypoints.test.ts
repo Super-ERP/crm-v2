@@ -69,6 +69,8 @@ vi.mock("@/lib/deployment-seats", () => ({
   releaseInvitation: vi.fn(),
 }))
 
+vi.mock("@/server/services/locations", () => ({ locationCountry: vi.fn(async () => ({ countryCode: "MY", name: "Malaysia" })) }))
+
 vi.mock("@/server/audit", () => ({ writeAudit: mocks.writeAudit }))
 vi.mock("@/server/services/activity", () => ({ logActivity: vi.fn() }))
 vi.mock("@/server/services/changes/record", () => ({ recordChanges: vi.fn() }))

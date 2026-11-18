@@ -1,7 +1,10 @@
 "use client"
 
-import { ProjectCodeLink, ProjectCodeSummary } from "@/components/project-code-link"
+import { CRM_TERMS } from "@/lib/crm-terminology"
+import { ProjectCodeLink, ProjectCodeLinks, ProjectCodeSummary } from "@/components/project-code-link"
 import * as React from "react"
+import { OPPORTUNITY_RECORD_TABS } from "@/lib/crm-record-tabs"
+import { useRecordTab } from "@/components/use-record-tab"
 import { useRecordEditor } from "@/components/use-record-editor"
 import { RecordHeaderActions } from "@/components/record-header-actions"
 import { Input } from "@/components/ui/input"
@@ -63,7 +66,6 @@ export function OpportunityDetailBody({
   newFunnelButton,
   persons,
   canEdit,
-  initialTab,
 }: {
   detail: OpportunityContainerDetail
   activity: ActivityRow[]
@@ -74,13 +76,8 @@ export function OpportunityDetailBody({
   persons: { id: string; name: string; accountId: string }[]
   /** Whether the caller can edit this Opportunity (OPPORTUNITY_UPDATE) — gates every inline editor. */
   canEdit: boolean
-  /** Deep-linked tab (?tab=analysis from the stage-gate checklist). */
-  initialTab?: string
 }) {
-  const TABS = ["funnels", "activity", "quotations", "products", "analysis", "remarks", "documents", "history"]
-  const [tab, setTab] = React.useState(
-    initialTab && TABS.includes(initialTab) ? initialTab : "funnels"
-  )
+  const [tab, setTab] = useRecordTab("funnels", OPPORTUNITY_RECORD_TABS)
   const editor = useRecordEditor<OpportunityContainerDetail["opportunity"]>({ initial: detail.opportunity, onSave: (_draft, changes) => updateOpportunityContainer(detail.opportunity.id, changes) })
   const o = editor.record
   const saveField = async (patch: OpportunityContainerUpdateInput) => { editor.stage(patch) }
@@ -142,10 +139,10 @@ export function OpportunityDetailBody({
       },
       {
         accessorKey: "estimatedAmount",
-        header: ({ column }) => <SortableHeader column={column} title="Est. amount" />,
+        header: ({ column }) => <SortableHeader column={column} title="Estimated deal value (excl. tax)" />,
         cell: ({ row }) => (
           <span className="tabular-nums">
-            {formatMoney(row.original.estimatedAmount, row.original.currency)}
+            {row.original.estimatedAmount === null ? "Not set" : formatMoney(row.original.estimatedAmount, row.original.currency)}
           </span>
         ),
       },
@@ -209,7 +206,7 @@ export function OpportunityDetailBody({
       },
       {
         accessorKey: "productCategory",
-        header: "Category",
+        header: CRM_TERMS.productCategory,
         cell: ({ row }) => row.original.productCategory ?? "—",
       },
       {
@@ -224,11 +221,11 @@ export function OpportunityDetailBody({
         header: rightHeader("Unit price"),
         cell: moneyCell<ProductRow>(
           (r) => r.unitPrice,
-          () => o.currency
+          (r) => r.currency
         ),
       },
     ],
-    [o.currency]
+    []
   )
 
   return (
@@ -239,15 +236,17 @@ export function OpportunityDetailBody({
           <DetailCardHeader kind="opportunity" eyebrow="Opportunity" actions={<RecordHeaderActions canEdit={canEdit} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canEdit ? { type: "opportunity", id: detail.opportunity.id } : undefined} />} />
           {editor.error ? <p role="alert" className="px-6 text-sm text-destructive">{editor.error}</p> : null}
           <CardContent className="grid gap-3 text-sm">
-            <FieldRow inline label="Name">
+            <FieldRow inline label="Opportunity number">
               <span className="font-medium">{o.name}</span>
             </FieldRow>
-            <FieldRow inline label="Account">
+            <FieldRow inline label="End customer">
               <Link href={`/accounts/${detail.accountId}`} className="font-medium link">
                 {detail.accountName}
               </Link>
             </FieldRow>
-            <FieldRow inline label="Account owner">{detail.ownerName ?? "—"}</FieldRow>
+            <FieldRow inline label="Project Codes"><ProjectCodeLinks codes={[...new Set(detail.funnels.flatMap(funnel=>funnel.projectCode?[funnel.projectCode]:[]))]} /></FieldRow>
+            <FieldRow inline label="Account owner">{detail.accountOwnerName ?? "—"}</FieldRow>
+            <FieldRow inline label="Internal Opportunity owner">{detail.ownerName ?? "—"}</FieldRow>
             <FieldRow inline label="Opportunity Nature">
               {canEdit && editor.editing ? (
                 projectNatures.length === 0 ? (
@@ -295,7 +294,7 @@ export function OpportunityDetailBody({
                   title="Click to change owner contact"
                 />
               ) : (
-                detail.ownerContact?.name ?? "—"
+                detail.ownerContact ? <Link href={`/persons/${detail.ownerContact.id}`} className="link">{detail.ownerContact.name}</Link> : "—"
               )}
               {detail.ownerContact?.designation && o.ownerContactId === detail.opportunity.ownerContactId ? (
                 <span className="text-muted-foreground"> · {detail.ownerContact.designation}</span>
@@ -305,20 +304,21 @@ export function OpportunityDetailBody({
               {canEdit && editor.editing ? (
                 <DraftValue
                   value={o.ownerBudgetLimit ?? ""}
-                  display={formatMoney(o.ownerBudgetLimit, o.currency)}
+                  display={o.ownerBudgetLimit === null ? "Not set" : formatMoney(o.ownerBudgetLimit, o.currency)}
                   formatDraft={(v) => formatMoney(v || "0", o.currency)}
                   type="number"
                   title="Click to edit budget limit"
                   onSave={(next) => saveField({ ownerBudgetLimit: next || null })}
                 />
               ) : (
-                formatMoney(o.ownerBudgetLimit, o.currency)
+                o.ownerBudgetLimit === null ? "Not set" : formatMoney(o.ownerBudgetLimit, o.currency)
               )}
             </FieldRow>
             <Separator />
-            <FieldRow inline label="Total est. funnel amount">
+            <FieldRow inline label="Child estimate total (excl. tax)">
               <span className="font-semibold tabular-nums">
                 {formatOpportunityEstimatedTotals(o.estimatedTotalsByCurrency, o.currency)}
+                <span className="mt-1 block text-xs font-normal text-muted-foreground">All non-deleted child estimates, by currency, including Won/Lost deals. Excludes quote fallback and current list filters.</span>
               </span>
             </FieldRow>
           </CardContent>

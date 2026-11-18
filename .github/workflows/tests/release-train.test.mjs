@@ -13,6 +13,7 @@ test("successful main quality runs create one automatic release", () => {
   assert.deepEqual(workflow.on?.workflow_run?.workflows, ["quality"])
   assert.deepEqual(workflow.on?.workflow_run?.branches, ["main"])
   assert.match(workflow.jobs?.release?.if ?? "", /conclusion == 'success'/)
+  for(const guard of ["event == 'push'", "event == 'workflow_dispatch'", "head_branch == 'main'", "head_repository.full_name == github.repository"])assert.ok(workflow.jobs.release.if.includes(guard),guard)
   assert.equal(workflow.concurrency?.group, "release-main")
   assert.equal(workflow.concurrency?.["cancel-in-progress"], false)
   assert.equal(workflow.permissions?.actions, "write")

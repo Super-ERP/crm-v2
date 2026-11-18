@@ -27,6 +27,7 @@ export default async function PaymentMilestoneDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{milestone.title}</h1>
 
         <PaymentMilestoneDetailBody
           milestone={milestone}

@@ -2,10 +2,16 @@ name: quality
 
 on:
   workflow_dispatch:
+    inputs:
+      run_build:
+        description: Run an additional standalone build for diagnosis
+        required: false
+        type: boolean
+        default: true
   pull_request:
-    branches: [main]
+    branches: [main, staging]
   push:
-    branches: [main]
+    branches: [main, staging]
   workflow_call:
     inputs:
       ref:
@@ -57,10 +63,11 @@ jobs:
           SOURCE_SHA: ${{ inputs.ref || github.sha }}
           CHECK_MODE: "true"
           GH_TOKEN: ${{ github.token }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || (github.ref_name == 'staging' && github.event.before) || '' }}
         run: |
           export SOURCE_SHA="$(git rev-parse HEAD)"
-          if [ -z "$BASE_SHA" ]; then
+          if [[ "$BASE_SHA" =~ ^0+$ ]]; then BASE_SHA=""; fi
+          if [ -z "$BASE_SHA" ] && [ "$GITHUB_REF_NAME" != staging ]; then
             BASE_SHA="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/quality.yml/runs?status=success&per_page=100" --jq '.workflow_runs | map(select(.head_branch == "main" and (.event == "push" or .event == "workflow_dispatch") and .head_sha != env.SOURCE_SHA)) | .[0].head_sha // empty')"
             export BASE_SHA
           fi
@@ -111,4 +118,4 @@ jobs:
           pnpm --filter control-plane exec wrangler deploy --dry-run --env=""
       - run: pnpm run test:workflows
       - run: pnpm run build
-        if: ${{ steps.scope.outputs.erp == 'true' && inputs.run_build }}
+        if: ${{ steps.scope.outputs.erp == 'true' && (github.event_name == 'pull_request' || github.ref_name == 'staging' || inputs.run_build == true) }}

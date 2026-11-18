@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRecordTab } from "@/components/use-record-tab"
 import { useRecordEditor } from "@/components/use-record-editor"
 import { RecordHeaderActions } from "@/components/record-header-actions"
 import { Input } from "@/components/ui/input"
@@ -74,7 +75,7 @@ export function ProjectDetailBody({
   documents,
   billing = null,
 }: ProjectDetailData) {
-  const [tab, setTab] = React.useState("milestones")
+  const [tab, setTab] = useRecordTab<string>("milestones", ["milestones", ...(salesOrdersEnabled ? ["orders"] : []), ...(billing ? ["billing"] : []), "activity", "documents"])
   const revalidate = `/projects/${projectId}`
 
   const editor = useRecordEditor<ProjectRecord>({ initial: { ...initialRecord, notes: initialNotes }, onSave: (_draft, changes) => updateProject(projectId, changes) })
@@ -88,7 +89,7 @@ export function ProjectDetailBody({
       {/* Left column — project details */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="project" eyebrow="Project" actions={<RecordHeaderActions canEdit={canManage} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canManage ? { type: "project", id: projectId } : undefined} />} />
+          <DetailCardHeader kind="project" eyebrow="Project" title={record.name} actions={<RecordHeaderActions canEdit={canManage} editing={editor.editing} saving={editor.saving} onEdit={editor.start} onSave={editor.save} onCancel={editor.cancel} voidTarget={canManage ? { type: "project", id: projectId } : undefined} />} />
           {editor.error ? <p role="alert" className="px-6 text-sm text-destructive">{editor.error}</p> : null}
           <CardContent className="grid gap-3 text-sm">
             {fields.map((d) => {

@@ -14,7 +14,7 @@ it("searches literal historical codes in a tenant and owner scoped active direct
   const query = new PgDialect().sqlToQuery(execute.mock.calls[0][0])
   expect(query.sql).toContain('"funnels"."owner_member_id"')
   expect(query.sql).toContain("code_stage.kind = 'WON'")
-  expect(query.sql).toContain("code_stage.code = '4a'")
+  expect(query.sql).toContain("code_stage.kind = 'OPEN'")
   expect(query.params).toContain("tenant")
   expect(query.params).toContain("rep")
   expect(query.params).toContain("%A\\%\\_\\\\/%")

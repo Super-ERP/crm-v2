@@ -38,7 +38,7 @@ export default async function LeadDetailPage({
   ])
   if (!data) notFound()
 
-  const { lead, stageName, funnelName, accountName, personName } = data
+  const { lead, stageName, funnelName, convertedOpportunityLabel, accountName, personName } = data
   const [activity, files] = await Promise.all([
     listActivities("lead", id),
     listEntityAttachments("lead", id),
@@ -70,23 +70,9 @@ export default async function LeadDetailPage({
       ),
     },
     { label: "Source", value: lead.source ?? "—", editKey: "source" },
-    {
-      label: "Funnel",
-      value: funnelName ? (
-        lead.convertedOpportunityId ? (
-          <Link
-            href={`/opportunities/${lead.convertedOpportunityId}`}
-            className="link"
-          >
-            {funnelName}
-          </Link>
-        ) : (
-          funnelName
-        )
-      ) : (
-        "—"
-      ),
-    },
+    { label: "Pipeline", value: funnelName ?? "—" },
+    ...(lead.convertedOpportunityId ? [{label: "Converted Opportunity", value: convertedOpportunityLabel ?
+      <Link href={`/opportunities/${lead.convertedOpportunityId}`} className="link">{convertedOpportunityLabel}</Link> : "Unavailable"}] : []),
     { label: "Created", value: formatDate(lead.createdAt) },
   ]
 
@@ -138,6 +124,7 @@ export default async function LeadDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{lead.name}</h1>
         <LeadDetailBody
           leadId={id}
           workflowActions={<>
@@ -160,8 +147,8 @@ export default async function LeadDetailPage({
                   accountName,
                   personId: lead.convertedPersonId,
                   personName,
-                  funnelId: lead.convertedOpportunityId,
-                  funnelName,
+                  funnelId: convertedOpportunityLabel ? lead.convertedOpportunityId : null,
+                  funnelName: convertedOpportunityLabel,
                 }
               : null
           }

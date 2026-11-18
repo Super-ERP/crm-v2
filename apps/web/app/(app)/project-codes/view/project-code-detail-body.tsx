@@ -1,12 +1,14 @@
 "use client"
 
 import * as React from "react"
+import { useRecordTab } from "@/components/use-record-tab"
 import Link from "next/link"
 import { BriefcaseIcon, FilterIcon, FileTextIcon, Building2Icon, UsersIcon, FolderKanbanIcon } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DataTable, SortableHeader, moneyCell } from "@/components/data-table"
 import { DetailAside, DetailCardHeader, DetailTabs, RelatedCard, CountTab, FieldRow } from "@/components/detail-page"
 import { Card, CardContent } from "@/components/ui/card"
+import { SharedProjectCodeRename } from "@/components/shared-project-code-rename"
 import { StatusBadge } from "@/components/status-badge"
 import { Badge } from "@/components/ui/badge"
 import { TabsContent, TabsList } from "@/components/ui/tabs"
@@ -53,7 +55,7 @@ function RecordTable({ rows, kind, base, tableId, code }: { code:string; rows: C
 export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDetail: CodeDetail; initialTab?: string }) {
   const [loaded, setLoaded] = React.useState<{ source: CodeDetail; detail: CodeDetail } | null>(null)
   const detail = loaded?.source === initialDetail ? loaded.detail : initialDetail
-  const [tab, setTab] = React.useState<Tab>(VALID_TABS.includes(initialTab as Tab) ? initialTab as Tab : "funnels")
+  const [tab, setTab] = useRecordTab<Tab>("funnels", VALID_TABS, "tab", initialTab ? `?${new URLSearchParams({tab:initialTab})}` : "")
   const request = React.useRef(0)
   const loadFunnels = React.useCallback(async (query: ServerTableQuery) => {
     const currentRequest = ++request.current
@@ -68,7 +70,7 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
     { accessorKey: "name", header: ({ column }) => <SortableHeader column={column} title="Funnel" />, cell: ({ row }) => objectLink("funnel", `/funnel/${row.original.id}`, row.original.name) },
     { id: "relationship", header: "Relationship", enableSorting: false, cell: ({ row }) => <CodeRoles {...row.original} /> },
     { accessorKey: "stageName", header: ({ column }) => <SortableHeader column={column} title="Stage" />, cell: ({ row }) => <StageBadge name={row.original.stageName ?? row.original.status} kind={row.original.stageKind} /> },
-    { accessorKey: "estimatedAmount", header: ({ column }) => <SortableHeader column={column} title="Est. amount" />, cell: moneyCell(r => r.estimatedAmount, r => r.currency) },
+    { accessorKey: "estimatedAmount", header: ({ column }) => <SortableHeader column={column} title="Estimated deal value (excl. tax)" />, cell: moneyCell(r => r.estimatedAmount, r => r.currency) },
     { accessorKey: "expectedCloseDate", header: ({ column }) => <SortableHeader column={column} title="Expected close date" />, cell: ({ row }) => formatDate(row.original.expectedCloseDate) },
     { id: "account", header: "Account", enableSorting: false, cell: ({ row }) => { const a = accounts.get(row.original.accountId); return a ? objectLink("account", `/accounts/${a.id}`, a.name) : "—" } },
     { id: "opportunity", header: "Opportunity", enableSorting: false, cell: ({ row }) => { const o = row.original.opportunity; return o ? objectLink("opportunity", `/opportunities/${o.id}`, o.name) : "—" } },
@@ -85,10 +87,11 @@ export function ProjectCodeDetailBody({ initialDetail, initialTab }: { initialDe
   return <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
     <DetailAside>
       <Card><DetailCardHeader kind="projectCode" eyebrow="Project code" /><CardContent className="grid gap-3 text-sm">
+        <SharedProjectCodeRename code={detail.code} navigate/>
         <FieldRow inline label="Code"><span className="break-all font-mono font-medium">{detail.code}</span></FieldRow>
-        <FieldRow inline label="Availability">Commit (4A) and Closed Won</FieldRow>
+        <FieldRow inline label="Availability">Open and Closed Won Funnels</FieldRow>
         <FieldRow inline label="Funnels"><Badge variant="secondary" className="tabular-nums">{detail.total}</Badge></FieldRow>
-        <p className="text-xs text-muted-foreground">Historical codes remain stored when funnels move to an earlier stage.</p>
+        <p className="text-xs text-muted-foreground">Assigned codes remain visible when Funnels move to an earlier open stage.</p>
       </CardContent></Card>
       <RelatedCard items={groups.map(group => ({ kind: group.kind, label: group.label, count: group.count, onSelect: () => setTab(group.tab) }))} />
     </DetailAside>

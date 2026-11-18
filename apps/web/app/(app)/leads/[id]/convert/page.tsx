@@ -3,7 +3,7 @@ import { SiteHeader } from "@/components/site-header"
 import { PageBody } from "@/components/page-header"
 import { requireContext } from "@/lib/server-context"
 import { PERMISSIONS } from "@/lib/permissions"
-import { listAccountOptions, listCountries } from "@/lib/lookups"
+import { listAccountOptions, listCountries, listProjectNatures } from "@/lib/lookups"
 import { getLead } from "../../actions"
 import { ConvertForm } from "./convert-form"
 
@@ -13,11 +13,12 @@ export default async function ConvertLeadPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const [ctx, data, accountOptions, countries] = await Promise.all([
+  const [ctx, data, accountOptions, countries, projectNatures] = await Promise.all([
     requireContext(),
     getLead(id),
     listAccountOptions(),
     listCountries(),
+    listProjectNatures(),
   ])
   // No convert permission → no affordance leads here; bounce back.
   if (!ctx.can(PERMISSIONS.LEAD_CONVERT)) redirect("/leads")
@@ -40,6 +41,7 @@ export default async function ConvertLeadPage({
           lead={data.lead}
           accountOptions={accountOptions}
           countries={countries}
+          projectNatures={projectNatures}
         />
       </PageBody>
     </>

@@ -12,7 +12,7 @@ import {
 import { organization } from "./auth"
 import { projects } from "./projects"
 import { funnels } from "./pipeline"
-import { quotations } from "./quotations"
+import { quotations, quotationLineItems } from "./quotations"
 import { timestamps, softDelete } from "./_helpers"
 
 export const paymentMilestoneStatus = pgEnum("payment_milestone_status", [
@@ -50,6 +50,7 @@ export const paymentMilestones = pgTable(
   quotationId: uuid("quotation_id").references(() => quotations.id, {
     onDelete: "set null",
   }),
+  quotationLineItemId: uuid("quotation_line_item_id").references(() => quotationLineItems.id, { onDelete: "set null" }),
   title: text("title").notNull(),
   /** User-facing optional notes, distinct from `title`. */
   description: text("description"),
@@ -61,13 +62,14 @@ export const paymentMilestones = pgTable(
   dueDate: date("due_date"),
   status: paymentMilestoneStatus("status").notNull().default("pending_invoicing"),
   sortOrder: integer("sort_order").notNull().default(0),
+  /** Explicit billing schedule period; nullable only for historical rows. */
+  expectedInvoiceMonth: text("expected_invoice_month"),
+  expectedInvoiceYear: integer("expected_invoice_year"),
   // Deprecated Salesforce invoice snapshot fields. Read-only compatibility
   // columns: new application flows must not write or expose them.
   splitPercentage: numeric("split_percentage", { precision: 6, scale: 2 }),
   invoiceNumber: text("invoice_number"),
   invoiceDate: date("invoice_date"),
-  expectedInvoiceMonth: text("expected_invoice_month"),
-  expectedInvoiceYear: integer("expected_invoice_year"),
   soNumber: text("so_number"),
   productCategory: text("product_category"),
   productSubcategory: text("product_subcategory"),
@@ -76,6 +78,7 @@ export const paymentMilestones = pgTable(
     ...softDelete,
   },
   (t) => [
+    index("payment_milestones_quotation_line_idx").on(t.quotationLineItemId),
     index("payment_milestones_project_idx").on(t.projectId),
     index("payment_milestones_funnel_idx").on(t.tenantId, t.funnelId),
   ]
