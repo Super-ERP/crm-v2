@@ -10,8 +10,8 @@ import type postgres from "postgres"
 export async function importLocationCatalogue(client: postgres.Sql) {
   const root=path.join(process.cwd(),'db/reference')
   const manifest=JSON.parse(await readFile(path.join(root,'geonames-manifest.json'),'utf8'))
-  const [previous]=await client`SELECT manifest FROM location_catalogue_imports WHERE source='GeoNames'`
-  if(previous?.manifest?.snapshotSha256===manifest.snapshotSha256 && manifest.snapshotSha256)return
+  const [previous]=await client`SELECT manifest->>'snapshotSha256' AS checksum FROM location_catalogue_imports WHERE source='GeoNames'`
+  if(previous?.checksum===manifest.snapshotSha256 && manifest.snapshotSha256)return
   const snapshot=await readFile(path.join(root,'geonames.tsv.gz'))
   if(createHash('sha256').update(snapshot).digest('hex')!==manifest.snapshotSha256)throw new Error('GeoNames snapshot checksum mismatch')
   const fields=['id','kind','country_code','state_code','name','ascii_name','aliases','population']
@@ -26,6 +26,6 @@ export async function importLocationCatalogue(client: postgres.Sql) {
     await flush()
     await tx`DELETE FROM location_catalogue WHERE source='GeoNames' AND id NOT IN (SELECT id FROM incoming_locations)`
     await tx`INSERT INTO location_catalogue SELECT * FROM incoming_locations ON CONFLICT(id) DO UPDATE SET name=excluded.name,ascii_name=excluded.ascii_name,aliases=excluded.aliases,country_code=excluded.country_code,state_code=excluded.state_code,population=excluded.population,updated_at=now()`
-    await tx`INSERT INTO location_catalogue_imports(source,manifest) VALUES ('GeoNames',${tx.json(manifest)}) ON CONFLICT(source) DO UPDATE SET manifest=excluded.manifest,imported_at=now()`
+    await tx`INSERT INTO location_catalogue_imports(source,manifest) VALUES ('GeoNames',${JSON.stringify(manifest)}::text::jsonb) ON CONFLICT(source) DO UPDATE SET manifest=excluded.manifest,imported_at=now()`
   })
 }
