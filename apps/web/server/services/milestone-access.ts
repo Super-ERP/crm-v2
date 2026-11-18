@@ -21,6 +21,12 @@ export async function milestoneReadScope(tx: Tx, ctx: ServerContext, includeInvo
         select mp.funnel_id from projects mp where mp.id = ${paymentMilestones.projectId} and mp.tenant_id = ${paymentMilestones.tenantId}
       )) and mf.tenant_id = ${paymentMilestones.tenantId} and ${funnelOwner}
       and ((${includeInvoicedHistory} and ${paymentMilestones.status} = 'invoiced') or (
+        mf.deleted_at is null and mf.status in ('open', 'won')
+        and ${paymentMilestones.expectedInvoiceMonth} is not null and ${paymentMilestones.expectedInvoiceYear} is not null
+        and exists(select 1 from quotations prepared where prepared.id = mf.primary_quotation_id
+          and prepared.id = ${paymentMilestones.quotationId} and prepared.tenant_id = mf.tenant_id
+          and prepared.deleted_at is null and prepared.status not in ('void', 'rejected', 'expired'))
+      ) or (
         mf.deleted_at is null and mf.status in ('open', 'won') and mq.status = 'accepted'
         and (ms.kind = 'WON' or (ms.kind = 'OPEN' and ms.code = '4a'))
       ))

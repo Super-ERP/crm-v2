@@ -1,8 +1,9 @@
 import "server-only"
+import { assertProjectNatures } from "@/lib/project-nature"
 import { and, eq, isNull } from "drizzle-orm"
 import type { Tx } from "@/db"
 import type { ServerContext } from "@/lib/server-context"
-import { opportunities, funnels } from "@/db/schema"
+import { opportunities, funnels, tenantSettings } from "@/db/schema"
 import { visibleMemberIds, ownsOrManages, canManageAllRecords } from "@/lib/access-scope"
 import { recordChanges } from "@/server/services/changes/record"
 import { recordPpvvcSyncChanges, updateOpportunityPpvvc } from "@/server/services/ppvvc"
@@ -62,12 +63,19 @@ const cascade = {
         : input.projectNatureCode || null,
   projectNatures:
     input.projectNatures === undefined
-      ? existing.projectNatures
+      ? input.projectNatureCode === undefined ? existing.projectNatures : input.projectNatureCode ? [input.projectNatureCode] : null
       : input.projectNatures && input.projectNatures.length
         ? input.projectNatures
         : null,
 }
 
+if (input.projectNatures !== undefined || input.projectNatureCode !== undefined) {
+  const natures = cascade.projectNatures?.length ? cascade.projectNatures : cascade.projectNatureCode ? [cascade.projectNatureCode] : []
+  if (natures.length || existing.projectNatureCode || existing.projectNatures?.length) {
+    const [settings] = await tx.select({ natures: tenantSettings.projectNatures }).from(tenantSettings).where(eq(tenantSettings.organizationId, ctx.tenantId)).limit(1)
+    assertProjectNatures(natures, settings?.natures ?? [])
+  }
+}
 const updated = {
   description:
     input.description === undefined ? existing.description : input.description || null,

@@ -369,7 +369,7 @@ export function IntercompanyTable({
         id: "dealValue",
         accessorFn: (r) => Number(r.quotedAmount ?? r.estimatedAmount ?? 0),
         header: ({ column }) => (
-          <SortableHeader column={column} title="Deal value" />
+          <SortableHeader column={column} title="Allocated deal basis (excl. tax)" />
         ),
         cell: ({ row }) => {
           const r = row.original
@@ -379,7 +379,7 @@ export function IntercompanyTable({
             <span className="tabular-nums">
               {formatMoney(basis, r.currency)}
               <span className="ml-1 text-xs text-muted-foreground">
-                ({r.quotedAmount ? "quoted" : "estimated"})
+                ({r.quotedAmount != null ? "quoted net" : "manual estimate"})
               </span>
             </span>
           )
@@ -389,7 +389,7 @@ export function IntercompanyTable({
         id: "yourShare",
         accessorFn: (r) => Number(partnerShare(r)?.amount ?? 0),
         header: ({ column }) => (
-          <SortableHeader column={column} title="Your share" />
+          <SortableHeader column={column} title="Our allocated share (excl. tax)" />
         ),
         cell: ({ row }) => {
           const share = partnerShare(row.original)

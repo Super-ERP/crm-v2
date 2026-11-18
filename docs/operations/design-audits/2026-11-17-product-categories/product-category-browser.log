@@ -1,0 +1,7 @@
+read {"url":"https://asus-dev.tail66f665.ts.net:10574/settings/taxonomy/product-codes","details":7,"edit":true,"open":0,"overflow":false}
+edit {"labels":["Category code*","Category name*","Category code*","Category name*","Subcategory code*","Subcategory name*","Category code*","Category name*","Subcategory code*","Subcategory name*","Category code*","Category name*","Subcategory code*","Subcategory name*","Category code*","Category name*","Subcategory code*","Subcategory name*","Category code*","Category name*","Subcategory code*","Subcategory name*","Category code*","Category name*","Subcategory code*","Subcategory name*","Category code*","Category name*","Subcategory code*","Subcategory name*"],"saveDisabled":true}
+stable focus true
+discard prompt true
+width 768 overflow false
+width 375 overflow false
+exceptions []

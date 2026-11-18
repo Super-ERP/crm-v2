@@ -56,7 +56,7 @@ describe.skipIf(!databaseUrl)("payment milestone invoicing policy", () => {
         .toEqual({ status: "invoiced", invoice_number: "INV-KEEP", amount: "100" })
       expect((await client`SELECT DISTINCT status::text FROM payment_milestones ORDER BY status::text`).map((r) => r.status))
         .toEqual(["invoiced", "pending_invoicing"])
-      await client`ALTER TABLE payment_milestones ADD COLUMN deleted_at timestamptz`
+      await client`ALTER TABLE payment_milestones ADD COLUMN deleted_at timestamptz, ADD COLUMN quotation_id text, ADD COLUMN expected_invoice_month text, ADD COLUMN expected_invoice_year integer`
       const db = drizzle(client, { schema })
       const ctx = { memberId: "sales", isSuperadmin: false, can: () => false } as unknown as ServerContext
       await db.transaction(async (tx) => {
@@ -86,6 +86,14 @@ describe.skipIf(!databaseUrl)("payment milestone invoicing policy", () => {
         expect(afterVoid.map((r) => r.id)).toEqual(["closed"])
         const retained = await tx.execute(query`select status::text, invoice_number, amount::text from payment_milestones where id = 'invoice'`)
         expect(retained[0]).toEqual({ status: "invoiced", invoice_number: "INV-KEEP", amount: "100" })
+        await tx.execute(query`update funnels set primary_quotation_id = 'early-quote' where id = 'early'`)
+        await tx.execute(query`update payment_milestones set quotation_id = 'early-quote', expected_invoice_month = 'January', expected_invoice_year = 2027 where id = 'early'`)
+        const prepared = await tx.select({id:schema.paymentMilestones.id}).from(schema.paymentMilestones).where(await milestoneReadScope(tx,ctx))
+        expect(prepared.map(row => row.id).sort()).toEqual(["closed", "early"])
+        await expect(milestoneStatusForFunnel(tx,"early")).rejects.toThrow("4a")
+        const peer = { ...ctx, memberId:"other" }
+        const peerRows = await tx.select({id:schema.paymentMilestones.id}).from(schema.paymentMilestones).where(await milestoneReadScope(tx,peer))
+        expect(peerRows.map(row => row.id)).not.toContain("early")
         await tx.execute(query`update funnels set current_stage_id = 'commit', status = 'on_hold' where id = 'commit'`)
         await expect(milestoneStatusForFunnel(tx, "commit")).rejects.toThrow("4a")
       })

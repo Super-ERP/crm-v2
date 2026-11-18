@@ -3,11 +3,13 @@ export type LeadConversionInput = {
   createOpportunity?: boolean
   opportunityName?: string | null
   funnelName?: string | null
+  projectNatureCode?: string | null
   expectedCloseDate?: string | null
   existingAccountId?: string | null
   newAccount?: {
     accountType?: "client" | "reseller" | null
     code?: string | null
+    registrationNumber?: string | null
     phone?: string | null
     address?: Record<string, string | null | undefined> | null
   } | null
@@ -26,8 +28,22 @@ export function assertConversionSnapshot(saved: unknown, current: unknown): void
 
 export function validateConversionInput(input: LeadConversionInput): void {
   if (!input.leadId) throw new Error("Lead is required")
-  if (!input.existingAccountId && !/^[A-Z0-9]{2,6}$/.test((input.newAccount?.code ?? "").trim().toUpperCase()))
-    throw new Error("A company code (2–6 letters/digits) is required for the new account")
+  if (!input.existingAccountId && !normalizeRegistrationNumber(input.newAccount?.registrationNumber)) throw new Error("SSM registration number is required for the new account")
+  if (input.createOpportunity && !input.projectNatureCode?.trim()) throw new Error("Project Nature is required")
   if (input.expectedCloseDate && (!/^\d{4}-\d{2}-\d{2}$/.test(input.expectedCloseDate) || Number.isNaN(Date.parse(input.expectedCloseDate)) || new Date(input.expectedCloseDate).toISOString().slice(0, 10) !== input.expectedCloseDate))
     throw new Error("Enter a valid expected close date")
+}
+
+export type LeadConversionReview = { accountCode?: string; registrationChecked?: boolean; independentAccountConfirmed?: boolean }
+
+/** Punctuation and spacing do not identify independent registered companies. */
+export function normalizeRegistrationNumber(value?: string | null): string {
+  return (value ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+}
+
+export function validateConversionReview(input: LeadConversionInput, review?: LeadConversionReview): LeadConversionInput {
+  if (input.existingAccountId) return input
+  const code = (review?.accountCode ?? "").trim().toUpperCase()
+  if (!/^[A-Z0-9]{2,6}$/.test(code)) throw new Error("A company code (2–6 letters/digits) is required for the new account")
+  return { ...input, newAccount: { ...input.newAccount, code } }
 }

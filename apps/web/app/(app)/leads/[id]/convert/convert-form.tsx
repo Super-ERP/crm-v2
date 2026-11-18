@@ -1,16 +1,20 @@
 "use client"
 
+import { LocationFields } from "@/components/location-fields"
+
+import { useConversionDuplicateCheck } from "@/components/use-conversion-duplicate-check"
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Building2Icon, TargetIcon } from "lucide-react"
+import { Building2Icon, TargetIcon, CheckCircle2Icon, TriangleAlertIcon, LoaderCircleIcon } from "lucide-react"
 import { showActionError } from "@/lib/show-action-error"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { Combobox } from "@/components/ui/combobox"
 import {
   AlertDialog,
@@ -48,11 +52,13 @@ function matchingAccountId(companyName: string | null, accounts: Option[]): stri
 export function ConvertForm({
   lead,
   accountOptions,
-  countries = [],
+  countries: _countries = [],
+  projectNatures,
 }: {
   lead: Lead
   accountOptions: Option[]
   countries?: CountryOption[]
+  projectNatures: { code: string; name: string }[]
 }) {
   const router = useRouter()
   const defaultDealName = `${lead.companyName || lead.name} opportunity`
@@ -65,10 +71,12 @@ export function ConvertForm({
     matchingAccountId(lead.companyName, accountOptions)
   )
   const [newType, setNewType] = React.useState<"client" | "reseller">("client")
-  const [newCode, setNewCode] = React.useState("")
+  const [registrationNumber, setRegistrationNumber] = React.useState("")
+  const [projectNatureCode, setProjectNatureCode] = React.useState("")
   const [newPhone, setNewPhone] = React.useState("")
   const [addr, setAddr] = React.useState({
     line1: "",
+    locationCityId: "",
     city: "",
     state: "",
     postcode: "",
@@ -81,8 +89,7 @@ export function ConvertForm({
   const [confirmOpen, setConfirmOpen] = React.useState(false)
 
   const creatingNew = accountId === NEW_ACCOUNT
-  const stateOptions = countries.find((c) => c.name === addr.country)?.states ?? []
-  const codeValid = /^[A-Za-z0-9]{2,6}$/.test(newCode.trim())
+  const duplicate = useConversionDuplicateCheck(lead.id, registrationNumber, undefined, creatingNew && !!registrationNumber.trim())
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue.trim())
   const missingEmail = !validEmail
   const selectedAccountName = creatingNew
@@ -99,13 +106,14 @@ export function ConvertForm({
   const missing = [
     missingEmail ? "a lead email" : null,
     !accountId ? "Account" : null,
-    creatingNew && !codeValid ? "a valid account code (2–6 letters/digits)" : null,
+    creatingNew && !registrationNumber.trim() ? "SSM registration number" : null,
+    !projectNatureCode ? "Project Nature" : null,
     creatingNew && !addr.country.trim() ? "Country" : null,
     !opportunityName.trim() ? "Opportunity name" : null,
     !funnelName.trim() ? "Funnel name" : null,
   ].filter((m): m is string => m !== null)
 
-  const blocked = submitting || missing.length > 0
+  const blocked = submitting || missing.length > 0 || duplicate.blocked
 
   async function saveLeadEmail() {
     const email = emailValue.trim()
@@ -146,14 +154,16 @@ export function ConvertForm({
         opportunityName,
         funnelName,
         expectedCloseDate: expectedCloseDate || null,
+        projectNatureCode,
         existingAccountId: creatingNew ? null : accountId,
         newAccount: creatingNew
           ? {
               accountType: newType,
-              code: newCode.trim().toUpperCase(),
+              registrationNumber,
               phone: newPhone || null,
               address: {
                 line1: addr.line1 || null,
+                locationCityId: addr.locationCityId || null,
                 city: addr.city || null,
                 state: addr.state || null,
                 postcode: addr.postcode || null,
@@ -167,7 +177,7 @@ export function ConvertForm({
         return
       }
       if (res.data.pending) {
-        toast.success("Conversion submitted for manager approval")
+        toast.success("Conversion submitted for Sales Admin review")
         router.push(`/leads/${lead.id}`)
         router.refresh()
         return
@@ -200,9 +210,9 @@ export function ConvertForm({
           </div>
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <div className="grid gap-2">
-              <Label htmlFor="convert-lead-email">Lead email</Label>
+              <Label required htmlFor="convert-lead-email">Lead email</Label>
               <Input
-                id="convert-lead-email"
+                required id="convert-lead-email"
                 type="email"
                 autoComplete="email"
                 value={emailValue}
@@ -232,47 +242,32 @@ export function ConvertForm({
             <Building2Icon className="size-4" />
           </div>
           <div className="grid gap-0.5">
-            <CardTitle className="text-base">Account</CardTitle>
-            <CardDescription>
-              “{lead.name}” becomes a contact for “{lead.companyName || lead.name}”.
-            </CardDescription>
+            <CardTitle className="text-base"><h2>Account</h2></CardTitle>
+            <CardDescription>Contact: {lead.name}</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="convert-account">
-              Account{" "}
-              <span aria-hidden="true" className="text-destructive">
-                *
-              </span>
-            </Label>
+            <Label required htmlFor="convert-account">Account</Label>
             <Combobox
-              id="convert-account"
+              aria-required="true" id="convert-account"
               value={accountId}
               onChange={(v) => setAccountId(v || "")}
               options={[
-                { value: NEW_ACCOUNT, label: "Create new account" },
+                { value: NEW_ACCOUNT, label: `New account — ${lead.companyName || lead.name}` },
                 ...accountOptions.map((a) => ({ value: a.id, label: a.name })),
               ]}
               placeholder="Choose an account"
               searchPlaceholder="Search accounts…"
               emptyMessage="No accounts found."
             />
-            <p className="text-xs text-muted-foreground">
-              {!accountId
-                ? "Attach the contact to an existing account, or create a new one."
-                : creatingNew
-                  ? `A new account will be created from “${lead.companyName || lead.name}”.`
-                  : "Matched by company name. The contact will be added to this account."}
-            </p>
+
           </div>
 
           {creatingNew ? (
-            <div className="grid gap-4 rounded-lg border p-4">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                New account details
-              </p>
-              <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 border-t pt-4">
+              <h3 className="text-sm font-medium">Account Details</h3>
+              <div className="grid items-start gap-4 sm:grid-cols-3">
                 <div className="grid gap-2">
                   <Label htmlFor="new-acct-type">Type</Label>
                   <Combobox
@@ -287,23 +282,9 @@ export function ConvertForm({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="new-acct-code">
-                    Company code{" "}
-                    <span aria-hidden="true" className="text-destructive">
-                      *
-                    </span>
-                  </Label>
-                  <Input
-                    id="new-acct-code"
-                    value={newCode}
-                    onChange={(e) => setNewCode(e.target.value.toUpperCase())}
-                    placeholder="TTDC"
-                    maxLength={6}
-                    className="uppercase"
-                  />
-                  {newCode && !codeValid ? (
-                    <p className="text-xs text-destructive">2–6 letters/digits.</p>
-                  ) : null}
+                  <Label required htmlFor="new-acct-ssm">SSM registration number</Label>
+                  <Input required id="new-acct-ssm" aria-invalid={!!duplicate.registrationDuplicate} aria-describedby={registrationNumber.trim() ? "new-acct-ssm-status" : undefined} value={registrationNumber} onChange={e => setRegistrationNumber(e.target.value)} maxLength={120} />
+
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="new-acct-phone">Office phone</Label>
@@ -316,9 +297,14 @@ export function ConvertForm({
                 </div>
               </div>
 
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Address
-              </p>
+              {registrationNumber.trim() ? <div id="new-acct-ssm-status" role="status" className="flex flex-wrap items-center gap-2 text-xs">
+                {duplicate.checking ? <span className="inline-flex items-center gap-1 text-muted-foreground"><LoaderCircleIcon className="size-3 animate-spin" aria-hidden="true"/>Checking existing accounts…</span> : duplicate.error ? <span className="text-destructive">Could not check. Edit the SSM number to retry.</span> : <>
+                  <Badge variant="outline" className={duplicate.registrationDuplicate ? "text-destructive" : "text-muted-foreground"}>{duplicate.registrationDuplicate ? <TriangleAlertIcon aria-hidden="true"/> : <CheckCircle2Icon aria-hidden="true"/>}{duplicate.registrationDuplicate ? "SSM already exists — select the existing account" : "No SSM match in CRM"}</Badge>
+                  <Badge variant="outline" className={duplicate.similarName ? "text-warning" : "text-muted-foreground"}>{duplicate.similarName ? <TriangleAlertIcon aria-hidden="true"/> : <CheckCircle2Icon aria-hidden="true"/>}{duplicate.similarName ? "Similar company name found" : "No similar company name"}</Badge>
+                  {duplicate.registrationDuplicate || duplicate.similarName ? <Link className="link" href="/accounts" target="_blank" rel="noreferrer">Review accounts ↗</Link> : null}
+                </>}
+              </div> : null}
+              <h3 className="text-sm font-medium">Address</h3>
               <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="new-acct-line1">Street address</Label>
@@ -329,77 +315,9 @@ export function ConvertForm({
                     placeholder="Level 10, Menara ABC, Jalan Sultan Ismail"
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-acct-city">City</Label>
-                    <Input
-                      id="new-acct-city"
-                      value={addr.city}
-                      onChange={(e) => setAddr((a) => ({ ...a, city: e.target.value }))}
-                      placeholder="Kuala Lumpur"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-acct-postcode">Postcode</Label>
-                    <Input
-                      id="new-acct-postcode"
-                      value={addr.postcode}
-                      onChange={(e) => setAddr((a) => ({ ...a, postcode: e.target.value }))}
-                      placeholder="50250"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-acct-country">
-                      Country{" "}
-                      <span aria-hidden="true" className="text-destructive">
-                        *
-                      </span>
-                    </Label>
-                    {countries.length > 0 ? (
-                      <Combobox
-                        id="new-acct-country"
-                        value={addr.country}
-                        onChange={(v) =>
-                          // States are country-scoped — reset state on change.
-                          setAddr((a) => ({ ...a, country: v || "", state: "" }))
-                        }
-                        options={countries.map((c) => ({ value: c.name, label: c.name }))}
-                        placeholder="Choose a country"
-                        searchPlaceholder="Search countries…"
-                        emptyMessage="Add countries in Settings."
-                      />
-                    ) : (
-                      <Input
-                        id="new-acct-country"
-                        value={addr.country}
-                        onChange={(e) => setAddr((a) => ({ ...a, country: e.target.value }))}
-                        placeholder="Malaysia"
-                      />
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="new-acct-state">State</Label>
-                    {stateOptions.length > 0 ? (
-                      <Combobox
-                        id="new-acct-state"
-                        value={addr.state}
-                        onChange={(v) => setAddr((a) => ({ ...a, state: v || "" }))}
-                        options={stateOptions.map((s) => ({ value: s, label: s }))}
-                        placeholder="Optional"
-                        searchPlaceholder="Search states…"
-                        emptyMessage="No states."
-                      />
-                    ) : (
-                      <Input
-                        id="new-acct-state"
-                        value={addr.state}
-                        onChange={(e) => setAddr((a) => ({ ...a, state: e.target.value }))}
-                        placeholder="Optional"
-                        disabled={countries.length > 0 && !addr.country}
-                      />
-                    )}
-                  </div>
-                </div>
+                <LocationFields idPrefix="new-acct" countryRequired value={addr} onChange={next=>setAddr(a=>({...a,country:next.country ?? "",state:next.state ?? "",city:next.city ?? "",locationCityId:next.locationCityId ?? ""}))}>
+                  <div className="grid gap-2"><Label htmlFor="new-acct-postcode">Postcode</Label><Input id="new-acct-postcode" value={addr.postcode} onChange={e=>setAddr(a=>({...a,postcode:e.target.value}))}/></div>
+                </LocationFields>
               </div>
             </div>
           ) : null}
@@ -412,7 +330,7 @@ export function ConvertForm({
             <TargetIcon className="size-4" />
           </div>
           <div className="grid gap-0.5">
-            <CardTitle className="text-base">Opportunity &amp; Funnel</CardTitle>
+            <CardTitle className="text-base"><h2>Opportunity &amp; Funnel</h2></CardTitle>
             <CardDescription>
               Created together in the Sales Funnel at its first stage.
             </CardDescription>
@@ -420,40 +338,7 @@ export function ConvertForm({
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2 sm:col-span-2">
-              <Label htmlFor="opp-name">
-                Opportunity name{" "}
-                <span aria-hidden="true" className="text-destructive">
-                  *
-                </span>
-              </Label>
-              <Input
-                id="opp-name"
-                value={opportunityName}
-                onChange={(e) => onOpportunityNameChange(e.target.value)}
-                placeholder={defaultDealName}
-              />
-            </div>
-            <div className="grid gap-2 sm:col-span-2">
-              <Label htmlFor="funnel-name">
-                Funnel name{" "}
-                <span aria-hidden="true" className="text-destructive">
-                  *
-                </span>
-              </Label>
-              <Input
-                id="funnel-name"
-                value={funnelName}
-                onChange={(e) => {
-                  setFunnelNameTouched(true)
-                  setFunnelName(e.target.value)
-                }}
-                placeholder={opportunityName || defaultDealName}
-              />
-              <p className="text-xs text-muted-foreground">
-                The first deal under this Opportunity — usually the same name.
-              </p>
-            </div>
+            <div className="grid gap-2"><Label required htmlFor="conversion-nature">Project Nature</Label><Combobox aria-required="true" id="conversion-nature" value={projectNatureCode} onChange={setProjectNatureCode} options={projectNatures.map(n => ({ value: n.code, label: n.name }))} placeholder="Select Project Nature" /></div>
             <div className="grid gap-2">
               <Label htmlFor="opp-close">Expected close date</Label>
               <Input
@@ -463,6 +348,29 @@ export function ConvertForm({
                 onChange={(e) => setExpectedCloseDate(e.target.value)}
               />
             </div>
+            <div className="grid gap-2 sm:col-span-2">
+              <Label required htmlFor="opp-name">Opportunity name</Label>
+              <Input
+                required id="opp-name"
+                value={opportunityName}
+                onChange={(e) => onOpportunityNameChange(e.target.value)}
+                placeholder={defaultDealName}
+              />
+            </div>
+            <div className="grid gap-2 sm:col-span-2">
+              <Label required htmlFor="funnel-name">Funnel name</Label>
+              <Input
+                required id="funnel-name"
+                value={funnelName}
+                onChange={(e) => {
+                  setFunnelNameTouched(true)
+                  setFunnelName(e.target.value)
+                }}
+                placeholder={opportunityName || defaultDealName}
+              />
+
+            </div>
+
           </div>
         </CardContent>
       </Card>
@@ -480,20 +388,17 @@ export function ConvertForm({
         </Button>
       </div>
       {missing.length > 0 && !submitting ? (
-        <p className="text-right text-xs text-destructive" role="status">
-          To convert, fill in: {missing.join(" · ")}
+        <p className="text-right text-xs text-muted-foreground" role="status">
+          Required fields: {missing.join(" · ")}
         </p>
       ) : null}
-      <p className="text-right text-xs text-muted-foreground">
-        You&apos;ll review the account and sales records before conversion.
-      </p>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Convert this lead?</AlertDialogTitle>
             <AlertDialogDescription>
-              This submits the conversion for reporting-manager approval. Records are created after approval. Eligible managers without a reporting manager can convert immediately. Check the account and names before continuing.
+              Submit for Sales Admin review. Records are created after approval.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <dl className="grid gap-3 rounded-md border p-3 text-sm">
@@ -509,6 +414,7 @@ export function ConvertForm({
               <dd className="font-medium break-words">{lead.name}</dd>
               <dd className="break-all text-xs text-muted-foreground">{emailValue.trim()}</dd>
             </div>
+            <div className="grid gap-0.5"><dt className="text-muted-foreground">Project Nature</dt><dd className="font-medium">{projectNatures.find(nature=>nature.code===projectNatureCode)?.name}</dd></div>
             <div className="grid gap-0.5">
               <dt className="text-muted-foreground">Opportunity</dt>
               <dd className="font-medium break-words">{opportunityName}</dd>

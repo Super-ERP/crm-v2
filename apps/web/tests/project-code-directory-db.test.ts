@@ -83,7 +83,7 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
       expect(await read()).toBeNull()
       await client`update opportunities set deleted_at = null where id = ${parent}`
       await client`update funnels set current_stage_id = ${stage.early} where id = ${active}`
-      expect(await read()).toBeNull()
+      expect(await read()).toBe("INTERNAL")
       await client`update funnels set current_stage_id = ${stage.won}, status = 'won' where id = ${active}`
       expect(await read()).toBe("INTERNAL")
       const code = displayedFunnelProjectCode(["rep"])
@@ -96,9 +96,9 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
       await client`update opportunities set owner_member_id = 'rep', deleted_at = null where id = ${parent}`
     }
   })
-  it("groups literal primary and cross-deal codes and excludes early, hidden and foreign rows", async () => {
+  it("groups assigned codes including early Funnels without exposing hidden or foreign rows", async () => {
     const result = await listProjectCodes(tx, ctx, {})
-    expect(result.rows.map(r => r.code)).toEqual(["A/a & #1", "CROSS", "INTERNAL", "SECOND"])
+    expect(result.rows.map(r => r.code)).toEqual(["A/a & #1", "CROSS", "EARLY", "INTERNAL", "SECOND"])
     expect(result.rows.find(r => r.code === "A/a & #1")).toMatchObject({ funnelCount: 2, primaryCount: 1, crossDealCount: 1 })
     expect((await listProjectCodes(tx, ctx, { search: "A/a & #1" })).rows).toHaveLength(1)
     expect((await listProjectCodes(tx, ctx, { search: "%" })).rows).toEqual([])
@@ -123,7 +123,7 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
         expect(filtered.rows.map(r => r.code)).toEqual(['A/a & #1'])
       }
       for (const id of ['accountName', 'funnelName', 'ownerName', 'stageName', 'expectedCloseDate']) {
-        expect((await listProjectCodes(tx, ctx, { sorting: [{ id, desc: true }] })).total).toBe(3)
+        expect((await listProjectCodes(tx, ctx, { sorting: [{ id, desc: true }] })).total).toBe(4)
       }
       const restricted = (await listProjectCodes(tx, { ...ctx, can: p => p === PERMISSIONS.OPPORTUNITY_VIEW }, { search: 'A/a & #1' })).rows[0]
       expect(restricted.accountName).toEqual([])
@@ -135,7 +135,7 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
   })
   it("returns standard table totals and funnels with CRM summary fields", async () => {
     const directory = await listProjectCodes(tx, ctx, { pageSize: 50, sort: { id: "funnelCount", desc: true } })
-    expect(directory.total).toBe(4)
+    expect(directory.total).toBe(5)
     const detail = await getProjectCode(tx, ctx, "A/a & #1", 0, false, { pageSize: 50, search: "A/a" })
     expect(detail?.total).toBe(1)
     expect(detail?.funnels[0]).toMatchObject({ estimatedAmount: "1000", currency: "MYR", ownerName: "Sales representative", stageKind: "OPEN" })
@@ -159,7 +159,7 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
   it("masks inaccessible parent references in the related-code panel", async () => {
     await client`update opportunities set owner_member_id = 'other' where id = ${parent}`
     const rows = (await listRelatedProjectCodes("account", account)).rows
-    expect(rows).toHaveLength(2)
+    expect(rows).toHaveLength(3)
     expect(rows.every(r => r.opportunityId === null && r.opportunityName === null && r.crmProjectCode === null)).toBe(true)
     expect(rows.some(r => r.projectCode === "A/a & #1")).toBe(true)
     expect((await listProjectCodes(tx, ctx, {})).rows.map(r => r.code)).not.toContain("INTERNAL")
@@ -170,12 +170,12 @@ const url = process.env.TEST_DATABASE_ADMIN_URL
       codes: query<string[]>`array_agg(distinct ${funnels.projectCode}) filter (where ${visibleProjectCode(funnels.projectCode)} is not null)`
     }).from(funnels).where(query`${funnels.tenantId} = 'qm'`)
     expect(rows[0].count).toBe(4)
-    expect(rows[0].codes).not.toContain("EARLY")
+    expect(rows[0].codes).toContain("EARLY")
   })
-  it("hides historical codes on rollback and restores the same identifiers on re-entry", async () => {
+  it("keeps assigned codes visible on rollback and re-entry", async () => {
     await client`update funnels set current_stage_id = ${stage.early} where id = ${active}`
-    expect(await getProjectCode(tx, ctx, "CROSS", 0, false)).toBeNull()
-    expect((await tx.select({ code: visibleProjectCode(funnels.projectCode) }).from(funnels).where(query`${funnels.id} = ${active}`))[0].code).toBeNull()
+    expect((await getProjectCode(tx, ctx, "CROSS", 0, false))?.funnels.map(row=>row.id)).toEqual([active])
+    expect((await tx.select({ code: visibleProjectCode(funnels.projectCode) }).from(funnels).where(query`${funnels.id} = ${active}`))[0].code).toBe("A/a & #1")
     expect((await client`select project_code from funnels where id = ${active}`)[0].project_code).toBe("A/a & #1")
     await client`update funnels set current_stage_id = ${stage.commit} where id = ${active}`
     expect((await getProjectCode(tx, ctx, "CROSS", 0, false))?.funnels.map(r => r.id)).toEqual([active])

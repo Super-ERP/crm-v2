@@ -2,6 +2,8 @@ import type { TableFieldType } from "./types"
 
 /** Explicit metadata for existing CRM column IDs, never inferred from row values. */
 export const FIELD_TYPES: Record<string, TableFieldType> = {
+  expectedInvoice: "text",
+  quotationItemDescription: "text",
   "account": "relation",
   "accountId": "relation",
   "accountName": "relation",

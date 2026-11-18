@@ -1,5 +1,7 @@
 "use client"
 
+import { LocationFields } from "@/components/location-fields"
+
 import * as React from "react"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -7,6 +9,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 
+import { usePermissions } from "@/components/command-palette"
+import { PERMISSIONS } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { showActionError } from "@/lib/show-action-error"
@@ -57,14 +61,14 @@ const ACCOUNT_TYPE_ITEMS = [
   { value: "reseller", label: "Reseller (channel)" },
 ]
 
-const schema = (country: string) =>
+const schema = (country: string, currentCode?: string | null) =>
   z.object({
     name: z.string().min(1, "Name is required"),
     currency: z.string().length(3, "Currency is required"),
     code: z.string().refine(
       (v) => {
         const value = v.trim()
-        return value === "" || /^[A-Za-z0-9]{2,6}$/.test(value)
+        return v === currentCode || value === "" || /^[A-Za-z0-9]{2,6}$/.test(value)
       },
       "Account code must be 2–6 letters/digits when provided"
     ),
@@ -87,6 +91,7 @@ const schema = (country: string) =>
     defaultCountry: z.string().optional(),
     line1: z.string().optional(),
     line2: z.string().optional(),
+    locationCityId: z.string().optional(),
     city: z.string().optional(),
     state: z.string().optional(),
     postcode: z.string().optional(),
@@ -129,6 +134,7 @@ function defaults(
     defaultCountry: account ? a.country ?? "" : presets?.defaultCountry ?? "",
     line1: a.line1 ?? "",
     line2: a.line2 ?? "",
+    locationCityId: a.locationCityId ?? "",
     city: a.city ?? "",
     state: a.state ?? "",
     postcode: a.postcode ?? "",
@@ -141,7 +147,7 @@ export function AccountForm({
   parentOptions,
   endUserOptions,
   industries,
-  countries = [],
+  countries: _countries = [],
   currencies = [],
   presets,
   trigger,
@@ -181,9 +187,10 @@ export function AccountForm({
 }) {
   const [open, setOpen] = useDialogOpen(controlledOpen, onOpenChange)
   const editing = !!account
+  const canManageCode = usePermissions().has(PERMISSIONS.ACCOUNT_CODE_MANAGE)
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema(presets?.defaultCountry ?? "MY")),
+    resolver: zodResolver(schema(presets?.defaultCountry ?? "MY", account?.code)),
     defaultValues: defaults(account, presets, currencies),
   })
 
@@ -242,17 +249,12 @@ export function AccountForm({
   const accountType = form.watch("accountType")
   const isReseller = accountType === "reseller"
 
-  // Cascading address picklists: state options come from the chosen country.
-  const countryVal = form.watch("country")
-  const stateOptions = React.useMemo(
-    () => countries.find((c) => c.name === countryVal)?.states ?? [],
-    [countries, countryVal]
-  )
 
   async function onSubmit(values: FormValues) {
     const billingAddress: BillingAddress = {
       line1: values.line1 || null,
       line2: values.line2 || null,
+      locationCityId: values.locationCityId || null,
       city: values.city || null,
       state: values.state || null,
       postcode: values.postcode || null,
@@ -262,7 +264,7 @@ export function AccountForm({
       ...(editing && members ? { ownerMemberId: values.ownerMemberId || null } : {}),
       name: values.name,
       currency: values.currency,
-      code: values.code || null,
+      code: canManageCode ? values.code || null : account?.code,
       registrationNumber: values.registrationNumber || null,
       parentAccountId:
         values.parentAccountId && values.parentAccountId !== NONE
@@ -353,7 +355,9 @@ export function AccountForm({
                     <FormLabel>Account code</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="TTDC"
+                        readOnly={!canManageCode}
+                        required={canManageCode}
+                        placeholder="Assigned by Sales Admin"
                         className="uppercase"
                         maxLength={6}
                         {...field}
@@ -606,120 +610,10 @@ export function AccountForm({
                   </FormItem>
                 )}
               />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="city"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Kuala Lumpur" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="state"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>State</FormLabel>
-                      {stateOptions.length > 0 ? (
-                        <Select
-                          value={field.value || NONE}
-                          onValueChange={(v) =>
-                            field.onChange(v === NONE ? "" : v)
-                          }
-                          items={[
-                            { value: NONE, label: "None" },
-                            ...stateOptions.map((s) => ({ value: s, label: s })),
-                          ]}
-                        >
-                          <FormControl>
-                            <SelectTrigger width="full">
-                              <SelectValue placeholder="Select state…" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value={NONE}>None</SelectItem>
-                            {stateOptions.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                {s}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <FormControl>
-                          <Input placeholder="Selangor" {...field} />
-                        </FormControl>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="postcode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Postcode</FormLabel>
-                      <FormControl>
-                        <Input placeholder="50000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="country"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel required>Country</FormLabel>
-                      {countries.length > 0 ? (
-                        <Select
-                          value={field.value || ""}
-                          onValueChange={(v) => {
-                            field.onChange(v ?? "")
-                            // States are country-scoped — clear the old one.
-                            form.setValue("state", "")
-                          }}
-                          items={countries.map((c) => ({
-                            value: c.name,
-                            label: c.name,
-                          }))}
-                        >
-                          <FormControl>
-                            <SelectTrigger width="full">
-                              <SelectValue placeholder="Select country…" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {countries.map((c) => (
-                              <SelectItem key={c.name} value={c.name}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <FormControl>
-                          {/* Free-text fallback when no country picklist is
-                              configured. The hint is prefixed "e.g." so it
-                              reads as guidance, never a pre-filled value. */}
-                          <Input placeholder="e.g. Malaysia" {...field} />
-                        </FormControl>
-                      )}
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <LocationFields idPrefix="account-location" countryRequired countryError={form.formState.errors.country?.message} value={{country:form.watch("country"),state:form.watch("state"),city:form.watch("city"),locationCityId:form.watch("locationCityId")}}
+                onChange={next=>{for(const key of ["country","state","city","locationCityId"] as const)form.setValue(key,next[key] ?? "",{shouldDirty:true,shouldValidate:true})}}>
+                <FormField control={form.control} name="postcode" render={({field})=><FormItem><FormLabel>Postcode</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>}/>
+              </LocationFields>
             </div>
             </fieldset>
           </form>

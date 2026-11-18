@@ -41,10 +41,10 @@ describe('project code column controls', () => {
     expect(getTableFields('project-codes').filter(field => !field.optional).map(({ id, label }) => [id, label])).toEqual([
       ['code', 'Project code'], ['relationship', 'Used as'], ['funnelCount', 'Linked funnels'],
       ['accountName', 'Account'], ['funnelName', 'Funnel'], ['ownerName', 'Owner'], ['stageName', 'Stage'],
-      ['totalEstimatedFunnelAmount', 'Est. amount'], ['expectedCloseDate', 'Earliest expected close date'],
+      ['totalEstimatedFunnelAmount', 'Linked estimate total (excl. tax)'], ['expectedCloseDate', 'Earliest expected close date'],
     ])
     expect(getTableFields('project-code-funnels', ['name', 'stageName', 'estimatedAmount']).map(f => f.label))
-      .toEqual(['Funnel', 'Stage', 'Est. amount'])
+      .toEqual(['Funnel', 'Stage', 'Estimated deal value (excl. tax)'])
     expect(getTableFields('code-contacts', ['name', 'title']).map(f => f.label)).toEqual(['Contact', 'Designation'])
   })
   it('preserves selectable column preferences while keeping the code identifier visible', () => {

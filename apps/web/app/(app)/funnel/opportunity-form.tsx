@@ -45,6 +45,7 @@ import { Combobox } from "@/components/ui/combobox"
 import { AccountQuickCreate } from "@/components/quick-create-account"
 import { ContactQuickCreate } from "@/components/quick-create-contact"
 import { useOpenOnNewParam } from "@/hooks/use-open-on-new-param"
+import { getProjectNatureOptions } from "./commit-setup-actions"
 import type { Option, MemberOption, FunnelWithStages } from "@/lib/lookups"
 import {
   createOpportunity,
@@ -56,6 +57,7 @@ import { DEFAULT_CURRENCIES } from "@/lib/tenant-defaults"
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
+  projectNatureCode: z.string().optional(),
   accountId: z.string().min(1, "Account is required"),
   primaryPersonId: z.string().optional(),
   pipelineId: z.string().min(1, "Funnel is required"),
@@ -68,7 +70,7 @@ const schema = z.object({
     .optional()
     .refine(
       (v) => !v || (Number(v) >= 0 && Number(v) <= 100),
-      "Recognized % must be between 0 and 100"
+      "Allocation % must be between 0 and 100"
     ),
   projectYear: z.string().optional(),
   description: z.string().optional(),
@@ -132,6 +134,8 @@ export function OpportunityForm({
 }) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
+  const [natureOptions, setNatureOptions] = React.useState<{ code: string; name: string }[]>([])
+  React.useEffect(() => { if (open) void getProjectNatureOptions().then(setNatureOptions).catch(() => toast.error("Could not load Project Natures")) }, [open])
   // Auto-open from the header "+ New" quick-create deep link (/funnel?new=1).
   // Only the create form responds; edit instances ignore the flag.
   useOpenOnNewParam(() => setOpen(true), mode === "create")
@@ -161,6 +165,7 @@ export function OpportunityForm({
     defaultValues: opportunity
       ? {
           name: opportunity.name,
+          projectNatureCode: opportunity.projectNatureCode ?? "",
           accountId: opportunity.accountId,
           primaryPersonId: "",
           pipelineId: opportunity.pipelineId,
@@ -184,6 +189,7 @@ export function OpportunityForm({
         }
       : {
           name: "",
+          projectNatureCode: "",
           accountId: opportunityId
             ? (accounts[0]?.id ?? "")
             : (presetAccountId ?? ""),
@@ -242,10 +248,12 @@ export function OpportunityForm({
   }, [pipelines, selectedFunnelId, mode])
 
   async function onSubmit(values: FormValues) {
+    if (mode === "create" && !values.projectNatureCode) { form.setError("projectNatureCode", { message: "Project Nature is required" }); return }
     if (mode === "create") {
       const res = await createOpportunity({
         opportunityId,
         name: values.name,
+        ...(values.projectNatureCode ? { projectNatureCode: values.projectNatureCode, projectNatures: [values.projectNatureCode] } : {}),
         accountId: values.accountId,
         primaryPersonId: values.primaryPersonId || null,
         pipelineId: values.pipelineId,
@@ -270,6 +278,7 @@ export function OpportunityForm({
     } else if (opportunity) {
       const res = await updateOpportunity(opportunity.id, {
         name: values.name,
+        ...(values.projectNatureCode ? { projectNatureCode: values.projectNatureCode, projectNatures: [values.projectNatureCode] } : {}),
         accountId: values.accountId,
         primaryPersonId: values.primaryPersonId || null,
         currency: values.currency,
@@ -315,6 +324,8 @@ export function OpportunityForm({
             onSubmit={form.handleSubmit(onSubmit)}
             className="grid gap-4"
           >
+            <FormField control={form.control} name="projectNatureCode" render={({ field }) => <FormItem><FormLabel required={mode === "create"}>Project Nature</FormLabel><FormControl><Combobox value={field.value ?? ""} onChange={field.onChange} options={natureOptions.map(n => ({ value: n.code, label: n.name }))} placeholder="Select Project Nature" /></FormControl><FormMessage /></FormItem>} />
+
             <FormField
               control={form.control}
               name="name"
@@ -534,7 +545,7 @@ export function OpportunityForm({
                   <FormDescription>
                     {currencyLocked
                       ? "Locked to the primary quotation's currency."
-                      : "The Funnel's value is set by its primary quotation (net)."}
+                      : "The manual estimate and primary quotation net each use this currency."}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -656,7 +667,7 @@ export function OpportunityForm({
                 name="estimatedAmount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Estimated funnel amount</FormLabel>
+                    <FormLabel>Estimated deal value (excl. tax)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.01" min="0" placeholder="0.00" {...field} />
                     </FormControl>
@@ -741,7 +752,7 @@ export function OpportunityForm({
                 </div>
                 <FormDescription>
                   Other entities that handle delivery — not external customers.
-                  Our recognized cut = deal value − all parties&apos; shares.
+                  Our allocated share = deal value − all parties&apos; shares.
                 </FormDescription>
 
                 {partyFields.fields.length === 0 ? (

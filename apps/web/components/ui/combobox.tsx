@@ -47,6 +47,11 @@ export function Combobox({
   onCreate,
   createLabel = (query) => `Create "${query}"`,
   "aria-invalid": ariaInvalid,
+  "aria-required": ariaRequired,
+  "aria-describedby": ariaDescribedBy,
+  onSearchChange,
+  filterLocally = true,
+  statusMessage,
 }: {
   value: string | null | undefined
   onChange: (value: string) => void
@@ -62,6 +67,11 @@ export function Combobox({
   onCreate?: (query: string) => void
   /** Label for the inline create row. Defaults to `Create "<query>"`. */
   createLabel?: (query: string) => string
+  statusMessage?: string
+  filterLocally?: boolean
+  onSearchChange?: (query: string) => void
+  "aria-describedby"?: string
+  "aria-required"?: React.AriaAttributes["aria-required"]
   "aria-invalid"?: boolean
 }) {
   const [open, setOpen] = React.useState(false)
@@ -78,7 +88,7 @@ export function Combobox({
 
   function handleOpenChange(next: boolean) {
     setOpen(next)
-    if (!next) setQuery("") // reset the search so the next open starts fresh
+    if (!next) { setQuery(""); onSearchChange?.("") } // reset the search so the next open starts fresh
   }
 
   return (
@@ -92,6 +102,8 @@ export function Combobox({
             role="combobox"
             aria-expanded={open}
             aria-invalid={ariaInvalid}
+            aria-required={ariaRequired}
+            aria-describedby={ariaDescribedBy}
             disabled={disabled}
             className={cn(
               "h-8 min-w-0 w-full justify-between gap-1.5 px-2.5 font-normal aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
@@ -110,14 +122,15 @@ export function Combobox({
         align="start"
         className="w-(--anchor-width) p-0"
       >
-        <Command>
+        <Command shouldFilter={filterLocally}>
           <CommandInput
             placeholder={searchPlaceholder}
             value={query}
-            onValueChange={setQuery}
+            onValueChange={next => { setQuery(next); onSearchChange?.(next) }}
           />
           <CommandList>
-            {showCreate ? null : <CommandEmpty>{emptyMessage}</CommandEmpty>}
+            {statusMessage ? <div role="status" className="px-3 py-2 text-sm text-muted-foreground">{statusMessage}</div> : null}
+            {showCreate || statusMessage ? null : <CommandEmpty>{emptyMessage}</CommandEmpty>}
             <CommandGroup>
               {options.map((option) => (
                 <CommandItem

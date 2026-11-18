@@ -9,7 +9,7 @@ export function activeProjectCodeFunnel(source: { status: SQLWrapper; deletedAt:
     SELECT 1 FROM pipeline_stages code_stage
     WHERE code_stage.id = ${source.currentStageId} AND code_stage.tenant_id = ${source.tenantId}
       AND code_stage.pipeline_id = ${source.pipelineId}
-      AND (code_stage.kind = 'WON' OR (code_stage.kind = 'OPEN' AND code_stage.code = '4a'))
+      AND (code_stage.kind = 'WON' OR (code_stage.kind = 'OPEN' AND code_stage.code NOT IN ('won','lost','kiv')))
   ))`
 }
 

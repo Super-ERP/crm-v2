@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import * as React from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -35,10 +36,10 @@ const columns: ColumnDef<ForecastRow>[] = [
     ),
     cell: ({ row }) => (
       <div className="grid gap-0.5">
-        <span className="font-medium">{row.original.opportunityName}</span>
+        {row.original.detailHref ? <Link className="font-medium text-primary underline underline-offset-4" href={row.original.detailHref}>{row.original.opportunityName}</Link> : <span className="font-medium">{row.original.opportunityName}</span>}
         {row.original.source === "inbound" ? (
           <span className="text-xs text-muted-foreground">
-            via {row.original.originEntityName ?? "sibling entity"}
+            Inbound allocation via {row.original.originEntityName ?? "sibling entity"}
           </span>
         ) : null}
       </div>
@@ -74,7 +75,7 @@ const columns: ColumnDef<ForecastRow>[] = [
   {
     id: "forecastMonth",
     accessorFn: (r) => r.forecastMonth ?? "",
-    header: ({ column }) => <SortableHeader column={column} title="Expected" />,
+    header: ({ column }) => <SortableHeader column={column} title="Forecast month" />,
     cell: ({ row }) => {
       const r = row.original
       return (
@@ -82,7 +83,7 @@ const columns: ColumnDef<ForecastRow>[] = [
           <span>{monthLabel(r.forecastMonth)}</span>
           {r.expectedCloseDate ? (
             <span className="text-xs text-muted-foreground">
-              {formatDate(r.expectedCloseDate)}
+              Expected close: {formatDate(r.expectedCloseDate)}
             </span>
           ) : null}
         </div>
@@ -93,11 +94,11 @@ const columns: ColumnDef<ForecastRow>[] = [
     id: "opportunityValue",
     accessorFn: (r) => Number(r.opportunityValue ?? 0),
     header: ({ column }) => (
-      <SortableHeader column={column} title="Value" />
+      <SortableHeader column={column} title="Deal basis (excl. tax)" />
     ),
     cell: ({ row }) => (
       <span className="tabular-nums">
-        {formatMoney(row.original.opportunityValue, row.original.currency ?? "MYR")}
+        {formatMoney(row.original.opportunityValue, row.original.currency ?? "MYR")}<span className="block text-xs text-muted-foreground">{row.original.source === "own" ? "Estimated deal value (excl. tax)" : "Our allocated deal basis"}</span>
       </span>
     ),
   },
@@ -105,7 +106,7 @@ const columns: ColumnDef<ForecastRow>[] = [
     id: "weightedValue",
     accessorFn: (r) => Number(r.weightedValue ?? 0),
     header: ({ column }) => (
-      <SortableHeader column={column} title="Weighted" />
+      <SortableHeader column={column} title="Probability-weighted value" />
     ),
     cell: ({ row }) => (
       <span className="font-medium tabular-nums">
@@ -117,7 +118,7 @@ const columns: ColumnDef<ForecastRow>[] = [
     id: "recognizedWeightedValue",
     accessorFn: (r) => Number(r.recognizedWeightedValue ?? 0),
     header: ({ column }) => (
-      <SortableHeader column={column} title="Recognized" />
+      <SortableHeader column={column} title="Our weighted share" />
     ),
     cell: ({ row }) => {
       const r = row.original
@@ -128,7 +129,7 @@ const columns: ColumnDef<ForecastRow>[] = [
           </span>
           {r.recognizedPercent != null ? (
             <span className="text-xs text-muted-foreground">
-              {Number(r.recognizedPercent)}% cut
+              {Number(r.recognizedPercent)}% allocated share
             </span>
           ) : null}
         </div>
@@ -235,7 +236,7 @@ export function ForecastView({
           onValueChange={(v) => setPeriod((v as PeriodPreset) ?? "all")}
           items={PERIOD_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger aria-label="Forecast period" className="w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -355,7 +356,7 @@ export function ForecastClient({
                     {formatMoney(c.weightedValue, c.currency)}
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">
-                    Weighted value · Σ value × stage probability
+                    Probability-weighted value · Σ basis × stage probability
                   </p>
                   <p className="mt-1 text-sm tabular-nums text-muted-foreground">
                     {formatMoney(c.opportunityValue, c.currency)} funnel
@@ -363,9 +364,9 @@ export function ForecastClient({
                   </p>
                   <p className="mt-1 text-sm tabular-nums text-muted-foreground">
                     {formatMoney(c.recognizedWeightedValue, c.currency)}{" "}
-                    recognized
+                    our weighted share
                     <span className="ml-1 text-xs">
-                      (your entity&apos;s cut on intercompany deals)
+                      (allocated share × stage probability)
                     </span>
                   </p>
                 </div>
@@ -373,7 +374,7 @@ export function ForecastClient({
             </div>
           )}
           <p className="mt-2 text-xs text-muted-foreground">
-            Stages included in the forecast are configured in Settings → Funnel
+            Own rows use estimated deal value (excl. tax); inbound rows use our allocated deal basis. These are forecasts, not invoices, receipts or accounting recognition. Stages included in the forecast are configured in Settings → Funnel
             Stages. Inbound rows are this entity&apos;s share of sibling
             entities&apos; intercompany deals.
           </p>
@@ -397,7 +398,7 @@ export function ForecastClient({
                   </CardTitle>
                   <p className="text-xs tabular-nums text-muted-foreground">
                     {formatMoney(fy.recognizedWeightedValue, fy.currency)}{" "}
-                    recognized
+                    our weighted share
                   </p>
                 </div>
               ))}

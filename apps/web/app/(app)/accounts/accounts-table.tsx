@@ -80,7 +80,7 @@ export function AccountsTable({
   const data = initialPage.rows
   const router = useRouter()
   const perms = usePermissions()
-  const canCreate = perms.has(PERMISSIONS.ACCOUNT_CREATE)
+  const canCreate = perms.has(PERMISSIONS.ACCOUNT_CREATE) && perms.has(PERMISSIONS.ACCOUNT_CODE_MANAGE)
   const [newOpen, setNewOpen] = React.useState(false)
   // Auto-open from the header "+ New" quick-create deep link (/accounts?new=1).
   useOpenOnNewParam(() => setNewOpen(true))

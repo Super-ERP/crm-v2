@@ -248,25 +248,7 @@ export async function ensureOriginEntityAccount(
         .limit(1)
       if (existing) return existing
 
-      const [created] = await tx
-        .insert(accounts)
-        .values({
-          tenantId: ctx.tenantId,
-          name: entityName,
-          // The sibling entity we bill through is a channel/reseller to us.
-          accountType: "reseller",
-          ownerMemberId: ctx.memberId,
-        })
-        .returning({ id: accounts.id, name: accounts.name })
-
-      await writeAudit(tx, ctx, {
-        action: "account.created",
-        entityType: "account",
-        entityId: created.id,
-        after: { name: entityName, source: "intercompany-auto-provision" },
-      })
-      revalidatePath("/accounts")
-      return created
+      throw new Error(`Ask Sales Admin to create the reseller account "${entityName}" with a unique Account Code first, then retry.`)
     })
   })
 }

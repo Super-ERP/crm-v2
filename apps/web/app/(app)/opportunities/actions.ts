@@ -23,6 +23,7 @@ export type OpportunityContainerRow = {
   name: string
   accountId: string
   accountName: string
+  accountCanView?: boolean
   accountCode: string | null
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
@@ -48,6 +49,7 @@ export type OpportunityContainerDetail = {
   accountName: string
   accountCurrency: string
   ownerName: string | null
+  accountOwnerName: string | null
   /** Opportunity Owner Contact, resolved with its derived Designation. */
   ownerContact: ContactRef | null
   /** Power Sponsor Contact, resolved with its derived Designation. */
@@ -76,6 +78,7 @@ export type OpportunityContainerDetail = {
     id: string
     description: string | null
     quantity: string
+    currency: string
     unitPrice: string
     productCategory: string | null
     funnelId: string

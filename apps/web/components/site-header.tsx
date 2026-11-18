@@ -37,15 +37,15 @@ export function SiteHeader({
       : breadcrumbs
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
+    <header data-site-header className="flex min-h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-1 py-2 px-4 lg:gap-2 lg:px-6">
         <SidebarTrigger className="-ml-1" />
         <Separator
           orientation="vertical"
           className="mx-2 h-4 data-vertical:self-auto"
         />
         {crumbs && crumbs.length ? (
-          <Breadcrumb>
+          <><h1 className="sr-only">{title}</h1><Breadcrumb className="min-w-0 flex-1">
             <BreadcrumbList>
               {crumbs.map((c, i) => (
                 <React.Fragment key={`${c.label}-${i}`}>
@@ -62,11 +62,11 @@ export function SiteHeader({
                 </React.Fragment>
               ))}
             </BreadcrumbList>
-          </Breadcrumb>
+          </Breadcrumb></>
         ) : (
-          <h1 className="text-base font-medium">{title}</h1>
+          <h1 className="min-w-0 flex-1 text-base font-medium break-words">{title}</h1>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
           <HeaderActions />
           <ReportIssueDialog />
           <TextSizeToggle />

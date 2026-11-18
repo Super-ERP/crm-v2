@@ -57,6 +57,7 @@ integration("quotation billing migration and recovery PostgreSQL boundary", () =
     expect(run(true)).toMatchObject({ ready: 0, alreadyCaptured: 1 })
     expect((await sql`select * from quotations`)[0]).toEqual(quote)
     expect((await sql`select * from audit_log`).length).toBe(1)
-    await expect(sql`delete from accounts where id = ${id("Account", "bill")}`).rejects.toMatchObject({ code: "23503" })
+    // PostgreSQL 18 reports RESTRICT actions as restrict_violation (23001).
+    await expect(sql`delete from accounts where id = ${id("Account", "bill")}`).rejects.toMatchObject({ code: expect.stringMatching(/^(23503|23001)$/) })
   }, 30_000)
 })

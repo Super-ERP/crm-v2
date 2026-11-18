@@ -1,5 +1,6 @@
 "use client"
 
+import { CRM_TERMS } from "@/lib/crm-terminology"
 import * as React from "react"
 import { useRecordEditor } from "@/components/use-record-editor"
 import { RecordHeaderActions } from "@/components/record-header-actions"
@@ -247,7 +248,7 @@ export function ProductDetailBody({
             <FieldRow label="Description">
               {canEdit && editor.editing ? <DraftValue value={product.description ?? ""} display={product.description || "—"} multiline title="Click to edit description" onSave={next => saveField({ description: next || null })} /> : <span className="whitespace-pre-wrap text-muted-foreground">{product.description || "No description added."}</span>}
             </FieldRow>
-            <FieldRow label="Product line">
+            <FieldRow label={CRM_TERMS.productCategory}>
               {canEdit && editor.editing ? (
                 <InlineCombobox
                   value={product.productCode ?? ""}
@@ -267,9 +268,9 @@ export function ProductDetailBody({
                   onSave={(next) =>
                     saveField({ productCode: next || null, subcategory: null })
                   }
-                  searchPlaceholder="Search product lines…"
-                  emptyMessage="No product lines configured."
-                  title="Click to change product line"
+                  searchPlaceholder="Search product categories…"
+                  emptyMessage="No product categories configured."
+                  title="Click to change product category"
                 />
               ) : product.productCode ? (
                 <span>
@@ -282,7 +283,7 @@ export function ProductDetailBody({
                 "—"
               )}
             </FieldRow>
-            <FieldRow label="Subcategory">
+            <FieldRow label={CRM_TERMS.productSubcategory}>
               {canEdit && editor.editing ? (
                 <InlineCombobox
                   value={product.subcategory ?? ""}
@@ -300,8 +301,8 @@ export function ProductDetailBody({
                   }
                   options={subcategoryOptions}
                   searchPlaceholder="Search subcategories…"
-                  emptyMessage="No subcategories configured for this category."
-                  title="Click to change subcategory"
+                  emptyMessage="No product subcategories configured for this category."
+                  title="Click to change product subcategory"
                   onSave={(next) => saveField({ subcategory: next || null })}
                 />
               ) : (
@@ -317,7 +318,7 @@ export function ProductDetailBody({
                 )
               )}
             </FieldRow>
-            <FieldRow label="Unit (UOM)">
+            <FieldRow label={CRM_TERMS.unitOfMeasure}>
               {canEdit && editor.editing ? (
                 <DraftValue
                   value={product.uom ?? ""}

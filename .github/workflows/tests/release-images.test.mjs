@@ -52,7 +52,7 @@ test("release validation and quality run in parallel before the manifest gate", 
   assert.deepEqual(workflow.jobs?.manifest?.needs, ["build", "validate-tag"])
 })
 
-test("release quality skips only the duplicate application build", () => {
+test("release reuses quality and PR compilation remains explicit", () => {
   const qualityInput = qualityWorkflow.on?.workflow_call?.inputs?.run_build
   assert.deepEqual(qualityInput, {
     description: "Run the standalone application build",
@@ -66,9 +66,11 @@ test("release quality skips only the duplicate application build", () => {
   assert.match(
     qualityBuild.if ?? "",
 /inputs\.run_build/,
-    "standalone build must be gated by inputs.run_build — true on PRs/pushes, false from release",
+    "manual/reusable quality supports an explicit standalone build",
   )
 
+  assert.match(qualityBuild.if, /github.event_name == 'pull_request'/)
+  assert.equal(qualityWorkflow.on.workflow_dispatch.inputs.run_build.default, true)
   assert.equal(workflow.jobs?.quality, undefined)
   assert.match(source, /verify-quality.mjs/)
 
@@ -216,9 +218,10 @@ test("release manifest records immutable provenance for all images", () => {
   assert.match(upload.with?.path ?? "", /release-manifest\.json/)
   assert.equal(upload.with?.["if-no-files-found"], "error")
   assert.equal(workflow.jobs?.manifest?.permissions?.contents, "write")
-  assert.equal(workflow.jobs?.manifest?.permissions?.actions, "write")
+  assert.equal(workflow.jobs?.manifest?.permissions?.actions, "read")
   assert.match(source, /gh release create "\$TARGET_REF" --verify-tag --generate-notes/)
-  assert.match(source, /gh workflow run deploy-staging\.yml --ref main -f release_run_id="\$GITHUB_RUN_ID"/)
+  assert.doesNotMatch(source, /gh workflow run deploy-staging\.yml/)
+  assert.match(source, /Staging starts automatically after this run succeeds/)
 })
 
 test("all third-party actions use immutable commit pins", () => {

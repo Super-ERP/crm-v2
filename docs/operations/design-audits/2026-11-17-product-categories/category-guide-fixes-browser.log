@@ -1,0 +1,7 @@
+inline error {"invalid":"true","focused":"new-category-code","error":"Code must be uppercase letters, digits, hyphen or underscore.","required":true}
+correction clears true
+search while editing {"disabled":false,"rows":2}
+draft preserved {"code":"CHILD_QA","name":"Preserved draft"}
+pending save {"saving":true,"busy":true,"inputsDisabled":true}
+saved {"success":true,"edit":true,"title":true}
+cleanup {"testCategoryGone":true,"edit":true}

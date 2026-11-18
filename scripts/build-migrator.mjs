@@ -37,3 +37,5 @@ await cp(path.join(webRoot, "db/migrations"), path.join(outdir, "db/migrations")
   recursive: true,
 })
 await cp(path.join(webRoot, "db/sql"), path.join(outdir, "db/sql"), { recursive: true })
+
+await cp(path.join(webRoot, "db/reference"), path.join(outdir, "db/reference"), { recursive: true })

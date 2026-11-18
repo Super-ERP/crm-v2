@@ -56,6 +56,7 @@ export type LeadDetail = {
   lead: Lead
   stageName: string | null
   funnelName: string | null
+  convertedOpportunityLabel: string | null
   accountName: string | null
   personName: string | null
 }
@@ -440,10 +441,12 @@ export type ConvertNewAccountInput = {
   accountType?: "client" | "reseller" | null
   /** Compulsory company code for the new account (used in project codes). */
   code?: string | null
+  registrationNumber?: string | null
   phone?: string | null
   address?: {
     line1?: string | null
     line2?: string | null
+    locationCityId?: string | null
     city?: string | null
     state?: string | null
     postcode?: string | null
@@ -458,6 +461,7 @@ export type ConvertLeadInput = {
   /** Funnel's own name — defaults to opportunityName when omitted. */
   funnelName?: string | null
   expectedCloseDate?: string | null
+  projectNatureCode?: string | null
   existingAccountId?: string | null
   /** Used only when no existingAccountId is given (creating a new account). */
   newAccount?: ConvertNewAccountInput | null
@@ -489,6 +493,7 @@ export async function convertLeadAction(input: ConvertLeadInput) {
       opportunityName: clean(input.opportunityName) ?? undefined,
       funnelName: clean(input.funnelName) ?? undefined,
       expectedCloseDate: clean(input.expectedCloseDate),
+      projectNatureCode: clean(input.projectNatureCode),
       existingAccountId: clean(input.existingAccountId),
       newAccount: input.existingAccountId ? null : input.newAccount ?? null,
     })

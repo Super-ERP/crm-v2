@@ -248,7 +248,7 @@ See [Contract information](../04-opportunities-and-funnel.md#contract-informatio
 <details>
 <summary>Can I find Project codes without enabling Projects?</summary>
 
-Yes. **Sales → Project Codes** and global search provide a linked code directory without the Projects module. Codes appear only for accessible Funnels at 4A or Closed Won. Earlier-stage values can remain stored but hidden. Enabling Projects alone creates no delivery Project records.
+Yes. **Sales → Project Codes** and global search provide a linked code directory without the Projects module. Assigned codes appear immediately for accessible open or Closed Won Funnels, including before 4a. Enabling Projects alone creates no delivery Project records.
 
 One main **Project code** is shown, using the original source code when available. A **Cross-deal reference** appears only when it differs. The CRM-generated identifier remains separate and supplies a fallback where the original code is absent. See [Project codes](../04-opportunities-and-funnel.md#project-codes-across-sales-records).
 

@@ -12,7 +12,7 @@ import { convertLead, decideLeadConversion } from "@/server/services/conversion"
 
 const lead = { id: "lead", tenantId: "tenant", name: "Alice", email: "alice@example.com", status: "qualified", ownerMemberId: "rep" }
 const ctx = { tenantId: "tenant", memberId: "rep", isSuperadmin: false, can: () => true } as unknown as ServerContext
-const input = { leadId: "lead", newAccount: { code: "ACME" }, createOpportunity: true }
+const input = { leadId: "lead", newAccount: { registrationNumber: "SSM-123" }, createOpportunity: false }
 
 describe("lead conversion service approval boundary", () => {
   const execute = vi.fn(), insert = vi.fn(), update = vi.fn(), lock = vi.fn()
@@ -24,21 +24,25 @@ describe("lead conversion service approval boundary", () => {
     mocks.visibleMemberIds.mockResolvedValue(["rep"])
     mocks.route.mockResolvedValue({ direct: false, approverMemberId: "manager" })
     mocks.manager.mockResolvedValue("manager")
-    execute.mockResolvedValue([])
+    execute.mockImplementation(async q => {
+      const query = new PgDialect().sqlToQuery(q)
+      if (query.sql.includes('FROM membership_profiles profile')) return [{ memberId: "manager" }]
+      if (query.sql.includes('INSERT INTO lead_conversion_approval_requests')) return [{ id: "request" }]
+      return []
+    })
   })
   it("submits frozen input without creating accounts, people or opportunities or updating the lead", async () => {
-    execute.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: "request" }])
     const result = await convertLead(ctx, input)
     expect(result).toMatchObject({ pending: true, requestId: "request", opportunityId: null })
     expect(insert).not.toHaveBeenCalled()
     expect(update).not.toHaveBeenCalled()
-    const query = new PgDialect().sqlToQuery(execute.mock.calls[1][0])
+    const query = execute.mock.calls.map(([q]) => new PgDialect().sqlToQuery(q)).find(q => q.sql.includes("INSERT INTO lead_conversion_approval_requests"))!
     expect(query.sql).toContain("INSERT INTO lead_conversion_approval_requests")
     expect(query.params).toContain(JSON.stringify(lead))
     expect(query.params).toContain(JSON.stringify(input))
   })
   it("rejects duplicate pending submissions", async () => {
-    execute.mockResolvedValueOnce([{ id: "pending" }])
+    execute.mockImplementationOnce(async () => []).mockImplementationOnce(async () => []).mockImplementationOnce(async () => [{ id: "pending" }])
     await expect(convertLead(ctx, input)).rejects.toThrow("already pending")
     expect(insert).not.toHaveBeenCalled()
     expect(update).not.toHaveBeenCalled()
@@ -47,15 +51,15 @@ describe("lead conversion service approval boundary", () => {
     await expect(convertLead({ ...ctx, can: () => false }, input)).rejects.toThrow("FORBIDDEN")
     expect(mocks.runInTenant).not.toHaveBeenCalled()
   })
-  it("does not convert when no eligible reporting manager exists", async () => {
-    mocks.route.mockRejectedValue(new Error("No eligible manager"))
-    await expect(convertLead(ctx, input)).rejects.toThrow("No eligible manager")
+  it("does not convert when no independent Sales Admin reviewer exists", async () => {
+    execute.mockResolvedValue([])
+    await expect(convertLead(ctx, input)).rejects.toThrow("No independent Sales Admin")
     expect(insert).not.toHaveBeenCalled()
     expect(update).not.toHaveBeenCalled()
   })
   it("refuses self approval even for a requester with approval permission", async () => {
     execute.mockResolvedValueOnce([{ id: "request", lead_id: "lead", requester_member_id: "rep", status: "pending" }])
-    await expect(decideLeadConversion(ctx, "request", "approved")).rejects.toThrow("assigned reporting manager")
+    await expect(decideLeadConversion(ctx, "request", "approved")).rejects.toThrow("own request")
     expect(insert).not.toHaveBeenCalled()
   })
   it("requires a rejection reason", async () => {

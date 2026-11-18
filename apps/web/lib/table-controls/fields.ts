@@ -19,7 +19,7 @@ export const OPTIONAL_TABLE_FIELDS: Record<string, readonly OptionalTableField[]
   products: [currency, ...dates],
   'product-usage': [field('createdAt', 'Created date', 'date')],
   projects: [owner, ...funnel, field('quoteNumber', 'Quotation number'), field('startDate', 'Start date', 'date', true), currency, ...dates],
-  'payment-milestones': [field('description', 'Description'), field('dueDate', 'Payment due date', 'date', true), ...funnel, field('quotationStatus', 'Quotation → Status', 'enum'), field('customerName', 'Funnel → Customer', 'relation'), owner, field('projectName', 'Delivery project', 'relation'), currency, ...dates],
+  'payment-milestones': [field('expectedInvoiceMonth', 'Expected invoice month'), field('expectedInvoiceYear', 'Expected invoice year', 'number'), field('description', 'Description'), field('dueDate', 'Payment due date', 'date', true), ...funnel, field('quotationStatus', 'Quotation → Status', 'enum'), field('customerName', 'Funnel → Customer', 'relation'), owner, field('projectName', 'Delivery project', 'relation'), currency, ...dates],
   'sales-orders': [field('projectCode', 'Project code'), field('funnelName', 'Funnel', 'relation'), ...funnel, field('quoteNumber', 'Quotation number'), field('reviewedByName', 'Reviewed by', 'relation'), field('reviewedAt', 'Reviewed date', 'date'), field('documentKind', 'Document kind'), field('paymentTerm', 'Payment terms'), ...dates],
   'finance-sale': [field('dueDate', 'Due date', 'date', true), currency, ...dates],
   'finance-purchase': [field('dueDate', 'Due date', 'date', true), currency, ...dates],
@@ -51,7 +51,7 @@ export function tableFieldOptions(listKey: string, fieldId: string): TableFieldD
   if (['funnel','account-pipelines','person-pipelines','opp-funnels'].includes(listKey)) return funnelStatuses
   if (['quotations','account-quotations','opp-quotations','funnel-quotes','code-quotations','product-usage'].includes(listKey)) return quotationStatuses
   if (['projects','account-projects','person-projects','funnel-projects','code-projects'].includes(listKey)) return PROJECT_STATUS_OPTIONS
-  if (['payment-milestones','so-milestones'].includes(listKey)) return MILESTONE_STATUS_OPTIONS
+  if (['payment-milestones','so-milestones','funnel-milestones','project-milestones'].includes(listKey)) return MILESTONE_STATUS_OPTIONS
   if (listKey === 'team-members') return choices(['active','invited','disabled'])
   if (listKey === 'sales-orders') return choices(['submitted','approved','rejected','void'])
   if (['finance-sale','finance-purchase','so-finance-docs'].includes(listKey)) return choices(['draft','issued','settled','cancelled'])

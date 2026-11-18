@@ -1,4 +1,5 @@
 "use server"
+import { updateQuotationLines } from "@/server/services/quotation-lines"
 import { reassignPrimaryAfterRemoval } from "@/server/services/quotation-primary"
 
 import { activeProjectCodeFunnel } from "@/server/services/project-code-visibility"
@@ -84,6 +85,7 @@ export type QuotationListItem = QuotationRow & {
 }
 
 export type LineInput = {
+  lineId?: string
   productId?: string | null
   /** Project-nature code this line bills under (per-nature revenue split). */
   projectNatureCode?: string | null
@@ -847,9 +849,12 @@ export async function createQuotation(input: {
 export async function updateQuotation(
   id: string,
   input: QuotationHeaderInput
-): Promise<ActionResult<QuotationRow>> {
+): Promise<ActionResult<QuotationRow & { lineIds: string[] }>> {
   return runAction(async () => {
   const row = await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
+    // Match billing preparation's Funnel → quotation lock order. Both the net
+    // ceiling and stable product sources must be validated against current data.
+    await tx.execute(sql`select id from funnels where tenant_id=${ctx.tenantId} and id=(select funnel_id from quotations where id=${id} and tenant_id=${ctx.tenantId} and deleted_at is null) for update`)
     const [existing] = await tx
       .select()
       .from(quotations)
@@ -945,9 +950,7 @@ export async function updateQuotation(
       .where(eq(quotations.id, id))
       .returning()
 
-    // Replace line items (delete + reinsert).
-    await tx.delete(quotationLineItems).where(eq(quotationLineItems.quotationId, id))
-    await insertLines(tx, ctx.tenantId, id, input.lines, totals, input.taxSettingId)
+    const lineIds = await updateQuotationLines(tx, ctx.tenantId, id, input.lines, totals, input.taxSettingId)
 
     // If this quote is the opportunity's primary, keep amount == its net, and
     // keep opportunity products in step with the lines just replaced.
@@ -973,7 +976,7 @@ export async function updateQuotation(
         paymentTerm: content.paymentTerm,
       }) },
     })
-    return updated
+    return { ...updated, lineIds }
   })
   revalidatePath("/quotations")
   revalidatePath("/approvals")
@@ -1567,6 +1570,8 @@ export async function acceptQuotation(
 ): Promise<ActionResult<AcceptQuotationResult>> {
   return runAction(async () => {
   const result = await withTenant(PERMISSIONS.QUOTATION_ACCEPT, async (tx, ctx) => {
+    // Share the Funnel → quotation lock order with billing and primary changes.
+    await tx.execute(sql`select id from funnels where tenant_id=${ctx.tenantId} and id=(select funnel_id from quotations where id=${id} and tenant_id=${ctx.tenantId} and deleted_at is null) for update`)
     const [q] = await tx
       .select()
       .from(quotations)
@@ -1578,7 +1583,6 @@ export async function acceptQuotation(
     const [opp] = await tx
       .select({
         ownerMemberId: funnels.ownerMemberId,
-        status: funnels.status,
         accountId: funnels.accountId,
       })
       .from(funnels)
@@ -1589,12 +1593,6 @@ export async function acceptQuotation(
       throw new Error("FORBIDDEN: not permitted on this quotation")
     if (q.status !== "sent")
       throw new Error("Only sent quotations can be accepted")
-    // The funnel must still be open: a won/lost/parked deal can't take a new
-    // acceptance (this also prevents a second accepted quote on a won deal).
-    if (opp.status !== "open")
-      throw new Error(
-        "This funnel is no longer open, so its quotation can't be accepted."
-      )
     // Don't accept on lapsed terms.
     if (q.validUntil && q.validUntil < toDateString())
       throw new Error(
@@ -1635,6 +1633,11 @@ export async function acceptQuotation(
       .set({ isPrimary: true })
       .where(eq(quotations.id, id))
 
+    await tx.update(funnels).set({ primaryQuotationId: id, updatedAt: new Date() })
+      .where(and(eq(funnels.id, q.funnelId), eq(funnels.tenantId, ctx.tenantId)))
+    await syncOpportunityAmount(tx, ctx, q.funnelId)
+    await syncFunnelProductsFromQuote(tx, ctx.tenantId, q.funnelId, id)
+
     await logActivity(tx, ctx, {
       entityType: "opportunity",
       entityId: q.funnelId,
@@ -1661,6 +1664,8 @@ export async function acceptQuotation(
   revalidatePath("/quotations")
   revalidatePath("/approvals")
   revalidatePath(`/quotations/${id}`)
+  revalidatePath(`/funnel/${result.funnelId}`)
+  revalidatePath("/payment-milestones")
   return {
     funnelId: result.funnelId,
     accountId: result.accountId,

@@ -121,6 +121,15 @@ const group=(...children:unknown[])=>({kind:'group',id:randomUUID(),logic:'and',
    expect(one).toEqual({})
    const foreign=await projectRelationships(tx,{...ctx,tenantId:'other'},'accounts',[accountA],['related.milestones.count'],group())
    expect(foreign).toEqual({})
+   // A dated primary-quote plan is visible consistently before4a, including
+   // in related-record counts, without treating it as an invoice.
+   await client`update pipeline_stages set code='3b' where id=${stage}`
+   await client`update quotations set status='draft' where id=${quoteB}`
+   await client`update funnels set primary_quotation_id=${quoteB} where id=${funnelB}`
+   await client`update payment_milestones set expected_invoice_month='December',expected_invoice_year=2026 where funnel_id=${funnelB}`
+   const prepared=await projectRelationships(tx,ctx,'accounts',[accountB],['related.milestones.count'],group())
+   expect(prepared[accountB]['related.milestones.count']).toBe(1)
+
   }finally{await client.unsafe(`drop schema if exists "${namespace}" cascade`);await client.end()}
  },60000)
 })

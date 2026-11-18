@@ -1,6 +1,7 @@
 "use client"
 
 import { ProjectCodeLinks, ProjectCodeSummary } from "@/components/project-code-link"
+import { RecordReference } from "@/components/record-reference"
 import * as React from "react"
 import { Briefcase } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -20,7 +21,7 @@ export function OpportunitiesTable({ initialPage, filterOptions }: {
     () => [
       {
         accessorKey: "name",
-        header: ({ column }) => <SortableHeader column={column} title="Opportunity" />,
+        header: ({ column }) => <SortableHeader column={column} title="Opportunity number" />,
         cell: linkCell(
           (r) => `/opportunities/${r.id}`,
           (r) => r.name
@@ -32,16 +33,16 @@ export function OpportunitiesTable({ initialPage, filterOptions }: {
           id: row.accountId,
           label: [row.accountCode, row.accountName].filter(Boolean).join(" — "),
         }),
-        header: ({ column }) => <SortableHeader column={column} title="Account" />,
-        cell: ({ row }) => row.original.accountName ?? "—",
+        header: ({ column }) => <SortableHeader column={column} title="End customer" />,
+        cell: ({ row }) => <RecordReference href={`/accounts/${row.original.accountId}`} label={row.original.accountName} available={row.original.accountCanView} />,
         sortingFn: (a, b) => a.original.accountName.localeCompare(b.original.accountName),
       },
       {
         accessorKey: "totalEstimatedFunnelAmount",
-        header: "Total est. funnel amount",
+        header: "Child estimate total (excl. tax)",
         enableSorting: false,
         cell: ({ row }) => (
-          <span className="tabular-nums">
+          <span className="tabular-nums" title="All non-deleted child estimates, by currency, including Won/Lost; excludes quote fallback and list filters.">
             {formatOpportunityEstimatedTotals(row.original.estimatedTotalsByCurrency, row.original.currency)}
           </span>
         ),

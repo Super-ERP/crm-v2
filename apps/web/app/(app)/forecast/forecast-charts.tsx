@@ -32,18 +32,18 @@ function monthLabel(value: string | null): string {
 
 const weightedConfig = {
   weightedValue: {
-    label: "Weighted",
+    label: "Probability-weighted value",
     color: "var(--primary)",
   },
   recognizedValue: {
-    label: "Recognized",
+    label: "Our weighted share",
     color: "var(--chart-2)",
   },
 } satisfies ChartConfig
 
 const stageConfig = {
   weightedAmount: {
-    label: "Weighted",
+    label: "Probability-weighted value",
     color: "var(--primary)",
   },
 } satisfies ChartConfig
@@ -58,6 +58,7 @@ type MonthDatum = {
 type StageDatum = {
   sortOrder: number
   stage: string
+  stageCode: string
   weightedAmount: number
   opportunityCount: number
 }
@@ -111,6 +112,7 @@ export function ForecastCharts({
       const existing = map.get(key) ?? {
         sortOrder: p.sortOrder,
         stage: p.stageName ?? p.stageCode ?? "—",
+        stageCode: p.stageCode ?? p.stageName ?? "—",
         weightedAmount: 0,
         opportunityCount: 0,
       }
@@ -244,6 +246,7 @@ export function ForecastCharts({
                 <CardTitle>Funnel weighted amount</CardTitle>
               </CardHeader>
               <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+                <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground" aria-label={`Stage names and weighted values (${currency})`}>{byStage.map(stage => <li key={stage.stage}>{stage.stageCode}: {stage.stage} · {formatMoney(stage.weightedAmount, currency)}</li>)}</ul>
                 {hasStages ? (
                   <ChartContainer
                     config={stageConfig}
@@ -252,7 +255,7 @@ export function ForecastCharts({
                     <BarChart data={byStage} margin={{ left: 12, right: 12 }}>
                       <CartesianGrid vertical={false} />
                       <XAxis
-                        dataKey="stage"
+                        dataKey="stageCode"
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}

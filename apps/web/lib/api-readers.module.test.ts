@@ -18,7 +18,7 @@ import {
   stageApprovalRequests,
 } from "@/db/schema"
 import { createDisabledModuleMap } from "@/lib/module-registry"
-import { accountsList, funnelsGet, funnelsList, leadsList, opportunitiesList, personsGet, personsList, quotationsList, quotationsGet } from "@/lib/api-readers"
+import { accountsList, funnelsGet, funnelsList, leadsGet, leadsList, opportunitiesGet, opportunitiesList, personsGet, personsList, quotationsList, quotationsGet } from "@/lib/api-readers"
 import type { QuotationStatus } from "@/lib/quotation-transitions"
 import type { Tx } from "@/db"
 import type { ServerContext } from "@/lib/server-context"
@@ -115,6 +115,43 @@ function tableTx(entries: Array<[object, unknown[]]>): Tx & {
 describe("module-owned nested API readers", () => {
   beforeEach(() => {
     moduleState.map = createDisabledModuleMap()
+  })
+
+  it("totals all matching stage rows by currency independently of the loaded page", async () => {
+    const tx = tableTx([[funnels, [[{id:"loaded", currency:"USD", estimatedAmount:"0", amount:"500"}],
+      [{currency:"MYR",count:26,valueTotal:"2600"},{currency:"USD",count:2,valueTotal:"120"}]]]])
+    const result = await funnelsList(tx, ctx, {limit:25,offset:25,stageId:"stage-1"})
+    expect(result.total).toBe(28)
+    expect(result.valueTotalsByCurrency).toEqual([{currency:"MYR",total:"2600"},{currency:"USD",total:"120"}])
+    expect(tx.limits).toEqual([25])
+    expect(tx.offsets).toEqual([25])
+    const dialect = new PgDialect()
+    for (const call of tx.whereCalls.filter(call=>call.table===funnels)) {
+      expect(dialect.sqlToQuery(call.condition as SQL).params).toContain("stage-1")
+    }
+  })
+
+  it("resolves Account owner separately from the internal Opportunity owner", async () => {
+    const tx = tableTx([
+      [opportunities, [[{id:"o", accountId:"a", ownerMemberId:"opp-owner"}]]],
+      [accounts, [[{name:"Account",currency:"MYR",ownerMemberId:"account-owner"}]]],
+      [member, [[{name:"Opportunity owner"}],[{name:"Account owner"}]]],
+      [funnels, [[]]],
+    ])
+    const result = await opportunitiesGet(tx,ctx,"o")
+    expect(result?.ownerName).toBe("Opportunity owner")
+    expect(result?.accountOwnerName).toBe("Account owner")
+  })
+
+  it("resolves a converted lead's actual accessible Opportunity, independent of its Pipeline", async () => {
+    const tx = tableTx([
+      [leads, [[{id:"l",ownerMemberId:"member-1",pipelineId:null,convertedOpportunityId:"o"}]]],
+      [opportunities, [[{name:"Modernization",code:"OPP-001"}]]],
+    ])
+    const result = await leadsGet(tx,ctx,"l")
+    expect(result?.convertedOpportunityLabel).toBe("OPP-001 — Modernization")
+    const query = new PgDialect().sqlToQuery(tx.whereCalls.find(call=>call.table===opportunities)!.condition as SQL)
+    expect(query.sql).toContain('"opportunities"."deleted_at"')
   })
 
   it("hides an inaccessible parent's CRM code on an owned active funnel", async () => {
@@ -274,7 +311,7 @@ describe("module-owned nested API readers", () => {
     expect(tx.joins).toContain(accounts)
     expect(result.rows[0]).toMatchObject({ projectCode: "SF-ORIGINAL-001", crossDealProjectCode: "SF-CROSS-002" })
     const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls[0]![0]
-    expect(new PgDialect().sqlToQuery(selection.projectCode).sql).toContain("code_stage.code = '4a'")
+    expect(new PgDialect().sqlToQuery(selection.projectCode).sql).toContain("code_stage.kind = 'OPEN'")
     expect(new PgDialect().sqlToQuery(selection.crossDealProjectCode).sql).toContain("code_stage.kind = 'WON'")
     expect(tx.joins).not.toContain(projects)
     expect(tx.joins).toContain(opportunities)
@@ -289,7 +326,7 @@ describe("module-owned nested API readers", () => {
     const detail = await quotationsGet(tx, ctx, "quote-1")
     expect(detail).toMatchObject({ projectCode: "SF-001", crossDealProjectCode: "SF-CROSS-001" })
     const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls[0]![0]
-    expect(new PgDialect().sqlToQuery(selection.projectCode).sql).toContain("code_stage.code = '4a'")
+    expect(new PgDialect().sqlToQuery(selection.projectCode).sql).toContain("code_stage.kind = 'OPEN'")
     expect(new PgDialect().sqlToQuery(selection.crossDealProjectCode).sql).toContain("code_stage.kind = 'WON'")
     expect(tx.joins).not.toContain(projects)
   })
@@ -303,7 +340,9 @@ describe("module-owned nested API readers", () => {
     expect(result.rows[0]).toMatchObject({ code: "OPP-26-001", funnelCount: 3, projectCodes: ["SF-001", "SF-002"], crossDealProjectCodes: ["CROSS-001"] })
     const selection = (tx.select as ReturnType<typeof vi.fn>).mock.calls.find(([value]) => value?.projectCodes)?.[0]
     const query = new PgDialect().sqlToQuery(selection.projectCodes as SQL<unknown>)
-    expect(query.sql).toContain('array_agg(distinct "funnels"."project_code"')
+    expect(query.sql).toContain('array_agg(distinct CASE WHEN')
+    expect(query.sql).toContain("coalesce(nullif(\"funnels\".\"project_code\", '')")
+    expect(query.sql).toContain('THEN "opportunities"."project_code" ELSE NULL END')
     expect(tx.joins).not.toContain(projects)
   })
 
@@ -328,12 +367,12 @@ describe("module-owned nested API readers", () => {
   })
 
   it("uses the same bounded funnel stage, owner, and search conditions for rows and totals", async () => {
-    const tx = tableTx([[funnels, [[], [{ count: 31, valueTotal: "130000" }]]]])
+    const tx = tableTx([[funnels, [[], [{ currency:"MYR", count: 31, valueTotal: "130000" }]]]])
     const result = await funnelsList(tx, ctx, {
       limit: 25, offset: 25, stageId: "stage-1",
       query: { search: "Acme", selections: { accountOwnerMemberId: ["member-2"], status: ["open"] } },
     })
-    expect(result).toMatchObject({ total: 31, valueTotal: "130000" })
+    expect(result).toMatchObject({ total: 31, valueTotalsByCurrency: [{currency:"MYR",total:"130000"}] })
     expect(tx.limits).toEqual([25])
     expect(tx.offsets).toEqual([25])
     const where = tx.whereCalls.filter(({ table }) => table === funnels)

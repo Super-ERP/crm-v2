@@ -10,7 +10,7 @@ export default async function ProjectCodePage({ searchParams }: { searchParams: 
   const detail = await getProjectCodeDetail(sp.code)
   if (!detail) notFound()
   return <>
-    <SiteHeader title="Project code" breadcrumbs={[{ label: "Project Codes", href: "/project-codes" }, { label: detail.code }]} />
+    <SiteHeader title={`Project code ${detail.code}`} breadcrumbs={[{ label: "Project Codes", href: "/project-codes" }, { label: detail.code }]} />
     <PageBody><ProjectCodeDetailBody key={detail.code} initialDetail={detail} initialTab={sp.tab} /></PageBody>
   </>
 }

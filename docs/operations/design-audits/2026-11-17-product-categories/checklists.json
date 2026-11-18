@@ -1,0 +1,300 @@
+{
+  "design-system-accessibility": [
+    {
+      "title": "Target conformance level",
+      "body": "The WCAG conformance target the team has committed to documented and referenced in contribution guidelines. AA as a baseline for most products, with AAA achievable for specific criteria such as text contrast.\n\n_Tip: WCAG AA is a typical  baseline for most products, with AAA achievable for specific criteria such as text contrast_"
+    },
+    {
+      "title": "Colour contrast standards",
+      "body": "The contrast ratios verified across all text and interactive element colour combinations (4.5:1 for normal text, 3:1 for large text and UI components)\n\n_Tip: Show these ratios in existing UI_"
+    },
+    {
+      "title": "Focus indicator design",
+      "body": "A visible, high-contrast focus indicator designed for every interactive component\n\n_Tip: Show clear examples for most common interactive components like button and input field_"
+    },
+    {
+      "title": "Keyboard navigation patterns",
+      "body": "Standard keyboard interaction patterns documented and applied consistently e.g. arrow keys for menus and listboxes, Enter and Space for activation, Escape for dismissal"
+    },
+    {
+      "title": "ARIA pattern library",
+      "body": "Attributes that make web content accessible to those who use assistive technologies with roles, states, and properties defined for every interactive component pattern"
+    },
+    {
+      "title": "Screen reader testing",
+      "body": "Components tested with at least VoiceOver on Safari and NVDA on Chrome before shipping"
+    },
+    {
+      "title": "Accessibility annotations in design",
+      "body": "A shared annotation kit used in design files to specify ARIA labels, roles, reading order, and focus behaviour"
+    },
+    {
+      "title": "Accessibility in contribution guidelines",
+      "body": "Ensuring accessibility requirements are part of the component contribution checklist"
+    }
+  ],
+  "design-system-accordion": [
+    {
+      "title": "Header",
+      "body": "The clickable area that triggers expanding and collapsing and has a title\n\n_Tip: The header text should clearly convey the content that is inside_"
+    },
+    {
+      "title": "Expand/collapse icon",
+      "body": "Visual indicator of the current state \u2014 typically a plus/minus, or a caret/chevron that rotates between states"
+    },
+    {
+      "title": "Content area",
+      "body": "The content that shows or hides when toggled, containing detailed information associated with the header\n\n_Tip: While headers should be text only, content can be anything that is suited to help answer or elaborate on the header (text, image, video, etc)_"
+    },
+    {
+      "title": "States",
+      "body": "Default (collapsed), expanded, hover, focused, and disabled"
+    },
+    {
+      "title": "Expanding logic",
+      "body": "Decide if users can open multiple sections at once, or one at a time\n\n_Tip: Can be determined by whether you think information from other items are related and should be seen together_"
+    }
+  ],
+  "design-system-button": [
+    {
+      "title": "Base style",
+      "body": "Your default style, one of the following: fill, outline, underline"
+    },
+    {
+      "title": "Shape",
+      "body": "Visual properties of a button: padding, border, border radius, shadow"
+    },
+    {
+      "title": "Variants",
+      "body": "Each visual type to represent button structure e.g. primary and secondary buttons"
+    },
+    {
+      "title": "Copy",
+      "body": "Instructional text that details what will happen if you click the button\n\n_Tip: Users should understand what will happen before clicking a button. Buttons can have generic copy such as 'Okay' or 'Cancel', but only if there is context around that action, in the title or as a label for example._"
+    },
+    {
+      "title": "States",
+      "body": "How the button changes based on the interaction: hover, focused, disabled"
+    }
+  ],
+  "design-system-color-system": [
+    {
+      "title": "Primitive palette",
+      "body": "A base set of named color ramps (blue-100 through blue-900, neutral-0 through neutral-1000) that serves as the raw material for all semantic decisions\n\n_Tip: Systems where components reference primitive values directly are significantly harder to theme \u2014 a color change requires updating each component individually rather than a single token definition_"
+    },
+    {
+      "title": "Semantic color tokens",
+      "body": "Named tokens that describe purpose rather than appearance so the system can be reskinned without touching components e.g. color-background-primary, color-text-danger, color-border-interactive\n\n_Tip: The semantic layer is what makes a design system actually themeable by defining purpose for colors_"
+    },
+    {
+      "title": "Interactive state colors",
+      "body": "Defined color values for default, hover, pressed, focused, disabled, and selected states applied consistently across all interactive elements"
+    },
+    {
+      "title": "Feedback colors",
+      "body": "A consistent set of colors for success, warning, error, and informational states \u2014 used across alerts, form validation, badges, and status indicators.\n\n_Tip: Feedback colors that pass contrast in light mode frequently fail in dark mode \u2014 testing each token pair against every surface in both themes is where most gaps tend to surface._"
+    },
+    {
+      "title": "Contrast ratios (accessibility)",
+      "body": "A breakdown of text and interactive element color combinations verified to meet WCAG AA contrast minimums \u2014 4.5:1 for normal text, 3:1 for large text and UI components\n\n_Tip: Not all colors will pair together nicely so defining this for all usage is helpful_"
+    },
+    {
+      "title": "Dark and light mode definition",
+      "body": "A complete parallel set of semantic token values for the opposite mode\n\n_Tip: It is not as simple as inverting colors of one mode to the other, they require their own system (still using the same primitive colors though)_"
+    },
+    {
+      "title": "Brand color integration",
+      "body": "Brand colors mapped into the semantic system in a way that maintains accessibility \n\n_Tip: Where brand values fall below contrast thresholds, they are restricted to decorative contexts, with accessible token values carrying the text and interactive roles._"
+    },
+    {
+      "title": "Color blindness considerations",
+      "body": "The palette tested against common color vision deficiencies for when color is used to convey state\n\n_Tip: It's worthwhile considering relative items to the color if vision is a concern, meaning an icon or text can help further convey a state incase the color is not successfully visible_"
+    }
+  ],
+  "design-system-input-field": [
+    {
+      "title": "Input field",
+      "body": "Interactive text field for user to enter their data into\n\n_Tip: Ensure text size is readable on all devices_"
+    },
+    {
+      "title": "Label",
+      "body": "Stating what information the user is meant to provide\n\n_Tip: Avoid all caps for text labels to improve readability_"
+    },
+    {
+      "title": "Placeholder text",
+      "body": "Text inside the input field acting as an example of what you want the user to enter\n\n_Tip: Text colour must be notably lighter than default text, so users don't assume its filled in Providing examples lets users understand how you would like them to enter the information_"
+    },
+    {
+      "title": "Data format",
+      "body": "Set text fields to allow the relevant text values e.g. numeric only for phone number\n\n_Tip: Hint at preferred data format with placeholder text or hint_"
+    },
+    {
+      "title": "Illustration or icon",
+      "body": "A visual cue can help break up a long list of text fields"
+    },
+    {
+      "title": "Hint",
+      "body": "Elaborate on the title of the text field incase a user struggles to know what to enter"
+    }
+  ],
+  "design-system-searchbar": [
+    {
+      "title": "Input field",
+      "body": "A clear container for a user to start typing in"
+    },
+    {
+      "title": "Label or placeholder text",
+      "body": "Identify the purpose of the field is for them to search\n\n_Tip: Use your placeholder text to suggest examples of what to search for_"
+    },
+    {
+      "title": "Quick links, autocomplete and suggestions",
+      "body": "As the user is typing, offer available links and phrases based on what they have entered so far\n\n_Tip: With enough data from the user, you can collect quick links and suggestions based on their previous searches to streamline their search_"
+    },
+    {
+      "title": "Submit search button",
+      "body": "A visible link to submit search and view results\n\n_Tip: Include a loading icon or feature once search has been submitted incase there is a connection issue_"
+    },
+    {
+      "title": "Previous searches",
+      "body": "Showing what a user has searched before can speed up their experience if they frequently search the same queries"
+    },
+    {
+      "title": "Appropriate visibility",
+      "body": "Search should be directly linked to what you are looking for, whether it's searching across the entire platform or in a specific area"
+    }
+  ],
+  "design-system-spacing-and-grid": [
+    {
+      "title": "Spacing scale",
+      "body": "A defined set of spacing values (typically base-4 or base-8, covering 4, 8, 12, 16, 24, 32, 48, 64, 96) used for all margin, padding, and gap decisions\n\n_Tip: A base-8 scale is the most commonly adopted because it divides evenly across common device pixel ratios and helps avoid exceptions being made_"
+    },
+    {
+      "title": "Semantic spacing tokens",
+      "body": "Named tokens for spacing that describe purpose (space-component-padding-sm, space-layout-section-gap) so spacing decisions are intentional, not arbitrary\n\n_Tip: Raw spacing values appearing as hardcoded numbers in components make global spacing changes significantly harder, since each instance requires a separate update rather than a single token edit_"
+    },
+    {
+      "title": "Column grid",
+      "body": "A defined column grid for each major breakpoint (typically 4 columns mobile, 8 tablet, 12 desktop) with gutter and margin values specified"
+    },
+    {
+      "title": "Breakpoints",
+      "body": "A named set of breakpoints (sm, md, lg, xl) that are shared between design and code, so responsive behaviour is described in consistent terms across both disciplines\n\n_Tip: Breakpoint names tied to device types (phone, tablet, desktop) tend to age poorly as screen sizes shift. Content-based naming (narrow, mid, wide) describes viewport behaviour rather than hardware categories_"
+    },
+    {
+      "title": "Component vs layout spacing",
+      "body": "A clear distinction between spacing used inside components and spacing used to compose layouts, since different scales often apply to each\n\n_Tip: Buttons that use the same spacing tokens as page-level section gaps, and vice versa, tend to produce compositions where internal padding and layout rhythm feel mismatched_"
+    },
+    {
+      "title": "Density variants",
+      "body": "Where applicable, defined compact and comfortable density modes, common in data-heavy products where users need to choose between information density and breathing room"
+    },
+    {
+      "title": "Baseline grid alignment",
+      "body": "Text baselines and component heights designed to align to the base unit, so stacking elements produces predictable, harmonious vertical rhythm"
+    }
+  ],
+  "design-system-typography": [
+    {
+      "title": "Type scale",
+      "body": "A defined set of font sizes with a consistent ratio between them, covering everything from captions to display headings\n\n_Tip: A modular scale (1.25, 1.333, 1.5 ratio) produces a more harmonious hierarchy than arbitrary size choices_"
+    },
+    {
+      "title": "Semantic text styles",
+      "body": "Named styles that describe role rather than size so usage is driven by meaning, not pixel values e.g. display-large, body-default, label-small, caption\n\n_Tip: Style names chosen by size \u2014 24px, 18px, 14px \u2014 consistently result in designers selecting styles by measurement rather than role, which makes the system harder to evolve when the scale changes._"
+    },
+    {
+      "title": "Typeface selection and loading",
+      "body": "The chosen typefaces detailing style and weight e.g. Inclusive Sans Medium"
+    },
+    {
+      "title": "Line height per style",
+      "body": "Line height defined explicitly for every text style since tightly spaced headings and readable body text require different values\n\n_Tip: Similar style groups follow a consistent line height e.g. 1.5 for body text, 1.2 for heading and 1.1 for display_"
+    },
+    {
+      "title": "Letter spacing per style",
+      "body": "Letter spacing defined per style where needed\n\n_Tip: Similar to line height, where style groups often following a consistent pattern_"
+    },
+    {
+      "title": "Responsive type behaviour",
+      "body": "How text styles respond to viewport size, whether through fluid type scaling, breakpoint-based overrides, or fixed sizes with responsive layout compensation"
+    },
+    {
+      "title": "Minimum readable size",
+      "body": "The smallest text size in use across the system, and how readability at that size is validated in the actual rendering environment\n\n_Tip: Consider minimum size between desktop and mobile differently_"
+    },
+    {
+      "title": "Accessibility responsiveness",
+      "body": "How text styles behave at 200% browser zoom, and whether any style communicates meaning through colour variation alone\n\n## Checklist Design \u00b7 Web app"
+    }
+  ],
+  "web-app-settings": [
+    {
+      "title": "Structure",
+      "body": "Organising settings controls into logical categories e.g. account, notifications, security, billing.\n\n_Tip: Consider elevating the most commonly changed settings rather than the most important_"
+    },
+    {
+      "title": "Account details",
+      "body": "The fields where users update their name, email address, and profile photo"
+    },
+    {
+      "title": "Security details",
+      "body": "The ability to change the password,  two-factor authentication and other security information\n\n_Tip: These fields should require re-authentication to save changes_"
+    },
+    {
+      "title": "Notification preferences",
+      "body": "Controls for which notifications the user receives and through which channel, grouped by type (product updates, reminders, billing)\n\n_Tip: Grouping by type and/or platform helps reduce the chances of a user disabling all notifications rather than some_"
+    },
+    {
+      "title": "Billing",
+      "body": "Managing payment method, upgrading or cancelling a payment \u2014 this could also be a preview of this information with a link directly to the billing page if separate"
+    },
+    {
+      "title": "Additional preferences (if applicable)",
+      "body": "Language, timezone, date format, and appearance settings like dark mode"
+    },
+    {
+      "title": "Danger zone",
+      "body": "Destructive actions like account deletion, clearly separated from the rest of settings\n\n_Tip: Include a confirmation step for any destructive actions, with details on what will be lost if the user continues_"
+    }
+  ],
+  "flows-showing-input-error": [
+    {
+      "title": "Keep the input in default state",
+      "body": "The text field should be checked for errors only after the information has been entered."
+    },
+    {
+      "title": "Allow user to enter information",
+      "body": "Let the user type without interruptions and submit the information aka don't assess as changes are made."
+    },
+    {
+      "title": "Signal error after loss of focus",
+      "body": "After the input has lost focus (user has clicked another element), the field should be assessed. Looks like we have an error here! In this case, explain why the error happened, and what is required to resolve it. For accessibility, combine the text with a visual icon that indicates an error was found."
+    },
+    {
+      "title": "Return to default state upon reattempt",
+      "body": "Once the user focuses on the field again, the error message should disappear. If there is an error again, the process will simply repeat until they are able to continue."
+    }
+  ],
+  "flows-submitting-a-form": [
+    {
+      "title": "Show button to submit",
+      "body": "Below the form fields, a button to submit the information needs to be present. You can change the copy to fit the form e.g. the button can say \u201cSubscribe\u201d if someone is providing their email address to receive emails."
+    },
+    {
+      "title": "Show loading state after submission",
+      "body": "The user must see the form is in the process of being submitted. Note: also make sure your hover state is considered before they press the button!"
+    },
+    {
+      "title": "Show success message when it submits",
+      "body": "The form was submitted! Let\u2019s communicate that back to the user with a clear success message."
+    },
+    {
+      "title": "If it doesn't, show an error message",
+      "body": "Sometimes, things don\u2019t work out. If the form can\u2019t submit, because of invalid information or another error, that also needs to be shown."
+    },
+    {
+      "title": "An error may occur because of the wrong information",
+      "body": "If the criteria for a text field isn\u2019t met, the form can fail to submit due to that error, and must be detailed."
+    }
+  ]
+}

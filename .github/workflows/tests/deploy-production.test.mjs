@@ -48,3 +48,13 @@ test("image publication and staging use the authorized registry namespace", () =
   assert.match(images, /IMAGE_NAMESPACE: ghcr\.io\/super-erp/)
   assert.match(staging, /ghcr\.io\/super-erp\/crm-/)
 })
+
+test("automatic promotion pins the bundle that passed staging smoke", () => {
+  const staging = readFileSync(new URL("../deploy-staging.yml", import.meta.url), "utf8")
+  assert.match(staging, /-f release_run_id="\$RELEASE_RUN_ID"/)
+  assert.match(staging, /-f bundle_sha256="\$BUNDLE_SHA256"/)
+  assert.match(workflow, /RELEASE_RUN_ID: \$\{\{ inputs\.release_run_id \}\}/)
+  assert.match(workflow, /BUNDLE_SHA256: \$\{\{ inputs\.bundle_sha256 \}\}/)
+  assert.ok(workflow.indexOf("sha256sum --check") > workflow.indexOf("gh run download"))
+  assert.ok(workflow.indexOf("sha256sum --check") < workflow.indexOf("tar -xzf"))
+})

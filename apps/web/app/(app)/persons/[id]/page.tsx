@@ -105,6 +105,7 @@ export default async function PersonDetailPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{[person.firstName, person.lastName].filter(Boolean).join(" ")}</h1>
         <PersonDetailBody
           projectCodes={projectCodes ? <ProjectCodePanel kind="person" recordId={id} initialPage={projectCodes} /> : null}
           projectCodeCount={projectCodes?.total}

@@ -9,7 +9,7 @@ vi.mock("@/components/use-record-editor", () => ({ useRecordEditor: ({ initial }
 vi.mock("@/components/record-header-actions", () => ({ RecordHeaderActions: ({ canEdit, voidTarget }: { canEdit: boolean; voidTarget?: { type: string } }) => createElement("div", { "data-record-actions": true }, canEdit ? "Edit record" : "", voidTarget ? "Void record" : "") }))
 vi.mock("@/app/(app)/payment-milestones/actions", () => ({ updateFunnelMilestone: vi.fn() }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
-const milestone = { id: "m1", title: "Deposit", amount: "100", status: "pending_invoicing", dueDate: null, description: null } as PaymentMilestoneDetail
+const milestone = { id: "m1", title: "Deposit", amount: "100", currency: "USD", status: "pending_invoicing", dueDate: null, description: null } as PaymentMilestoneDetail
 function render(status = "pending_invoicing", canManage = true, canVoid = true) {
   return renderToStaticMarkup(createElement(PaymentMilestoneDetailBody, { milestone: { ...milestone, status } as PaymentMilestoneDetail, canManage, canVoid }))
 }
@@ -41,7 +41,14 @@ describe("milestone record actions", () => {
     state.editing = true
     const html = render("invoiced")
     expect(html).not.toContain("Click to edit amount")
-    expect(html).toContain("Click to edit name")
+    expect(html).not.toContain("Click to edit name")
     expect(html).not.toContain("Mark invoiced")
   })
+})
+
+it("shows the resolved currency and distinguishes planning from documentary evidence", () => {
+  const html = render()
+  expect(html).toContain("US$100.00")
+  expect(html).toContain("Planned amount (excl. tax)")
+  expect(html).toContain("does not create an invoice or record payment")
 })

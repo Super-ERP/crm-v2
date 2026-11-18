@@ -77,10 +77,11 @@ function txWithSelects(values: unknown[], updatedRow: unknown = { id: "quotation
   const queue = [...values]
   const updates: unknown[] = []
   const tx = {
+    execute: vi.fn(async () => []),
     select: vi.fn(() => chain(queue.shift() ?? [], updates)),
     update: vi.fn(() => chain([updatedRow], updates)),
     delete: vi.fn(() => chain([], updates)),
-    insert: vi.fn(() => chain([], updates)),
+    insert: vi.fn(() => chain([{ id: "line-created" }], updates)),
   }
   return { tx, updates }
 }
@@ -170,7 +171,7 @@ describe("quotation edit currency persistence", () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(tx.select).toHaveBeenCalledTimes(4)
+    expect(tx.select).toHaveBeenCalledTimes(6)
     const auditEntry = mocks.writeAudit.mock.calls.at(-1)?.[2] as {
       before: Record<string, unknown>
       after: Record<string, unknown>

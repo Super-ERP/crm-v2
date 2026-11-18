@@ -14,6 +14,13 @@ on:
         required: false
         type: string
 
+      release_run_id:
+        description: Release image run ID supplied by staging
+        type: string
+      bundle_sha256:
+        description: Tested bundle checksum supplied by staging
+        type: string
+
 permissions:
   actions: write
   contents: read
@@ -31,6 +38,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       CLIENT_DIR: /home/internalops/quandatics-client
       RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+      BUNDLE_SHA256: ${{ inputs.bundle_sha256 }}
       OPERATION: ${{ inputs.operation }}
     steps:
       - name: Download verified source-free release bundle
@@ -39,6 +48,10 @@ jobs:
           set -euo pipefail
           if [ "$OPERATION" = "Roll back" ] && [ -z "$RELEASE_TAG" ]; then
             echo "Choose the prior release tag to roll back to." >&2
+            exit 1
+          fi
+          if [ -n "$RELEASE_RUN_ID$BUNDLE_SHA256" ] && [ -z "$RELEASE_TAG" ]; then
+            echo "Staging promotion requires a release tag." >&2
             exit 1
           fi
           if [ -z "$RELEASE_TAG" ]; then
@@ -50,10 +63,17 @@ jobs:
           echo "WORKFLOW_IDENTITY=$WORKFLOW_IDENTITY" >> "$GITHUB_ENV"
           [ -f "$CLIENT_DIR/.env" ] || { echo "protected production env is missing" >&2; exit 1; }
 
-          ARTIFACT_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=client-deployment-bundle-${RELEASE_TAG}&per_page=100" \
-            | jq -c '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last')"
-          [ "$ARTIFACT_JSON" != "null" ] || { echo "signed release bundle not found" >&2; exit 1; }
-          RELEASE_RUN_ID="$(printf '%s' "$ARTIFACT_JSON" | jq -er '.workflow_run.id')"
+          if [ -n "$RELEASE_RUN_ID$BUNDLE_SHA256" ]; then
+            [[ "$RELEASE_RUN_ID" =~ ^[0-9]+$ && "$BUNDLE_SHA256" =~ ^[0-9a-f]{64}$ ]] || {
+              echo "Staging promotion requires a release tag, run ID and bundle checksum." >&2
+              exit 1
+            }
+          else
+            ARTIFACT_JSON="$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=client-deployment-bundle-${RELEASE_TAG}&per_page=100" \
+              | jq -c '[.artifacts[] | select(.expired == false)] | sort_by(.created_at) | last')"
+            [ "$ARTIFACT_JSON" != "null" ] || { echo "signed release bundle not found" >&2; exit 1; }
+            RELEASE_RUN_ID="$(printf '%s' "$ARTIFACT_JSON" | jq -er '.workflow_run.id')"
+          fi
           echo "RELEASE_RUN_ID=$RELEASE_RUN_ID" >> "$GITHUB_ENV"
 
           RELEASE_RUN="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RELEASE_RUN_ID}")"
@@ -70,6 +90,10 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --name "client-deployment-bundle-${RELEASE_TAG}" \
             --dir "$TEMP_DIR/bundle"
+
+          if [ -n "$BUNDLE_SHA256" ]; then
+            printf '%s  %s\n' "$BUNDLE_SHA256" "$TEMP_DIR/bundle/client-deployment-bundle.tar.gz" | sha256sum --check
+          fi
 
           command -v cosign >/dev/null 2>&1 || { echo "cosign is required" >&2; exit 1; }
           cosign verify-blob \

@@ -22,6 +22,7 @@ export const PERMISSIONS = {
   // accounts
   ACCOUNT_VIEW: "account.view",
   ACCOUNT_CREATE: "account.create",
+  ACCOUNT_CODE_MANAGE: "account.code.manage",
   ACCOUNT_UPDATE: "account.update",
   ACCOUNT_DELETE: "account.delete",
   // persons
@@ -82,6 +83,7 @@ export const PERMISSIONS = {
   TENANT_MANAGE_USERS: "tenant.manage_users",
   TENANT_MANAGE_ROLES: "tenant.manage_roles",
   TENANT_SETTINGS: "tenant.settings",
+  PROJECT_CODE_RENAME: "project_code.rename",
   AUDIT_VIEW: "audit.view",
   // record-level access — own records by default, explicit team/all elevations
   RECORDS_VIEW_TEAM: "records.view_team",
@@ -131,7 +133,6 @@ const REP_BASE: PermissionKey[] = [
 const MANAGER: PermissionKey[] = [
   PERMISSIONS.RECORD_VOID_APPROVE,
   ...REP_BASE,
-  PERMISSIONS.LEAD_CONVERT_APPROVE,
   PERMISSIONS.RECORDS_VIEW_TEAM,
   PERMISSIONS.SALES_ORDER_APPROVE,
   PERMISSIONS.LEAD_DELETE,
@@ -158,6 +159,9 @@ const MANAGER: PermissionKey[] = [
 // documentation without receiving tenant-administration or subscription powers.
 // User, role, settings, and licensing changes remain Owner/Admin responsibilities.
 const DEVELOPER_DENIED = new Set<PermissionKey>([
+  PERMISSIONS.PROJECT_CODE_RENAME,
+  PERMISSIONS.ACCOUNT_CODE_MANAGE,
+  PERMISSIONS.LEAD_CONVERT_APPROVE,
   PERMISSIONS.TENANT_MANAGE_USERS,
   PERMISSIONS.TENANT_MANAGE_ROLES,
   PERMISSIONS.TENANT_SETTINGS,
@@ -196,6 +200,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       { key: PERMISSIONS.ACCOUNT_VIEW, label: "View accounts" },
       { key: PERMISSIONS.ACCOUNT_CREATE, label: "Create accounts" },
+      { key: PERMISSIONS.ACCOUNT_CODE_MANAGE, label: "Assign and edit account codes (Sales Admin)" },
       { key: PERMISSIONS.ACCOUNT_UPDATE, label: "Edit accounts" },
       { key: PERMISSIONS.ACCOUNT_DELETE, label: "Delete accounts" },
     ],
@@ -337,6 +342,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
       { key: PERMISSIONS.TENANT_MANAGE_USERS, label: "Manage users" },
       { key: PERMISSIONS.TENANT_MANAGE_ROLES, label: "Manage roles" },
       { key: PERMISSIONS.TENANT_SETTINGS, label: "Manage settings" },
+      { key: PERMISSIONS.PROJECT_CODE_RENAME, label: "Rename and manually edit Project Codes (Admin)" },
     ],
   },
 ]
@@ -386,6 +392,12 @@ export type RoleTemplate = {
 export const ROLE_TEMPLATES: RoleTemplate[] = [
   { name: "Owner", description: "Full control of the workspace", tier: 100, permissions: "*" },
   { name: "Admin", description: "Administer users, roles, and settings", tier: 90, permissions: "*" },
+  {
+    name: "Sales Admin", description: "Review account identities, assign account codes and approve lead conversions", tier: 65,
+    permissions: [PERMISSIONS.LEAD_VIEW, PERMISSIONS.LEAD_CREATE, PERMISSIONS.LEAD_UPDATE, PERMISSIONS.LEAD_CONVERT, PERMISSIONS.LEAD_CONVERT_APPROVE,
+      PERMISSIONS.ACCOUNT_VIEW, PERMISSIONS.ACCOUNT_CREATE, PERMISSIONS.ACCOUNT_UPDATE, PERMISSIONS.ACCOUNT_CODE_MANAGE,
+      PERMISSIONS.PERSON_VIEW, PERMISSIONS.PERSON_CREATE, PERMISSIONS.PERSON_UPDATE, PERMISSIONS.OPPORTUNITY_VIEW, PERMISSIONS.RECORDS_VIEW_ALL],
+  },
   {
     name: "Developer",
     description: "Test business modules and view internal documentation without tenant administration",

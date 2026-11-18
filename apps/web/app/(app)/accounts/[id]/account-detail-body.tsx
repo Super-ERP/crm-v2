@@ -1,19 +1,24 @@
 "use client"
 
+import { LocationField } from "@/components/location-fields"
+
 import * as React from "react"
+import { usePermissions } from "@/components/command-palette"
+import { PERMISSIONS } from "@/lib/permissions"
 import { formatOpportunityEstimatedTotals } from "@/lib/opportunity-currency"
-import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AccountDraftPhone } from "./account-draft-phone"
+import { FunnelCreateAction } from "./funnel-create-action"
+import { accountRecordTabs } from "@/lib/crm-record-tabs"
+import { useRecordTab } from "@/components/use-record-tab"
+import { formatMoney } from "@/lib/format"
 import { useRecordEditor } from "@/components/use-record-editor"
 import { RecordHeaderActions } from "@/components/record-header-actions"
 import type { AccountRow } from "../actions"
-import { Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/status-badge"
 import { TabsContent, TabsList } from "@/components/ui/tabs"
 import {
@@ -131,7 +136,7 @@ export function AccountDetailBody(props: AccountDetailData) {
     industries,
     parentOptions,
     currencies,
-    countries,
+    countries: _countries,
     members,
     contacts,
     opportunities,
@@ -147,11 +152,9 @@ export function AccountDetailBody(props: AccountDetailData) {
     canCreateProject,
   } = props
 
-  // Quotations and projects are raised on a funnel, so their empty-state CTAs
-  // deep-link the account's first funnel as the prefill.
-  const firstFunnelId = pipelines[0]?.funnelId
-
-  const [tab, setTab] = React.useState("contacts")
+  const availableTabs = accountRecordTabs(projectsEnabled, !!projectCodes)
+  const canManageCode = usePermissions().has(PERMISSIONS.ACCOUNT_CODE_MANAGE)
+  const [tab, setTab] = useRecordTab<string>("contacts", availableTabs)
   const searchParams = useSearchParams()
   const router = useRouter()
   const editor = useRecordEditor({ initial: savedRecord,
@@ -180,10 +183,6 @@ export function AccountDetailBody(props: AccountDetailData) {
   const currencyOptions = React.useMemo(
     () => currencies.map((currency) => ({ value: currency, label: currency })),
     [currencies]
-  )
-  const countryOptions = React.useMemo(
-    () => countries.map((c) => ({ value: c, label: c })),
-    [countries]
   )
   const memberOptions = React.useMemo(
     () => members.map((m) => ({ value: m.memberId, label: m.name })),
@@ -227,7 +226,7 @@ export function AccountDetailBody(props: AccountDetailData) {
       },
       {
         accessorKey: "totalEstimatedFunnelAmount",
-        header: rightHeader("Value"),
+        header: rightHeader("Child estimate total (excl. tax)"),
         cell: ({ row }) => (
           <span className="tabular-nums">
             {formatOpportunityEstimatedTotals(row.original.estimatedTotalsByCurrency, row.original.currency)}
@@ -258,11 +257,8 @@ export function AccountDetailBody(props: AccountDetailData) {
       },
       {
         accessorKey: "amount",
-        header: rightHeader("Value"),
-        cell: moneyCell(
-          (r) => r.amount,
-          (r) => r.currency
-        ),
+        header: rightHeader("Estimated deal value (excl. tax)"),
+        cell: ({row}) => row.original.amount === null ? "Not set" : <span className="tabular-nums">{formatMoney(row.original.amount, row.original.currency)}</span>,
       },
     ],
     []
@@ -338,7 +334,7 @@ export function AccountDetailBody(props: AccountDetailData) {
   function renderField(d: AccountDetailSection["fields"][number]) {
     if (d.editKey === "endUserAccountId" && (editingDetails ? record : savedRecord).accountType !== "reseller") return null
 
-    const key = canEdit && editingDetails ? d.editKey : undefined
+    const key = canEdit && editingDetails && (d.editKey !== "code" || canManageCode) ? d.editKey : undefined
     const addressSub =
       key && key.startsWith("address.")
         ? (key.slice("address.".length) as AccountAddressKey)
@@ -366,16 +362,8 @@ export function AccountDetailBody(props: AccountDetailData) {
             onSave={next => saveField({ endUserAccountId: next || null })}
             title="Click to change default end user" />
         ) : addressSub ? (
-          addressSub === "country" ? (
-            <InlineCombobox
-              value={record.billingAddress?.country ?? ""}
-              display={record.billingAddress?.country || "—"}
-              options={countryOptions}
-              onSave={(next) => saveAddress("country", next)}
-              searchPlaceholder="Search countries…"
-              emptyMessage="No countries configured."
-              title="Click to change country"
-            />
+          ["country","state","city"].includes(addressSub) ? (
+            <LocationField required={addressSub === "country"} kind={addressSub as "country"|"state"|"city"} value={record.billingAddress ?? {}} onChange={next=>saveField({billingAddress:{...record.billingAddress,...next}})} />
           ) : (
             <InlineValue
               value={record.billingAddress?.[addressSub] ?? ""}
@@ -505,7 +493,7 @@ export function AccountDetailBody(props: AccountDetailData) {
           <CountTab value="pipelines" count={pipelines.length}>
             Funnels
           </CountTab>
-          {projectsEnabled ? (
+          {availableTabs.includes("projects") ? (
             <CountTab value="projects" count={projects.length}>
               Projects
             </CountTab>
@@ -516,7 +504,7 @@ export function AccountDetailBody(props: AccountDetailData) {
           <CountTab value="children" count={childAccounts.length}>
             Child accounts
           </CountTab>
-          {projectCodes ? <CountTab value="project-codes" count={projectCodeCount}>Project codes</CountTab> : null}
+          {availableTabs.includes("project-codes") ? <CountTab value="project-codes" count={projectCodeCount}>Project codes</CountTab> : null}
           <CountTab value="activity">Activity</CountTab>
           <CountTab value="documents" count={documents.length}>
             Documents
@@ -553,7 +541,7 @@ export function AccountDetailBody(props: AccountDetailData) {
           />
         </TabsContent>
 
-        {projectsEnabled ? <TabsContent value="projects" className="mt-4">
+        {availableTabs.includes("projects") ? <TabsContent value="projects" className="mt-4">
           <DataTable
             columns={projectColumns}
             data={projects}
@@ -562,24 +550,13 @@ export function AccountDetailBody(props: AccountDetailData) {
             searchPlaceholder="Search projects…"
             emptyMessage="No projects for this account yet."
             emptyDescription={
-              firstFunnelId
+              pipelines.length
                 ? "Projects are created from a funnel."
                 : "Projects are created from a funnel — create a funnel for this account first."
             }
             emptyAction={
-              canCreateProject && firstFunnelId ? (
-                <Button
-                  size="sm"
-                  nativeButton={false}
-                  render={
-                    <Link
-                      href={`/projects?new=1&funnelId=${firstFunnelId}&accountId=${accountId}`}
-                    />
-                  }
-                >
-                  <Plus className="size-4" />
-                  New project
-                </Button>
+              canCreateProject && pipelines.length ? (
+                <FunnelCreateAction funnels={pipelines} accountId={accountId} kind="project" />
               ) : undefined
             }
             pageSize={5}
@@ -595,22 +572,13 @@ export function AccountDetailBody(props: AccountDetailData) {
             searchPlaceholder="Search quotations…"
             emptyMessage="No quotations for this account yet."
             emptyDescription={
-              firstFunnelId
+              pipelines.length
                 ? "Quotations are raised on a funnel."
                 : "Quotations are raised on a funnel — create a funnel for this account first."
             }
             emptyAction={
-              canCreateQuotation && firstFunnelId ? (
-                <Button
-                  size="sm"
-                  nativeButton={false}
-                  render={
-                    <Link href={`/quotations/new?funnelId=${firstFunnelId}`} />
-                  }
-                >
-                  <Plus className="size-4" />
-                  New quotation
-                </Button>
+              canCreateQuotation && pipelines.length ? (
+                <FunnelCreateAction funnels={pipelines} accountId={accountId} kind="quotation" />
               ) : undefined
             }
             pageSize={5}
@@ -629,7 +597,7 @@ export function AccountDetailBody(props: AccountDetailData) {
           />
         </TabsContent>
 
-        {projectCodes ? <TabsContent value="project-codes" className="mt-4">{projectCodes}</TabsContent> : null}
+        {availableTabs.includes("project-codes") ? <TabsContent value="project-codes" className="mt-4">{projectCodes}</TabsContent> : null}
 
         <TabsContent value="activity" className="mt-4">
           <ActivityTimeline

@@ -43,6 +43,8 @@ import {
   deriveOriginRecognizedPercent,
   validatePartyShares,
 } from "@/lib/interco-share"
+import type { ProjectCodeChoice } from "@/lib/commit-stage"
+import type { BillingScheduleInput } from "@/lib/billing-schedule"
 import { requestStageAdvance } from "@/server/services/stage"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import {
@@ -227,6 +229,8 @@ export type OpportunityListRow = {
   name: string
   accountId: string
   accountName: string
+  accountCanView?: boolean
+  opportunityCanView?: boolean
   accountOwnerMemberId: string | null
   accountOwnerName: string | null
   opportunityName: string
@@ -255,6 +259,7 @@ export type OpportunityListRow = {
   pipelineId: string
   pipelineIsDefault: boolean
   primaryQuotationId: string | null
+  primaryQuotationNumber?: string | null
   projectNatureCode: string | null
   projectNatures: string[] | null
   pain: string | null
@@ -319,9 +324,9 @@ export async function listFunnelPage(input: ServerTableQuery): Promise<{ rows: O
     normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS, getTableFields("funnel"))))
 }
 
-export async function listFunnelStagePage(input: ServerTableQuery & { stageId: string }): Promise<{ rows: OpportunityListRow[]; total: number; valueTotal: string }> {
+export async function listFunnelStagePage(input: ServerTableQuery & { stageId: string }): Promise<{ rows: OpportunityListRow[]; total: number; valueTotalsByCurrency: Array<{currency: string; total: string}> }> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.stageId)) {
-    return { rows: [], total: 0, valueTotal: "0" }
+    return { rows: [], total: 0, valueTotalsByCurrency: [] }
   }
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsList(tx, ctx, {
     ...normalizeRecordListQuery(input, FUNNEL_SORTS, FUNNEL_FILTERS, getTableFields("funnel")),
@@ -384,6 +389,12 @@ export async function getOpportunity(
   id: string
 ): Promise<OpportunityDetail | null> {
   return withTenant(PERMISSIONS.OPPORTUNITY_VIEW, (tx, ctx) => funnelsGet(tx, ctx, id))
+}
+
+async function assertConfiguredFunnelNature(tx: Tx, tenantId: string, natures: string[]): Promise<void> {
+  if (!natures.length) throw new Error("Project Nature is required")
+  const [settings] = await tx.select({ natures: tenantSettings.projectNatures }).from(tenantSettings).where(eq(tenantSettings.organizationId, tenantId)).limit(1)
+  if (natures.some(code => !settings?.natures.some(n => n.code === code))) throw new Error("Choose a configured Project Nature")
 }
 
 export async function createOpportunity(
@@ -491,6 +502,10 @@ export async function createOpportunity(
         ppvvc = pickPpvvc(input)
         nature = pickNature(input)
       }
+      // New funnels require an explicit nature, including those under legacy containers.
+      const requestedNature = pickNature(input)
+      if (requestedNature.projectNatureCode) nature = requestedNature
+      await assertConfiguredFunnelNature(tx, ctx.tenantId, nature.projectNatures?.length ? nature.projectNatures : nature.projectNatureCode ? [nature.projectNatureCode] : [])
       const [account] = await tx
         .select({ currency: accounts.currency, ownerMemberId: accounts.ownerMemberId })
         .from(accounts)
@@ -727,6 +742,10 @@ export async function updateOpportunity(
       throw new Error("FORBIDDEN: not permitted on this account")
     }
 
+    if (input.projectNatures !== undefined || input.projectNatureCode !== undefined) {
+      const nature = pickNature(input)
+      if (nature.projectNatureCode || nature.projectNatures?.length || existing.projectNatureCode || existing.projectNatures?.length) await assertConfiguredFunnelNature(tx, ctx.tenantId, nature.projectNatures?.length ? nature.projectNatures : nature.projectNatureCode ? [nature.projectNatureCode] : [])
+    }
     const updated = {
       name: input.name ?? existing.name,
       accountId: nextAccountId,
@@ -984,6 +1003,8 @@ export async function advanceStageAction(input: {
   reason?: string
   customFields?: Record<string, string>
   skipPpvvc?: boolean
+  projectCodeChoice?: ProjectCodeChoice
+  billingSchedule?: BillingScheduleInput[]
 }): Promise<ActionResult<{ moved: boolean; approvalRequestId?: string }>> {
   return runAction(async () => {
   const ctx = await requireContext()

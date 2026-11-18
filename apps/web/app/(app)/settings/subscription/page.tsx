@@ -4,7 +4,7 @@ export default async function SubscriptionSettingsPage() {
   return (
     <div className="grid gap-6">
       <div>
-        <h1 className="text-xl font-semibold">Subscription</h1>
+        <h2 className="text-xl font-semibold">Subscription</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Commercial access is managed by your vendor. This client workspace is read-only for
           licensing operations.

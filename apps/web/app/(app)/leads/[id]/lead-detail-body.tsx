@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRecordTab } from "@/components/use-record-tab"
 import { useRecordEditor } from "@/components/use-record-editor"
 import { RecordHeaderActions } from "@/components/record-header-actions"
 import { Input } from "@/components/ui/input"
@@ -106,7 +107,7 @@ export function LeadDetailBody({
   activity,
   files,
 }: LeadDetailData) {
-  const [tab, setTab] = React.useState("activity")
+  const [tab, setTab] = useRecordTab<string>("activity", ["activity", "documents"] as const)
   const router = useRouter()
   const perms = usePermissions()
   const canUpdate = perms.has(PERMISSIONS.LEAD_UPDATE)
@@ -230,8 +231,8 @@ export function LeadDetailBody({
             ...(converted?.funnelId
               ? [
                   {
-                    kind: "funnel" as const,
-                    label: converted.funnelName ?? "Opportunity",
+                    kind: "opportunity" as const,
+                    label: converted.funnelName ?? "Converted Opportunity",
                     href: `/opportunities/${converted.funnelId}`,
                   },
                 ]

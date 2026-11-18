@@ -1,5 +1,5 @@
 import "server-only"
-import { and, eq, isNull, asc, ne } from "drizzle-orm"
+import { and, eq, isNull, asc, ne, sql } from "drizzle-orm"
 import { db, runInTenant } from "@/db"
 import {
   member,
@@ -201,17 +201,13 @@ export async function listLossReasons(): Promise<string[]> {
 
 export type CountryOption = { name: string; states: string[] }
 
-/** Tenant-configured country → states picklist for account addresses. */
+/** Shared GeoNames country/state directory; tenant lists no longer define geography. */
 export async function listCountries(): Promise<CountryOption[]> {
   const ctx = await requireContext()
-  const [s] = await runInTenant(ctx.tenantId, (tx) =>
-    tx
-      .select({ countries: tenantSettings.countries })
-      .from(tenantSettings)
-      .where(eq(tenantSettings.organizationId, ctx.tenantId))
-      .limit(1)
-  )
-  return s?.countries ?? []
+  return runInTenant(ctx.tenantId, async tx => Array.from(await tx.execute<CountryOption>(sql`
+    SELECT c.name, coalesce((SELECT json_agg(s.name ORDER BY s.name) FROM location_catalogue s WHERE s.kind='state' AND s.country_code=c.country_code),'[]'::json) AS states
+    FROM location_catalogue c WHERE c.kind='country' ORDER BY c.name
+  `)))
 }
 
 /**

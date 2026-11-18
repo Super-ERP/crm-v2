@@ -2,6 +2,8 @@
 import { RecordHeaderActions } from "@/components/record-header-actions"
 
 import * as React from "react"
+import { RecordReference } from "@/components/record-reference"
+import { useRecordTab } from "@/components/use-record-tab"
 import Link from "next/link"
 import type { ColumnDef } from "@tanstack/react-table"
 import { CheckIcon, XIcon } from "lucide-react"
@@ -60,7 +62,7 @@ export function SalesOrderDetailBody({
   const [approveOpen, setApproveOpen] = React.useState(false)
   const [declineOpen, setDeclineOpen] = React.useState(false)
   const [resubmitOpen, setResubmitOpen] = React.useState(false)
-  const [tab, setTab] = React.useState("review")
+  const [tab, setTab] = useRecordTab<string>("review", ["review", "milestones", "billing"])
 
   const fields: { label: string; value: React.ReactNode }[] = [
     { label: "Status", value: <SalesOrderStatusBadge status={order.status} /> },
@@ -76,29 +78,21 @@ export function SalesOrderDetailBody({
     {
       label: "Project",
       value: (
-        <Link
-          href={`/projects/${order.projectId}`}
-          className="font-medium link"
-        >
-          {order.projectName}{" "}
-          <span className="font-mono text-xs text-muted-foreground">
-            {order.projectCode}
-          </span>
-        </Link>
+        <RecordReference href={`/projects/${order.projectId}`} label={`${order.projectName} ${order.projectCode}`} available={order.projectAvailable === true} />
       ),
     },
     {
-      label: "Value",
+      label: "Current project value (excl. tax)",
       value:
         order.amount != null
           ? formatMoney(order.amount, order.currency)
           : "—",
     },
-    { label: "Source funnel", value: order.funnelName ?? "—" },
+    { label: "Source funnel", value: order.funnelId ? <RecordReference href={`/funnel/${order.funnelId}`} label={order.funnelName ?? "Funnel"} available={order.funnelAvailable === true} /> : order.funnelName ?? "—" },
     {
       label: "Quotation",
       value: order.quoteNumber ? (
-        <span className="font-mono">{order.quoteNumber}</span>
+        order.quotationId ? <RecordReference href={`/quotations/${order.quotationId}`} label={order.quoteNumber} available={order.quotationAvailable === true} /> : <span className="font-mono">{order.quoteNumber}</span>
       ) : (
         "—"
       ),
@@ -197,7 +191,7 @@ export function SalesOrderDetailBody({
       {/* Left — sales-order details + related quick links */}
       <DetailAside>
         <Card>
-          <DetailCardHeader kind="salesOrder" eyebrow="Sales order" actions={<RecordHeaderActions canEdit={false} voidTarget={(canSubmit || canApprove) && order.status !== "void" ? { type: "sales_order", id: order.id } : undefined} />} />
+          <DetailCardHeader kind="salesOrder" eyebrow="Sales order" title={order.soNumber ?? order.projectCode} actions={<RecordHeaderActions canEdit={false} voidTarget={(canSubmit || canApprove) && order.status !== "void" ? { type: "sales_order", id: order.id } : undefined} />} />
           <CardContent className="grid gap-3 text-sm">
             {fields.map((d) => (
               <FieldRow key={d.label} label={d.label}>

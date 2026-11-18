@@ -20,13 +20,13 @@ describe("lead conversion approval inbox", () => {
     mocks.runInTenant.mockImplementation(async (_tenant, work) => work({ execute }))
     execute.mockResolvedValue([])
   })
-  it("restricts incoming lead conversions to the assigned approver, pending status, visible owners and live records", async () => {
+  it("restricts incoming lead conversions to the effective Sales Admin review pool, pending status, visible owners and live records", async () => {
     await listLeadConversionApprovals("incoming", 2)
     const query = new PgDialect().sqlToQuery(execute.mock.calls[0][0])
     expect(query.sql).toContain('r.status = \'pending\'')
-    expect(query.sql).toContain('current_approver."memberId" =')
-    expect(query.sql).toContain('WITH RECURSIVE reporting_line')
-    expect(query.sql).toContain('p.member_id = r.requester_member_id')
+    expect(query.sql).toContain('pool."memberId" =')
+    expect(query.sql).toContain('count(DISTINCT perm.key)')
+    expect(query.params).toContain(PERMISSIONS.ACCOUNT_CODE_MANAGE)
     expect(query.sql).toContain('l.deleted_at IS NULL')
     expect(query.sql).toContain('r.tenant_id =')
     expect(query.sql).toContain('l.owner_member_id IN')
@@ -38,7 +38,7 @@ describe("lead conversion approval inbox", () => {
     await listLeadConversionApprovals("mine")
     const query = new PgDialect().sqlToQuery(execute.mock.calls[0][0])
     expect(query.sql).toContain('r.requester_member_id =')
-    expect(query.sql).toContain('LEFT JOIN LATERAL')
+    expect(query.sql).not.toContain('reporting_line')
   })
   it("fails closed when lead view or conversion approval permission is absent", async () => {
     mocks.requireContext.mockResolvedValue({ tenantId: "tenant", memberId: "manager", isSuperadmin: false, can: (p: string) => p !== PERMISSIONS.LEAD_CONVERT_APPROVE })

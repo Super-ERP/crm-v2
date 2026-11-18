@@ -25,7 +25,7 @@ const url=process.env.TEST_DATABASE_ADMIN_URL
 ;(url?describe:describe.skip)('core advanced table adapters',()=>{
  it('filters and counts the complete authorized result set before paging',async()=>{
   const client=postgres(url!,{max:1}),namespace='table_core_'+randomUUID().replaceAll('-','')
-  const ctx={tenantId:'qm',memberId:'rep'} as ServerContext
+  const ctx={tenantId:'qm',memberId:'rep',can:()=>true,isSuperadmin:false} as unknown as ServerContext
   const tableList=[schema.leads,schema.accounts,schema.persons,schema.pipelines,schema.pipelineStages,schema.funnels,schema.opportunities,schema.quotations,schema.quotationLineItems,schema.projects,schema.member,schema.user,schema.organization,schema.products,schema.paymentMilestones,schema.financeDocs,schema.salesOrders,schema.attachments,schema.auditLog,schema.intercompanyDeals,schema.intercompanyDealResponses]
   const account=randomUUID(),opp=randomUUID(),funnel=randomUUID(),stage=randomUUID(),pipeline=randomUUID(),person=randomUUID(),quote=randomUUID()
   const tree=(fieldId:string,value:unknown,operator='contains'):FilterGroup=>({kind:'group',id:'root',logic:'and',children:[{kind:'condition',id:'c',fieldId,operator:operator as never,value}]})

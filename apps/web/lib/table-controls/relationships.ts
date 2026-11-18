@@ -1,7 +1,8 @@
+import { PRODUCT_FIELD_LABELS } from "../crm-terminology"
 import type {TableFieldDefinition,TableFieldType} from './types'
 import {tableFieldOptions} from './fields'
 export type BusinessField={id:string;column?:string;label:string;type:TableFieldType;dateOnly?:boolean}
-const f=(id:string,type:TableFieldType='text',column=id.replace(/[A-Z]/g,c=>'_'+c.toLowerCase()),label=id.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./,c=>c.toUpperCase()),dateOnly=false):BusinessField=>({id,type,column,label,dateOnly})
+const f=(id:string,type:TableFieldType='text',column=id.replace(/[A-Z]/g,c=>'_'+c.toLowerCase()),label=PRODUCT_FIELD_LABELS[id] ?? id.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./,c=>c.toUpperCase()),dateOnly=false):BusinessField=>({id,type,column,label,dateOnly})
 const dates=[f('createdAt','date'),f('updatedAt','date')]
 export const RELATION_ENTITIES={
  leads:{table:'leads',permission:'lead.view',fields:[f('name'),f('companyName'),f('email'),f('phone'),f('mobile'),f('country'),f('source'),f('status','enum'),f('disqualifyReason'),f('convertedAt','date'),...dates]},
@@ -12,7 +13,7 @@ export const RELATION_ENTITIES={
  quotations:{table:'quotations',permission:'quotation.view',fields:[f('quoteNumber'),f('status','enum'),f('isPrimary','boolean'),f('currency'),f('quoteDate','date','quote_date','Quotation date',true),f('validUntil','date','valid_until','Valid until',true),f('subtotal','money'),f('taxTotal','money'),f('total','money'),...dates]},
  products:{table:'products',permission:'product.view',fields:[f('name'),f('productCode'),f('subcategory'),f('description'),f('uom'),f('standardPrice','money'),f('currency'),f('isActive','boolean'),...dates]},
  projects:{table:'projects',permission:'project.view',module:'projects',fields:[f('name'),f('projectCode'),f('status','enum'),f('startDate','date','start_date','Start date',true),f('value','money'),f('currency'),f('notes'),...dates]},
- milestones:{table:'payment_milestones',permission:'payment_milestone.view',fields:[f('title'),f('description'),f('amount','money'),f('currency','text','@milestoneCurrency'),f('dueDate','date','due_date','Due date',true),f('status','enum'),...dates]},
+ milestones:{table:'payment_milestones',permission:'payment_milestone.view',fields:[f('title'),f('description'),f('amount','money'),f('currency','text','@milestoneCurrency'),f('expectedInvoiceMonth','text','expected_invoice_month','Expected invoice month'),f('expectedInvoiceYear','number','expected_invoice_year','Expected invoice year'),f('dueDate','date','due_date','Due date',true),f('status','enum'),...dates]},
  salesOrders:{table:'sales_orders',permission:'sales_order.view',module:'salesOrders',fields:[f('soNumber'),f('status','enum'),f('documentKind'),f('paymentTerm'),f('notes'),f('submittedAt','date'),f('reviewedAt','date'),...dates]},
  finance:{table:'finance_docs',permission:'finance.view',module:'finance',fields:[f('number'),f('kind','enum'),f('status','enum'),f('partyName'),f('amount','money'),f('currency'),f('docDate','date','doc_date','Document date',true),f('dueDate','date','due_date','Due date',true),f('notes'),...dates]},
  costs:{table:'deal_costs',permission:'opportunity.view',module:'finance',fields:[f('supplierName'),f('partyKind','enum'),f('category'),f('contractYear','number'),f('poNumber'),f('amount','money'),f('currency'),f('notes'),...dates]},

@@ -34,7 +34,7 @@ export function ProjectCodesTable({ initialPage }: { initialPage: CodeDirectory 
     { accessorKey: "funnelName", header: "Funnel", cell: ({ row }) => <LinkedRecords records={row.original.linkedFunnels} base="/funnel" /> },
     { accessorKey: "ownerName", header: "Owner", cell: ({ row }) => row.original.ownerName?.join(", ") || "—" },
     { accessorKey: "stageName", header: "Stage", cell: ({ row }) => <div className="flex flex-wrap gap-1.5">{row.original.stages?.map(stage => <StageBadge key={`${stage.kind}:${stage.name}`} {...stage} />)}</div> },
-    { id: "totalEstimatedFunnelAmount", header: "Est. amount", enableSorting: false, cell: ({ row }) => <span className="tabular-nums">{row.original.estimatedTotalsByCurrency?.length ? formatOpportunityEstimatedTotals(row.original.estimatedTotalsByCurrency, "MYR") : "—"}</span> },
+    { id: "totalEstimatedFunnelAmount", header: "Linked estimate total (excl. tax)", enableSorting: false, cell: ({ row }) => <span className="tabular-nums">{row.original.estimatedTotalsByCurrency?.length ? formatOpportunityEstimatedTotals(row.original.estimatedTotalsByCurrency, "MYR") : "—"}</span> },
     { accessorKey: "expectedCloseDate", header: "Earliest expected close date", cell: ({ row }) => formatDate(row.original.expectedCloseDate) },
   ], [])
   return <DataTable columns={columns} data={initialPage.rows}

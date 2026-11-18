@@ -1,4 +1,5 @@
 "use server"
+import { auditRecordIdentities } from "./record-identities"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
 import { getTableFields } from "@/lib/table-controls/registry"
@@ -19,6 +20,8 @@ export type AuditRow = {
   actorName: string | null
   ip: string | null
   createdAt: string
+  recordName: string | null
+  recordHref: string | null
 }
 
 /**
@@ -61,10 +64,13 @@ export async function listAuditPage(input: ServerTableQuery): Promise<{ rows: Au
         .leftJoin(user, eq(member.userId, user.id)).where(where),
     ])
 
-    return { rows: rows.map((r) => ({
-      ...r,
-      createdAt: r.createdAt.toISOString(),
-    })), total: totalRows[0]?.count ?? 0 }
+    const references = await auditRecordIdentities(tx, ctx, rows)
+    const resolved = rows.map((r, index) => ({
+      ...r, createdAt: r.createdAt.toISOString(),
+      recordName: references[index]?.name ?? null,
+      recordHref: references[index]?.href ?? null,
+    }))
+    return { rows: resolved, total: totalRows[0]?.count ?? 0 }
   })
 }
 

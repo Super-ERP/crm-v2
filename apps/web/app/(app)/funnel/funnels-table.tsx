@@ -1,11 +1,13 @@
 "use client"
 
+import { DealValue } from "@/components/deal-value"
 import { ProjectCodeLink, ProjectCodeSummary } from "@/components/project-code-link"
+import { RecordReference } from "@/components/record-reference"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { DataTable, SortableHeader, linkCell } from "@/components/data-table"
 import { StatusBadge } from "@/components/status-badge"
-import { formatDate, formatMoney } from "@/lib/format"
+import { formatDate } from "@/lib/format"
 import { StageBadge } from "./stage-badge"
 import { listFunnelPage, type OpportunityListRow } from "./actions"
 import type { ServerTableQuery } from "@/lib/table-pagination"
@@ -14,7 +16,7 @@ const columns: ColumnDef<OpportunityListRow>[] = [
   {
     id: "id",
     accessorFn: (row) => ({ id: row.id, label: row.name }),
-    header: ({ column }) => <SortableHeader column={column} title="Name" />,
+    header: ({ column }) => <SortableHeader column={column} title="Funnel / deal name" />,
     cell: linkCell(
       (r) => `/funnel/${r.id}`,
       (r) => r.name
@@ -24,9 +26,9 @@ const columns: ColumnDef<OpportunityListRow>[] = [
   {
     id: "accountId",
     accessorFn: (row) => ({ id: row.accountId, label: row.accountName }),
-    header: ({ column }) => <SortableHeader column={column} title="Account" />,
+    header: ({ column }) => <SortableHeader column={column} title="End customer" />,
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.original.accountName}</span>
+      <RecordReference href={`/accounts/${row.original.accountId}`} label={row.original.accountName} available={row.original.accountCanView} />
     ),
   },
   {
@@ -44,8 +46,8 @@ const columns: ColumnDef<OpportunityListRow>[] = [
   {
     id: "opportunityId",
     accessorFn: (row) => ({ id: row.opportunityId, label: row.opportunityName }),
-    header: "Opportunity",
-    cell: ({ row }) => row.original.opportunityName,
+    header: "Parent Opportunity",
+    cell: ({row}) => <RecordReference href={`/opportunities/${row.original.opportunityId}`} label={row.original.opportunityName} available={row.original.opportunityCanView} />,
   },
   {
     id: "accountOwnerMemberId",
@@ -55,18 +57,11 @@ const columns: ColumnDef<OpportunityListRow>[] = [
   },
   {
     id: "amount",
-    accessorFn: (row) => Number(row.estimatedAmount ?? row.amount ?? 0),
+    accessorFn: (row) => row.estimatedAmount ?? row.amount,
     header: ({ column }) => (
-      <SortableHeader column={column} title="Est. funnel amount" />
+      <SortableHeader column={column} title="Deal value (excl. tax)" />
     ),
-    cell: ({ row }) => {
-      const value = row.original.estimatedAmount ?? row.original.amount
-      return (
-        <span className="tabular-nums">
-          {value ? formatMoney(value, row.original.currency) : "—"}
-        </span>
-      )
-    },
+    cell: ({ row }) => <DealValue row={row.original} />,
     sortingFn: (a, b) =>
       Number(a.original.estimatedAmount ?? a.original.amount ?? 0) -
       Number(b.original.estimatedAmount ?? b.original.amount ?? 0),
@@ -119,15 +114,15 @@ export function OpportunitiesTable({
       columns={columns}
       data={initialPage.rows}
       server={{ total: initialPage.total, loadPage: listFunnelPage }}
-      emptyMessage="No pipelines yet."
+      emptyMessage="No deals yet."
       toolbar={toolbar}
       renderFilteredView={renderBoard}
       tableId="funnel"
       searchColumn="name"
       searchPlaceholder="Search funnels…"
       filters={[
-        { type: "relation", columnId: "accountId", title: "Account", options: filterOptions.accounts },
-        { type: "relation", columnId: "opportunityId", title: "Opportunity", options: filterOptions.opportunities },
+        { type: "relation", columnId: "accountId", title: "End customer", options: filterOptions.accounts },
+        { type: "relation", columnId: "opportunityId", title: "Parent Opportunity", options: filterOptions.opportunities },
         { type: "enum", columnId: "expectedCloseDate", title: "Expected close year", options: filterOptions.expectedCloseYears },
         { type: "relation", columnId: "accountOwnerMemberId", title: "Account owner", options: filterOptions.accountOwners },
         { type: "relation", columnId: "stageId", title: "Stage", options: filterOptions.stages },

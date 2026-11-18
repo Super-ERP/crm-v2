@@ -143,3 +143,30 @@ After billing, the supported manual status transition is **Pending invoicing →
 ## Void instead of deleting history
 
 Select **More (⋯) → Void** on a milestone row or in its detail header. The record and invoice snapshot are retained after approval and stop consuming active project/quotation allocation. Invoiced or legacy-invoice milestones require an authorised financial reversal reviewer, and any linked live finance documents must be resolved first. Voiding a schedule does not cancel an external invoice or refund money. Splitting a schedule preserves archived rows. See [Void records](07-void-records.md).
+
+## Planning amounts versus finance documents
+
+Milestone amounts use their linked quotation, Funnel or Project currency consistently in lists and details. **Mark invoiced** records planning progress only: it does not create an invoice, verify an invoice or record payment. Finance documents and receipts are managed in Billing.
+
+Billing displays document totals in their recorded currency. Historical finance documents do not have separately recorded tax components, so they are not presented as a net completion percentage of Project value. **Received** sums issued receipts, including partial receipts, rather than the face value of invoices marked settled. The balance subtracts receipts and credit notes; a negative balance means credit. Sales Order context is labelled **Current project value (excl. tax)**, not an invented historical approved amount. New sale document party defaults use the source quotation's Bill To context; explicit entries and existing documents are preserved.
+
+
+## Billing schedules and invoice forecast periods
+
+The primary quotation has a **Payment milestones** tab, linked both ways to individual payment milestones. Each row records a planned amount excluding tax, expected invoice month and year, and an optional originating quotation product line. One product line can have several billing rows for instalments. These periods are available in table filters and CSV exports. Preparing a schedule does not issue an invoice.
+
+An uninvoiced row can be split while preserving its total and source. Rows with invoice or financial history retain their identities, amounts and sources; only forecast month/year metadata may be corrected. Historical rows linked to an older quotation keep that source. Ordinary draft quotation saves preserve product line IDs; a product line used by the schedule must be reassigned before removal.
+
+### Checking the payment plan
+
+Quotation Related and the Funnel Payment Milestones tab open the linked plan, including when no rows exist yet. Each row identifies its quotation item and expected invoice month/year; expand linkage details for longer descriptions. One quotation item can be split across several milestones.
+
+The plan total must equal the quotation net amount excluding tax, in its own currency. The balance is shown while editing, and an unallocated or excess amount prevents saving. Required row details must also be complete. Existing record permissions and stage eligibility still apply.
+
+### Start from quotation items
+
+Choose **Create milestones** on the primary quotation. The draft starts with one milestone for each positive-value quotation item, using its net amount after an allocated share of any quotation-level discount. Enter an expected invoice month and year on every row.
+
+Use a row's **Split** action to divide it into instalments linked to the same quotation item. Adjust titles, amounts and invoice periods as needed. Each item's instalments must match that item's allocated net, and the entire plan must match quotation net excluding tax. Save checks both. Existing invoices/finance history protect amounts and source links; permitted forecast-period corrections remain available.
+
+From a Funnel, **Edit quotation payment plan** opens the same workspace for financial changes. Standalone Project schedules and legacy records without quotation-item detail retain their existing workflows.

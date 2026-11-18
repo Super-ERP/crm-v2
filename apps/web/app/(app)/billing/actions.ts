@@ -1,4 +1,5 @@
 "use server"
+import { financeReferenceAccess } from "@/server/services/finance-reference-access"
 import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
@@ -41,6 +42,8 @@ import {
   kindsForDirection,
   type FinanceDocKind,
 } from "@/lib/finance-kinds"
+import { resolveFinanceParty } from "@/lib/finance-party"
+import { projectBillingTotals } from "@/lib/project-billing-totals"
 import { partyShare } from "@/lib/interco-share"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import {
@@ -75,6 +78,8 @@ export type FinanceDocRow = {
   counterpartDocId: string | null
   /** Proof/attachment count (receipts/payments need ≥ 1 to be issued). */
   attachCount: number
+  salesOrderAvailable?: boolean
+  projectAvailable?: boolean
   createdAt: Date
 }
 
@@ -131,7 +136,8 @@ async function readFinanceDocPage(tx: Tx, ctx: import("@/lib/server-context").Se
         .leftJoin(salesOrders, eq(financeDocs.salesOrderId, salesOrders.id))
         .leftJoin(projects, eq(financeDocs.projectId, projects.id)).where(where),
     ])
-    return { rows: rows as FinanceDocRow[], total: totalRows[0]?.count ?? 0 }
+    const refs = await financeReferenceAccess(tx, ctx, rows)
+    return { rows: rows.map(row => ({ ...row, salesOrderAvailable: !!row.salesOrderId && refs.salesOrders.has(row.salesOrderId), projectAvailable: !!row.projectId && refs.projects.has(row.projectId) })) as FinanceDocRow[], total: totalRows[0]?.count ?? 0 }
 }
 
 export async function listFinanceDocPage(direction: "sale" | "purchase", input: ServerTableQuery): Promise<{ rows: FinanceDocRow[]; total: number }> {
@@ -170,6 +176,10 @@ export async function getReminderSchedule(): Promise<number[]> {
   })
 }
 
+// Frozen quotation billing context takes precedence over the current end customer.
+const projectBillToName = sql<string | null>`(select coalesce(q.billing_snapshot->'account'->>'name', a.name) from quotations q left join accounts a on a.id=coalesce(q.bill_to_account_id, ${projects.accountId}) and a.tenant_id=q.tenant_id where q.id=${projects.quotationId} and q.tenant_id=${projects.tenantId})`
+const projectAttentionName = sql<string | null>`(select coalesce(q.billing_snapshot->'contact'->>'name', nullif(trim(concat_ws(' ', p.first_name, p.last_name)), '')) from quotations q left join persons p on p.id=q.attention_contact_id and p.tenant_id=q.tenant_id where q.id=${projects.quotationId} and q.tenant_id=${projects.tenantId})`
+
 export type FinanceSources = {
   /** Approved sales orders — the roots both chains hang off. */
   salesOrders: {
@@ -178,6 +188,8 @@ export type FinanceSources = {
     projectId: string | null
     projectName: string | null
     accountName: string | null
+    billToName: string | null
+    attentionName: string | null
     currency: string | null
     value: string | null
   }[]
@@ -202,6 +214,8 @@ export async function listFinanceSources(): Promise<FinanceSources> {
         projectId: salesOrders.projectId,
         projectName: projects.name,
         accountName: accounts.name,
+        billToName: projectBillToName,
+        attentionName: projectAttentionName,
         currency: projects.currency,
         value: projects.value,
       })
@@ -384,13 +398,14 @@ export async function createFinanceDoc(
         // Derive project / currency / party down the chain.
         let projectId = parent?.projectId ?? null
         let currency = parent?.currency ?? null
-        let partyName = input.partyName?.trim() || parent?.partyName || null
+        let partyName = resolveFinanceParty(input.partyName, parent?.partyName, null, null)
         if (!projectId && salesOrderId) {
           const [so] = await tx
             .select({
               projectId: salesOrders.projectId,
               currency: projects.currency,
               accountName: accounts.name,
+              billToName: projectBillToName,
             })
             .from(salesOrders)
             .leftJoin(projects, eq(salesOrders.projectId, projects.id))
@@ -402,7 +417,7 @@ export async function createFinanceDoc(
           currency = currency ?? so.currency
           // Customer prefill only makes sense on the sale side.
           if (!partyName && FINANCE_KINDS[kind].direction === "sale") {
-            partyName = so.accountName
+            partyName = resolveFinanceParty(null, null, so.billToName, so.accountName)
           }
         }
 
@@ -829,6 +844,8 @@ export type FinanceDocDetail = {
   projectName: string | null
   milestoneTitle: string | null
   quoteNumber: string | null
+  quotationId: string | null
+  references: { salesOrder: boolean; quotation: boolean; milestone: boolean; project: boolean }
   /** Tenant reminder schedule (days after due) for stage computation. */
   reminderSchedule: number[]
 }
@@ -900,6 +917,7 @@ export async function getFinanceDoc(id: string): Promise<FinanceDocDetail | null
       quoteNumber = q?.n ?? null
     }
 
+    const references = await financeReferenceAccess(tx, ctx, [row])
     const { reminderDays } = await financeSettings(tx, ctx.tenantId)
     const { parentKind, projectName, milestoneTitle, counterpartNumber, quotationId: _q, ...doc } = row
     return {
@@ -912,6 +930,8 @@ export async function getFinanceDoc(id: string): Promise<FinanceDocDetail | null
       projectName: projectName ?? null,
       milestoneTitle: milestoneTitle ?? null,
       quoteNumber,
+      quotationId: row.quotationId,
+      references: { salesOrder: !!row.salesOrderId && references.salesOrders.has(row.salesOrderId), quotation: !!row.quotationId && references.quotations.has(row.quotationId), milestone: !!row.milestoneId && references.milestones.has(row.milestoneId), project: !!row.projectId && references.projects.has(row.projectId) },
       reminderSchedule: reminderDays,
     }
   })
@@ -956,6 +976,7 @@ export type ProjectBillingSummary = {
   projectValue: string | null
   invoiced: string
   paid: string
+  outstanding: string
   creditNotes: string
   purchaseCost: string
   /** invoiced − credit notes − purchase cost (billed margin so far). */
@@ -1008,21 +1029,14 @@ export async function getProjectBillingSummary(
       .where(eq(financeDocs.projectId, projectId))
       .orderBy(desc(financeDocs.createdAt))) as FinanceDocRow[]
 
-    const live = (kinds: FinanceDocKind[], statuses: FinanceDocStatus[]) =>
-      docs
-        .filter((d) => kinds.includes(d.kind) && statuses.includes(d.status))
-        .reduce((n, d) => n + Number(d.amount), 0)
-
-    const invoiced = live(["invoice"], ["issued", "settled"])
-    const paid = live(["invoice"], ["settled"])
-    const creditNotes = live(["credit_note"], ["issued", "settled"])
-    const purchaseCost = live(["purchase_invoice"], ["issued", "settled"])
+    const { invoiced, paid, creditNotes, purchaseCost, outstanding } = projectBillingTotals(docs, proj.currency)
     return {
       enabled: true,
       currency: proj.currency,
       projectValue: proj.value,
       invoiced: invoiced.toFixed(2),
       paid: paid.toFixed(2),
+      outstanding: outstanding.toFixed(2),
       creditNotes: creditNotes.toFixed(2),
       purchaseCost: purchaseCost.toFixed(2),
       margin: (invoiced - creditNotes - purchaseCost).toFixed(2),

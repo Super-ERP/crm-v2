@@ -1,0 +1,771 @@
+{
+  "scope": "Product categories settings: administrator reads, finds, creates, edits and archives categories/subcategories. Source, screenshots and desktop Chrome browser evidence; review only after user supplied guide. No product-code changes made by this audit.",
+  "snapshot": "bfae71e507b1b7c03c12e0756402b60eb80f5d14",
+  "selected": [
+    {
+      "checklist": "design-system-accessibility",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "design-system-accordion",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "design-system-button",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "design-system-color-system",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "design-system-input-field",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "design-system-searchbar",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "design-system-spacing-and-grid",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "design-system-typography",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "web-app-settings",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "flows-showing-input-error",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    },
+    {
+      "checklist": "flows-submitting-a-form",
+      "reason": "Matches this settings editor, interactive controls, form flow or shared visual/accessibility foundations."
+    }
+  ],
+  "excluded": [
+    {
+      "checklist": "design-system-table",
+      "reason": "Uses expandable category rows, not a sortable/paged table."
+    },
+    {
+      "checklist": "web-app-data-table",
+      "reason": "No table selection/pagination/reporting task."
+    },
+    {
+      "checklist": "web-app-multi-step-form",
+      "reason": "Single-screen settings editor."
+    },
+    {
+      "checklist": "mobile-settings",
+      "reason": "Responsive web screen, not native mobile settings."
+    }
+  ],
+  "items": [
+    {
+      "id": "design-system-accessibility:01",
+      "title": "Target conformance level",
+      "status": "Unverified",
+      "location": "Contribution guidelines",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "This screen review does not establish a repository-wide conformance target.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-accessibility:02",
+      "title": "Colour contrast standards",
+      "status": "Unverified",
+      "location": "All themes/states",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "No measured contrast matrix was run.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-accessibility:03",
+      "title": "Focus indicator design",
+      "status": "Present",
+      "location": "Accordion summary focus",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-search-keyboard.log",
+      "reason": "Space opened the row with focus retained and a visible 2px focus ring; shared input/button styles also define focus-visible rings."
+    },
+    {
+      "id": "design-system-accessibility:04",
+      "title": "Keyboard navigation patterns",
+      "status": "Unverified",
+      "location": "Full keyboard journey",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-search-keyboard.log",
+      "reason": "Space toggling and focus retention passed; complete Tab order and dialog Escape/focus-return were not tested.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-accessibility:05",
+      "title": "ARIA pattern library",
+      "status": "Partial",
+      "location": "Required editing fields",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx; apps/web/components/ui/label.tsx",
+      "reason": "Fields have associated labels, but required stars are aria-hidden and the Inputs omit required/aria-required.",
+      "severity": "Medium",
+      "impact": "Required status is visible as a red star but unavailable as an input semantic to assistive technology.",
+      "fix": "Set required or aria-required on every required category/subcategory input while retaining associated labels.",
+      "verify": "Inspect the accessibility tree and confirm required state is announced by a screen reader."
+    },
+    {
+      "id": "design-system-accessibility:06",
+      "title": "Screen reader testing",
+      "status": "Unverified",
+      "location": "Assistive technology",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "VoiceOver/Safari and NVDA/Chrome were not run.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-accessibility:07",
+      "title": "Accessibility annotations in design",
+      "status": "Not applicable",
+      "location": "Design files",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "No design-file annotation kit is part of this implementation-only screen review."
+    },
+    {
+      "id": "design-system-accessibility:08",
+      "title": "Accessibility in contribution guidelines",
+      "status": "Unverified",
+      "location": "Contribution process",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Repository-wide accessibility contribution enforcement was not audited.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-accordion:01",
+      "title": "Header",
+      "status": "Present",
+      "location": "Category summaries",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/product-category-browser.log",
+      "reason": "Headers identify each category, code and subcategory count."
+    },
+    {
+      "id": "design-system-accordion:02",
+      "title": "Expand/collapse icon",
+      "status": "Present",
+      "location": "Category summary chevrons",
+      "evidenceType": "screenshot",
+      "evidence": "product-categories-edit.png",
+      "reason": "Collapsed and expanded rows show directional chevrons."
+    },
+    {
+      "id": "design-system-accordion:03",
+      "title": "Content area",
+      "status": "Present",
+      "location": "Expanded category",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/product-category-browser.log",
+      "reason": "Associated category fields and subcategories appear within the expanded row."
+    },
+    {
+      "id": "design-system-accordion:04",
+      "title": "States",
+      "status": "Partial",
+      "location": "Summary interaction states",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Category summaries have a focus ring; Add category summary omits equivalent focus styling and neither summary defines an explicit hover treatment.",
+      "severity": "Low",
+      "impact": "Add category does not share the category rows\u2019 explicit focus treatment; hover gives no additional affordance.",
+      "fix": "Reuse one summary style with focus-visible ring and subtle hover background for all expandable groups.",
+      "verify": "Tab through both summary types and compare focus/hover in light and dark themes."
+    },
+    {
+      "id": "design-system-accordion:05",
+      "title": "Expanding logic",
+      "status": "Present",
+      "location": "Multiple category rows",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Independent native details allow multiple expanded categories; search expands matching rows."
+    },
+    {
+      "id": "design-system-button:01",
+      "title": "Base style",
+      "status": "Present",
+      "location": "Toolbar and row buttons",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Uses shared Button defaults with primary Save, outline secondary actions and ghost archive controls."
+    },
+    {
+      "id": "design-system-button:02",
+      "title": "Shape",
+      "status": "Present",
+      "location": "All buttons",
+      "evidenceType": "source",
+      "evidence": "apps/web/components/ui/button.tsx",
+      "reason": "Shared size, padding, border and radius variants are reused."
+    },
+    {
+      "id": "design-system-button:03",
+      "title": "Variants",
+      "status": "Present",
+      "location": "Save/Edit/archive hierarchy",
+      "evidenceType": "screenshot",
+      "evidence": "product-categories-edit.png",
+      "reason": "Primary Save is visually distinct from secondary Cancel and row actions."
+    },
+    {
+      "id": "design-system-button:04",
+      "title": "Copy",
+      "status": "Present",
+      "location": "Action copy",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Edit, Save changes, Add category and Archive category identify actions; Confirm is contextualized by the dialog title."
+    },
+    {
+      "id": "design-system-button:05",
+      "title": "States",
+      "status": "Unverified",
+      "location": "Hover/focus/disabled combinations",
+      "evidenceType": "source",
+      "evidence": "apps/web/components/ui/button.tsx",
+      "reason": "Shared states are defined and disabled Save was observed, but all hover/focus/pressed combinations were not exercised.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-color-system:01",
+      "title": "Primitive palette",
+      "status": "Not applicable",
+      "location": "Global palette architecture",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Redesigning the primitive ramp system is outside this screen review; existing identity is preserved."
+    },
+    {
+      "id": "design-system-color-system:02",
+      "title": "Semantic color tokens",
+      "status": "Present",
+      "location": "Surface/text/feedback tokens",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx; apps/web/app/globals.css",
+      "reason": "Uses bg-card, text-muted-foreground, border and shared primary tokens rather than raw brand hex values."
+    },
+    {
+      "id": "design-system-color-system:03",
+      "title": "Interactive state colors",
+      "status": "Unverified",
+      "location": "Full interactive colour matrix",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Default dark appearance is observed; no comprehensive state-colour measurement.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-color-system:04",
+      "title": "Feedback colors",
+      "status": "Unverified",
+      "location": "Feedback theme combinations",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-browser.log",
+      "reason": "An error toast was observed; success and both-theme feedback colours were not measured.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-color-system:05",
+      "title": "Contrast ratios (accessibility)",
+      "status": "Unverified",
+      "location": "Contrast matrix",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "No contrast measurements were performed.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-color-system:06",
+      "title": "Dark and light mode definition",
+      "status": "Present",
+      "location": "Theme definitions",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/globals.css",
+      "reason": "Both root/light and dark semantic token sets exist; this is source verification only, not runtime light-theme certification."
+    },
+    {
+      "id": "design-system-color-system:07",
+      "title": "Brand color integration",
+      "status": "Unverified",
+      "location": "Brand accessibility mapping",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/globals.css",
+      "reason": "Brand blue is mapped to primary; its contrast across all surfaces was not measured.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-color-system:08",
+      "title": "Color blindness considerations",
+      "status": "Unverified",
+      "location": "Colour-vision simulation",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Text and icons identify actions, but common colour-vision simulations were not run.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-input-field:01",
+      "title": "Input field",
+      "status": "Present",
+      "location": "Category/subcategory fields",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/product-category-browser.log",
+      "reason": "Text inputs accept edits and retain focus when a code changes."
+    },
+    {
+      "id": "design-system-input-field:02",
+      "title": "Label",
+      "status": "Partial",
+      "location": "Required labels",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx; apps/web/components/ui/label.tsx",
+      "reason": "Visible labels are associated, but required semantics are absent on their Inputs.",
+      "severity": "Medium",
+      "impact": "Required status is visible as a red star but unavailable as an input semantic to assistive technology.",
+      "fix": "Set required or aria-required on every required category/subcategory input while retaining associated labels.",
+      "verify": "Inspect the accessibility tree and confirm required state is announced by a screen reader."
+    },
+    {
+      "id": "design-system-input-field:03",
+      "title": "Placeholder text",
+      "status": "Not applicable",
+      "location": "Editing fields",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Persistent explicit labels identify these short fields; repeating every label as placeholder would add noise. Search has its own purpose placeholder."
+    },
+    {
+      "id": "design-system-input-field:04",
+      "title": "Data format",
+      "status": "Partial",
+      "location": "Code fields",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-browser.log",
+      "reason": "Uppercase/max length are applied, but BAD! can be added and format restrictions are only reported by a toast after Save.",
+      "severity": "Medium",
+      "impact": "Users must infer which code is invalid and may miss an ephemeral toast.",
+      "fix": "Add code-format guidance and associated inline errors with aria-invalid/aria-describedby; validate after blur/submit, expand and focus the first invalid field, and clear errors on correction.",
+      "verify": "Enter BAD! in category and subcategory codes, blur and submit; check local error, focus, retained draft and successful correction."
+    },
+    {
+      "id": "design-system-input-field:05",
+      "title": "Illustration or icon",
+      "status": "Not applicable",
+      "location": "Text field decoration",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Per-input illustration is unnecessary for this compact taxonomy editor; the existing toolbar/search icons provide hierarchy."
+    },
+    {
+      "id": "design-system-input-field:06",
+      "title": "Hint",
+      "status": "Partial",
+      "location": "Code format help",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Stable-code help exists, but allowed letters/digits/hyphen/underscore are not described next to code fields.",
+      "severity": "Medium",
+      "impact": "Users must infer which code is invalid and may miss an ephemeral toast.",
+      "fix": "Add code-format guidance and associated inline errors with aria-invalid/aria-describedby; validate after blur/submit, expand and focus the first invalid field, and clear errors on correction.",
+      "verify": "Enter BAD! in category and subcategory codes, blur and submit; check local error, focus, retained draft and successful correction."
+    },
+    {
+      "id": "design-system-searchbar:01",
+      "title": "Input field",
+      "status": "Present",
+      "location": "Category search",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-search-keyboard.log",
+      "reason": "Search input accepted Coaching and reduced the list to one matching expanded row."
+    },
+    {
+      "id": "design-system-searchbar:02",
+      "title": "Label or placeholder text",
+      "status": "Present",
+      "location": "Category search label",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx",
+      "reason": "Accessible label and placeholder explicitly describe category/subcategory search."
+    },
+    {
+      "id": "design-system-searchbar:03",
+      "title": "Quick links, autocomplete and suggestions",
+      "status": "Not applicable",
+      "location": "Suggestions",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Immediate local filtering of a small settings list needs no history-based suggestion system."
+    },
+    {
+      "id": "design-system-searchbar:04",
+      "title": "Submit search button",
+      "status": "Not applicable",
+      "location": "Submit search button",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Search filters locally while typing; a separate submit action would add an unnecessary step."
+    },
+    {
+      "id": "design-system-searchbar:05",
+      "title": "Previous searches",
+      "status": "Not applicable",
+      "location": "Search history",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "This bounded taxonomy list does not require stored prior searches."
+    },
+    {
+      "id": "design-system-searchbar:06",
+      "title": "Appropriate visibility",
+      "status": "Partial",
+      "location": "Editing state search",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx:51",
+      "reason": "Search is scoped correctly in read mode but disabled throughout Edit, preventing locating another category while editing.",
+      "severity": "Low",
+      "impact": "Long lists cannot be searched while making edits.",
+      "fix": "Keep drafts in parent state keyed by stable row IDs so search can stay enabled without discarding hidden edits.",
+      "verify": "Type an unadded subcategory, filter away/back, and verify draft persistence and safe Save behaviour."
+    },
+    {
+      "id": "design-system-spacing-and-grid:01",
+      "title": "Spacing scale",
+      "status": "Present",
+      "location": "Card/row spacing",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Uses gap-2/3/4 and p-3/4 from the shared spacing scale."
+    },
+    {
+      "id": "design-system-spacing-and-grid:02",
+      "title": "Semantic spacing tokens",
+      "status": "Partial",
+      "location": "Semantic spacing roles",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Card uses shared spacing variables, but row/section gaps use numeric utilities rather than named component/layout roles.",
+      "severity": "Low",
+      "impact": "Future spacing changes require editing repeated row/section utility classes.",
+      "fix": "If this taxonomy editor pattern is reused, extract shared row/section spacing tokens rather than introducing a separate visual scale.",
+      "verify": "Compare all taxonomy editor spacing after changing the shared token."
+    },
+    {
+      "id": "design-system-spacing-and-grid:03",
+      "title": "Column grid",
+      "status": "Present",
+      "location": "Editor field columns",
+      "evidenceType": "screenshot",
+      "evidence": "product-categories-edit.png",
+      "reason": "Code/name/action columns align, with stack layout at narrow widths; a global 12-column grid is unnecessary for this bounded editor."
+    },
+    {
+      "id": "design-system-spacing-and-grid:04",
+      "title": "Breakpoints",
+      "status": "Present",
+      "location": "Responsive breakpoints",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Shared sm breakpoint switches the three-column field row into a vertical stack."
+    },
+    {
+      "id": "design-system-spacing-and-grid:05",
+      "title": "Component vs layout spacing",
+      "status": "Present",
+      "location": "Internal vs layout rhythm",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Row separation uses gap-2; expanded sections use gap-4 and p-4; controls use shared compact sizing."
+    },
+    {
+      "id": "design-system-spacing-and-grid:06",
+      "title": "Density variants",
+      "status": "Not applicable",
+      "location": "Density mode toggle",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "The compact editor plus user-controlled expansion is sufficient; an extra density preference is not required."
+    },
+    {
+      "id": "design-system-spacing-and-grid:07",
+      "title": "Baseline grid alignment",
+      "status": "Present",
+      "location": "Control alignment",
+      "evidenceType": "screenshot",
+      "evidence": "product-categories-edit.png",
+      "reason": "Shared control heights and items-end align category/subcategory code/name/actions."
+    },
+    {
+      "id": "design-system-typography:01",
+      "title": "Type scale",
+      "status": "Present",
+      "location": "Screen text hierarchy",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Shared CardTitle, text-sm and text-xs distinguish title, form labels and metadata."
+    },
+    {
+      "id": "design-system-typography:02",
+      "title": "Semantic text styles",
+      "status": "Partial",
+      "location": "Section heading semantics",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx:47; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx:30; apps/web/components/ui/card.tsx",
+      "reason": "Product categories is a styled div, while Subcategories uses h3 without a corresponding screen-section h2.",
+      "severity": "Medium",
+      "impact": "Heading navigation skips the visible Product categories section title.",
+      "fix": "Render Product categories as h2, preserving CardTitle styling and subordinate h3 sections.",
+      "verify": "Inspect visible heading structure and navigate headings with NVDA/VoiceOver."
+    },
+    {
+      "id": "design-system-typography:03",
+      "title": "Typeface selection and loading",
+      "status": "Present",
+      "location": "Font selection/loading",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/layout.tsx",
+      "reason": "Inter/Geist font variables are loaded with next/font and shared heading/body/mono styles are reused."
+    },
+    {
+      "id": "design-system-typography:04",
+      "title": "Line height per style",
+      "status": "Present",
+      "location": "Line-height styles",
+      "evidenceType": "source",
+      "evidence": "apps/web/components/ui/card.tsx; apps/web/components/ui/input.tsx; apps/web/components/ui/label.tsx",
+      "reason": "Shared component and Tailwind text styles provide title/body/control line heights."
+    },
+    {
+      "id": "design-system-typography:05",
+      "title": "Letter spacing per style",
+      "status": "Not applicable",
+      "location": "Custom tracking",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "No special tracking is needed for these normal form labels; existing type defaults are retained."
+    },
+    {
+      "id": "design-system-typography:06",
+      "title": "Responsive type behaviour",
+      "status": "Present",
+      "location": "Responsive text layout",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/product-category-browser.log",
+      "reason": "The screen fits 1440/768/375px widths through layout stacking and wrapping, without requiring fluid type scaling."
+    },
+    {
+      "id": "design-system-typography:07",
+      "title": "Minimum readable size",
+      "status": "Unverified",
+      "location": "Minimum-size readability",
+      "evidenceType": "screenshot",
+      "evidence": "product-categories-375.png",
+      "reason": "12px metadata is visible in the screenshot; real-device readability was not tested.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "design-system-typography:08",
+      "title": "Accessibility responsiveness",
+      "status": "Unverified",
+      "location": "200% browser zoom",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Responsive viewport resizing is not a substitute for actual browser zoom testing.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "web-app-settings:01",
+      "title": "Structure",
+      "status": "Present",
+      "location": "Settings / Taxonomy navigation",
+      "evidenceType": "screenshot",
+      "evidence": "product-categories-read.png",
+      "reason": "The Product categories screen sits in the Taxonomy group with clear category/subcategory organization."
+    },
+    {
+      "id": "web-app-settings:02",
+      "title": "Account details",
+      "status": "Not applicable",
+      "location": "Profile fields",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Account profile editing is another settings screen, not this taxonomy task."
+    },
+    {
+      "id": "web-app-settings:03",
+      "title": "Security details",
+      "status": "Not applicable",
+      "location": "Security fields",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Password/2FA settings are outside this taxonomy editor."
+    },
+    {
+      "id": "web-app-settings:04",
+      "title": "Notification preferences",
+      "status": "Not applicable",
+      "location": "Notifications",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "Notification preferences are unrelated to product taxonomy."
+    },
+    {
+      "id": "web-app-settings:05",
+      "title": "Billing",
+      "status": "Not applicable",
+      "location": "Billing preferences",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "No payment or plan changes occur in this screen."
+    },
+    {
+      "id": "web-app-settings:06",
+      "title": "Additional preferences (if applicable)",
+      "status": "Not applicable",
+      "location": "Appearance/language preferences",
+      "evidenceType": "none",
+      "evidence": "",
+      "reason": "These preferences belong to separate settings; this screen inherits the current theme."
+    },
+    {
+      "id": "web-app-settings:07",
+      "title": "Danger zone",
+      "status": "Present",
+      "location": "Archive action",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx:33; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx:27",
+      "reason": "Archive controls are separate from identity inputs and open a confirmation explaining that saving applies the change and in-use codes are blocked."
+    },
+    {
+      "id": "flows-showing-input-error:01",
+      "title": "Keep the input in default state",
+      "status": "Present",
+      "location": "Initial empty/edit fields",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/product-category-browser.log",
+      "reason": "Inputs begin without premature error styling; unchanged Save remains disabled."
+    },
+    {
+      "id": "flows-showing-input-error:02",
+      "title": "Allow user to enter information",
+      "status": "Present",
+      "location": "Code entry",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/product-category-browser.log",
+      "reason": "Code entry retains focus and accepts user typing without validation interruption."
+    },
+    {
+      "id": "flows-showing-input-error:03",
+      "title": "Signal error after loss of focus",
+      "status": "Missing",
+      "location": "Invalid code after blur/save",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-browser.log",
+      "reason": "BAD! reached Save and produced only a toast; zero aria-invalid fields and no local corrective message were present.",
+      "severity": "Medium",
+      "impact": "Users must infer which code is invalid and may miss an ephemeral toast.",
+      "fix": "Add code-format guidance and associated inline errors with aria-invalid/aria-describedby; validate after blur/submit, expand and focus the first invalid field, and clear errors on correction.",
+      "verify": "Enter BAD! in category and subcategory codes, blur and submit; check local error, focus, retained draft and successful correction."
+    },
+    {
+      "id": "flows-showing-input-error:04",
+      "title": "Return to default state upon reattempt",
+      "status": "Missing",
+      "location": "Retry invalid code",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "There is no field-level error state to clear/revalidate during correction; errors remain detached in toasts.",
+      "severity": "Medium",
+      "impact": "Users must infer which code is invalid and may miss an ephemeral toast.",
+      "fix": "Add code-format guidance and associated inline errors with aria-invalid/aria-describedby; validate after blur/submit, expand and focus the first invalid field, and clear errors on correction.",
+      "verify": "Enter BAD! in category and subcategory codes, blur and submit; check local error, focus, retained draft and successful correction."
+    },
+    {
+      "id": "flows-submitting-a-form:01",
+      "title": "Show button to submit",
+      "status": "Present",
+      "location": "Save/add actions",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx; apps/web/app/(app)/settings/taxonomy/product-codes/product-category-row.tsx",
+      "reason": "Save is in the standard shared header; new-category/subcategory forms place Add after their fields. Header placement is appropriate for this settings editor."
+    },
+    {
+      "id": "flows-submitting-a-form:02",
+      "title": "Show loading state after submission",
+      "status": "Unverified",
+      "location": "Pending save state",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx:41-48",
+      "reason": "Saving\u2026 and disabled controls are implemented; a delayed successful request was not exercised.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "flows-submitting-a-form:03",
+      "title": "Show success message when it submits",
+      "status": "Unverified",
+      "location": "Successful save",
+      "evidenceType": "source",
+      "evidence": "apps/web/app/(app)/settings/taxonomy/product-codes/product-codes-client.tsx:44",
+      "reason": "Success toast and baseline reset are implemented; this audit did not persist a successful settings mutation.",
+      "verify": "Run the named check against the live screen in its relevant themes/states; record direct evidence before claiming it passes."
+    },
+    {
+      "id": "flows-submitting-a-form:04",
+      "title": "If it doesn't, show an error message",
+      "status": "Present",
+      "location": "Failed save",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-browser.log",
+      "reason": "Invalid code submission produced the server error toast and preserved unsaved changes."
+    },
+    {
+      "id": "flows-submitting-a-form:05",
+      "title": "An error may occur because of the wrong information",
+      "status": "Partial",
+      "location": "Invalid field feedback",
+      "evidenceType": "browser",
+      "evidence": "docs/operations/design-audits/2026-11-17-product-categories/category-guide-browser.log",
+      "reason": "The error text identifies the format restriction, but is not attached to the affected field and focus is not moved to it.",
+      "severity": "Medium",
+      "impact": "Users must infer which code is invalid and may miss an ephemeral toast.",
+      "fix": "Add code-format guidance and associated inline errors with aria-invalid/aria-describedby; validate after blur/submit, expand and focus the first invalid field, and clear errors on correction.",
+      "verify": "Enter BAD! in category and subcategory codes, blur and submit; check local error, focus, retained draft and successful correction."
+    }
+  ],
+  "coverage": {
+    "expected": 69,
+    "reported": 69,
+    "remaining": [],
+    "complete": true,
+    "verificationComplete": false,
+    "totals": {
+      "Present": 29,
+      "Partial": 9,
+      "Missing": 2,
+      "Not applicable": 14,
+      "Unverified": 15
+    }
+  },
+  "limitations": [
+    "No VoiceOver/Safari or NVDA/Chrome test.",
+    "No measured contrast, colour-vision simulation, actual 200% browser zoom or runtime light-theme pass.",
+    "No delayed save or successful persisted save in this audit; invalid server submission was exercised and cancelled.",
+    "The first browser probe ran too early for reliable search/keyboard evidence; the later search-keyboard log supersedes those two observations.",
+    "Review covers 11 selected checklists, not all 138 or the whole CRM."
+  ]
+}

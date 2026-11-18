@@ -38,7 +38,7 @@ export default async function ForecastPage() {
         </div>
         <p className="text-xs text-muted-foreground">
           Report — derived, read-only. Figures are computed from
-          forecast-eligible pipelines and their primary quotation; nothing
+          own Funnel estimates (excl. tax) and inbound allocations (quoted basis, falling back to estimate); nothing
           here is editable. Stages included in the forecast are configured in
           Settings → Funnel Stages.
         </p>

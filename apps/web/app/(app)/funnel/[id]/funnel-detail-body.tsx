@@ -1,8 +1,11 @@
 "use client"
 
+import { FunnelProjectCodeEditor } from "@/components/funnel-project-code-editor"
 import { ProjectCodeLink } from "@/components/project-code-link"
 import * as React from "react"
 import { RecordHeaderActions } from "@/components/record-header-actions"
+import { funnelRecordTabs } from "@/lib/crm-record-tabs"
+import { useRecordTab } from "@/components/use-record-tab"
 import { useRecordEditor } from "@/components/use-record-editor"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -202,6 +205,7 @@ export type FunnelDetailData = {
   /** Gates the milestones panel's add/edit/reorder affordances. */
   milestoneValueCeiling: string | null
   milestoneEligible: boolean
+  canViewMilestones?: boolean
   canManageMilestones: boolean
 }
 
@@ -324,7 +328,8 @@ export function FunnelDetailBody(props: FunnelDetailData) {
     saveField({ projectNatures: projectNatureCodes.includes(code) ? [] : [code] })
   }
 
-  const [tab, setTab] = React.useState("activity")
+  const availableTabs = funnelRecordTabs({ milestoneVisible: props.canViewMilestones ?? true, projectsEnabled, financeEnabled, contractEnabled: SHOW_CONTRACT })
+  const [tab, setTab] = useRecordTab<string>("activity", availableTabs)
   const revalidate = `/funnel/${funnelId}`
 
   // Recognized Amount = deal value × Recognized % (the tenant's cut). Once a
@@ -357,7 +362,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
   const marginRevenue =
     isIntercompany && parties.length > 0 ? Number(recognizedAmount) : costRevenue
   const marginRevenueLabel =
-    isIntercompany && parties.length > 0 ? "Recognized revenue" : "Quoted revenue"
+    isIntercompany && parties.length > 0 ? "Our allocated deal share" : "Deal basis (excl. tax)"
 
   const quoteColumns = React.useMemo<ColumnDef<(typeof quotations)[number]>[]>(
     () => [
@@ -646,7 +651,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
           canEdit ? (
             <InlineValue
               value={container?.powerSponsorBudgetLimit ?? ""}
-              display={formatMoney(container?.powerSponsorBudgetLimit, currency)}
+              display={(container?.powerSponsorBudgetLimit == null ? "Not set" : formatMoney(container.powerSponsorBudgetLimit, currency))}
               formatDraft={(next) => formatMoney(next || "0", currency)}
               type="number"
               title="Click to edit power sponsor budget limit"
@@ -655,7 +660,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
               }
             />
           ) : (
-            formatMoney(container?.powerSponsorBudgetLimit, currency)
+            (container?.powerSponsorBudgetLimit == null ? "Not set" : formatMoney(container.powerSponsorBudgetLimit, currency))
           )
         )
       case "ownerContact":
@@ -682,14 +687,14 @@ export function FunnelDetailBody(props: FunnelDetailData) {
           canEdit ? (
             <InlineValue
               value={container?.ownerBudgetLimit ?? ""}
-              display={formatMoney(container?.ownerBudgetLimit, currency)}
+              display={(container?.ownerBudgetLimit == null ? "Not set" : formatMoney(container.ownerBudgetLimit, currency))}
               formatDraft={(next) => formatMoney(next || "0", currency)}
               type="number"
               title="Click to edit opportunity owner budget limit"
               onSave={(next) => saveContainerField({ ownerBudgetLimit: next || null })}
             />
           ) : (
-            formatMoney(container?.ownerBudgetLimit, currency)
+            (container?.ownerBudgetLimit == null ? "Not set" : formatMoney(container.ownerBudgetLimit, currency))
           )
         )
       case "oppEstimatedBudget":
@@ -697,14 +702,14 @@ export function FunnelDetailBody(props: FunnelDetailData) {
           canEdit ? (
             <InlineValue
               value={container?.estimatedBudget ?? ""}
-              display={formatMoney(container?.estimatedBudget, currency)}
+              display={(container?.estimatedBudget == null ? "Not set" : formatMoney(container.estimatedBudget, currency))}
               formatDraft={(next) => formatMoney(next || "0", currency)}
               type="number"
               title="Click to edit project budget"
               onSave={(next) => saveContainerField({ estimatedBudget: next || null })}
             />
           ) : (
-            formatMoney(container?.estimatedBudget, currency)
+            (container?.estimatedBudget == null ? "Not set" : formatMoney(container.estimatedBudget, currency))
           )
         )
       case "oppEstimatedCloseDate":
@@ -763,6 +768,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
           ) : formatDate(negotiationDate)
         )
       case "expectedInvoice":
+        if (milestones.length) return <FieldRow label="Invoice plan" inline><button type="button" className="link text-left" onClick={()=>setTab("milestones")}>{milestones.length} payment milestones — view invoice periods</button></FieldRow>
         return (
           <>
             <FieldRow label="Expected Invoice Month" inline>
@@ -870,7 +876,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
           <CardContent key={editor.session} onChangeCapture={editor.markDirty} className="grid gap-3 text-sm">
             {/* Salesforce "Opportunity Information" section (SPEC §4). */}
             <h3 className="text-sm font-semibold">Opportunity Information</h3>
-            <FieldRow label="Account">
+            <FieldRow label="End customer">
               {canEdit ? (
                 <InlineCombobox
                   value={accountId}
@@ -892,7 +898,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 "—"
               )}
             </FieldRow>
-            <FieldRow label="Opportunity">
+            <FieldRow label="Parent Opportunity">
               {container ? (
                 <Link href={`/opportunities/${container.id}`} className="font-medium link">
                   {container.name}
@@ -901,7 +907,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 "—"
               )}
             </FieldRow>
-            <FieldRow label="Account owner">
+            <FieldRow label="Salesperson / Funnel owner">
               {ownerName ?? "—"}
             </FieldRow>
             <FieldRow label="Contact">
@@ -966,9 +972,9 @@ export function FunnelDetailBody(props: FunnelDetailData) {
 
             {/* Salesforce "Funnel Info" section (SPEC §4). */}
             <h3 className="text-sm font-semibold">Funnel Info</h3>
-            <FieldRow label="Project code"><ProjectCodeLink code={props.projectCode || props.crmProjectCode} /></FieldRow>
+            <FieldRow label="Project code">{props.canEdit && !editor.saving ? <FunnelProjectCodeEditor funnelId={funnelId} code={props.projectCode || props.crmProjectCode}/> : <ProjectCodeLink code={props.projectCode || props.crmProjectCode} />}</FieldRow>
             {props.crossDealProjectCode && props.crossDealProjectCode !== (props.projectCode || props.crmProjectCode) ? <FieldRow label="Cross-deal reference"><ProjectCodeLink code={props.crossDealProjectCode} /></FieldRow> : null}
-            <FieldRow label="Funnel Name">
+            <FieldRow label="Funnel / deal name">
               {canEdit ? (
                 <InlineValue
                   value={name}
@@ -984,7 +990,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 <span className="font-medium">{name}</span>
               )}
             </FieldRow>
-            <FieldRow label="Funnel">{funnelName ?? "—"}</FieldRow>
+            <FieldRow label="Pipeline">{funnelName ?? "—"}</FieldRow>
             <FieldRow label="Stage">
               <StageBadge
                 name={stageName}
@@ -1013,7 +1019,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
             </FieldRow>
 
             {/* Value breakdown: estimated (forecast) vs quoted vs recognized. */}
-            <FieldRow label="Estimated funnel amount">
+            <FieldRow label="Estimated deal value (excl. tax)">
               {canEdit ? (
                 <InlineValue
                   value={estimatedAmount ?? ""}
@@ -1030,13 +1036,13 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 </span>
               )}
             </FieldRow>
-            <FieldRow label="Quoted amount">
+            <FieldRow label={primaryQuotationId ? "Primary quote net (excl. tax)" : "Stored deal value (excl. tax)"}>
               {quotedAmount ? (
                 <span className="tabular-nums">
                   {formatMoney(quotedAmount, currency)}
                   {quoteNumber ? (
                     <span className="ml-1 text-xs text-muted-foreground">
-                      from {quoteNumber}
+                      <Link href={`/quotations/${primaryQuotationId}`} className="link">from {quoteNumber}</Link>
                     </span>
                   ) : null}
                 </span>
@@ -1045,7 +1051,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
               )}
             </FieldRow>
             {financeEnabled ? (
-              <FieldRow label="Recognized">
+              <FieldRow label="Our allocated share (excl. tax)">
                 {canEdit && parties.length === 0 ? (
                   // Manual % override — recomputed from party shares (and thus
                   // locked here) once handling partners exist.
@@ -1060,12 +1066,12 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                           </span>
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">Set recognized %</span>
+                        <span className="text-muted-foreground">Set allocation %</span>
                       )
                     }
                     formatDraft={(v) => (v ? `${Number(v)}%` : "—")}
                     type="number"
-                    title="Click to edit recognized %"
+                    title="Click to edit allocation %"
                     onSave={(next) => saveField({ recognizedPercent: next || null })}
                   />
                 ) : recognizedPercent ? (
@@ -1238,8 +1244,8 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 formatDate(negotiationDate)
               )}
             </FieldRow>
-            <FieldRow label="Expected Invoice">
-              <span className="inline-flex flex-wrap items-center gap-2">
+            <FieldRow label={milestones.length ? "Invoice plan" : "Expected Invoice"}>
+              {milestones.length ? <button type="button" className="link text-left" onClick={()=>setTab("milestones")}>{milestones.length} payment milestones — view periods</button> : <span className="inline-flex flex-wrap items-center gap-2">
                 {canEdit ? (
                   <>
                     <InlineCombobox
@@ -1270,7 +1276,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                       : "—"}
                   </span>
                 )}
-              </span>
+              </span>}
             </FieldRow>
 
             {customFieldDefs.length > 0 ? (
@@ -1311,7 +1317,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
               : []),
             { kind: "quotation", label: "Quotations", count: quotations.length, onSelect: () => setTab("quotations") },
             { kind: "product", label: "Products", count: products.length, onSelect: () => setTab("products") },
-            ...(props.milestoneEligible ? [{ kind: "milestone" as const, label: "Payment Milestones", count: milestones.length, onSelect: () => setTab("milestones") }] : []),
+            ...(availableTabs.includes("milestones") ? [{ kind: "milestone" as const, label: "Payment Milestones", count: milestones.length, onSelect: () => setTab("milestones") }] : []),
             ...(projectsEnabled
               ? [{ kind: "project" as const, label: "Projects", count: projects.length, onSelect: () => setTab("projects") }]
               : []),
@@ -1337,8 +1343,9 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 setViewStage({ sourceStageId: currentStageId, stageId })
               }
             />
-            <p className="text-sm font-semibold">Sales Stage: {selectedStage?.name ?? stageName}</p>
-            <Separator />
+            <details open={editor.editing || viewStageId !== currentStageId} className="group border-t pt-3">
+            <summary className="cursor-pointer rounded-sm text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">Stage requirements · {selectedStage?.name ?? stageName} <span className="ml-1 font-normal text-muted-foreground">({stageRequirements.filter(req=>req.ok).length}/{stageRequirements.length} complete)</span></summary>
+            <div className="mt-4 grid gap-3">
             {stageRequirements.length > 0 ? (
               <div className="grid gap-3">
                 {stageRequirements.map((requirement) => (
@@ -1352,10 +1359,11 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 No fields configured for this stage.
               </p>
             )}
+            </div></details>
           </CardContent>
         </Card>
 
-        <TabsCard value={tab === "milestones" && !props.milestoneEligible ? "activity" : tab} onValueChange={setTab}>
+        <TabsCard value={tab} onValueChange={setTab}>
               <TabsList>
 
                 <CountTab value="activity">Activity</CountTab>
@@ -1365,20 +1373,20 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 <CountTab value="products" count={products.length}>
                   Products
                 </CountTab>
-                {props.milestoneEligible ? (
+                {availableTabs.includes("milestones") ? (
                   <CountTab value="milestones" count={milestones.length}>Payment Milestones</CountTab>
                 ) : null}
-                {projectsEnabled ? (
+                {availableTabs.includes("projects") ? (
                   <CountTab value="projects" count={projects.length}>
                     Projects
                   </CountTab>
                 ) : null}
-                {showCostMargin ? (
+                {availableTabs.includes("costs") ? (
                   <CountTab value="costs" count={costs.length}>
                     Costs &amp; margin
                   </CountTab>
                 ) : null}
-                {SHOW_CONTRACT ? (
+                {availableTabs.includes("contract") ? (
                   <CountTab value="contract" count={contractYears.length}>
                     Contract
                   </CountTab>
@@ -1435,13 +1443,16 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 />
               </TabsContent>
 
-              {props.milestoneEligible ? <TabsContent value="milestones" className="mt-4">
+              {availableTabs.includes("milestones") ? <TabsContent value="milestones" className="mt-4">
+                {primaryQuotationId && quoteNumber ? <p className="mb-3 text-sm text-muted-foreground">Primary quotation: <Link className="link" href={`/quotations/${primaryQuotationId}?tab=milestones`}>{quoteNumber} — view linked items and payment plan</Link></p> : <p className="mb-3 text-sm text-muted-foreground">Select a primary quotation in <button type="button" className="link" onClick={()=>setTab("quotations")}>Quotations</button> to prepare payment milestones.</p>}
                 <MilestonesPanel
                   milestones={milestones as MilestoneItemBase[]}
+                  planHref={primaryQuotationId ? `/quotations/${primaryQuotationId}?tab=milestones` : undefined}
                   valueCeiling={milestoneValueCeiling}
-                  valueCeilingLabel="net funnel value, ex-tax"
+                  valueCeilingLabel={primaryQuotationId ? "Quotation net" : "Funnel estimate"}
                   currency={currency}
-                  canManage={canManageMilestones}
+                  canEditPlan={canManageMilestones}
+                  canManage={canManageMilestones && props.milestoneEligible}
                   onCreate={(values) =>
                     createFunnelMilestone({ funnelId, ...values })
                   }
@@ -1451,7 +1462,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 />
               </TabsContent> : null}
 
-              {projectsEnabled ? (
+              {availableTabs.includes("projects") ? (
                 <TabsContent value="projects" className="mt-4">
                   <DataTable
                     columns={projectColumns}
@@ -1481,7 +1492,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 </TabsContent>
               ) : null}
 
-              {showCostMargin ? (
+              {availableTabs.includes("costs") ? (
                 <TabsContent value="costs" className="mt-4">
                   <CostsPanel
                     funnelId={funnelId}
@@ -1495,7 +1506,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
                 </TabsContent>
               ) : null}
 
-              {SHOW_CONTRACT ? (
+              {availableTabs.includes("contract") ? (
                 <TabsContent value="contract" className="mt-4">
                   <ContractPanel
                     funnelId={funnelId}

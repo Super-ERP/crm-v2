@@ -11,7 +11,7 @@ architecture directory.
 | --- | --- |
 | **[Documentation](https://github.com/Q-App/docs)** | Central platform directory |
 | [Production CRM](https://app.quandatics.com) | Live application |
-| [Latest staging deployment](https://github.com/Q-App/crm-v2/actions/workflows/deploy-staging.yml) | Preview URL in the latest run summary |
+| [Release smoke tests](https://github.com/Super-ERP/crm-v2/actions/workflows/deploy-staging.yml) | Signed production-bundle verification and promotion |
 | [Module directory](https://github.com/Q-App/docs/tree/main/pages/product/module-directory.mdx) | Every capability and its code map |
 | [External developer guide](https://github.com/Q-App/docs/tree/main/pages/external-developers/overview.mdx) | API integration and public contribution path |
 | [Add a module](https://github.com/Q-App/docs/tree/main/pages/extensibility/adding-a-module.mdx) | Placement and integration checklist |
@@ -120,6 +120,8 @@ This adds four more logins under the Demo Entity (all password `Password123!`) a
 The sample seed is idempotent and **dev-only** — don't run it on an internet-exposed deployment (it mints well-known default credentials). It is intentionally not part of the production Docker `migrate` step.
 
 ## Signed client release images
+
+Release flow and stage-specific recovery: [CI/CD runbook](docs/operations/2026-11-18-ci-release-simplification.md).
 
 Client releases come from annotated strict SemVer tags such as `v1.2.3`.
 `.github/workflows/release-images.yml` builds Linux AMD64 images for

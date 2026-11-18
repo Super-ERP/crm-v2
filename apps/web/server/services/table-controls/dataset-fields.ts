@@ -10,6 +10,7 @@ const roots: Record<string, string> = {
   'sales-orders':'sales_orders', 'finance-sale':'finance_docs', 'finance-purchase':'finance_docs',
 }
 const direct: Record<string,string> = {
+  expectedInvoiceMonth:'expected_invoice_month', expectedInvoiceYear:'expected_invoice_year',
   country:'country', convertedAt:'converted_at', createdAt:'created_at', updatedAt:'updated_at', website:'website', phone:'phone',
   registrationNumber:'registration_number', isCustomer:'is_customer', budgetingDate:'budgeting_date', mobile:'mobile',
   currency:'currency', quoteDate:'quote_date', startDate:'start_date', description:'description', dueDate:'due_date',

@@ -106,7 +106,7 @@ export function OpportunityAnalysis({
           {canEdit ? (
             <Input aria-label="power sponsor budget limit" type="number" value={o.powerSponsorBudgetLimit ?? ""} onChange={event => void onSave({ powerSponsorBudgetLimit: event.target.value || null })} />
           ) : (
-            formatMoney(o.powerSponsorBudgetLimit, o.currency)
+            o.powerSponsorBudgetLimit === null ? "Not set" : formatMoney(o.powerSponsorBudgetLimit, o.currency)
           )}
         </AnalysisRow>
       </AnalysisSection>
@@ -146,7 +146,7 @@ export function OpportunityAnalysis({
           {canEdit ? (
             <Input aria-label="estimated budget" type="number" value={o.estimatedBudget ?? ""} onChange={event => void onSave({ estimatedBudget: event.target.value || null })} />
           ) : (
-            formatMoney(o.estimatedBudget, o.currency)
+            o.estimatedBudget === null ? "Not set" : formatMoney(o.estimatedBudget, o.currency)
           )}
         </AnalysisRow>
         <AnalysisRow label="Estimated Close Date">

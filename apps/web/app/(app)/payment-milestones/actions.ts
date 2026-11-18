@@ -1,5 +1,6 @@
 "use server"
 
+import { BILLING_MONTHS, validateBillingSchedule } from "@/lib/billing-schedule"
 import { lockRecordVoidGraph } from "@/server/services/record-void-lock"
 import {relatedQueryRegistry,relationshipSortColumns} from "@/server/services/table-controls/relationships"
 
@@ -11,9 +12,10 @@ import { recordFilterRelated, recordSort } from "@/server/services/table-control
 import { milestoneReadScope } from "@/server/services/milestone-access"
 import { milestoneStatusForFunnel, milestoneContextForFunnel } from "@/server/services/milestone-status"
 
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm"
 import { normalizeRecordListQuery } from "@/lib/record-list-query"
 import type { ServerTableQuery } from "@/lib/table-pagination"
+import { revalidateMilestoneViews } from "@/lib/revalidate-milestone-views"
 import { revalidatePath } from "next/cache"
 import { withTenant, type Tx } from "@/lib/actions"
 import { PERMISSIONS } from "@/lib/permissions"
@@ -27,6 +29,7 @@ import {
   opportunities,
 } from "@/db/schema"
 import { runAction, type ActionResult } from "@/lib/action-result"
+import { validateMilestoneDetails,isForecastOnlyMilestoneUpdate } from "@/lib/billing-schedule"
 import {
   visibleMemberIds,
   ownsOrManages,
@@ -41,7 +44,7 @@ import {
   type PaymentMilestoneStatus,
 } from "@/lib/payment-milestone-lifecycle"
 
-export type PaymentMilestoneRow = typeof paymentMilestones.$inferSelect
+export type PaymentMilestoneRow = typeof paymentMilestones.$inferSelect & {quoteNumber?:string|null;quotationItemDescription?:string|null}
 
 /** A milestone row for the list, joined to its funnel + quotation for display. */
 export type PaymentMilestoneListItem = PaymentMilestoneRow & {
@@ -52,9 +55,13 @@ export type PaymentMilestoneListItem = PaymentMilestoneRow & {
 
 /** A single milestone plus its resolved funnel name + quote number. */
 export type PaymentMilestoneDetail = PaymentMilestoneRow & {
+  hasFinanceHistory?: boolean
+  currency: string | null
   funnelName: string | null
   quoteNumber: string | null
 }
+
+const milestoneCurrency = sql<string|null>`coalesce(${quotations.currency},${funnels.currency},(select projects.currency from projects where projects.id=${paymentMilestones.projectId} and projects.tenant_id=${paymentMilestones.tenantId}))`
 
 /** Resolve product metadata from the quotation line that owns the milestone.
  * A legacy/default full-payment milestone has no line-item foreign key, so a
@@ -63,11 +70,13 @@ export type PaymentMilestoneDetail = PaymentMilestoneRow & {
 async function resolveMilestoneProduct(
   tx: Tx,
   quotationId: string | null,
-  milestoneTitle: string
+  milestoneTitle: string,
+  quotationLineItemId?: string | null
 ): Promise<{ productCategory: string | null; productSubcategory: string | null }> {
   if (!quotationId) return { productCategory: null, productSubcategory: null }
   const lines = await tx
     .select({
+      id: quotationLineItems.id,
       description: quotationLineItems.description,
       productName: products.name,
       productCategory: products.productCode,
@@ -78,7 +87,7 @@ async function resolveMilestoneProduct(
     .where(eq(quotationLineItems.quotationId, quotationId))
     .orderBy(asc(quotationLineItems.sortOrder))
   const line =
-    lines.find(
+    lines.find(candidate => candidate.id === quotationLineItemId) ?? lines.find(
       (candidate) =>
         candidate.description === milestoneTitle ||
         candidate.productName === milestoneTitle
@@ -99,9 +108,8 @@ export async function listPaymentMilestonePage(input: ServerTableQuery): Promise
       ["title", "amount", "quoteNumber", "status", "funnelName"], ["status"],getTableFields("payment-milestones"))
     const search = query.search ? `%${query.search.replace(/[\\%_]/g, "\\$&")}%` : null
     const statuses = query.selections.status?.filter((value): value is (typeof paymentMilestoneStatus.enumValues)[number] => paymentMilestoneStatus.enumValues.includes(value as (typeof paymentMilestoneStatus.enumValues)[number]))
-    const milestoneCurrency=sql<string|null>`coalesce(${quotations.currency},${funnels.currency},(select projects.currency from projects where projects.id=${paymentMilestones.projectId} and projects.tenant_id=${paymentMilestones.tenantId}))`
     const relatedFields=await relatedQueryRegistry(tx,ctx,"payment-milestones",query.filterTree,query.sorting)
-  const tableFieldColumns = {title:paymentMilestones.title,amount:paymentMilestones.amount,quoteNumber:quotations.quoteNumber,status:paymentMilestones.status,funnelName:funnels.name}
+  const tableFieldColumns = {title:paymentMilestones.title,amount:paymentMilestones.amount,quoteNumber:quotations.quoteNumber,expectedInvoiceMonth:paymentMilestones.expectedInvoiceMonth,expectedInvoiceYear:paymentMilestones.expectedInvoiceYear,status:paymentMilestones.status,funnelName:funnels.name}
     const where = and(recordFilterRelated("payment-milestones",query.filterTree,tableFieldColumns,relatedFields,{currency:milestoneCurrency}),
       await milestoneReadScope(tx, ctx),
       search ? or(ilike(paymentMilestones.title, search), ilike(funnels.name, search), ilike(quotations.quoteNumber, search)) : undefined,
@@ -143,10 +151,15 @@ export async function listFunnelMilestones(
   funnelId: string
 ): Promise<PaymentMilestoneRow[]> {
   return withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, async (tx, ctx) => {
+    const [funnel] = await tx.select().from(funnels).where(and(eq(funnels.id, funnelId), isNull(funnels.deletedAt)))
+    const visible = await visibleMemberIds(tx, ctx)
+    if (!funnel || (!canManageAllRecords(ctx) && !ownsOrManages(visible, funnel.ownerMemberId))) return []
     return tx
-      .select()
+      .select({...getTableColumns(paymentMilestones),quoteNumber:ctx.can(PERMISSIONS.QUOTATION_VIEW)?quotations.quoteNumber:sql<string|null>`null`,quotationItemDescription:ctx.can(PERMISSIONS.QUOTATION_VIEW)?quotationLineItems.description:sql<string|null>`null`})
       .from(paymentMilestones)
-      .where(and(isNull(paymentMilestones.deletedAt), and(eq(paymentMilestones.funnelId, funnelId), await milestoneReadScope(tx, ctx, false))))
+      .leftJoin(quotations,and(eq(quotations.id,paymentMilestones.quotationId),eq(quotations.funnelId,funnelId),eq(quotations.tenantId,ctx.tenantId),isNull(quotations.deletedAt)))
+      .leftJoin(quotationLineItems,and(eq(quotationLineItems.id,paymentMilestones.quotationLineItemId),eq(quotationLineItems.quotationId,quotations.id),eq(quotationLineItems.tenantId,ctx.tenantId)))
+      .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.funnelId, funnelId)))
       .orderBy(
         asc(paymentMilestones.sortOrder),
         asc(paymentMilestones.createdAt)
@@ -162,6 +175,8 @@ export async function getPaymentMilestone(
     const [row] = await tx
       .select({
         m: paymentMilestones,
+        hasFinanceHistory: sql<boolean>`exists(select 1 from finance_docs d where d.milestone_id=${paymentMilestones.id} and d.tenant_id=${ctx.tenantId})`,
+        currency: milestoneCurrency,
         funnelName: funnels.name,
         quoteNumber: quotations.quoteNumber,
       })
@@ -171,9 +186,11 @@ export async function getPaymentMilestone(
       .where(and(isNull(paymentMilestones.deletedAt), and(eq(paymentMilestones.id, id), await milestoneReadScope(tx, ctx))))
       .limit(1)
     if (!row) return null
-    const product = await resolveMilestoneProduct(tx, row.m.quotationId, row.m.title)
+    const product = await resolveMilestoneProduct(tx, row.m.quotationId, row.m.title, row.m.quotationLineItemId)
     return {
       ...row.m,
+      hasFinanceHistory: row.hasFinanceHistory,
+      currency: row.currency,
       funnelName: row.funnelName,
       quoteNumber: row.quoteNumber,
       ...product,
@@ -192,6 +209,9 @@ export type FunnelMilestoneCreateInput = {
   description?: string | null
   amount?: string | null
   dueDate?: string | null
+  expectedInvoiceMonth?: string | null
+  expectedInvoiceYear?: number | null
+  quotationLineItemId?: string | null
 }
 
 export type FunnelMilestoneUpdateInput = {
@@ -199,6 +219,9 @@ export type FunnelMilestoneUpdateInput = {
   description?: string | null
   amount?: string | null
   dueDate?: string | null
+  expectedInvoiceMonth?: string | null
+  expectedInvoiceYear?: number | null
+  quotationLineItemId?: string | null
   status?: string
 }
 
@@ -265,6 +288,10 @@ export async function createFunnelMilestone(
           throw new Error("FORBIDDEN: not permitted on this Funnel")
         }
 
+        if (funnel.primaryQuotationId) {
+          const [item]=await tx.select({id:quotationLineItems.id}).from(quotationLineItems).where(eq(quotationLineItems.quotationId,funnel.primaryQuotationId)).limit(1)
+          if(item) throw new Error("Create milestones from the quotation payment plan so every row has a quotation item.")
+        }
         const title = input.title.trim()
         if (!title) throw new Error("Title is required")
 
@@ -297,6 +324,7 @@ export async function createFunnelMilestone(
           .from(paymentMilestones)
           .where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.funnelId, input.funnelId)))
 
+        validateBillingSchedule([{ title, amount, expectedInvoiceMonth: input.expectedInvoiceMonth ?? "", expectedInvoiceYear: input.expectedInvoiceYear ?? 0 }])
         const status = milestoneContext.status
         const [row] = await tx
           .insert(paymentMilestones)
@@ -310,6 +338,8 @@ export async function createFunnelMilestone(
             description: input.description || null,
             amount,
             dueDate: input.dueDate || null,
+            expectedInvoiceMonth: input.expectedInvoiceMonth || null,
+            expectedInvoiceYear: input.expectedInvoiceYear || null,
             sortOrder: Number(maxSort) + 1,
           })
           .returning({ id: paymentMilestones.id })
@@ -331,7 +361,7 @@ export async function createFunnelMilestone(
       }
     )
     revalidatePath(`/funnel/${input.funnelId}`)
-    revalidatePath("/payment-milestones")
+    revalidateMilestoneViews()
     return created
   })
 }
@@ -341,6 +371,7 @@ export async function updateFunnelMilestone(
   input: FunnelMilestoneUpdateInput
 ): Promise<ActionResult<void>> {
   return runAction(async () => {
+    validateMilestoneDetails(input)
     const funnelId = await withTenant(
       PERMISSIONS.PAYMENT_MILESTONE_MANAGE,
       async (tx, ctx) => {
@@ -370,11 +401,25 @@ export async function updateFunnelMilestone(
           throw new Error("FORBIDDEN: not permitted on this Funnel")
         }
 
-        const { value: netValue } = existing.status === "invoiced"
-          ? await opportunityNetValue(tx, existing.funnelId)
-          : await milestoneContextForFunnel(tx, existing.funnelId)
+        if (input.amount !== undefined && Number(input.amount) !== Number(existing.amount) && existing.quotationId) {
+          const [item]=await tx.select({id:quotationLineItems.id}).from(quotationLineItems).where(eq(quotationLineItems.quotationId,existing.quotationId)).limit(1)
+          if(item) throw new Error("Adjust amounts in the quotation payment plan so each item's instalments reconcile.")
+        }
+        // Existing planning rows can be edited before 4a, just like the quotation plan.
+        // Moving into invoiced still requires the accepted-quotation/stage gate.
+        const { value: netValue } = input.status === "invoiced" && existing.status !== "invoiced"
+          ? await milestoneContextForFunnel(tx, existing.funnelId)
+          : await opportunityNetValue(tx, existing.funnelId)
         const funnelValue = Number(netValue) || 0
 
+        if (input.amount !== undefined && (!input.amount || !/^\d+(\.\d{1,2})?$/.test(input.amount) || Number(input.amount) <= 0)) throw new Error("Enter a positive amount in whole cents")
+        if (input.expectedInvoiceMonth !== undefined && (!input.expectedInvoiceMonth || !(BILLING_MONTHS as readonly string[]).includes(input.expectedInvoiceMonth))) throw new Error("Invalid expected invoice month")
+        if (input.expectedInvoiceYear !== undefined && (input.expectedInvoiceYear === null || !Number.isInteger(input.expectedInvoiceYear) || input.expectedInvoiceYear < 1900 || input.expectedInvoiceYear > 9999)) throw new Error("Invalid expected invoice year")
+        const rewriting = Object.keys(input).some(key => key !== "status")
+        if (rewriting) {
+          const linked = await tx.execute(sql`select 1 from finance_docs where milestone_id = ${id} and tenant_id = ${ctx.tenantId} limit 1`)
+          if ((existing.status === "invoiced" || linked.length) && !isForecastOnlyMilestoneUpdate(input)) throw new Error("Milestones with finance history only allow expected invoice month/year corrections.")
+        }
         // Milestones are split by exact amount; an untouched amount is preserved.
         const nextAmount =
           input.amount === undefined
@@ -430,6 +475,8 @@ export async function updateFunnelMilestone(
               input.dueDate === undefined
                 ? existing.dueDate
                 : input.dueDate || null,
+            expectedInvoiceMonth: input.expectedInvoiceMonth === undefined ? existing.expectedInvoiceMonth : input.expectedInvoiceMonth,
+            expectedInvoiceYear: input.expectedInvoiceYear === undefined ? existing.expectedInvoiceYear : input.expectedInvoiceYear,
             status: nextStatus,
             updatedAt: new Date(),
           })
@@ -457,7 +504,7 @@ export async function updateFunnelMilestone(
       }
     )
     revalidatePath(`/funnel/${funnelId}`)
-    revalidatePath("/payment-milestones")
+    revalidateMilestoneViews()
   })
 }
 
@@ -512,7 +559,7 @@ export async function reorderFunnelMilestones(
       })
     })
     revalidatePath(`/funnel/${funnelId}`)
-    revalidatePath("/payment-milestones")
+    revalidateMilestoneViews()
   })
 }
 
@@ -521,6 +568,9 @@ export type SplitMilestonePart = {
   description?: string | null
   amount: string
   dueDate?: string | null
+  expectedInvoiceMonth?: string | null
+  expectedInvoiceYear?: number | null
+  quotationLineItemId?: string | null
 }
 
 /**
@@ -540,6 +590,7 @@ export async function splitFunnelMilestones(
       if (parts.length < 2) {
         throw new Error("Split into at least 2 parts.")
       }
+      validateBillingSchedule(parts.map(p => ({ ...p, expectedInvoiceMonth: p.expectedInvoiceMonth ?? "", expectedInvoiceYear: p.expectedInvoiceYear ?? 0 })))
       for (const p of parts) {
         if (!p.title.trim()) throw new Error("Every part needs a title.")
       }
@@ -580,19 +631,29 @@ export async function splitFunnelMilestones(
         where m.tenant_id = ${ctx.tenantId} and m.funnel_id = ${funnelId}
         and m.deleted_at is null limit 1`)
       if (linkedFinance.length) throw new Error("Milestones with finance history cannot be split. Use Void to request reviewed cancellation")
+      const sources = await tx.select().from(paymentMilestones).where(and(eq(paymentMilestones.funnelId, funnelId), isNull(paymentMilestones.deletedAt)))
+      if (sources.length > 1) throw new Error("Split an individual milestone to preserve its quotation and product source.")
+      if (!sources.length && milestoneContext.quotationId) {
+        const [item]=await tx.select({id:quotationLineItems.id}).from(quotationLineItems).where(eq(quotationLineItems.quotationId,milestoneContext.quotationId)).limit(1)
+        if(item) throw new Error("Create milestones from the quotation payment plan so every row has a quotation item.")
+      }
+      const source = sources[0]
       const status = milestoneContext.status
       await tx.update(paymentMilestones).set({ deletedAt: new Date(), updatedAt: new Date() }).where(and(isNull(paymentMilestones.deletedAt), eq(paymentMilestones.funnelId, funnelId)))
 
       const rows = parts.map((p, i) => ({
         tenantId: ctx.tenantId,
         funnelId,
-        quotationId: milestoneContext.quotationId,
+        quotationId: source?.quotationId ?? milestoneContext.quotationId,
+        quotationLineItemId: source?.quotationLineItemId,
         status,
         title: p.title.trim(),
         name: milestoneName(funnel.projectCode, p.title.trim()),
         description: p.description || null,
         amount: p.amount,
-        dueDate: p.dueDate || null,
+        dueDate: p.dueDate ?? source?.dueDate ?? null,
+        expectedInvoiceMonth: p.expectedInvoiceMonth || null,
+        expectedInvoiceYear: p.expectedInvoiceYear || null,
         sortOrder: i,
       }))
       await tx.insert(paymentMilestones).values(rows)
@@ -611,6 +672,47 @@ export async function splitFunnelMilestones(
       })
     })
     revalidatePath(`/funnel/${funnelId}`)
-    revalidatePath("/payment-milestones")
+    revalidateMilestoneViews()
+  })
+}
+
+/** Split one row without changing its quotation, product source, or sibling rows. */
+export async function splitPaymentMilestone(id: string, parts: SplitMilestonePart[]): Promise<ActionResult<void>> {
+  return runAction(async () => {
+    await withTenant(PERMISSIONS.PAYMENT_MILESTONE_MANAGE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
+      const [row] = await tx.select().from(paymentMilestones).where(and(eq(paymentMilestones.id, id), isNull(paymentMilestones.deletedAt))).for("update")
+      if (!row?.funnelId) throw new Error("Milestone not found")
+      const [funnel] = await tx.select().from(funnels).where(and(eq(funnels.id, row.funnelId), isNull(funnels.deletedAt))).for("update")
+      const visible = await visibleMemberIds(tx, ctx)
+      if (!funnel || (!canManageAllRecords(ctx) && !ownsOrManages(visible, funnel.ownerMemberId))) throw new Error("FORBIDDEN: not permitted on this Funnel")
+      const linked = await tx.execute(sql`select 1 from finance_docs where milestone_id = ${id} and tenant_id = ${ctx.tenantId} limit 1`)
+      if (row.status === "invoiced" || linked.length) throw new Error("Invoiced milestones or milestones with finance history cannot be split.")
+      validateBillingSchedule(parts.map(part => ({ ...part, expectedInvoiceMonth: part.expectedInvoiceMonth ?? row.expectedInvoiceMonth ?? "", expectedInvoiceYear: part.expectedInvoiceYear ?? row.expectedInvoiceYear ?? 0 })))
+      if (parts.length < 2 || parts.some(p => !p.title.trim() || !Number.isFinite(Number(p.amount)) || Number(p.amount) <= 0) || parts.reduce((sum,p) => sum + cents(Number(p.amount)),0) !== cents(Number(row.amount))) throw new Error("At least two positive parts must sum exactly to the original amount.")
+      await tx.update(paymentMilestones).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(paymentMilestones.id,id))
+      await tx.insert(paymentMilestones).values(parts.map((part,index) => ({ tenantId: ctx.tenantId, funnelId: row.funnelId, projectId: row.projectId, quotationId: row.quotationId, quotationLineItemId: row.quotationLineItemId, title: part.title.trim(), description: part.description ?? row.description, amount: part.amount, dueDate: part.dueDate ?? row.dueDate, expectedInvoiceMonth: part.expectedInvoiceMonth ?? row.expectedInvoiceMonth, expectedInvoiceYear: part.expectedInvoiceYear ?? row.expectedInvoiceYear, sortOrder: row.sortOrder + index })))
+      await writeAudit(tx, ctx, { action: "milestone.split", entityType: "payment_milestone", entityId:id, after:{parts:parts.length} })
+    })
+    revalidateMilestoneViews()
+    revalidatePath(`/payment-milestones/${id}`)
+  })
+}
+
+export async function prepareQuotationBillingSchedule(quotationId: string, rows: import("@/lib/billing-schedule").BillingScheduleInput[]): Promise<ActionResult<void>> {
+  return runAction(async () => {
+    await withTenant(PERMISSIONS.PAYMENT_MILESTONE_MANAGE, async (tx, ctx) => {
+      await lockRecordVoidGraph(tx, ctx.tenantId)
+      const [quote] = await tx.select().from(quotations).where(and(eq(quotations.id, quotationId), isNull(quotations.deletedAt)))
+      if (!quote) throw new Error("Quotation not found")
+      const [funnel] = await tx.select().from(funnels).where(and(eq(funnels.id, quote.funnelId), isNull(funnels.deletedAt))).for("update")
+      const visible = await visibleMemberIds(tx, ctx)
+      if (!funnel || (!canManageAllRecords(ctx) && !ownsOrManages(visible, funnel.ownerMemberId))) throw new Error("FORBIDDEN: not permitted on this Funnel")
+      const { saveBillingSchedule } = await import("@/server/services/billing-schedule")
+      await saveBillingSchedule(tx, { funnelId: funnel.id, quotationId, rows })
+      await writeAudit(tx, ctx, { action: "milestone.schedule", entityType: "quotation", entityId: quotationId, after: { rows: rows.length } })
+    })
+    revalidatePath(`/quotations/${quotationId}`)
+    revalidateMilestoneViews()
   })
 }

@@ -29,6 +29,7 @@ export default async function FinanceDocPage({
   return (
     <>
       <PageBody>
+        <h1 className="text-xl font-semibold tracking-tight break-words">{detail.doc.number}</h1>
         <DocDetailBody
           detail={detail}
           activity={activity}

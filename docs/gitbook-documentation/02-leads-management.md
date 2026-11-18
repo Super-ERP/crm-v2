@@ -124,7 +124,7 @@ Qualify the lead before converting as a team practice. Conversion is available f
 ```mermaid
 flowchart TD
     L["Qualified lead"] --> R["Review conversion details"]
-    R --> P["Manager approval, or direct confirmation by an eligible top manager"]
+    R --> P["Independent Sales Admin review"]
     P --> A["Link or create an account"]
     A --> C["Create the linked contact"]
     C --> O["Create an opportunity and funnel deal"]
@@ -137,11 +137,11 @@ flowchart TD
 
 ### Approval before conversion
 
-The conversion form saves a request with the selected account and conversion details. No linked records are created while it is pending, and the lead remains unconverted. The eligible reporting manager reviews it under **Sales → Approvals → Needs my review**, filtered to **Lead conversions**. The requester can track or cancel it in **My requests**. Rejection requires a reason and leaves the lead available for correction and resubmission.
+The conversion form saves a request with the selected account and conversion details. No linked records are created while it is pending, and the lead remains unconverted. An eligible Sales Admin reviews it under **Sales → Approvals → Needs my review**, filtered to **Lead conversions**. The requester can track or cancel it in **My requests**. Rejection requires a reason and leaves the lead available for correction and resubmission.
 
-A manager with **Approve lead conversions** permission and no manager above them can convert directly. A manager with a superior must request approval, just like other users. Missing reporting configuration is not an exemption. See [Shared manager approval policy](https://jienweng.gitbook.io/q-app/reference/permissions-and-approvals#shared-manager-approval-policy).
+All conversions require independent Sales Admin review, including requests submitted by administrators. The reviewer checks the SSM registration number against existing CRM accounts, confirms the independent-account review and assigns the unique Account Code. Self-approval is not allowed.
 
-Approval rechecks saved details, record access and current lead data. If the lead changes after submission, cancel and resubmit with the updated details. Duplicate pending requests and duplicate conversions are prevented. The requester must remain active with **Convert leads** and access to the lead and selected account. The reviewer must have **Approve lead conversions** and access to the lead and selected account. A failed conversion rolls back both linked records and the approval decision, leaving the request pending.
+Approval rechecks saved details, record access and current lead data. If the lead changes after submission, cancel and resubmit with the updated details. Duplicate pending requests and duplicate conversions are prevented. The requester must remain active with **Convert leads** and access to the lead and selected account. The reviewer must have **Approve lead conversions**, **Assign and edit account codes**, an active membership and access to the lead and selected account. A failed conversion rolls back both linked records and the approval decision, leaving the request pending.
 
 ### Step-by-step conversion
 
@@ -168,12 +168,13 @@ You will be redirected to the full-page conversion wizard:
 
 * **Account Section**:
   * **Link Existing Account**: The wizard scans your database for matching company names. If a match is found, you can link to the existing Account.
-  * **Create New Account**: If no match exists, select `Create New Account`. Specify the Account Type (*Client* or *Reseller*), Account Code, and Address.
+  * **Create New Account**: If no match exists, select `Create New Account`. Specify the Account Type (*Client* or *Reseller*), SSM registration number and Address. Sales Admin assigns the Account Code during review.
 * **Contact Section**:
   * Automatically creates a new Contact record pre-filled with the lead's name, email, and phone number, associated with the Account.
 * **Opportunity & Funnel Section**:
   * **Opportunity Name**: Defaults to `[Company Name] opportunity` (customizable).
   * **Expected Close Date**: Set the estimated closing target date.
+  * **Project Nature**: Required when creating an Opportunity and Funnel; select a configured nature.
   * The deal is automatically seeded into the sales funnel at the initial stage **`0e` (Identified)**.
 
 {% endstep %}
@@ -181,7 +182,7 @@ You will be redirected to the full-page conversion wizard:
 
 #### Convert the lead
 
-Click **Submit conversion**. The server either queues it for approval or performs direct conversion when you are eligible. Check **My requests** for the approval result.
+Click **Submit conversion**. The server queues it for independent Sales Admin review. Check **My requests** for the approval result.
 
 {% endstep %}
 {% endstepper %}
@@ -197,3 +198,11 @@ Click **Submit conversion**. The server either queues it for approval or perform
 * [Back to start](https://jienweng.gitbook.io/q-app)
 
 For record corrections, select **Void** and track the request in Approvals. Converted leads require their active resulting records to be resolved first. See [Void records](07-void-records.md).
+
+### Testing the conversion review flow
+
+As the salesperson, open an unconverted owned Lead and choose **Convert**. Select Project Nature, an existing Account or Create new account, and supply the new company's SSM registration number and Country. Opportunity/Funnel names must be present. Required fields use a red asterisk. Choose **Review conversion → Submit conversion**.
+
+As a different authorized reviewer, open **Approvals → Needs my review**, select the lead-conversion request, check its submitted company details and choose **Approve conversion**. For a new Account, assign a unique Account Code and confirm both company checks before approving. Return to the Lead to verify the created Account, Contact, Opportunity and Funnel links. The requester cannot approve their own request. A rejected request requires a reason; records are created only after approval.
+
+Conversion addresses use the same shared fields as Accounts: searchable A–Z Country and State/Province dropdowns, plus custom City/Town text. Street and Postcode remain text.

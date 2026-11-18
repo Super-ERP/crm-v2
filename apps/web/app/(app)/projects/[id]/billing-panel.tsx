@@ -24,12 +24,6 @@ export function BillingPanel({
 }: {
   summary: ProjectBillingSummary
 }) {
-  const value = Number(summary.projectValue ?? 0)
-  const invoiced = Number(summary.invoiced)
-  const paid = Number(summary.paid)
-  const pctInvoiced = value > 0 ? Math.min(100, (invoiced / value) * 100) : 0
-  const pctPaid = value > 0 ? Math.min(100, (paid / value) * 100) : 0
-
   return (
     <div className="grid gap-4">
       <Card>
@@ -37,27 +31,15 @@ export function BillingPanel({
           <CardTitle>Billing progress</CardTitle>
           <CardDescription>
             {formatMoney(summary.invoiced, summary.currency)} invoiced ·{" "}
-            {formatMoney(summary.paid, summary.currency)} paid
-            {summary.projectValue
-              ? ` · of ${formatMoney(summary.projectValue, summary.currency)} project value`
-              : ""}
+            {formatMoney(summary.paid, summary.currency)} received
+
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3">
-          {value > 0 ? (
-            <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className="absolute inset-y-0 left-0 bg-info/70"
-                style={{ width: `${pctInvoiced}%` }}
-                title={`Invoiced ${pctInvoiced.toFixed(0)}%`}
-              />
-              <div
-                className="absolute inset-y-0 left-0 bg-success"
-                style={{ width: `${pctPaid}%` }}
-                title={`Paid ${pctPaid.toFixed(0)}%`}
-              />
-            </div>
-          ) : null}
+          {summary.projectValue != null ? <p className="text-sm">Current project value (excl. tax): {formatMoney(summary.projectValue, summary.currency)}</p> : null}
+          <p className="text-xs text-muted-foreground">Received counts issued receipts. An invoice marked settled without a receipt does not count as received.</p>
+          <p className="text-sm text-muted-foreground">Document totals as recorded in {summary.currency}; historical tax basis is not separately recorded. Current project value excludes tax, so no completion percentage is calculated. Other currencies appear only in the document list.</p>
+          <p className="text-sm">Balance after receipts and credit notes (negative means credit): {formatMoney(summary.outstanding, summary.currency)}</p>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
             {Number(summary.creditNotes) > 0 ? (
               <span>
@@ -68,7 +50,7 @@ export function BillingPanel({
               Purchase cost {formatMoney(summary.purchaseCost, summary.currency)}
             </span>
             <span className="font-medium text-foreground">
-              Billed margin {formatMoney(summary.margin, summary.currency)}
+              Document revenue less credit notes and purchase cost {formatMoney(summary.margin, summary.currency)}
             </span>
           </div>
         </CardContent>

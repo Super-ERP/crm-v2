@@ -1,3 +1,4 @@
+import { CRM_TERMS } from "@/lib/crm-terminology"
 import { PERMISSIONS } from "@/lib/permissions"
 
 /**
@@ -77,7 +78,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         permission: PERMISSIONS.TENANT_SETTINGS,
       },
       {
-        label: "Product Codes",
+        label: CRM_TERMS.productCategories,
         href: "/settings/taxonomy/product-codes",
         permission: PERMISSIONS.TENANT_SETTINGS,
       },

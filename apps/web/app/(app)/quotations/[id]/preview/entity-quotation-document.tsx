@@ -164,10 +164,15 @@ function CcLines({ doc }: { doc: QuotationDocument }) {
 
 function Totals({ doc, template }: { doc: QuotationDocument; template: EntityTemplateKey }) {
   const currency = template === "qar" && doc.quotation.currency === "MYR" ? "RM" : doc.quotation.currency
-  const labels = template === "qar"
-    ? [[`Total (${currency})`, doc.quotation.subtotal], [`SST (${currency})`, doc.quotation.taxTotal], [`Total with SST (${currency})`, doc.quotation.total]]
-    : [["Total (excl. of SST)", doc.quotation.subtotal], [taxLabel(doc), doc.quotation.taxTotal], ["Total (Inclusive of SST)", doc.quotation.total]]
-  return <div className="ml-auto w-[42%] border-t border-black text-[10px]">{labels.map(([label, value]) => <div key={String(label)} className="grid h-9 grid-cols-[1fr_32mm] items-center border-b border-black"><div className="px-2 text-right">{label}</div><div className="px-2 text-right">{plainMoney(value, doc.quotation.currency)}</div></div>)}</div>
+  const discount = Number(doc.quotation.discountTotal) || 0
+  const labels = [
+    [`Subtotal (${currency})`, doc.quotation.subtotal],
+    [`Header discount (${currency})`, `−${plainMoney(discount, doc.quotation.currency)}`],
+    [`Net excluding tax (${currency})`, (Number(doc.quotation.subtotal) - discount).toFixed(2)],
+    [taxLabel(doc), doc.quotation.taxTotal],
+    [`Total including tax (${currency})`, doc.quotation.total],
+  ]
+  return <div className="ml-auto w-[42%] border-t border-black text-[10px]">{labels.map(([label, value]) => <div key={String(label)} className="grid h-9 grid-cols-[1fr_32mm] items-center border-b border-black"><div className="px-2 text-right">{label}</div><div className="px-2 text-right">{String(value).startsWith("−") ? value : plainMoney(value, doc.quotation.currency)}</div></div>)}</div>
 }
 
 export function EntityQuotationDocument({ doc, template }: { doc: QuotationDocument; template: EntityTemplateKey }) {
