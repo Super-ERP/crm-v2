@@ -24,14 +24,14 @@ New to Q-App? Start with [Quick start by role](https://jienweng.gitbook.io/q-app
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | [Opportunities and sales funnel](sales/04-opportunities-and-funnel.md) | Record PPVVC qualification and manage deal stages.                 |
 | [Quotations and revisions](sales/05-quotations-and-revisions.md)       | Build a proposal, get approval, create revisions, and print a PDF. |
-| [Payment milestones](sales/06-payment-milestones.md)                   | Review planned billing events and understand Won/Invoiced status.  |
+| [Payment milestones](sales/06-payment-milestones.md)                   | Review planned billing events and understand Pending invoicing and Invoiced status.  |
 | [Stage approvals](sales/08-approvals-inbox.md)                         | Review assigned requests and follow up on your own requests.       |
 
 ## Administration
 
 | Guide                                                                  | What you can do                                                                                  |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [Roles and RBAC](administration/roles-and-rbac.md)                     | Compare seven default roles and configure member roles, custom permissions, and reporting lines. |
+| [Roles and RBAC](administration/roles-and-rbac.md)                     | Compare eight default roles and configure member roles, custom permissions, and reporting lines. |
 | [Administration and settings](administration/09-admin-and-settings.md) | Manage team access, reporting lines, defaults, and custom roles.                                 |
 
 ## Reference and help

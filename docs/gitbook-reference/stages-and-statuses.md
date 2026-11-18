@@ -18,7 +18,7 @@ These are the standard stage labels. Your organization can customize labels and 
 | `2c` — Proposal | Work is progressing toward a proposal. | Keep scope and commercial assumptions current. |
 | `3b` — Negotiation | The proposal is being negotiated. | Review the quote and buyer's decision process. |
 | `4a` — Commit | The pursuit is near commitment. | The deal is still open until its outcome is recorded. |
-| Closed Won | The deal is won. | Terminal: stage changes are no longer allowed. Live Planned milestones become Won. |
+| Closed Won | The deal is won. | Terminal: stage changes are no longer allowed. |
 | Closed Lost | The deal is lost. | Terminal: stage changes are no longer allowed. Record close remarks. |
 | KIV — Keep In View | The pursuit is parked for later follow-up. | Record the reason. Reopening follows approval policy; the current request-path limitation is documented in the KIV guide. |
 
@@ -45,13 +45,7 @@ See [Quotations and revisions](https://jienweng.gitbook.io/q-app/docs/sales/05-q
 
 ## Payment milestone statuses
 
-| Status | Meaning | How it changes |
-| --- | --- | --- |
-| Planned | A billing event is being planned before the deal is won. | Closing the linked funnel Won updates live Planned milestones to Won. |
-| Won | A billing event belongs to a won deal. | An authorized update can record Won → Invoiced after billing. |
-| Invoiced | Billing has been recorded for this milestone. | Forward-only; it cannot return to Won or Planned. |
-
-A milestone created for an already won funnel starts as Won. Invoiced milestones keep their status. The current guide documents a status-control limitation; see [Managing milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones#managing-milestones).
+**Pending invoicing** → **Invoiced**. After billing, use **Mark invoiced** on an eligible milestone. Billing manages issued invoices and receipts.
 
 ## Decisions that are separate
 

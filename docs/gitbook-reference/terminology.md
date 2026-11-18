@@ -111,7 +111,7 @@ The currency used for an amount. **MYR**, **USD**, and **SGD** are examples of t
 
 ### Payment milestone
 
-A planned billing event, such as a deposit or delivery payment. Its status can be **Planned**, **Won**, or **Invoiced**. It is a planning record and does not issue an invoice or receipt. See [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
+A planned billing event, such as a deposit or delivery payment. Its status can be **Pending invoicing** or **Invoiced**. It is a planning record and does not issue an invoice or receipt. See [Payment milestones](https://jienweng.gitbook.io/q-app/docs/sales/06-payment-milestones).
 
 ## Commercial terms
 

@@ -122,3 +122,7 @@ See [Documents, actions, and approval](https://jienweng.gitbook.io/q-app/referen
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](../help/troubleshooting.md)
+
+## Lead conversion review
+
+Eligible Sales Admin reviewers use **Approvals** for independent account review. Stage requests follow their own manager routing.

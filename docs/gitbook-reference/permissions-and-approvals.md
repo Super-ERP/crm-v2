@@ -74,3 +74,7 @@ Use [Missing modules or records](https://jienweng.gitbook.io/q-app/docs/help/tro
 * [Administration and settings](https://jienweng.gitbook.io/q-app/docs/administration/09-admin-and-settings)
 * [Terminology](terminology.md)
 * [Documentation overview](https://jienweng.gitbook.io/q-app/docs)
+
+## Lead conversion review
+
+Eligible Sales Admin reviewers use **Approvals** for independent account review. Stage requests follow their own manager routing.

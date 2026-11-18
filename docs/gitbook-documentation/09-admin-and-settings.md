@@ -19,7 +19,7 @@ Manage team access, custom roles, and organization defaults.
 
 ## Team and roles
 
-User administration requires **Manage users**, granted to Owner and Admin by default. Configure each salesperson’s reporting manager here for approval routing. Default System roles are fixed templates. Create custom roles to change the permission mix. See [Roles and RBAC](roles-and-rbac.md) for all seven defaults and setup instructions.
+User administration requires **Manage users**, granted to Owner and Admin by default. Configure each salesperson’s reporting manager here for approval routing. Default System roles are fixed templates. Create custom roles to change the permission mix. See [Roles and RBAC](roles-and-rbac.md) for all eight defaults and setup instructions.
 
 ### Inviting Team Members
 

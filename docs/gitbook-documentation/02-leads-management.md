@@ -119,72 +119,10 @@ The lead detail page locks status controls for Disqualified and Converted record
 
 ## Converting a lead
 
-Qualify the lead before converting as a team practice. The current Convert action is available for non-Converted leads and does not enforce Qualified status. When ready for a commercial proposal, convert it using the **Conversion Wizard**. Add a valid email to the lead before converting; the new contact requires one.
-
-```mermaid
-flowchart TD
-    L["Qualified lead"] --> R["Review conversion details"]
-    R --> A["Link or create an account"]
-    A --> C["Create the linked contact"]
-    C --> O["Create an opportunity and funnel deal"]
-    O --> D["Lead is marked Converted"]
-```
-
-**Result:** the converted lead links to the customer records and sales pursuit. Review account matching and currency before confirming; the same lead cannot be converted twice.
-
-<details>
-<summary>View a static copy of the conversion flow</summary>
-
-<figure><img src="assets/lead-conversion.png" alt="Review a qualified lead, link or create an account, create the contact and sales pursuit, then mark the lead Converted."><figcaption><p>Lead conversion creates linked records; it is not a status change alone.</p></figcaption></figure>
-
-</details>
-
-### Step-by-step conversion
-
-{% stepper %}
-{% step %}
-
-#### Open the lead
-
-Open the Lead detail page.
-
-{% endstep %}
-{% step %}
-
-#### Start conversion
-
-Click the **Convert Lead** button in the top action bar.
-
-{% endstep %}
-{% step %}
-
-#### Review the linked records
-
-You will be redirected to the full-page conversion wizard:
-
-* **Account Section**:
-  * **Link Existing Account**: The wizard scans your database for matching company names. If a match is found, you can link to the existing Account.
-  * **Create New Account**: If no match exists, select `Create New Account`. Specify the Account Type (*Client* or *Reseller*), Account Code, and Address.
-* **Contact Section**:
-  * Automatically creates a new Contact record pre-filled with the lead's name, email, and phone number, associated with the Account.
-* **Opportunity & Funnel Section**:
-  * **Opportunity Name**: Defaults to `[Company Name] opportunity` (customizable).
-  * **Expected Close Date**: Set the estimated closing target date.
-  * The deal is automatically seeded into the sales funnel at the initial stage **`0e` (Identified)**.
-
-{% endstep %}
-{% step %}
-
-#### Convert the lead
-
-Click **Convert lead**.
-
-{% endstep %}
-{% endstepper %}
-
-{% hint style="warning" %}
-**Review before converting.** Conversion creates linked records and marks the lead Converted. You cannot convert the same lead again.
-{% endhint %}
+1. Open the Lead and choose **Convert**. Check the contact email, choose an existing Account or enter the new company's details, and select Project Nature when creating a Funnel.
+2. For a new company, enter its SSM registration number. The CRM compares registered numbers and warns about similar company names. Review a suggested match before requesting another Account.
+3. Submit the request. An eligible independent Sales Admin reviewer opens **Approvals**, checks the company identity and assigns a unique Account Code for a new Account. A requester cannot approve their own request.
+4. After approval, follow the converted Lead’s links to its Account, Contact and requested sales records. Submitting a request alone does not create them.
 
 ## Continue
 

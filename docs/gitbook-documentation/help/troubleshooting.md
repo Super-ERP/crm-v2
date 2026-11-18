@@ -137,39 +137,7 @@ See [Accounts & contacts](../customer-records/03-accounts-and-contacts.md).
 
 ## A milestone cannot become Invoiced
 
-{% stepper %}
-{% step %}
-#### Check the current status
-
-Check the milestone's current status. Only **Won → Invoiced** is an allowed manual status change.
-{% endstep %}
-
-{% step %}
-#### Check the linked funnel
-
-If it is **Planned**, check the linked funnel. Planned milestones become Won when that funnel reaches Closed Won.
-{% endstep %}
-
-{% step %}
-#### Check whether billing is already recorded
-
-If it is already **Invoiced**, the status cannot be reverted.
-{% endstep %}
-
-{% step %}
-#### Check the interface limitation
-
-The current repository screens show status badges without a status-editing control. If your deployed version also has no action, contact your administrator or support team; this is not necessarily a permission issue.
-{% endstep %}
-{% endstepper %}
-
-{% hint style="warning" %}
-Record the customer's actual commercial outcome. Do not close a deal as Won just to enable a milestone action.
-{% endhint %}
-
-**Expected result:** an authorized user records billing on an eligible Won milestone. The milestone status does not issue an invoice or receipt.
-
-See [Payment milestones](../sales/06-payment-milestones.md).
+Open the milestone and check its status, your management permission, and the linked Funnel and accepted quotation. Only eligible Pending invoicing rows offer **Mark invoiced**. An Invoiced row has already recorded billing progress.
 
 ## The quotation PDF looks wrong
 

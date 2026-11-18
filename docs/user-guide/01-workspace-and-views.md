@@ -55,7 +55,7 @@ The system is strictly multi-tenant. Every tenant's data (leads, opportunities, 
 
 ## User Roles and Access Hierarchy
 
-The seven default roles are **Owner, Admin, Developer, Manager, Senior Rep, Rep, and Viewer**. System roles are fixed templates; Advanced Roles lets administrators create custom roles and assign multiple roles to a member. Permissions combine across assigned roles. Role tiers do not grant approval authority.
+The eight default roles are **Owner, Admin, Sales Admin, Developer, Manager, Senior Rep, Rep, and Viewer**. System roles are fixed templates; Advanced Roles lets administrators create custom roles and assign multiple roles to a member. Permissions combine across assigned roles. Role tiers do not grant approval authority.
 
 Use the [role comparison and RBAC setup guide](https://jienweng.gitbook.io/q-app/docs/administration/roles-and-rbac) to compare capabilities and record scope. Viewer is read-only across the organization; Manager, Senior Rep, and Rep normally use their own/reporting-subtree scope.
 

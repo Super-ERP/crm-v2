@@ -80,7 +80,7 @@ flowchart TD
 * **`4a` Commit**: The pursuit is near commitment. Confirm the customer decision and quotation details before recording the outcome.
 * **Closed Won** *(Terminal)*:
    * Contract executed and deal won.
-   * **Automatic Action**: Sets live Planned payment milestones to `Won`; Invoiced milestones retain their status.
+   * **Automatic Action**: Records the commercial outcome. Check billing progress on each payment milestone.
    * Locks the stage from further changes.
 * **Closed Lost** *(Terminal)*:
    * Prospect decided against the purchase or chose a competitor.
@@ -169,3 +169,9 @@ Reopening KIV to an open stage skips forward field gates but uses the approval p
 * [Quotations & revisions](05-quotations-and-revisions.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+## Deal value and Commit setup
+
+**Deal value (excl. tax)** shows the manual Funnel estimate first, including a recorded zero. **Estimated** identifies that source even if the Funnel has a primary quotation. Without an estimate, the list uses the stored deal value and identifies the primary quotation when available. Compare **Quoted amount** on the Funnel for the primary quotation’s net amount. All amounts use the record currency.
+
+When advancing to **4a — Commit**, choose **Generate new** or **Select existing** Project Code and review the primary quotation’s payment plan. Each billing row needs an expected invoice month and year. Multiple Funnels may share a code. An assigned code appears on the Funnel and linked Opportunity before Commit. Reassigning one Funnel and renaming a shared code have different scopes; shared renaming requires administrative access.

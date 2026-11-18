@@ -1,5 +1,5 @@
 ---
-description: Compare all seven default roles and configure custom permissions, member assignments, and reporting lines.
+description: Compare all eight default roles and configure custom permissions, member assignments, and reporting lines.
 icon: users-gear
 ---
 
@@ -55,7 +55,7 @@ Create/edit includes leads, accounts, contacts, opportunities, and funnel detail
 | Rep | Yes | No | No |
 | Viewer | No | No | No |
 
-All default roles can view quotations within their record scope. Approval still requires the eligible manager in the Account owner's reporting line; approval permission alone is not sufficient. Customer acceptance/rejection uses the separate **Accept quotations** permission. Owner, Admin, Developer, and Manager also have **Delete quotations**, subject to deletion restrictions.
+Quotation visibility requires the corresponding view permission. Sales Admin alone does not grant it. Approval still requires the eligible manager in the Account owner's reporting line; approval permission alone is not sufficient. Customer acceptance/rejection uses the separate **Accept quotations** permission. Owner, Admin, Developer, and Manager also have **Delete quotations**, subject to deletion restrictions.
 
 {% endtab %}
 {% tab title="Stages & planning" %}
@@ -85,7 +85,7 @@ Users without stage-approval permission submit requests when the transition requ
 | Rep | No | No | No |
 | Viewer | No | No | No |
 
-All default roles can view products and tax settings. Maintaining pipeline configuration is granted to Owner, Admin, Developer, and Manager. Team membership uses **Manage users**; creating/editing custom roles and saving their permissions uses **Manage roles**. Opening the role-management pages also requires Manage users.
+Product and tax visibility depend on the corresponding view permissions. Maintaining pipeline configuration is granted to Owner, Admin, Developer, and Manager. Team membership uses **Manage users**; creating/editing custom roles and saving their permissions uses **Manage roles**. Opening the role-management pages also requires Manage users.
 
 {% endtab %}
 {% endtabs %}
@@ -166,3 +166,7 @@ See [Approval routing](https://jienweng.gitbook.io/q-app/reference/permissions-a
 
 * [Administration and settings](09-admin-and-settings.md)
 * [Troubleshooting](help-center/troubleshooting.md)
+
+## Sales Admin
+
+Reviews lead conversions and company identity, and assigns Account Codes. The reviewer must be independent of the requester.

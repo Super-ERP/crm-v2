@@ -173,6 +173,6 @@ Explained additive grants, reporting managers, legacy tiers, custom-role setup,
 assignment limits, and approval eligibility. Only the active Base and Advanced
 Roles capabilities are compared. No tenant permissions were changed.
 
-All seven default role names appear in every comparison tab. Navigation, links,
+All eight default role names appear in every comparison tab. Navigation, links,
 anchors, balanced blocks, and git diff --check pass. Work was isolated from
 unrelated application edits in a documentation worktree.

@@ -50,7 +50,7 @@ flowchart TD
     W --> M["Track payment milestones"]
 ```
 
-**In words:** qualify the prospect, confirm the customer records, work the deal, prepare an approved quote, and record the outcome. On Closed Won, live planned payment milestones become **Won**. Billing is recorded separately by updating eligible milestones to **Invoiced**.
+**In words:** qualify the prospect, confirm the customer records, work the deal, prepare an approved quote, and record the outcome. Track the separate billing schedule under **Payment Milestones**. Billing is recorded separately by updating eligible milestones to **Invoiced**.
 
 ## Need help?
 

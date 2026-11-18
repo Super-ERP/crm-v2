@@ -100,7 +100,7 @@ See [Opportunities & sales funnel](../04-opportunities-and-funnel.md).
 <details>
 <summary>When does a payment milestone become Won?</summary>
 
-Live Planned milestones become Won when their linked funnel closes Won. A milestone created for an already won funnel starts as Won. Invoiced milestones retain their status.
+Funnel outcome and billing progress are separate. Review Pending invoicing and Invoiced rows on the payment plan.
 
 See [Milestone statuses](../06-payment-milestones.md#milestone-statuses).
 
@@ -109,7 +109,7 @@ See [Milestone statuses](../06-payment-milestones.md#milestone-statuses).
 <details>
 <summary>Does marking a milestone Invoiced generate an invoice?</summary>
 
-No. The supported manual transition is **Won → Invoiced** after billing. The current repository screens do not expose a status-editing control; contact your administrator if your deployed version also has no action. Payment milestones are planning records; they do not create or update invoices or receipts.
+No. Mark invoiced changes the planning status. Issue invoices and record receipts in Billing.
 
 See [Payment milestones](../06-payment-milestones.md).
 

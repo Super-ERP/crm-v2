@@ -11,13 +11,13 @@ This reference covers the active Base modules and Advanced Roles. Check the exac
 
 | Item | What you can do with the right permissions and record access | What is approved? |
 | --- | --- | --- |
-| Lead | Capture, qualify, edit, and convert to linked customer and sales records. | Lead conversion has no separate manager-approval flow. |
+| Lead | Capture, qualify, edit, and convert to linked customer and sales records. | An independent Sales Admin reviewer approves the conversion. |
 | Account and contact | Maintain customer details and ownership. | Saving these records has no separate manager-approval flow. |
 | Opportunity and funnel | Maintain qualification, deal details, and follow-ups; request a stage change. | A configured stage gate can require approval of one specific stage transition. |
 | Quotation | Prepare a Draft, submit it, record sending, record the customer decision, and create eligible revisions. | The eligible manager approves the specific quotation record before it can be sent. |
 | Quotation PDF | Preview or export the quotation being viewed. | Exporting a PDF does not approve the quotation or record sending. Check the quotation's status separately. |
 | Supporting attachment | Add or review supporting files where the record's interface and your permissions allow. | A file supports the record or request; uploading it does not create a separate file-approval decision. |
-| Payment milestone | Maintain supported planning fields and review Planned, Won, or Invoiced status. | There is no separate milestone-approval inbox. Closing the funnel Won updates live Planned milestones. |
+| Payment milestone | Maintain supported planning fields and review Pending invoicing or Invoiced status. | There is no separate milestone-approval inbox. An authorized user records billing progress with Mark invoiced. |
 | Product | Maintain catalog entries used to prepare quotation lines. | Saving a catalog entry has no separate manager-approval flow. |
 
 A saved record is not necessarily approved. A manager's quotation approval does not approve a stage request, and an approved stage request does not approve the quotation.

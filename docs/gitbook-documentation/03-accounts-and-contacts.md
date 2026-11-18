@@ -130,3 +130,7 @@ When generating quotations or advancing sales stages:
 * [Opportunities & sales funnel](04-opportunities-and-funnel.md)
 * [Troubleshooting](help-center/troubleshooting.md)
 * [Back to start](https://jienweng.gitbook.io/q-app)
+
+## Account identity and address
+
+Sales Admin and authorized administrators assign the Account Code. Use the Country and State/Province selectors. City/Town accepts custom text.
