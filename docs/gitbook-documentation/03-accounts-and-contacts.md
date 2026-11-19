@@ -21,7 +21,7 @@ Maintain the companies and people involved in your deals.
 An **Account** represents an enterprise customer, client, partner, or reseller. It serves as the parent container for all commercial interactions, including contacts, active opportunities, and quotations.
 
 ### Creating an Account
-Accounts are usually created automatically during **Lead Conversion**, but can also be created manually:
+Search **Accounts** before creating a company. If the company already exists, use that Account. For a new company, Sales submits a Lead conversion with the SSM registration number. An independent reviewer checks existing CRM records and assigns a unique Account Code before approving. For direct Account creation, the user needs both account creation and Account Code management permissions. The steps below are for authorized direct creation.
 
 {% stepper %}
 {% step %}
@@ -45,7 +45,7 @@ Click **+ New Account**.
 Fill in the organization details:
 
 * **Company Name**: Official registered company name.
-* **Account Code**: Unique short business identifier (e.g., `ACME-01`).
+* **Account Code**: Unique short business identifier (e.g., `ACME`).
 * **Account Type**: Select **Client** or **Reseller**.
 * **Currency**: Select the standard ISO Currency (e.g., `MYR`, `USD`, `SGD`, `EUR`).
 * **Phone & Website**: Primary office contact channels.
@@ -87,6 +87,8 @@ Pending stage requests are cancelled, and pending quotations return to Draft wit
 A **Contact** represents an individual stakeholder employed by an Account (e.g., procurement officer, project manager, technical lead, or executive sponsor).
 
 ### Creating a Contact
+
+Open **Account → Contacts → Add contact**. Sales can add a contact directly to a client Account they own or manage, or to a shared reseller Account. Adding a contact to a shared reseller does not transfer ownership. Only someone who manages that Account can make the new contact its primary contact.
 
 {% stepper %}
 {% step %}

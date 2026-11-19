@@ -7,6 +7,18 @@ icon: bolt
 
 Choose the checklist closest to your work. Role names can be customized, so use the actions available in your workspace as your guide.
 
+
+## Sales workflow checklist
+
+1. **New company** — Search Accounts first. For a new company, submit a Lead conversion with the SSM registration number. An independent Sales Admin reviewer checks the company and assigns the Account Code. In Approvals, reviewers cannot approve their own requests.
+2. **Existing company, new contact** — Open **Account → Contacts → Add contact**. Sales can add a contact directly to a client Account they own or manage, or to a shared reseller Account.
+3. **New Opportunity or Funnel** — Select **Project Nature**, including when creating a Funnel during Lead conversion.
+4. **Payment plan** — Open the primary quotation’s **Payment Milestones**. Split an item into instalments if needed. Give each row an amount and expected invoice month and year. The complete plan must equal the quotation net excluding tax in its original currency.
+5. **Advance to 4a — Commit** — Complete the plan and choose **Generate new Project Code** or **Select existing Project Code**. Multiple Funnels may share one code. Reassign one Funnel to change its link. Ask an authorized administrator to rename a shared code across linked Funnels.
+6. **Customer acceptance** — An eligible Sent quotation within its validity period can be accepted at any Funnel stage, including Closed Won. Acceptance makes it primary and preserves the Funnel stage. Only one live quotation can be accepted per Funnel.
+
+**Reading Funnel amounts:** Estimated means the list is showing the salesperson’s estimate. When an estimate exists it takes priority, even if a primary quotation exists. Open the Funnel and check **Quoted amount** for the primary quotation value excluding tax.
+
 ## Before you start
 
 {% stepper %}
