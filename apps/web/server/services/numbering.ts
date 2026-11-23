@@ -115,9 +115,9 @@ export async function nextSoNumber(tx: Tx, ctx: ServerContext): Promise<string> 
 
 /**
  * Allocate the next project code in the format
- * `{YYYY}-{ENTITY}-{ACCOUNTCODE}-{PROJECTNATURE}-{NNN}` (e.g.
- * `2026-DEMO-ACME-WEB-001`):
- *   - YYYY        — the deal's CONTRACT/LICENSE start year when supplied
+ * `{YY}-{ENTITY}-{ACCOUNTCODE}-{PROJECTNATURE}-{NNN}` (e.g.
+ * `26-DEMO-ACME-WEB-001`):
+ *   - YY          — last two digits of the deal's CONTRACT/LICENSE start year when supplied
  *                   (`opts.year`, from opportunity.projectYear / project start
  *                   date); falls back to the current local calendar year.
  *   - ENTITY      — tenant_settings.entityCode (fallback "ENT").
@@ -167,10 +167,10 @@ export async function nextProjectCode(
     .where(eq(tenantSettings.organizationId, ctx.tenantId))
     .limit(1)
 
-  const yyyy = String(year)
+  const yy = String(year).slice(-2)
   const entity = (s?.entityCode || "ENT").toUpperCase()
   const acct = (accountCode || "ACC").toUpperCase()
   const product = (projectNatureCode || "GEN").toUpperCase()
   const running = String(assigned).padStart(s?.pad ?? 3, "0")
-  return `${yyyy}-${entity}-${acct}-${product}-${running}`
+  return `${yy}-${entity}-${acct}-${product}-${running}`
 }

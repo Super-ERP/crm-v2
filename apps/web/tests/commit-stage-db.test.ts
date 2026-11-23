@@ -49,7 +49,7 @@ describe.skipIf(!url)('commit setup transaction',()=>{
   expect((await pg`select project_code from funnels where id=${funnel}`)[0].project_code).toBeNull()
   await expect(requestStageAdvance(ctx,{funnelId:funnel,targetStageId:commit,projectCodeChoice:choice,billingSchedule:[{title:'Deposit',amount:'40',expectedInvoiceMonth:'November',expectedInvoiceYear:2026},{title:'Balance',amount:'60',expectedInvoiceMonth:'December',expectedInvoiceYear:2026}]})).resolves.toEqual({moved:true})
   const [saved]=await pg`select project_code,current_stage_id,expected_invoice_month from funnels where id=${funnel}`
-  expect(saved.project_code).toMatch(/^2026-QM-ACME-L-/);expect(saved.current_stage_id).toBe(commit);expect(saved.expected_invoice_month).toBe('November')
+  expect(saved.project_code).toMatch(/^26-QM-ACME-L-/);expect(saved.current_stage_id).toBe(commit);expect(saved.expected_invoice_month).toBe('November')
   expect(await pg`select id from payment_milestones where funnel_id=${funnel} and deleted_at is null`).toHaveLength(2)
  })
  it('reuses one code across Funnels and edits only the selected Funnel',async()=>{
