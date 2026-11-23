@@ -88,7 +88,7 @@ function ProjectNaturesCard({ projectNatures }: { projectNatures: ProjectNature[
           The picklist offered when creating a project. Each type has a short,
           stable code used as the project-nature segment of a project code (e.g.{" "}
           <span className="font-mono">WEB</span> in{" "}
-          <span className="font-mono">2026-DEMO-ACME-WEB-001</span>).
+          <span className="font-mono">26-DEMO-ACME-WEB-001</span>).
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">

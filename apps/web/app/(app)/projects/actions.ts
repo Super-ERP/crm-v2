@@ -598,7 +598,7 @@ export type ProjectCreateMeta = {
   projectNatures: ProjectNatureOption[]
   /** ENTITY segment of the project code (tenant_settings.entityCode). */
   entityCode: string
-  /** Current local calendar year — the YYYY segment of the live code preview. */
+  /** Current local calendar year — the YY segment of the live code preview. */
   year: number
   /** Visible accounts' short codes, keyed by account id, for the live preview. */
   accountCodes: Record<string, string>
@@ -606,7 +606,7 @@ export type ProjectCreateMeta = {
 
 /**
  * Bundle of tenant data the create form needs to render the Project Nature picker
- * and the live project-code preview ({YYYY}-{ENTITY}-{ACCOUNTCODE}-{TYPE}-###).
+ * and the live project-code preview ({YY}-{ENTITY}-{ACCOUNTCODE}-{TYPE}-###).
  */
 export async function listProjectCreateMeta(): Promise<ProjectCreateMeta> {
   return withModule("projects", PERMISSIONS.PROJECT_CREATE, async (tx, ctx) => {

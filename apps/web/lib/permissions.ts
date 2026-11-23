@@ -85,6 +85,7 @@ export const PERMISSIONS = {
   TENANT_SETTINGS: "tenant.settings",
   PROJECT_CODE_RENAME: "project_code.rename",
   PROJECT_CODE_ENTER: "project_code.enter",
+  FUNNEL_CREATE_FOR_OWNER: "funnel.create_for_owner",
   AUDIT_VIEW: "audit.view",
   // record-level access — own records by default, explicit team/all elevations
   RECORDS_VIEW_TEAM: "records.view_team",
@@ -221,6 +222,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
     items: [
       { key: PERMISSIONS.OPPORTUNITY_VIEW, label: "View pipelines" },
       { key: PERMISSIONS.OPPORTUNITY_CREATE, label: "Create pipelines" },
+      { key: PERMISSIONS.FUNNEL_CREATE_FOR_OWNER, label: "Create Funnels for any account owner (Sales Admin)" },
       { key: PERMISSIONS.OPPORTUNITY_UPDATE, label: "Edit pipelines" },
       { key: PERMISSIONS.OPPORTUNITY_DELETE, label: "Delete pipelines" },
       { key: PERMISSIONS.RECORD_VOID_APPROVE, label: "Review record void requests (Manager / Sales Admin)" },
@@ -396,11 +398,11 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
   { name: "Owner", description: "Full control of the workspace", tier: 100, permissions: "*" },
   { name: "Admin", description: "Administer users, roles, and settings", tier: 90, permissions: "*" },
   {
-    name: "Sales Admin", description: "Review account identities, assign account codes and approve lead conversions", tier: 65,
+    name: "Sales Admin", description: "Review account identities, assign account codes, approve lead conversions and create Funnels for Sales", tier: 65,
     permissions: [PERMISSIONS.LEAD_VIEW, PERMISSIONS.LEAD_CREATE, PERMISSIONS.LEAD_UPDATE, PERMISSIONS.LEAD_CONVERT, PERMISSIONS.LEAD_CONVERT_APPROVE,
       PERMISSIONS.ACCOUNT_VIEW, PERMISSIONS.ACCOUNT_CREATE, PERMISSIONS.ACCOUNT_UPDATE, PERMISSIONS.ACCOUNT_CODE_MANAGE,
       PERMISSIONS.PERSON_VIEW, PERMISSIONS.PERSON_CREATE, PERMISSIONS.PERSON_UPDATE, PERMISSIONS.OPPORTUNITY_VIEW, PERMISSIONS.RECORDS_VIEW_ALL,
-      PERMISSIONS.PROJECT_CODE_ENTER],
+      PERMISSIONS.PROJECT_CODE_ENTER, PERMISSIONS.OPPORTUNITY_CREATE, PERMISSIONS.FUNNEL_CREATE_FOR_OWNER],
   },
   {
     name: "Developer",

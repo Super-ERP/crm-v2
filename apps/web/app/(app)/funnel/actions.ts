@@ -515,7 +515,9 @@ export async function createOpportunity(
       if (!account) throw new Error("Account not found")
       if (!account.ownerMemberId) throw new Error("Assign an account owner before creating a Funnel.")
       const visible = await visibleMemberIds(tx, ctx)
-      if (!canManageAllRecords(ctx) && !ownsOrManages(visible, account.ownerMemberId)) {
+      // Sales Admin may create a Funnel on any account; it is owned by the
+      // account owner (the Sales person), so Sales Admin stays view-only.
+      if (!canManageAllRecords(ctx) && !ctx.can(PERMISSIONS.FUNNEL_CREATE_FOR_OWNER) && !ownsOrManages(visible, account.ownerMemberId)) {
         throw new Error("FORBIDDEN: not permitted on this account")
       }
       const ownerMemberId = account.ownerMemberId

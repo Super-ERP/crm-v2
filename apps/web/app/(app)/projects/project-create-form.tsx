@@ -47,10 +47,10 @@ const CODE_NATURE_OPTIONS = [
   { value: "manual", label: "Manual" },
 ]
 
-// The 5-segment project-code shape: {YYYY}-{ENTITY}-{ACCOUNT}-{TYPE}-{NNN}.
-// Segments are alphanumeric (no inner hyphens); first is a 4-digit year, last
+// The 5-segment project-code shape: {YY}-{ENTITY}-{ACCOUNT}-{TYPE}-{NNN}.
+// Segments are alphanumeric (no inner hyphens); first is a 2-digit year (legacy 4-digit codes still accepted), last
 // is the running number. Used to validate a manually entered code.
-const PROJECT_CODE_RE = /^\d{4}-[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+-\d+$/
+const PROJECT_CODE_RE = /^(?:\d{2}|\d{4})-[A-Za-z0-9]+-[A-Za-z0-9]+-[A-Za-z0-9]+-\d+$/
 
 const projectSchema = z
   .object({
@@ -76,7 +76,7 @@ const projectSchema = z
       !v.projectCode?.trim() ||
       PROJECT_CODE_RE.test(v.projectCode.trim()),
     {
-      message: "Use the format YYYY-ENTITY-ACCOUNT-TYPE-NNN (e.g. 2026-DEMO-ACME-WEB-001)",
+      message: "Use the format YY-ENTITY-ACCOUNT-TYPE-NNN (e.g. 26-DEMO-ACME-WEB-001)",
       path: ["projectCode"],
     }
   )
@@ -110,7 +110,7 @@ export function ProjectCreateForm({
   projectNatures: ProjectNatureOption[]
   /** ENTITY segment of the generated code (tenant entity code). */
   entityCode: string
-  /** YYYY segment of the generated code (current local year). */
+  /** YY segment of the generated code (current local year). */
   codeYear: number
   /** Account short codes keyed by id, for the ACCOUNTCODE preview segment. */
   accountCodes: Record<string, string>
@@ -204,15 +204,15 @@ export function ProjectCreateForm({
   const watchedProjectNature = form.watch("projectNatureCode")
 
   // Live preview of the code the server will mint, mirroring nextProjectCode's
-  // {YYYY}-{ENTITY}-{ACCOUNTCODE}-{PROJECTNATURE}-{NNN} shape. NNN is unknown until
+  // {YY}-{ENTITY}-{ACCOUNTCODE}-{PROJECTNATURE}-{NNN} shape. NNN is unknown until
   // creation, so it's shown as "###". Segments fall back the same way the server
   // does when a value isn't picked yet.
   const previewCode = React.useMemo(() => {
-    const yyyy = String(codeYear)
+    const yy = String(codeYear).slice(-2)
     const entity = (entityCode || "ENT").toUpperCase()
     const acct = (accountCodes[watchedAccountId] || "ACC").toUpperCase()
     const product = (watchedProjectNature || "GEN").toUpperCase()
-    return `${yyyy}-${entity}-${acct}-${product}-###`
+    return `${yy}-${entity}-${acct}-${product}-###`
   }, [codeYear, entityCode, accountCodes, watchedAccountId, watchedProjectNature])
 
   const selectedAccountHasCode = Boolean(accountCodes[watchedAccountId])
@@ -358,7 +358,7 @@ export function ProjectCreateForm({
                       <FormLabel required>Code</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="e.g. 2026-DEMO-ACME-WEB-001"
+                          placeholder="e.g. 26-DEMO-ACME-WEB-001"
                           className="font-mono"
                           {...field}
                         />

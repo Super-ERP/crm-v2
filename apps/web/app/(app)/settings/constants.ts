@@ -69,7 +69,7 @@ export function defaultIncludeInForecast(kind: StageKind): boolean {
 
 /**
  * A tenant-managed project nature: a short stable CODE used as the PROJECTNATURE
- * segment of a project code ({YYYY}-{Entity}-{Account}-{ProjectNature}-{NNN}),
+ * segment of a project code ({YY}-{Entity}-{Account}-{ProjectNature}-{NNN}),
  * plus a human-readable display NAME.
  */
 export type ProjectNature = { code: string; name: string }

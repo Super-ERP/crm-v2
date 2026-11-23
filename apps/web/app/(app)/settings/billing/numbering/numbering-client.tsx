@@ -101,9 +101,9 @@ function NumberingForm({ settings }: { settings: TenantSettingsView }) {
   const soBelowIssued =
     Number(values.soNextNumber) > 0 &&
     Number(values.soNextNumber) < settings.soNextNumber
-  // Project codes are {YYYY}-{Entity}-{Account}-{ProjectNature}-{NNN}; the running
+  // Project codes are {YY}-{Entity}-{Account}-{ProjectNature}-{NNN}; the running
   // number (NNN) resets to 1 each year, so the preview always shows the first.
-  const projectPreview = `${currentYear}-${entityCode}-ACME-WEB-${pad(
+  const projectPreview = `${String(currentYear).slice(-2)}-${entityCode}-ACME-WEB-${pad(
     1,
     Number(values.projectPadWidth) || 1
   )}`
@@ -321,7 +321,7 @@ function NumberingForm({ settings }: { settings: TenantSettingsView }) {
           </CardHeader>
           <CardContent className="grid gap-5">
             <p className="text-sm text-muted-foreground">
-              Project code: <span className="font-mono">{`{YYYY}-{Entity}-{Account}-{Nature}-{NNN}`}</span>. Only NNN padding is set here.
+              Project code: <span className="font-mono">{`{YY}-{Entity}-{Account}-{Nature}-{NNN}`}</span>. Only NNN padding is set here.
             </p>
             <FormField
               control={form.control}
