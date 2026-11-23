@@ -187,6 +187,8 @@ export type FunnelDetailData = {
   canCreateProject: boolean
   /** Whether the caller can edit this Funnel (OPPORTUNITY_UPDATE) — gates every inline editor. */
   canEdit: boolean
+  /** Sales Admin may set the Project Code without broader Funnel edit rights. */
+  canEnterProjectCode?: boolean
   /** Whether the finance plugin (intercompany billing) is enabled. */
   financeEnabled: boolean
   /** Whether the projects plugin is enabled (gates the Projects related-list tab). */
@@ -972,7 +974,7 @@ export function FunnelDetailBody(props: FunnelDetailData) {
 
             {/* Salesforce "Funnel Info" section (SPEC §4). */}
             <h3 className="text-sm font-semibold">Funnel Info</h3>
-            <FieldRow label="Project code">{props.canEdit && !editor.saving ? <FunnelProjectCodeEditor funnelId={funnelId} code={props.projectCode || props.crmProjectCode}/> : <ProjectCodeLink code={props.projectCode || props.crmProjectCode} />}</FieldRow>
+            <FieldRow label="Project code">{(props.canEdit || props.canEnterProjectCode) && !editor.saving ? <FunnelProjectCodeEditor funnelId={funnelId} code={props.projectCode || props.crmProjectCode}/> : <ProjectCodeLink code={props.projectCode || props.crmProjectCode} />}</FieldRow>
             {props.crossDealProjectCode && props.crossDealProjectCode !== (props.projectCode || props.crmProjectCode) ? <FieldRow label="Cross-deal reference"><ProjectCodeLink code={props.crossDealProjectCode} /></FieldRow> : null}
             <FieldRow label="Funnel / deal name">
               {canEdit ? (

@@ -370,7 +370,7 @@ export function StageAdvanceDialog({
             {commitRequired ? <section className="grid gap-5" aria-label="Commit billing requirements">
               <section className="grid gap-3 rounded-lg border p-4" aria-labelledby="commit-code-title">
                 <h3 id="commit-code-title" className="text-sm font-semibold">Project Code <span className="text-destructive">*</span></h3>
-                <ProjectCodePicker value={projectCodeChoice} onChange={setProjectCodeChoice} currentCode={setup?.code} validationError={attempted && codeMissing ? "Generate a new code or select an existing code." : undefined}/>
+                <ProjectCodePicker funnelId={funnelId} value={projectCodeChoice} onChange={setProjectCodeChoice} currentCode={setup?.code} validationError={attempted && codeMissing ? "Generate a new code or select an existing code." : undefined}/>
               </section>
               <section className="grid min-w-0 gap-3 rounded-lg border p-4" aria-labelledby="commit-plan-title">
                 <div className="flex flex-wrap items-center justify-between gap-2"><h3 id="commit-plan-title" className="text-sm font-semibold">Payment Milestones <span className="text-destructive">*</span></h3>{setup?.quote ? <Link className="link text-sm" href={`/quotations/${setup.quote.id}?tab=milestones`} target="_blank">{setup.quote.number} — open payment plan ↗</Link> : null}</div>

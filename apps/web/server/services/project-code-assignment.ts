@@ -1,5 +1,5 @@
 import 'server-only'
-import { canRenameProjectCodes } from '@/lib/project-code-permissions'
+import { canEnterProjectCodes, canRenameProjectCodes } from '@/lib/project-code-permissions'
 import { and, eq, isNull, or, sql } from 'drizzle-orm'
 import type { Tx } from '@/db'
 import { accounts, funnels, opportunities, tenantSettings } from '@/db/schema'
@@ -17,18 +17,19 @@ export async function assertFunnelCodeAccess(tx: Tx, ctx: ServerContext, funnelI
   return funnel
 }
 /** A picker returns codes only from already accessible, nondeleted Funnels/parents. */
-export async function availableProjectCodes(tx: Tx,ctx: ServerContext,search='') {
+/** Codes are offered only from the same Account as the Funnel being coded. */
+export async function availableProjectCodes(tx: Tx,ctx: ServerContext,accountId: string,search='') {
   const visible = await visibleMemberIds(tx,ctx)
   const q=search.trim().slice(0,300)
   const rows=await tx.select({code:funnels.projectCode,parentCode:sql<string|null>`CASE WHEN ${ownerScope(opportunities.ownerMemberId,visible) ?? sql`true`} THEN ${opportunities.projectCode} ELSE NULL END`}).from(funnels)
     .innerJoin(opportunities,and(eq(opportunities.id,funnels.opportunityId),eq(opportunities.tenantId,ctx.tenantId),isNull(opportunities.deletedAt)))
-    .where(and(eq(funnels.tenantId,ctx.tenantId),isNull(funnels.deletedAt),ownerScope(funnels.ownerMemberId,visible),
+    .where(and(eq(funnels.tenantId,ctx.tenantId),eq(funnels.accountId,accountId),isNull(funnels.deletedAt),ownerScope(funnels.ownerMemberId,visible),
       or(sql`${funnels.projectCode} ilike ${'%'+q.replace(/[\\%_]/g,'\\$&')+'%'}`,and(ownerScope(opportunities.ownerMemberId,visible),sql`${opportunities.projectCode} ilike ${'%'+q.replace(/[\\%_]/g,'\\$&')+'%'}`))))
   return [...new Set(rows.flatMap(row=>[row.code,row.parentCode]).filter((code):code is string=>!!code))].sort().slice(0,100)
 }
 export async function assignFunnelProjectCode(tx:Tx,ctx:ServerContext,funnelId:string,choice:ProjectCodeChoice) {
   if(!choice || !['new','existing','manual'].includes(choice.mode))throw new Error('Invalid Project Code assignment mode.')
-  if(choice.mode==='manual' && !canRenameProjectCodes(ctx))throw new Error('FORBIDDEN: only administrators can manually edit Project Codes.')
+  if(choice.mode==='manual' && !canEnterProjectCodes(ctx))throw new Error('FORBIDDEN: only Sales Admin or administrators can enter Project Codes.')
   const funnel=await assertFunnelCodeAccess(tx,ctx,funnelId)
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${ctx.tenantId + ':project-code-assignment'},0))`)
   let code:string
@@ -46,8 +47,8 @@ export async function assignFunnelProjectCode(tx:Tx,ctx:ServerContext,funnelId:s
     }
   } else if(choice.mode==='existing') {
     const requested=choice.code.trim()
-    const match=(await availableProjectCodes(tx,ctx,requested)).find(candidate=>candidate===requested || candidate.toUpperCase()===requested.toUpperCase())
-    if(!match) throw new Error('Existing project code is unavailable or outside your record access.')
+    const match=(await availableProjectCodes(tx,ctx,funnel.accountId,requested)).find(candidate=>candidate===requested || candidate.toUpperCase()===requested.toUpperCase())
+    if(!match) throw new Error('Select a Project Code already used under this Funnel’s Account.')
     code=match // Preserve the exact spelling/punctuation of legacy identifiers.
   } else {
     code=normalizeProjectCode(choice.code)
