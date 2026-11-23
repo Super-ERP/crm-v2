@@ -14,7 +14,7 @@ vi.mock('@/lib/modules.server',()=>({getEntitledModuleMap:async()=>({finance:fal
 import {updateQuotationLines} from '@/server/services/quotation-lines'
 import {computeQuotation} from '@/server/services/quotation-math'
 import {requestStageAdvance} from '@/server/services/stage'
-import {assignFunnelProjectCode,sharedProjectCodeImpact,renameSharedProjectCode} from '@/server/services/project-code-assignment'
+import {assignFunnelProjectCode,availableProjectCodes,sharedProjectCodeImpact,renameSharedProjectCode} from '@/server/services/project-code-assignment'
 const url=process.env.TEST_DATABASE_ADMIN_URL
 
 describe.skipIf(!url)('commit setup transaction',()=>{
@@ -63,7 +63,7 @@ describe.skipIf(!url)('commit setup transaction',()=>{
  it('rejects clearing nature and unavailable or malicious codes',async()=>{
   await pg`update funnels set current_stage_id=${early},status='open',product_type_code=null where id=${other}`
   await expect(requestStageAdvance(ctx,{funnelId:other,targetStageId:commit,projectCodeChoice:{mode:'new'}})).rejects.toThrow('Project Nature')
-  await expect(drizzle(pg).transaction(tx=>assignFunnelProjectCode(tx as unknown as Tx,ctx,other,{mode:'existing',code:'NOT-FOUND'}))).rejects.toThrow('unavailable')
+  await expect(drizzle(pg).transaction(tx=>assignFunnelProjectCode(tx as unknown as Tx,ctx,other,{mode:'existing',code:'NOT-FOUND'}))).rejects.toThrow('under this Funnel’s Account')
  })
  it('preserves product line identities through draft saves and rejects removing a billed source',async()=>{
   const lineId=randomUUID()
@@ -78,6 +78,18 @@ describe.skipIf(!url)('commit setup transaction',()=>{
   expect((await pg`select id from quotation_line_items where quotation_id=${quote}`)[0].id).toBe(lineId)
  })
 
+ it('offers and links existing codes only from the Funnel account; Sales Admin may enter a code',async()=>{
+  const otherAccount=randomUUID(),foreignFunnel=randomUUID()
+  await pg`insert into accounts(id,tenant_id,name,code,owner_member_id) values(${otherAccount},${tenant},'Other customer','OTHER','commit-owner')`
+  await pg`insert into funnels(id,tenant_id,opportunity_id,name,account_id,pipeline_id,current_stage_id,owner_member_id,currency,project_code) values(${foreignFunnel},${tenant},${parent},'Other deal',${otherAccount},${pipeline},${early},'commit-owner','MYR','26-QM-OTHER-L-001')`
+  const offered=await drizzle(pg).transaction(tx=>availableProjectCodes(tx as unknown as Tx,ctx,account))
+  expect(offered).not.toContain('26-QM-OTHER-L-001')
+  await expect(drizzle(pg).transaction(tx=>assignFunnelProjectCode(tx as unknown as Tx,ctx,other,{mode:'existing',code:'26-QM-OTHER-L-001'}))).rejects.toThrow('under this Funnel’s Account')
+  const salesAdmin={...ctx,isSuperadmin:false,can:(key:string)=>['records.view_all','project_code.enter'].includes(key)} as unknown as ServerContext
+  await drizzle(pg).transaction(tx=>assignFunnelProjectCode(tx as unknown as Tx,salesAdmin,other,{mode:'manual',code:'26-qm-typed-l-777'}))
+  expect((await pg`select project_code from funnels where id=${other}`)[0].project_code).toBe('26-QM-TYPED-L-777')
+  await pg`delete from funnels where id=${foreignFunnel}`
+ })
  it('links the exact existing legacy code including spaces and punctuation',async()=>{
   const code='2025/QM A&B #1%'
   await pg`update funnels set project_code=${code} where id=${funnel}`
@@ -97,7 +109,7 @@ describe.skipIf(!url)('commit setup transaction',()=>{
   const salesAdmin={...ctx,isSuperadmin:false,can:(key:string)=>['records.manage_all','opportunity.update'].includes(key)} as unknown as ServerContext
   await expect(drizzle(pg).transaction(tx=>sharedProjectCodeImpact(tx as unknown as Tx,salesAdmin,original))).rejects.toThrow('only administrators')
   await expect(drizzle(pg).transaction(tx=>renameSharedProjectCode(tx as unknown as Tx,salesAdmin,original,renamed,'anything'))).rejects.toThrow('only administrators')
-  await expect(drizzle(pg).transaction(tx=>assignFunnelProjectCode(tx as unknown as Tx,salesAdmin,funnel,{mode:'manual',code:renamed}))).rejects.toThrow('only administrators')
+  await expect(drizzle(pg).transaction(tx=>assignFunnelProjectCode(tx as unknown as Tx,salesAdmin,funnel,{mode:'manual',code:renamed}))).rejects.toThrow('only Sales Admin or administrators')
   await expect(drizzle(pg).transaction(tx=>assignFunnelProjectCode(tx as unknown as Tx,salesAdmin,funnel,{mode:'bypass',code:renamed} as never))).rejects.toThrow('Invalid Project Code assignment mode')
   const preview=await drizzle(pg).transaction(tx=>sharedProjectCodeImpact(tx as unknown as Tx,ctx,original))
   expect(preview.funnels).toBe(2);expect(preview.opportunities).toBe(1)

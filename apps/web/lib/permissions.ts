@@ -84,6 +84,7 @@ export const PERMISSIONS = {
   TENANT_MANAGE_ROLES: "tenant.manage_roles",
   TENANT_SETTINGS: "tenant.settings",
   PROJECT_CODE_RENAME: "project_code.rename",
+  PROJECT_CODE_ENTER: "project_code.enter",
   AUDIT_VIEW: "audit.view",
   // record-level access — own records by default, explicit team/all elevations
   RECORDS_VIEW_TEAM: "records.view_team",
@@ -160,6 +161,7 @@ const MANAGER: PermissionKey[] = [
 // User, role, settings, and licensing changes remain Owner/Admin responsibilities.
 const DEVELOPER_DENIED = new Set<PermissionKey>([
   PERMISSIONS.PROJECT_CODE_RENAME,
+  PERMISSIONS.PROJECT_CODE_ENTER,
   PERMISSIONS.ACCOUNT_CODE_MANAGE,
   PERMISSIONS.LEAD_CONVERT_APPROVE,
   PERMISSIONS.TENANT_MANAGE_USERS,
@@ -343,6 +345,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
       { key: PERMISSIONS.TENANT_MANAGE_ROLES, label: "Manage roles" },
       { key: PERMISSIONS.TENANT_SETTINGS, label: "Manage settings" },
       { key: PERMISSIONS.PROJECT_CODE_RENAME, label: "Rename and manually edit Project Codes (Admin)" },
+      { key: PERMISSIONS.PROJECT_CODE_ENTER, label: "Enter Funnel Project Codes manually (Sales Admin)" },
     ],
   },
 ]
@@ -396,7 +399,8 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
     name: "Sales Admin", description: "Review account identities, assign account codes and approve lead conversions", tier: 65,
     permissions: [PERMISSIONS.LEAD_VIEW, PERMISSIONS.LEAD_CREATE, PERMISSIONS.LEAD_UPDATE, PERMISSIONS.LEAD_CONVERT, PERMISSIONS.LEAD_CONVERT_APPROVE,
       PERMISSIONS.ACCOUNT_VIEW, PERMISSIONS.ACCOUNT_CREATE, PERMISSIONS.ACCOUNT_UPDATE, PERMISSIONS.ACCOUNT_CODE_MANAGE,
-      PERMISSIONS.PERSON_VIEW, PERMISSIONS.PERSON_CREATE, PERMISSIONS.PERSON_UPDATE, PERMISSIONS.OPPORTUNITY_VIEW, PERMISSIONS.RECORDS_VIEW_ALL],
+      PERMISSIONS.PERSON_VIEW, PERMISSIONS.PERSON_CREATE, PERMISSIONS.PERSON_UPDATE, PERMISSIONS.OPPORTUNITY_VIEW, PERMISSIONS.RECORDS_VIEW_ALL,
+      PERMISSIONS.PROJECT_CODE_ENTER],
   },
   {
     name: "Developer",

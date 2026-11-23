@@ -1,4 +1,5 @@
 
+import { canEnterProjectCodes } from "@/lib/project-code-permissions"
 import { isPaymentMilestoneEligible } from "@/lib/payment-milestone-lifecycle"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -325,6 +326,7 @@ export default async function OpportunityDetailPage({
           canCreateQuote={canCreateQuote}
           canCreateProject={canCreateProject}
           canEdit={canUpdate}
+          canEnterProjectCode={canEnterProjectCodes(ctx)}
           financeEnabled={modules.finance}
           projectsEnabled={modules.projects}
           contractYears={contractYears}
