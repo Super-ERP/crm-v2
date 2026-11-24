@@ -846,6 +846,8 @@ export async function createQuotation(input: {
   })
 }
 
+const WON_QUOTATION_LOCKED = "This Funnel is Closed Won, so this quotation can’t be reopened for editing. Duplicate it or create a revision instead."
+
 export async function updateQuotation(
   id: string,
   input: QuotationHeaderInput
@@ -1394,6 +1396,8 @@ async function returnQuotationToDraft(
     await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
       const quotation = await getLockedQuotation(tx, id)
       await assertQuotationAccess(tx, ctx, quotation)
+      const [wonCheck] = await tx.select({ status: funnels.status }).from(funnels).where(eq(funnels.id, quotation.funnelId)).limit(1)
+      if (wonCheck?.status === "won") throw new Error(WON_QUOTATION_LOCKED)
       if (quotation.status !== expectedStatus) {
         throw new Error(expectedStatus === "pending_approval"
           ? "Only quotations pending approval can be recalled"

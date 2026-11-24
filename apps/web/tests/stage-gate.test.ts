@@ -46,7 +46,9 @@ describe("assertTransitionAllowed — stage state machine", () => {
   })
 
   it("allows reversible KIV moves but rejects immutable Won and Lost moves", () => {
-    expect(() => assertTransitionAllowed(won, open2)).toThrow(/closed/)
+    expect(() => assertTransitionAllowed(won, open2)).not.toThrow()
+    expect(() => assertTransitionAllowed(won, parked)).toThrow(/reopened to an open stage/)
+    expect(() => assertTransitionAllowed(won, lost)).toThrow(/reopened to an open stage/)
     expect(() => assertTransitionAllowed(lost, open1)).toThrow(/closed/)
     expect(() => assertTransitionAllowed(parked, open2)).not.toThrow()
     expect(() => assertTransitionAllowed(open2, parked)).not.toThrow()
@@ -56,7 +58,7 @@ describe("assertTransitionAllowed — stage state machine", () => {
     expect(canTransition(open2, open1)).toBe(true)
     expect(canTransition(parked, open1)).toBe(true)
     expect(canTransition(open1, parked)).toBe(true)
-    expect(canTransition(won, open1)).toBe(false)
+    expect(canTransition(won, open1)).toBe(true)
     expect(canTransition(lost, open1)).toBe(false)
     expect(canTransition(open1, open1)).toBe(false)
   })
@@ -68,7 +70,7 @@ describe("assertTransitionAllowed — stage state machine", () => {
     expect(isRollbackTransition(open2, won)).toBe(false)
     expect(isRollbackTransition(parked, won)).toBe(false)
     expect(isRollbackTransition(open2, lost)).toBe(false)
-    expect(isRollbackTransition(won, open1)).toBe(false)
+    expect(isRollbackTransition(won, open1)).toBe(true)
 
     const parkedBeforeLadder = stage("parked-before", "PARKED", -100)
     const openAfterParked = stage("open-after", "OPEN", 100)
@@ -292,5 +294,17 @@ describe("requiresCloseRemarks", () => {
     expect(requiresCloseRemarks("PARKED")).toBe(true)
     expect(requiresCloseRemarks("WON")).toBe(false)
     expect(requiresCloseRemarks("OPEN")).toBe(false)
+  })
+})
+
+describe('reopening a Closed Won funnel', () => {
+  const open1 = stage('o1', 'OPEN', 1)
+  const won = stage('w', 'WON', 99)
+  it('is a rollback that needs approval and a written reason, and only to open stages', () => {
+    expect(canTransition(won, open1)).toBe(true)
+    expect(canTransition(won, stage('k', 'PARKED', 50))).toBe(false)
+    expect(transitionDirection(won, open1)).toBe('rollback')
+    expect(requiresApprovalForTransition(won, open1)).toBe(true)
+    expect(requiresTransitionReason(won, open1)).toBe(true)
   })
 })

@@ -48,6 +48,16 @@ export function InlineValue({
     setEditing(false)
     const next = draft.trim()
     if (next === value.trim()) return
+    // A half-typed native date (e.g. only the year digit "1" → 0001-01-01)
+    // must never be saved. Clearing the field is fine; anything else needs a
+    // complete, plausible date, otherwise keep the previous value.
+    if (type === "date" && next) {
+      const year = Number(next.slice(0, 4))
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(next) || year < 1900 || year > 2100) {
+        showActionError({ ok: false, error: "Enter a complete date (year 1900–2100), or clear the field." })
+        return
+      }
+    }
     // Commit instantly at full opacity; the save + page refetch run in a
     // non-blocking transition so the cell never sits in a dimmed "busy" state.
     setOptimistic(next)

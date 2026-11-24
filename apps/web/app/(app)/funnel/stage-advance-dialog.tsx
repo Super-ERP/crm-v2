@@ -435,7 +435,7 @@ export function StageAdvanceDialog({
                   placeholder={
                     isTerminal
                       ? "Why is this funnel being closed? (recorded on the stage history)"
-                      : needsReason ? "Why is this Closed Lost funnel being reopened?" : "Optional context for the reviewer"
+                      : needsReason ? `Why is this ${from?.kind === "WON" ? "Closed Won" : "Closed Lost"} funnel being reopened?` : "Optional context for the reviewer"
                   }
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
