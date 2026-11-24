@@ -846,6 +846,8 @@ export async function createQuotation(input: {
   })
 }
 
+const WON_QUOTATION_LOCKED = "This Funnel is Closed Won, so its quotations are locked. Duplicate the quotation or create a revision instead."
+
 export async function updateQuotation(
   id: string,
   input: QuotationHeaderInput
@@ -868,12 +870,14 @@ export async function updateQuotation(
         ownerMemberId: funnels.ownerMemberId,
         currency: funnels.currency,
         accountId: funnels.accountId,
+        status: funnels.status,
       })
       .from(funnels)
       .where(eq(funnels.id, existing.funnelId))
       .limit(1)
     if (!canManageAllRecords(ctx) && !ownsOrManages(visible, opp?.ownerMemberId ?? null))
       throw new Error("FORBIDDEN: not permitted on this quotation")
+    if (opp?.status === "won") throw new Error(WON_QUOTATION_LOCKED)
     if (existing.status !== "draft")
       throw new Error("Only draft quotations can be edited")
     const resolvedCurrency = await tenantCurrencyForRecord(
@@ -1394,6 +1398,8 @@ async function returnQuotationToDraft(
     await withTenant(PERMISSIONS.QUOTATION_UPDATE, async (tx, ctx) => {
       const quotation = await getLockedQuotation(tx, id)
       await assertQuotationAccess(tx, ctx, quotation)
+      const [wonCheck] = await tx.select({ status: funnels.status }).from(funnels).where(eq(funnels.id, quotation.funnelId)).limit(1)
+      if (wonCheck?.status === "won") throw new Error(WON_QUOTATION_LOCKED)
       if (quotation.status !== expectedStatus) {
         throw new Error(expectedStatus === "pending_approval"
           ? "Only quotations pending approval can be recalled"

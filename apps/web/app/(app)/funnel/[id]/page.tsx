@@ -157,9 +157,8 @@ export default async function OpportunityDetailPage({
     customFunnelFields
   )
 
-  // Stage-action state: Closed Won/Lost are immutable; OPEN and KIV/PARKED
-  // stages use the same reversible transition dialog.
-  const terminal = isTerminalKind(stage.kind)
+  // Stage-action state: Closed Lost is immutable; Closed Won can only be
+  // reopened to an open stage; OPEN and KIV/PARKED stages use the same dialog.
   const selectable = selectableTargets(
     detail.funnelStagesList.map((s) => ({
       id: s.id,
@@ -168,6 +167,7 @@ export default async function OpportunityDetailPage({
     })),
     opp.currentStageId
   )
+  const terminal = isTerminalKind(stage.kind) && selectable.length === 0
   const pendingApproval = detail.pendingApproval
 
   // Per-affordance gates — mirrors the server-action permission checks so a

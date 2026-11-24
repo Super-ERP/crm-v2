@@ -378,7 +378,8 @@ export type TransitionDirection = "forward" | "rollback"
 /**
  * The single stage-transition policy shared by the server and client:
  * - no-op moves are rejected;
- * - Closed Won and Closed Lost are immutable;
+ * - Closed Lost is immutable;
+ * - Closed Won may only be reopened to an OPEN stage;
  * - OPEN and PARKED stages may move to any other stage, including backward.
  */
 export function canTransition(
@@ -386,7 +387,8 @@ export function canTransition(
   to: TransitionStage
 ): boolean {
   if (from.id === to.id) return false
-  return from.kind !== "WON" && from.kind !== "LOST"
+  if (from.kind === "WON") return to.kind === "OPEN"
+  return from.kind !== "LOST"
 }
 
 /**
@@ -400,7 +402,7 @@ export function transitionDirection(
   to: TransitionStage
 ): TransitionDirection | null {
   if (!canTransition(from, to)) return null
-  if (from.kind === "PARKED" && to.kind === "OPEN") return "rollback"
+  if ((from.kind === "PARKED" || from.kind === "WON") && to.kind === "OPEN") return "rollback"
   if (to.kind === "PARKED" || isTerminalKind(to.kind)) return "forward"
   return to.sortOrder < from.sortOrder ? "rollback" : "forward"
 }
@@ -424,7 +426,9 @@ export function assertTransitionAllowed(
   to: TransitionStage
 ): void {
   if (from.id === to.id) throw new Error("This funnel is already in this stage")
-  if (isTerminalKind(from.kind))
+  if (from.kind === "WON" && to.kind !== "OPEN")
+    throw new Error("A Closed Won funnel can only be reopened to an open stage.")
+  if (from.kind === "LOST")
     throw new Error("This funnel is closed and cannot change its stage.")
 }
 
@@ -433,15 +437,15 @@ export function requiresCloseRemarks(kind: string): boolean {
   return kind === "LOST" || kind === "PARKED"
 }
 
-/** Approval policy for a legal transition. KIV reopens require approval even
- * though they are rollback moves; all forward stages use their stage setting. */
+/** Approval policy for a legal transition. KIV and Closed Won reopens require approval
+ * even though they are rollback moves; all forward stages use their stage setting. */
 export function requiresApprovalForTransition(
   from: TransitionStage,
   to: TransitionStage
 ): boolean {
   const direction = transitionDirection(from, to)
   if (!direction) return false
-  if (direction === "rollback") return from.kind === "PARKED"
+  if (direction === "rollback") return from.kind === "PARKED" || from.kind === "WON"
   return !!to.requiresApprovalToEnter
 }
 
@@ -451,7 +455,7 @@ export function requiresTransitionReason(
   from: TransitionStage,
   to: TransitionStage
 ): boolean {
-  return requiresCloseRemarks(to.kind) || from.kind === "LOST"
+  return requiresCloseRemarks(to.kind) || from.kind === "LOST" || from.kind === "WON"
 }
 
 /** Friendly label for the close-remarks field, by terminal kind. */

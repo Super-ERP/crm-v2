@@ -453,7 +453,7 @@ export async function requestStageAdvance(
     }
     if (requiresTransitionReason(from, target) && !input.reason?.trim()) {
       throw new Error(
-        `${from.kind === "LOST" && !requiresCloseRemarks(target.kind) ? "Reopen reason" : closeRemarksLabel(target.kind)} is required to move to ${target.name}.`
+        `${(from.kind === "LOST" || from.kind === "WON") && !requiresCloseRemarks(target.kind) ? "Reopen reason" : closeRemarksLabel(target.kind)} is required to move to ${target.name}.`
       )
     }
 
