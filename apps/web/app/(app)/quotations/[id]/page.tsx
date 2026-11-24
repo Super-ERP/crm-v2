@@ -5,7 +5,7 @@ import { requireContext } from "@/lib/server-context"
 import { PERMISSIONS } from "@/lib/permissions"
 import { getEntitledModuleMap } from "@/lib/modules.server"
 import { QuotationBillingSchedule } from "@/components/quotation-billing-schedule"
-import { tenantSettings, paymentMilestones, funnels } from "@/db/schema"
+import { tenantSettings, paymentMilestones } from "@/db/schema"
 import { listTaxOptions, listProjectNatures, listProductOptions } from "@/lib/lookups"
 import { PageBody } from "@/components/page-header"
 import { listEntityAttachments } from "@/app/(app)/_shared/attachment-actions"
@@ -67,14 +67,8 @@ export default async function QuotationDetailPage({
     canDirectlyApproveQuotation(),
   ])
 
-  // Once the Funnel is Closed Won its quotations are locked: only duplicate or revise.
-  const funnelWon = await withTenant(PERMISSIONS.QUOTATION_VIEW, async (tx) => {
-    const [f] = await tx.select({ status: funnels.status }).from(funnels).where(eq(funnels.id, detail.quotation.funnelId)).limit(1)
-    return f?.status === "won"
-  })
-
   const perms = {
-    canUpdate: ctx.can(PERMISSIONS.QUOTATION_UPDATE) && !funnelWon,
+    canUpdate: ctx.can(PERMISSIONS.QUOTATION_UPDATE),
     canApprove,
     canDirectApprove,
     canSend: ctx.can(PERMISSIONS.QUOTATION_SEND),
