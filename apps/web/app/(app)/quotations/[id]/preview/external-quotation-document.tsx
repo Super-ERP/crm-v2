@@ -1,6 +1,6 @@
 import type { QuotationDocument } from "../../actions"
 import type { QuotationTemplateSpec } from "@/lib/quotation-template-registry"
-import { renderQuotationTemplate } from "@/lib/quotation-template-renderer"
+import { ensureCustomerAddress, ensureNotes, renderQuotationTemplate } from "@/lib/quotation-template-renderer"
 import { formatMalaysianPhone } from "@/lib/format"
 
 function formatQuotationDate(value: Date | string | null | undefined): string {
@@ -101,9 +101,10 @@ export function ExternalQuotationDocument({
 }) {
   if (!template.htmlTemplate) return null
 
+  const withNotes = ensureNotes(ensureCustomerAddress(template.htmlTemplate), template.cssTemplate, doc.quotation.notes)
   const rendered = renderQuotationTemplate({
-    htmlTemplate: template.htmlTemplate,
-    cssTemplate: template.cssTemplate,
+    htmlTemplate: withNotes.htmlTemplate,
+    cssTemplate: withNotes.cssTemplate,
     context: templateContext(doc),
   })
 
