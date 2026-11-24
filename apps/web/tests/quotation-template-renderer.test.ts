@@ -57,3 +57,33 @@ describe("renderQuotationTemplate", () => {
     expect(result.html).not.toContain("<script>")
   })
 })
+
+import { ensureCustomerAddress as ensureCustomerAddressForTest } from '@/lib/quotation-template-renderer'
+
+describe('ensureCustomerAddress', () => {
+  it('adds the customer address after the code when a template lacks it', () => {
+    const out = ensureCustomerAddressForTest('<td>{{customerName}}<br>{{customerCode}}</td>')
+    expect(out).toBe('<td>{{customerName}}<br>{{customerCode}}<br>{{customerAddress}}</td>')
+  })
+  it('falls back to the name, and leaves templates that already print it alone', () => {
+    expect(ensureCustomerAddressForTest('<td>{{ customerName }}</td>')).toContain('{{customerAddress}}')
+    const has = '<td>{{customerName}}</td><p>{{customerAddress}}</p>'
+    expect(ensureCustomerAddressForTest(has)).toBe(has)
+    expect(ensureCustomerAddressForTest('<p>none</p>')).toBe('<p>none</p>')
+  })
+})
+
+import { ensureNotes as ensureNotesForTest, renderQuotationTemplate as renderForNotesTest } from '@/lib/quotation-template-renderer'
+
+describe('ensureNotes', () => {
+  it('appends notes when the template has no notes token and notes exist', () => {
+    const r = ensureNotesForTest('<p>x</p>', '', 'Bank: CIMB\nAcc: 1')
+    const out = renderForNotesTest({ ...r, context: { notes: 'Bank: CIMB\nAcc: 1' } })
+    expect(out.html).toContain('Bank: CIMB')
+    expect(out.css).toContain('pre-line')
+  })
+  it('leaves templates with a notes token or empty notes unchanged', () => {
+    expect(ensureNotesForTest('<p>{{notes}}</p>', null, 'n').htmlTemplate).toBe('<p>{{notes}}</p>')
+    expect(ensureNotesForTest('<p>x</p>', null, '  ').htmlTemplate).toBe('<p>x</p>')
+  })
+})

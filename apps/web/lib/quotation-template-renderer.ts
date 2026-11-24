@@ -113,3 +113,29 @@ export function renderQuotationTemplate({
     css: sanitizeCss(cssTemplate ?? ""),
   }
 }
+
+/**
+ * Custom HTML templates written before the address was a token never print the
+ * customer's address. When a template has no `customerAddress` token, place it
+ * right after the customer code (or name) so the address always appears.
+ */
+export function ensureCustomerAddress(htmlTemplate: string): string {
+  if (/{{\s*customerAddress\s*}}/.test(htmlTemplate)) return htmlTemplate
+  const after = (token: string) => new RegExp(`{{\\s*${token}\\s*}}`)
+  const anchor = after("customerCode").test(htmlTemplate) ? "customerCode" : after("customerName").test(htmlTemplate) ? "customerName" : null
+  if (!anchor) return htmlTemplate
+  return htmlTemplate.replace(after(anchor), (m) => `${m}<br>{{customerAddress}}`)
+}
+
+/**
+ * Custom templates without a `notes` token never print the quotation notes
+ * (bank details, terms). Append a notes block at the end when notes exist.
+ */
+export function ensureNotes(htmlTemplate: string, cssTemplate: string | null | undefined, notes: string | null | undefined) {
+  const css = cssTemplate ?? ""
+  if (!notes?.trim() || /{{\s*notes\s*}}/.test(htmlTemplate)) return { htmlTemplate, cssTemplate: css }
+  return {
+    htmlTemplate: `${htmlTemplate}<div class="qt-auto-notes">{{notes}}</div>`,
+    cssTemplate: `${css}\n.qt-auto-notes{white-space:pre-line;padding:12px 8px;font-size:11px;line-height:1.5;}`,
+  }
+}
