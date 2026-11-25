@@ -32,6 +32,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { RelatedQuickLinks } from "@/components/object-tile"
 import { DocumentsSection, type SectionDocument } from "@/components/documents-section"
 import { Separator } from "@/components/ui/separator"
+import { RecordAcceptanceDialog, UndoAcceptanceDialog } from "./record-acceptance-dialog"
 import { showActionError } from "@/lib/show-action-error"
 import {
   Card,
@@ -142,6 +143,10 @@ export type QuotationPerms = {
   canDelete: boolean
   canCreateProject: boolean
   canCreateRevision: boolean
+  /** Owner / Admin / Sales Admin: record acceptance without approval or send. */
+  canRecordAcceptance?: boolean
+  /** Owner / Admin: undo an acceptance while nothing is invoiced. */
+  canUndoAcceptance?: boolean
 }
 
 const ALL_QUOTATION_PERMS: QuotationPerms = {
@@ -227,8 +232,11 @@ export function QuotationForm({
     canCreateQuotationRevision(quotation.status, quotation.deletedAt)
   const showSetPrimary = canSetQuotationPrimary(quotation, perms.canUpdate)
   const showVoid = perms.canUpdate && !quotation.deletedAt
+  const recordableStatus = ["draft", "approved", "sent", "expired"].includes(quotation.status)
+  const showRecordAcceptance = !!perms.canRecordAcceptance && recordableStatus && !quotation.deletedAt
+  const showUndoAcceptance = !!perms.canUndoAcceptance && isAccepted && !quotation.deletedAt
   const hasAnyAction =
-    showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary
+    showRecordAcceptance || showUndoAcceptance || showSubmit || showApproval || showSend || showRecall || showReset || showAcceptReject || showCreateProject || showDuplicate || showRevision || showSetPrimary
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -1240,6 +1248,10 @@ export function QuotationForm({
                 </AlertDialogContent>
               </AlertDialog>
             ) : null}
+            {showRecordAcceptance ? (
+              <RecordAcceptanceDialog quotationId={quotation.id} quoteNumber={quotation.quoteNumber} validUntil={quotation.validUntil} quoteDate={quotation.quoteDate} />
+            ) : null}
+            {showUndoAcceptance ? <UndoAcceptanceDialog quotationId={quotation.id} quoteNumber={quotation.quoteNumber} /> : null}
             {showAcceptReject ? (
               <>
                 <AlertDialog>

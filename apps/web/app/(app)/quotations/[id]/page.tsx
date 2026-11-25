@@ -77,6 +77,8 @@ export default async function QuotationDetailPage({
     canCreateProject:
       modules.projects && ctx.can(PERMISSIONS.PROJECT_CREATE),
     canCreateRevision: ctx.can(PERMISSIONS.QUOTATION_CREATE),
+    canRecordAcceptance: ctx.can(PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE),
+    canUndoAcceptance: ctx.can(PERMISSIONS.QUOTATION_ACCEPTANCE_UNDO),
   }
 
   const schedule = ctx.can(PERMISSIONS.PAYMENT_MILESTONE_VIEW) ? await withTenant(PERMISSIONS.PAYMENT_MILESTONE_VIEW, tx => tx.select().from(paymentMilestones).where(and(eq(paymentMilestones.quotationId, id), isNull(paymentMilestones.deletedAt))).orderBy(asc(paymentMilestones.sortOrder),asc(paymentMilestones.id))) : null
