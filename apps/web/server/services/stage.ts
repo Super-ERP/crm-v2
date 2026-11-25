@@ -273,7 +273,12 @@ async function applyStageMove(
     .where(eq(funnels.id, opp.id))
 
   const commitStage = await tx.select({sortOrder:pipelineStages.sortOrder}).from(pipelineStages).where(and(eq(pipelineStages.pipelineId,opp.pipelineId),eq(pipelineStages.code,"4a"))).limit(1)
-  if (toStage.kind === "WON" || (toStage.kind === "OPEN" && commitStage[0] && toStage.sortOrder >= commitStage[0].sortOrder)) {
+  // A reopen (Won/Lost/Parked → open stage) is a step back: the 4a commit
+  // checks run again when the funnel moves forward, so they must not block
+  // the reopen that lets the user revise the quotation and billing schedule.
+  const [fromStage] = opp.currentStageId ? await tx.select().from(pipelineStages).where(eq(pipelineStages.id, opp.currentStageId)).limit(1) : []
+  const reopening = !!fromStage && isRollbackTransition(fromStage, toStage)
+  if (!reopening && (toStage.kind === "WON" || (toStage.kind === "OPEN" && commitStage[0] && toStage.sortOrder >= commitStage[0].sortOrder))) {
     await assertCommitNature(tx, ctx, opp)
     if (!opp.projectCode?.trim()) throw new Error("Choose a project code before advancing to 4a.")
     await assertBillingScheduleForFunnel(tx, opp.id)
