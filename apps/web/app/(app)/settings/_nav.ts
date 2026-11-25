@@ -65,7 +65,7 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
       {
         label: "Acceptance backfill",
         href: "/settings/billing/acceptance-backfill",
-        permission: PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE,
+        permission: PERMISSIONS.QUOTATION_ACCEPTANCE_BACKFILL,
       },
     ],
   },

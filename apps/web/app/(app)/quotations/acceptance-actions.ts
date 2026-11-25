@@ -99,7 +99,7 @@ async function loadBackfillRows(tx: Parameters<Parameters<typeof withTenant>[1]>
 
 /** Won Funnels whose primary quotation is not accepted, with what the backfill would do. */
 export async function previewAcceptanceBackfill(): Promise<ActionResult<BackfillRow[]>> {
-  return runAction(() => withTenant(PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE, (tx, ctx) => loadBackfillRows(tx, ctx.tenantId)))
+  return runAction(() => withTenant(PERMISSIONS.QUOTATION_ACCEPTANCE_BACKFILL, (tx, ctx) => loadBackfillRows(tx, ctx.tenantId)))
 }
 
 export type BackfillOutcome = { accepted: number; switched: number; skipped: { funnelName: string; reason: string }[]; needsReplan: string[]; batchId: string }
@@ -115,7 +115,7 @@ export async function runAcceptanceBackfill(funnelIds: string[], note: string): 
     if (!funnelIds.length) throw new Error("Select at least one Funnel.")
     const selected = new Set(funnelIds)
     const batchId = randomUUID()
-    const outcome = await withTenant(PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE, async (tx, ctx) => {
+    const outcome = await withTenant(PERMISSIONS.QUOTATION_ACCEPTANCE_BACKFILL, async (tx, ctx) => {
       const rows = (await loadBackfillRows(tx, ctx.tenantId)).filter(row => selected.has(row.funnelId))
       const result: BackfillOutcome = { accepted: 0, switched: 0, skipped: [], needsReplan: [], batchId }
       for (const id of selected) if (!rows.some(row => row.funnelId === id)) result.skipped.push({ funnelName: id, reason: "No longer needs backfill" })

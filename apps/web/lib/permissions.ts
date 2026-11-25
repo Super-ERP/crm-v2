@@ -51,6 +51,7 @@ export const PERMISSIONS = {
   QUOTATION_ACCEPT: "quotation.accept",
   QUOTATION_RECORD_ACCEPTANCE: "quotation.record_acceptance",
   QUOTATION_ACCEPTANCE_UNDO: "quotation.acceptance_undo",
+  QUOTATION_ACCEPTANCE_BACKFILL: "quotation.acceptance_backfill",
   TAX_VIEW: "tax.view",
   TAX_CONFIGURE: "tax.configure",
   // payment milestones (core, funnel-attached)
@@ -247,6 +248,7 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
       { key: PERMISSIONS.QUOTATION_ACCEPT, label: "Accept quotations" },
       { key: PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE, label: "Record customer acceptance (skips approval and validity; backfill)" },
       { key: PERMISSIONS.QUOTATION_ACCEPTANCE_UNDO, label: "Undo a recorded quotation acceptance" },
+      { key: PERMISSIONS.QUOTATION_ACCEPTANCE_BACKFILL, label: "Bulk backfill quotation acceptance on Won Funnels" },
       { key: PERMISSIONS.TAX_VIEW, label: "View tax settings" },
       { key: PERMISSIONS.TAX_CONFIGURE, label: "Configure tax" },
     ],
