@@ -62,6 +62,11 @@ export const SETTINGS_NAV: SettingsNavGroup[] = [
         href: "/settings/billing/tax",
         permission: PERMISSIONS.TAX_VIEW,
       },
+      {
+        label: "Acceptance backfill",
+        href: "/settings/billing/acceptance-backfill",
+        permission: PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE,
+      },
     ],
   },
   {

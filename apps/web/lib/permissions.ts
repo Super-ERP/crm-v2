@@ -49,6 +49,8 @@ export const PERMISSIONS = {
   QUOTATION_APPROVE: "quotation.approve",
   QUOTATION_SEND: "quotation.send",
   QUOTATION_ACCEPT: "quotation.accept",
+  QUOTATION_RECORD_ACCEPTANCE: "quotation.record_acceptance",
+  QUOTATION_ACCEPTANCE_UNDO: "quotation.acceptance_undo",
   TAX_VIEW: "tax.view",
   TAX_CONFIGURE: "tax.configure",
   // payment milestones (core, funnel-attached)
@@ -243,6 +245,8 @@ export const ALL_PERMISSION_GROUPS: PermissionGroup[] = [
       { key: PERMISSIONS.QUOTATION_APPROVE, label: "Approve quotations" },
       { key: PERMISSIONS.QUOTATION_SEND, label: "Send quotations" },
       { key: PERMISSIONS.QUOTATION_ACCEPT, label: "Accept quotations" },
+      { key: PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE, label: "Record customer acceptance (skips approval and validity; backfill)" },
+      { key: PERMISSIONS.QUOTATION_ACCEPTANCE_UNDO, label: "Undo a recorded quotation acceptance" },
       { key: PERMISSIONS.TAX_VIEW, label: "View tax settings" },
       { key: PERMISSIONS.TAX_CONFIGURE, label: "Configure tax" },
     ],
@@ -402,7 +406,8 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
     permissions: [PERMISSIONS.LEAD_VIEW, PERMISSIONS.LEAD_CREATE, PERMISSIONS.LEAD_UPDATE, PERMISSIONS.LEAD_CONVERT, PERMISSIONS.LEAD_CONVERT_APPROVE,
       PERMISSIONS.ACCOUNT_VIEW, PERMISSIONS.ACCOUNT_CREATE, PERMISSIONS.ACCOUNT_UPDATE, PERMISSIONS.ACCOUNT_CODE_MANAGE,
       PERMISSIONS.PERSON_VIEW, PERMISSIONS.PERSON_CREATE, PERMISSIONS.PERSON_UPDATE, PERMISSIONS.OPPORTUNITY_VIEW, PERMISSIONS.RECORDS_VIEW_ALL,
-      PERMISSIONS.PROJECT_CODE_ENTER, PERMISSIONS.OPPORTUNITY_CREATE, PERMISSIONS.FUNNEL_CREATE_FOR_OWNER],
+      PERMISSIONS.PROJECT_CODE_ENTER, PERMISSIONS.OPPORTUNITY_CREATE, PERMISSIONS.FUNNEL_CREATE_FOR_OWNER,
+      PERMISSIONS.QUOTATION_VIEW, PERMISSIONS.QUOTATION_RECORD_ACCEPTANCE],
   },
   {
     name: "Developer",

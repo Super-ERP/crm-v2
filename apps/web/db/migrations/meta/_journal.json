@@ -785,6 +785,13 @@
 			"when": 1794873606000,
 			"tag": "0111_sales_admin_funnel_create",
 			"breakpoints": true
+		},
+		{
+			"idx": 112,
+			"version": "7",
+			"when": 1794960000000,
+			"tag": "0112_quotation_record_acceptance",
+			"breakpoints": true
 		}
 	]
 }
